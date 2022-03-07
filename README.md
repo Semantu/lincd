@@ -1,4 +1,4 @@
-#LINCD.js
+# LINCD.js
 **Javascript library implementing the [LINCD protocol](https://www.lincd.org).**
 
 ## About LINCD
