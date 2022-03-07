@@ -1,0 +1,40 @@
+{
+	"name": "lincd",
+	"license": "MPL-2.0",
+	"version": "0.1.0",
+	"description": "Linked Interoperable Code & Data - A javascript library for interoperability & collaboration based on W3C's Linked Data standards",
+	"main": "lib/index.js",
+	"types": "dist/lincd.d.ts",
+	"lincd": true,
+	"scripts": {
+		"build": "npm exec lincd build",
+		"dev": "npm exec lincd dev",
+		"publish": "npm exec lincd publish"
+	},
+	"keywords": [
+		"lincd",
+		"linked",
+		"code",
+		"linked-data",
+		"graph",
+		"RDF",
+		"in-memory",
+		"interoperable",
+		"semantic-web",
+		"semantic"
+	],
+	"author": "René Verheij",
+	"dependencies": {
+		"@types/react": "17.0.38",
+		"@types/react-dom": "17.0.11",
+		"eventemitter3": "3.1.0",
+		"next-tick": "^1.0.0",
+		"rdflib": "^2.2.17",
+		"react": "17.0.2",
+		"react-dom": "17.0.2"
+	},
+	"devDependencies": {
+		"@types/node": "^17.0.8",
+		"lincd-cli": "^0.1.1"
+	}
+}

@@ -1,0 +1,9 @@
+**/node_modules
+src
+.idea
+Gruntfile.js
+tsconfig.json
+node_modules
+.prettierignore
+.prettierrc.json
+.gitignore
