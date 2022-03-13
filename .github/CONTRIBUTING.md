@@ -143,4 +143,7 @@ Isn't this product cool? We are working on this full time. Your donations will d
 
 ## Credits
 
-Once again. Thank you to all the people who have already contributed to LINCD.js!
+Once again. Thank you to all the people who have already contributed to LINCD! We encourage you to say "Hi" in our community channels and share what you have done! 
+
+Follow us on Twitter (https://twitter.com/Semantu_com)
+Find the Slack channel here: (https://join.slack.com/t/semantu/shared_invite/zt-oastx0cn-Aaqmn0mMumI4dBqT8St_lg)
