@@ -10,7 +10,7 @@ import {QuadSet} from '../collections/QuadSet';
 import {EventEmitter} from '../events/EventEmitter';
 import {eventBatcher} from '../events/EventBatcher';
 import {Graph} from './Graph';
-import {defaultGraph} from '../index';
+import {defaultGraph} from '../models/DefaultGraph';
 
 export class Quad extends EventEmitter {
 	/**
