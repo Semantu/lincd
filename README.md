@@ -5,7 +5,7 @@
 Even today, most projects use their own data structures, thus creating data silos. 
 Projects that want to share data need understand each others APIs to extract the right data, and then convert that data using custom code.
 
-![image description](assets/lincd-slide.png)
+![](assets/lincd-slide.png)
 
 LINCD aims to remove these barriers to collaboration and interoperability by creating a place where projects can collectively define shared data structures and shared code.
 
