@@ -13,6 +13,7 @@ Prefix.add('shacl', base);
 //add your ontology resources here
 var _class: NamedNode = NamedNode.getOrCreate(base + 'class');
 var datatype: NamedNode = NamedNode.getOrCreate(base + 'datatype');
+var declare: NamedNode = NamedNode.getOrCreate(base + 'declare');
 var _in: NamedNode = NamedNode.getOrCreate(base + 'in');
 var maxCount: NamedNode = NamedNode.getOrCreate(base + 'maxCount');
 var minCount: NamedNode = NamedNode.getOrCreate(base + 'minCount');
@@ -20,8 +21,12 @@ var name: NamedNode = NamedNode.getOrCreate(base + 'name');
 var NodeShape: NamedNode = NamedNode.getOrCreate(base + 'NodeShape');
 var optional: NamedNode = NamedNode.getOrCreate(base + 'optional');
 var Parameter: NamedNode = NamedNode.getOrCreate(base + 'Parameter');
+var PrefixDeclaration: NamedNode = NamedNode.getOrCreate(
+	base + 'PrefixDeclaration',
+);
 var path: NamedNode = NamedNode.getOrCreate(base + 'path');
 var property: NamedNode = NamedNode.getOrCreate(base + 'property');
+var prefix: NamedNode = NamedNode.getOrCreate(base + 'prefix');
 var PropertyShape: NamedNode = NamedNode.getOrCreate(base + 'PropertyShape');
 var targetClass: NamedNode = NamedNode.getOrCreate(base + 'targetClass');
 var targetNode: NamedNode = NamedNode.getOrCreate(base + 'targetNode');
@@ -31,6 +36,7 @@ var Shape: NamedNode = NamedNode.getOrCreate(base + 'Shape');
 export const shacl = {
 	class: _class,
 	datatype,
+	declare,
 	in: _in,
 	maxCount,
 	minCount,
@@ -38,7 +44,9 @@ export const shacl = {
 	NodeShape,
 	optional,
 	Parameter,
+	PrefixDeclaration,
 	path,
+	prefix,
 	property,
 	PropertyShape,
 	Shape,

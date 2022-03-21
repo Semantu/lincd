@@ -394,6 +394,7 @@ export class Shape extends EventEmitter implements IShape {
 		return this._node.getAllQuads(includeAsObject, includeImplicit);
 	}
 
+	//TODO: move to rdfs:Resource or owl:Thing shape (and decide which one of those we want to promote)
 	get label() {
 		return this.getValue(rdfs.label);
 	}

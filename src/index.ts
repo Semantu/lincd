@@ -3,6 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
+import {linkedModule} from './LINCD';
+
 export const nextTick = require('next-tick');
 
 //some interfaces also need to be exported manually here because no other code reached from index requires them
@@ -83,6 +85,8 @@ import * as xsd from './ontologies/xsd';
 import * as List from './shapes/List';
 import * as LINCD from './LINCD';
 
+export const {linkedComponent, linkedShape} = linkedModule('lincd');
+
 declare var window;
 declare var global;
 
@@ -115,10 +119,10 @@ let ownClasses = {
 	Debug,
 	List,
 	URI,
-	shacl,
-	rdf,
-	xsd,
-	rdfs,
+	// shacl,
+	// rdf,
+	// xsd,
+	// rdfs,
 	Find,
 	Order,
 	Prefix,
