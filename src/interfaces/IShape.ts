@@ -4,8 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {IGraphObject} from './IGraphObject';
-import {NamedNode} from '../models/NamedNode';
-import {Node} from '../models/Node';
+import {NamedNode} from '../models';
+import {Node} from '../models';
 import {ICoreIterable} from './ICoreIterable';
 
 export interface IShape extends IGraphObject {

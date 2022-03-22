@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import * as LINCD from './LINCD';
-import {linkedModule} from './LINCD';
-import * as Node from './models/Node';
+// import * as LINCD from './LINCD';
+import {linkedModule} from './utils/Module';
+import * as Node from './models';
 import * as EventEmitter from './events/EventEmitter';
 import * as BlankNodeMap from './collections/BlankNodeMap';
 import * as CoreSet from './collections/CoreSet';
@@ -17,17 +17,17 @@ import * as NodeSet from './collections/NodeSet';
 import * as QuadArray from './collections/QuadArray';
 import * as QuadMap from './collections/QuadMap';
 import * as QuadSet from './collections/QuadSet';
-import * as BlankNode from './models/BlankNode';
-import * as Graph from './models/Graph';
-import * as Literal from './models/Literal';
-import * as Quad from './models/Quad';
-import * as NamedNode from './models/NamedNode';
-import * as Component from './models/Component';
+import * as BlankNode from './models';
+import * as Graph from './models';
+import * as Literal from './models';
+import * as Quad from './models';
+import * as NamedNode from './models';
+import * as Component from './models';
 import * as Shape from './shapes/Shape';
 import * as NodeShape from './shapes/NodeShape';
 import * as PropertyShape from './shapes/PropertyShape';
-import * as DefaultGraph from './models/DefaultGraph';
-import {defaultGraph} from './models/DefaultGraph';
+import * as DefaultGraph from './models';
+import {defaultGraph} from './models';
 import * as ShapeSet from './collections/ShapeSet';
 import * as Prefix from './utils/Prefix';
 import * as Debug from './utils/Debug';
@@ -35,6 +35,7 @@ import * as URI from './utils/URI';
 import * as Find from './utils/Find';
 import * as Order from './utils/Order';
 import * as NQuads from './utils/NQuads';
+import * as Module from './utils/Module';
 import * as ReactComponent from './shapes/ReactComponent';
 import * as ShapeDecorators from './utils/ShapeDecorators';
 import * as List from './shapes/List';
@@ -51,7 +52,7 @@ import * as SHACL_Shape from './shapes/SHACL_Shape';
 export const nextTick = require('next-tick');
 
 //some interfaces also need to be exported manually here because no other code reached from index requires them
-export * from './models/Node';
+export * from './models';
 // export * from './interfaces/IGraphObject';
 // export * from './interfaces/IGraphObjectSet';
 // export * from './interfaces/ICoreIterable';
@@ -66,13 +67,13 @@ export * from './models/Node';
 // export * from './collections/QuadArray';
 // export * from './collections/QuadMap';
 // export * from './collections/QuadSet';
-// export * from './models/BlankNode';
-// export * from './models/Graph';
-// export * from './models/Literal';
-// export * from './models/Quad';
-// export * from './models/NamedNode';
-// export * from './models/Component';
-// export {defaultGraph} from './models/DefaultGraph';
+// export * from './models';
+// export * from './models';
+// export * from './models';
+// export * from './models';
+// export * from './models';
+// export * from './models';
+// export {defaultGraph} from './models';
 // export * from './ontologies/shacl';
 // export * from './collections/ShapeSet';
 // export * from './utils/Debug';
@@ -88,21 +89,13 @@ export * from './models/Node';
 // export * from './shapes/ReactComponent';
 // export * from './shapes/SHACL_Shape';
 // export * from './shapes/List';
-export * from './LINCD';
+// export * from './LINCD';
 
 //dummy variable making sure these are included in the bundle
 let bundle = {
 	IGraphObject, IGraphObjectSet, ICoreIterable, DefaultGraph, shacl, SHACL_Shape, rdf, rdfs,	xsd
 }
 
-declare var window;
-declare var global;
-
-if (typeof window !== 'undefined') {
-	window['lincd'] = {_modules:{}};
-} else if (typeof global !== 'undefined') {
-	global['lincd'] = {_modules:{}};
-}
 
 export const {linkedComponent, linkedShape} = linkedModule('lincd');
 
@@ -146,8 +139,8 @@ let ownClasses = {
 	Boolean,
 	ShapeDecorators,
 	ReactComponent,
+	Module,
 	Component,
-	LINCD,
 	defaultGraph,
 };
 //register the library globally and make all classes available directly from it

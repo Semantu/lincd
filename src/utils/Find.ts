@@ -4,13 +4,13 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NodeSet} from '../collections/NodeSet';
-import {NamedNode} from '../models/NamedNode';
-import {Node} from '../models/Node';
+import {NamedNode} from '../models';
+import {Node} from '../models';
 import {rdf} from '../ontologies/rdf';
 import {rdfs} from '../ontologies/rdfs';
 import {QuadSet} from '../collections/QuadSet';
 import {URI} from './URI';
-import {Quad} from '../models/Quad';
+import {Quad} from '../models';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {SearchMap} from '../collections/SearchMap';
 

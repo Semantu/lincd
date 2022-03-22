@@ -5,9 +5,9 @@
  */
 import {NodeSet} from '../collections/NodeSet';
 import {rdf} from '../ontologies/rdf';
-import {NamedNode} from '../models/NamedNode';
-import {Node} from '../models/Node';
-import {BlankNode} from '../models/BlankNode';
+import {NamedNode} from '../models';
+import {Node} from '../models';
+import {BlankNode} from '../models';
 import {Shape} from './Shape';
 
 export class List extends Shape {

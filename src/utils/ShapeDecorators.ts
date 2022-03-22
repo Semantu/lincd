@@ -3,13 +3,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models/NamedNode';
-import {Node} from '../models/Node';
+import {NamedNode} from '../models';
+import {Node} from '../models';
 import {Shape} from '../shapes/Shape';
 import {PropertyShape} from '../shapes/PropertyShape';
 import {NodeSet} from '../collections/NodeSet';
-import {Literal} from '../models/Literal';
-import {BlankNode} from '../models/BlankNode';
+import {Literal} from '../models';
+import {BlankNode} from '../models';
 import {NodeShape} from '../shapes/NodeShape';
 
 export interface NodeShapeConfig {

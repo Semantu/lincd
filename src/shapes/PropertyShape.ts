@@ -3,13 +3,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 import {shacl} from '../ontologies/shacl';
-import {Literal} from '../models/Literal';
+import {Literal} from '../models';
 import {xsd} from '../ontologies/xsd';
 import {List} from './List';
 import {SHACL_Shape} from './SHACL_Shape';
-import {BlankNode} from '../models/BlankNode';
+import {BlankNode} from '../models';
 
 export class PropertyShape extends SHACL_Shape {
 	static preferredTermType = BlankNode;

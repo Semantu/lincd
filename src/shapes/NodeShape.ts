@@ -5,7 +5,7 @@
  */
 import {PropertyShape} from './PropertyShape';
 import {shacl} from '../ontologies/shacl';
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 import {SHACL_Shape} from './SHACL_Shape';
 
 export class NodeShape extends SHACL_Shape {

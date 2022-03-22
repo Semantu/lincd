@@ -4,14 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {Graph} from '../models/Graph';
+import {Graph} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import {Shape} from '../shapes/Shape';
-import {BlankNode} from '../models/BlankNode';
-import {NamedNode} from '../models/NamedNode';
-import {Literal} from '../models/Literal';
-import {Quad} from '../models/Quad';
-import {Node} from '../models/Node';
+import {BlankNode} from '../models';
+import {NamedNode} from '../models';
+import {Literal} from '../models';
+import {Quad} from '../models';
+import {Node} from '../models';
 import {QuadArray} from '../collections/QuadArray';
 
 export class NQuads {

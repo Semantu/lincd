@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {CoreMap} from './CoreMap';
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 import {NodeSet} from './NodeSet';
 
 export class SearchMap extends CoreMap<

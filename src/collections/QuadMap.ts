@@ -3,11 +3,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {Quad} from '../models/Quad';
-import {Node} from '../models/Node';
+import {Quad} from '../models';
+import {Node} from '../models';
 import {CoreMap} from './CoreMap';
 import {NodeSet} from './NodeSet';
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 
 export class QuadMap extends CoreMap<Node, Quad> {
 	removeAll(alteration: boolean = false) {

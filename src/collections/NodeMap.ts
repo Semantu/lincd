@@ -5,13 +5,13 @@
  */
 import {CoreMap} from './CoreMap';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet';
-import {NamedNode} from '../models/NamedNode';
-import {Quad} from '../models/Quad';
+import {NamedNode} from '../models';
+import {Quad} from '../models';
 import {QuadSet} from './QuadSet';
 import {QuadArray} from './QuadArray';
 import {NodeSet} from './NodeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {Node} from '../models/Node';
+import {Node} from '../models';
 
 export class NodeMap<R extends Node>
 	extends CoreMap<string, R>

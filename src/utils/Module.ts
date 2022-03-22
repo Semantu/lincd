@@ -3,14 +3,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from './models/NamedNode';
-import {registerComponent} from './models/Component';
-import {Shape} from './shapes/Shape';
-import {NodeShape} from './shapes/NodeShape';
-import {Prefix} from './utils/Prefix';
+import {NamedNode} from '../models';
+import {registerComponent} from '../models/Component';
+import {Shape} from '../shapes/Shape';
+import {NodeShape} from '../shapes/NodeShape';
+import {Prefix} from '../utils/Prefix';
 
 //global tree
 declare var lincd: any;
+declare var window;
+declare var global;
 
 const moduleURLBase: string = 'http://modules.lincd.org/';
 Prefix.add('lincm', moduleURLBase);
@@ -99,19 +101,19 @@ export function linkedModule(
 		if (typeof fileExports === 'function') {
 			console.warn(
 				moduleName +
-					"/index.ts exports a class or function under '" +
-					key +
-					"'. Make sure to import * as '" +
-					key +
-					"' and export that from index",
+				"/index.ts exports a class or function under '" +
+				key +
+				"'. Make sure to import * as '" +
+				key +
+				"' and export that from index",
 			);
 			continue;
 		}
 	}
 
 	//#Create declarators for this module
-	let registerInTree = function (constructor) {
-		lincd._modules[moduleName][constructor.name] = constructor;
+	let registerInTree = function (object) {
+		lincd._modules[moduleName][object.name] = object;
 	};
 
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
@@ -125,6 +127,11 @@ export function linkedModule(
 	// 		return constructor;
 	// 	};
 	// };
+
+	let registerModuleExport = function (exportName,exportedObject) {
+		lincd._modules[moduleName][exportName] = exportedObject;
+	};
+
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
 	let linkedUtil = function (constructor) {
 		//add the component class of this module to the global tree
@@ -176,5 +183,23 @@ export function linkedModule(
 	};
 
 	//return the declarators so the module can use them
-	return {linkedComponent, linkedShape, linkedUtil};
+	return {linkedComponent, linkedShape, linkedUtil, registerModuleExport};
 }
+
+export function initTree()
+{
+	if (typeof window !== 'undefined') {
+		if(typeof window['lincd'] === 'undefined')
+		{
+			window['lincd'] = {_modules:{}};
+		}
+	} else if (typeof global !== 'undefined') {
+		if(typeof global['lincd'] === 'undefined')
+		{
+			global['lincd'] = {_modules:{}};
+		}
+		global['lincd'] = {_modules:{}};
+	}
+}
+//when this file is used, make sure the tree is initialized
+initTree();

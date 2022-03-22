@@ -3,23 +3,279 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {CoreMap} from '../collections/CoreMap';
-import {QuadSet} from '../collections/QuadSet';
-import {PropertySet} from '../collections/PropertySet';
-import {Quad} from './Quad';
-import {BatchedEventEmitter,eventBatcher} from '../events/EventBatcher';
-import {EventEmitter} from '../events/EventEmitter';
-import {QuadMap} from '../collections/QuadMap';
-import {QuadArray} from '../collections/QuadArray';
-import {NodeSet} from '../collections/NodeSet';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {IShape} from '../interfaces/IShape';
-import {NamedNode as INamedNode,Term} from 'rdflib/lib/tf-types';
-import {Node} from './Node';
-import {IGraphObject} from '../interfaces/IGraphObject';
-import {NodeMap} from '../collections/NodeMap';
+import {DefaultGraph as TFDefaultGraph,Literal as ILiteral,NamedNode as INamedNode,Term} from 'rdflib/lib/tf-types';
+import {DefaultGraphTermType,TermType} from 'rdflib/lib/types';
+import {defaultGraphURI} from 'rdflib/lib/utils/default-graph-uri';
+
+import {QuadSet} from './collections/QuadSet';
+import {CoreMap} from './collections/CoreMap';
+import {QuadMap} from './collections/QuadMap';
+import {QuadArray} from './collections/QuadArray';
+import {NodeSet} from './collections/NodeSet';
+
+import {ICoreIterable} from './interfaces/ICoreIterable';
+import {IShape} from './interfaces/IShape';
+import {IGraphObject} from './interfaces/IGraphObject';
+
+import {PropertySet} from './collections/PropertySet';
+import {BatchedEventEmitter,eventBatcher} from './events/EventBatcher';
+import {EventEmitter} from './events/EventEmitter';
+import {NodeMap} from './collections/NodeMap';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
+
+export abstract class Node extends EventEmitter {
+	/** The type of node */
+	termType!: TermType;
+
+	constructor(protected _value: string) {
+		super();
+	}
+
+	get value(): string {
+		return this._value;
+	}
+	set value(val: string) {
+		this._value = val;
+	}
+
+	/**
+	 * Create an instance of the given class (or one of its subclasses) as a presentation of this node.
+	 * NOTE: this node MUST have the static.type of the given class as its rdf:type property
+	 * @param type - a class that extends Shape and thus who's instances represent a node as an instance of one specific type.
+	 */
+	getAs<T extends IShape>(type: {new (): T; getOf(resource: Node): T}): T {
+		return type.getOf(this);
+	}
+
+	/**
+	 * Create an instance of the given class as a presentation of this node.
+	 * Other than getAs this 'strict' message will ONLY return an exact instance of the given class, not one of its subclasses
+	 * rdf.type properties of the node are IGNORED. This method can therefore also come in handy in circumstances when you don't have the node it's rdf.type properties at hand.
+	 * Do not misuse this method though, the main use case is if you don't want to allow any subclass instances. If that's not neccecarily the case and it would make also sense to have the properties loaded, make sure to load them and use getAs.
+	 * OR use getAsAsync automatically ensures the data of the node is fully loaded before creating an instance.
+	 * @param type - a class that extends Shape and thus who's instances represent a node as an instance of one specific type.
+	 */
+	getStrictlyAs<T extends IShape>(type: {
+		new (): T;
+		getStrictlyOf(resource: Node): T;
+	}): T {
+		return type.getStrictlyOf(this);
+	}
+
+	/**
+	 * Compares whether the two nodes are equal
+	 * @param other The other node
+	 */
+	equals(other: Term): boolean {
+		if (!other) {
+			return false;
+		}
+		return this.termType === other.termType && this.value === other.value;
+	}
+
+	set(property: NamedNode, value: Node): boolean {
+		return false;
+	}
+
+	has(property: NamedNode, value: Node): boolean {
+		return false;
+	}
+
+	hasValue(property: NamedNode, value: string): boolean {
+		return false;
+	}
+
+	hasExplicit(property: NamedNode, value: Node): boolean {
+		return false;
+	}
+
+	hasExact(property: NamedNode, value: Node): boolean {
+		return false;
+	}
+
+	hasProperty(property: NamedNode): boolean {
+		return false;
+	}
+
+	hasInverseProperty(property: NamedNode): boolean {
+		return false;
+	}
+
+	hasInverse(property: NamedNode, value: Node): boolean {
+		return false;
+	}
+
+	mset(property: NamedNode, values: Iterable<Node>): boolean {
+		return false;
+	}
+
+	getProperties(includeFromIncomingArcs: boolean = false): NodeSet<NamedNode> {
+		return new NodeSet<NamedNode>();
+	}
+
+	getInverseProperties() {
+		return new NodeSet<NamedNode>();
+	}
+
+	getOne(property: NamedNode): Node | undefined {
+		return undefined;
+	}
+
+	getAll(property: NamedNode): PropertySet {
+		return new PropertySet();
+	}
+
+	getValue(property?: NamedNode): string {
+		return undefined;
+	}
+
+	getDeep(
+		property: NamedNode,
+		maxDepth: number = -1,
+		partialResult: NodeSet = new NodeSet(),
+	): NodeSet {
+		return partialResult;
+	}
+
+	getOneInverse(property: NamedNode): NamedNode | undefined {
+		return undefined;
+	}
+
+	getOneWhere(
+		property: NamedNode,
+		filterProperty: NamedNode,
+		filterValue: Node,
+	): undefined {
+		return undefined;
+	}
+
+	getOneWhereEquivalent(
+		property: NamedNode,
+		filterProperty: NamedNode,
+		filterValue: Node,
+		caseSensitive?: boolean,
+	): undefined {
+		return undefined;
+	}
+
+	getAllExplicit(property: NamedNode): NodeSet {
+		return undefined;
+	}
+
+	getAllInverse(property: NamedNode): NodeSet<NamedNode> | undefined {
+		return undefined;
+	}
+
+	getMultiple(properties: ICoreIterable<NamedNode>): NodeSet {
+		return new NodeSet();
+	}
+
+	hasPath(properties: NamedNode[]): boolean {
+		return false;
+	}
+
+	hasPathTo(properties: NamedNode[], value?: Node): boolean {
+		return false;
+	}
+
+	hasPathToSomeInSet(
+		properties: NamedNode[],
+		endPoints?: ICoreIterable<Node>,
+	): boolean {
+		return false;
+	}
+
+	getOneFromPath(...properties: NamedNode[]): Node | undefined {
+		return undefined;
+	}
+
+	getAllFromPath(...properties: NamedNode[]): NodeSet {
+		return new NodeSet();
+	}
+
+	getQuad(property: NamedNode, value: Node): Quad | undefined {
+		return undefined;
+	}
+
+	getQuads(property: NamedNode): QuadMap {
+		return new QuadMap();
+	}
+
+	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | undefined {
+		return undefined;
+	}
+
+	getInverseQuads(property: NamedNode): QuadMap {
+		return new QuadMap();
+	}
+
+	getAllInverseQuads(includeImplicit?: boolean): QuadArray {
+		return new QuadArray();
+	}
+
+	getAllQuads(
+		includeAsObject: boolean = false,
+		includeImplicit: boolean = false,
+	): QuadArray {
+		return null;
+	}
+
+	overwrite(property: NamedNode, value: any): boolean {
+		return false;
+	}
+
+	moverwrite(property: NamedNode, value: any): boolean {
+		return false;
+	}
+
+	unset(property: NamedNode, value: Node): boolean {
+		return false;
+	}
+
+	unsetAll(property: NamedNode): boolean {
+		return false;
+	}
+	isLoaded(includingIncomingProperties?: boolean): boolean {
+		return false;
+	}
+
+	promiseLoaded(loadInverseProperties?: boolean): Promise<boolean> {
+		return null;
+	}
+	getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet {
+		return new NodeSet();
+	}
+
+	/**
+	 * @internal
+	 * @param quad
+	 */
+	unregisterInverseProperty(
+		quad: Quad,
+		alteration?: boolean,
+		emitEvents?: boolean,
+	): void {}
+
+	/**
+	 * registers the use of a quad. Since a quad can only be used in 1 quad
+	 * this method makes a clone of the Literal if it's used a second time,
+	 * and returns that new Literal so it will be used by the quad
+	 * @internal
+	 * @param quad
+	 */
+	registerInverseProperty(
+		quad: Quad,
+		alteration?: boolean,
+		emitEvents?: boolean,
+	): Node {
+		return null;
+	}
+
+	clone(): Node {
+		return null;
+	}
+}
 
 /**
  * A Named Node in the graph is a node that has outgoing edges to other nodes.
@@ -53,7 +309,7 @@ export class NamedNode
 	private static clearedProperties: CoreMap<
 		NamedNode,
 		[NamedNode, QuadArray][]
-	> = new CoreMap<NamedNode, [NamedNode, QuadArray][]>();
+		> = new CoreMap<NamedNode, [NamedNode, QuadArray][]>();
 	private static nodesToSave: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToLoad: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
@@ -167,7 +423,7 @@ export class NamedNode
 	properties: CoreMap<NamedNode, PropertySet> = new CoreMap<
 		NamedNode,
 		PropertySet
-	>();
+		>();
 
 	//keeping track of changes to be emitted in one batched event
 	//NOTE: the quad sets in these maps will contain both newly ADDED and REMOVED quads
@@ -1788,10 +2044,10 @@ export class NamedNode
 		if (this.namedNodes.has(node.uri)) {
 			throw new Error(
 				'A node with this URI already exists:' +
-					node.uri +
-					' You should probably use NamedNode.getOrCreate instead of NamedNode.create (' +
-					node.uri +
-					')',
+				node.uri +
+				' You should probably use NamedNode.getOrCreate instead of NamedNode.create (' +
+				node.uri +
+				')',
 			);
 		}
 		this.namedNodes.set(node.uri, node);
@@ -1857,9 +2113,9 @@ export class NamedNode
 		if (NamedNode.namedNodes.has(newUri)) {
 			throw new Error(
 				'Cannot update URI. A node with this URI already exists: ' +
-					newUri +
-					'. You tried to update the URI of ' +
-					this._value,
+				newUri +
+				'. You tried to update the URI of ' +
+				this._value,
 			);
 		}
 
@@ -1871,5 +2127,950 @@ export class NamedNode
 
 		eventBatcher.register(NamedNode);
 		NamedNode.nodesURIUpdated.set(this, [oldUri, newUri]);
+	}
+}
+
+//cannot import from xsd ontology here without creating circular dependencies
+var rdfLangString: NamedNode = NamedNode.getOrCreate(
+	'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString',
+);
+var xsdString: NamedNode = NamedNode.getOrCreate(
+	'http://www.w3.org/2001/XMLSchema#string',
+);
+
+export class BlankNode extends NamedNode {
+	private static counter: number = 0;
+
+	termType: any = 'BlankNode';
+	constructor() {
+		//passing true because a BlankNode is always a "local node", as it's URI is only valid in local context
+		super(BlankNode.createUri(), true);
+		NamedNode.register(this);
+	}
+
+	static create(): BlankNode {
+		return new BlankNode();
+	}
+
+	static createUri() {
+		return '_:' + this.counter++;
+	}
+}
+
+/**
+ * One of the two main classes of resources (nodes) in the graph.
+ * Literals are endpoints. They do NOT have outgoing connections (edges) to other resources in the graph.
+ * Though a NamedNode can point to a Literal.
+ * Each literal node has a literal value, like a string.
+ * Besides that is can also have a language tag or a data type.
+ * Literals are often saved as a single string, for example '"yes"@en' (yes in english) or '"true"^^xsd:boolean (the value true with datatype english)
+ * This class represents those properties.
+ * See also: https://www.w3.org/TR/rdf-concepts/#section-Graph-Literal
+ */
+export class Literal extends Node implements IGraphObject, ILiteral {
+	private referenceQuad: Quad;
+
+	/**
+	 * @internal
+	 */
+	previousValue: Literal;
+
+	termType: 'Literal' = 'Literal';
+
+	/**
+	 * Other than with NamedNodes, its fine to do `new Literal("my string value")`
+	 * Datatype and language tags are optional
+	 * @param value
+	 * @param datatype
+	 * @param language
+	 */
+	constructor(
+		value: string,
+		protected _datatype: NamedNode = null,
+		private _language: string = '',
+	) {
+		super(value);
+	}
+
+	getAs<T extends IShape>(type: {new (): T; getOf(resource: Node): T}): T {
+		return type.getOf(this);
+	}
+
+	/**
+	 * @internal
+	 * @param quad
+	 */
+	registerProperty(quad: Quad): void {
+		throw new Error('Literal resources should not be used as subjects');
+	}
+
+	/**
+	 * registers the use of a quad. Since a quad can only be used in 1 quad
+	 * this method makes a clone of the Literal if it's used a second time,
+	 * and returns that new Literal so it will be used by the quad
+	 * @internal
+	 * @param quad
+	 */
+	registerInverseProperty(quad: Quad): Node {
+		if (this.referenceQuad) {
+			return this.clone().registerInverseProperty(quad);
+			// throw new Error("Literals should not be reused, create a clone instead");
+		}
+		this.referenceQuad = quad;
+		return this;
+	}
+
+	/**
+	 * @internal
+	 * @param quad
+	 */
+	unregisterProperty(quad: Quad): void {
+		throw new Error('Literal resources should not be used as subjects');
+	}
+
+	/**
+	 * @internal
+	 * @param quad
+	 */
+	unregisterInverseProperty(quad: Quad): void {
+		this.referenceQuad = null;
+	}
+
+	/**
+	 * returns true if this literal node has a language tag
+	 */
+	hasLanguage(): boolean {
+		return this._language != '';
+	}
+
+	/**
+	 * get the language tag of this literal which states which language this literal is written in
+	 * See also: http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
+	 */
+	get language(): string {
+		//list of language tags: http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
+		return this._language;
+	}
+
+	/**
+	 * returns true if the language tag of this literal matches the given language
+	 */
+	isOfLanguage(language: string) {
+		return this._language === language;
+	}
+
+	/**
+	 * update the language tag of this literal
+	 */
+	set language(lang: string) {
+		this._language = lang;
+
+		//the datatype of any literal with a language tag is rdf:langString
+		this._datatype = rdfLangString;
+	}
+
+	/**
+	 * returns true if this literal has a datatype
+	 */
+	hasDatatype(): boolean {
+		//checks for null and undefined
+		return this._datatype != null;
+	}
+
+	/**
+	 * returns the datatype of this literal
+	 * Note that datatypes are NamedNodes themselves, who always have rdf:type rdf:Datatype
+	 * If no datatype is set, the default datatype xsd:string will be returned
+	 * If a language tag is set, the returned datatype will be rdf:langString
+	 */
+	get datatype(): NamedNode {
+		if (this._datatype) {
+			return this._datatype;
+		}
+		//default datatype is xsd:string, if language is set this.datatype should be langString already
+		return xsdString;
+	}
+
+	/**
+	 * Update the datatype of this literal
+	 * @param datatype
+	 */
+	set datatype(datatype: NamedNode) {
+		this._datatype = datatype;
+	}
+
+	/**
+	 * Return the value of this literal
+	 * @param datatype
+	 */
+	get value(): string {
+		return this._value;
+	}
+
+	/**
+	 * update the literal value of this literal
+	 * @param datatype
+	 */
+	set value(value: string) {
+		if (this.referenceQuad) {
+			// var oldValue = this.toString();
+			//do we also need to save / do this for datatype / language
+			if (!this.previousValue) {
+				this.previousValue = this.clone();
+			}
+		}
+		this._value = value;
+		if (this.referenceQuad) {
+			// var newValue = this.toString();
+			this.referenceQuad.subject.registerValueChange(this.referenceQuad, true);
+			this.referenceQuad.registerValueChange(this.previousValue, this, true);
+		}
+	}
+
+	/**
+	 * Returns true if both are literal resources, with equal literal values, equal language tags and equal data types
+	 * Other than NamedNodes, two different literal node instances can be deemed equivalent if all their properties are the same
+	 * @param other
+	 * @param caseSensitive
+	 */
+	equals(other: Term): boolean {
+		return this._equals(other);
+	}
+
+	/**
+	 * Returns true if both are literal resources, with equal literal values (CASE INSENSITIVE CHECK), equal language tags and equal data types
+	 * Other than NamedNodes, two different literal node instances can be deemed equivalent if all their properties are the same
+	 * @param other
+	 */
+
+	equalsCaseInsensitive(other: Term) {
+		return this._equals(other, false);
+	}
+
+	private _equals(other: Term, caseSensitive: boolean = true) {
+		if (other === this) return true;
+
+		var valueToMatch: string;
+		var languageToMatch: string;
+		var dataTypeToMatch: NamedNode;
+
+		if (other instanceof Literal) {
+			valueToMatch = other.value;
+			languageToMatch = other.language;
+			dataTypeToMatch = other.datatype; //direct access to avoid default, alternatively build a boolean parameter 'returnDefault=true' into getDataType()
+		} else {
+			var type = typeof other;
+			if (type == 'string' || type == 'number' || type == 'boolean') {
+				//if you don't specify a datatype we accept all
+				valueToMatch = other.toString();
+				languageToMatch = '';
+				dataTypeToMatch = null;
+			} else {
+				return false;
+			}
+		}
+
+		//do the actual matching
+		var valueMatch: boolean;
+		if (caseSensitive) {
+			valueMatch = this._value === valueToMatch;
+		} else {
+			valueMatch =
+				this._value.toLocaleLowerCase() == valueToMatch.toLocaleLowerCase();
+		}
+
+		//if values match
+		if (valueMatch) {
+			//if there is a language
+			if (this.hasLanguage()) {
+				//then only the languages need to match
+				return this.language == languageToMatch;
+			} else {
+				//no language = datatypes need to match
+				//we check with this.datatype, not this.datatype which can return the default xsd:String
+				//a literal without datatypespecified is however considered different from a a literal with a explicit xsd:String datatype
+				//that is, like some SPARQL quad stores, you should be able to create two otherwise identical (sub&pred) quads for those two literals
+				return this.datatype === dataTypeToMatch;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Creates a new Literal with exact the same properties (value,datatype and language)
+	 */
+	clone(): Literal {
+		return new Literal(this._value, this.datatype, this.language) as this;
+	}
+
+	/**
+	 * Returns the literal value of the first Literal that occurs as object for the given subject and property and optionally also matches the given language
+	 * @param subject
+	 * @param property
+	 * @param language
+	 * @deprecated
+	 * @returns {string|undefined}
+	 */
+	static getValue(
+		subject: NamedNode,
+		property: NamedNode,
+		language: string = '',
+	): string | undefined {
+		for (var value of subject.getAll(property)) {
+			if (
+				value instanceof Literal &&
+				(!language || value.isOfLanguage(language))
+			) {
+				return value.value;
+			}
+		}
+		return undefined;
+	}
+
+	/**
+	 * Returns all literal values of the Literals that occur as object for the given subject and property and optionally also match the given language
+	 * @param subject
+	 * @param property
+	 * @param language
+	 * @returns {string[]}
+	 */
+	static getValues(
+		subject: NamedNode,
+		property: NamedNode,
+		language: string = '',
+	): string[] {
+		var res = [];
+		for (var value of subject.getAll(property)) {
+			if (
+				value instanceof Literal &&
+				(!language || value.isOfLanguage(language))
+			) {
+				res.push(value.value);
+			}
+		}
+		return res;
+	}
+
+	getReferenceQuad() {
+		return this.referenceQuad;
+	}
+	hasInverseProperty(property: NamedNode): boolean {
+		return this.referenceQuad && this.referenceQuad.predicate === property;
+	}
+
+	hasInverse(property: NamedNode, value: Node): boolean {
+		return (
+			this.referenceQuad &&
+			this.referenceQuad.predicate === property &&
+			this.referenceQuad.subject === value
+		);
+	}
+
+	getOneInverse(property: NamedNode): NamedNode | undefined {
+		return this.referenceQuad && this.referenceQuad.predicate === property
+			? this.referenceQuad.subject
+			: undefined;
+	}
+
+	getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet<NamedNode> {
+		if (properties.find((p) => p === this.referenceQuad.predicate)) {
+			return new NodeSet<NamedNode>([this.referenceQuad.subject]);
+		}
+		return new NodeSet<NamedNode>();
+	}
+
+	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | undefined {
+		return this.referenceQuad &&
+		this.referenceQuad.predicate === property &&
+		this.referenceQuad.subject === subject
+			? this.referenceQuad
+			: undefined;
+	}
+
+	getInverseQuads(property: NamedNode): QuadMap {
+		return this.referenceQuad && this.referenceQuad.predicate === property
+			? new QuadMap([[this, this.referenceQuad]])
+			: new QuadMap();
+	}
+
+	getAllInverseQuads(includeImplicit?: boolean): QuadArray {
+		return !includeImplicit || !this.referenceQuad.implicit
+			? new QuadArray(this.referenceQuad)
+			: new QuadArray();
+	}
+
+	getAllQuads(
+		includeAsObject: boolean = false,
+		includeImplicit: boolean = false,
+	): QuadArray {
+		return includeAsObject && (!includeImplicit || !this.referenceQuad.implicit)
+			? new QuadArray(this.referenceQuad)
+			: new QuadArray();
+	}
+
+	promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
+		return Promise.resolve(true);
+	}
+
+	isLoaded(includingInverseProperties: boolean = false): boolean {
+		return true;
+	}
+
+	toString(): string {
+		//quotes are needed to differentiate the literal "http://test.com" from the URI http://test.com, so the literal value is always surrounded by quotes
+		//quad quotes are needed in case of newlines
+		// let quotes = this._value.indexOf("\n") != -1 ? '"""' : '"';
+		let quotes = '"';
+		let suffix = '';
+		if (this.hasLanguage()) {
+			suffix = '@' + this.language;
+		} else if (this.hasDatatype()) {
+			suffix = '^^<' + this.datatype.uri + '>';
+		}
+		//quotes in the value need to be escaped
+		return (
+			quotes +
+			this._value.replace(/\"/g, '\\"').replace(/\n/g, '\\n') +
+			quotes +
+			suffix
+		);
+	}
+
+	print(includeIncomingProperties: boolean = true) {
+		dprint(this, includeIncomingProperties);
+	}
+
+	static isLiteralString(literalString: string): boolean {
+		var regex = new RegExp(
+			'(\\"[^\\"^\\n]*\\")(@[a-z]{1,3}|\\^\\^[a-zA-Z]+\\:[a-zA-Z0-9_-]+|\\<https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)\\>)?',
+		);
+		return regex.test(literalString);
+	}
+
+	static fromString(literalString: string): Literal {
+		//self made regex thatL
+		// match anything between quotes or quad quotes (the quotes are group 1 and 3)
+		// except escaped quotes (2)
+		//and everything behind it (4) for language or datatype
+		//..with a little help on the escaped quotes from here
+		//https://stackoverflow.com/questions/38563414/javascript-regex-to-select-quoted-string-but-not-escape-quotes
+
+		let match = literalString.match(
+			/("|""")([^"\\]*(?:\\.[^"\\]*)*)("|""")(.*)/,
+		);
+
+		//NOTE: if \n replacement turns out to be not correct here it should at least be moved to JSONLDParser, see https://github.com/digitalbazaar/jsonld.js/issues/242
+		let literal = (match[2] ? match[2] : '')
+			.replace(/\\"/g, '"')
+			.replace(/\\n/g, '\n');
+		let suffix = match[4];
+		if (!suffix) {
+			return new Literal(literal);
+		}
+		if (suffix[0] == '@') {
+			return new Literal(literal, null, suffix.substr(1));
+		} else if (suffix[0] == '^') {
+			var dataType = NamedNode.fromString(suffix.substr(2));
+			return new Literal(literal, dataType);
+		} else {
+			throw new Error('Invalid literal string format: ' + literalString);
+		}
+	}
+}
+
+export class Graph implements Term {
+	private static graphs: CoreMap<string, Graph> = new CoreMap<string, Graph>();
+	private quads: QuadSet;
+	private _node: NamedNode;
+	termType: string = 'Graph';
+
+	constructor(public value: string, quads?: QuadSet) {
+		this._node = NamedNode.getOrCreate(value);
+		this.quads = quads ? quads : new QuadSet();
+	}
+
+	equals(other: Term) {
+		return other === this;
+	}
+
+	get node(): NamedNode {
+		return this._node;
+	}
+
+	//Static methods
+	/**
+	 * Resets the map of resources that is known in this environment
+	 */
+	static reset() {
+		this.graphs = new CoreMap<string, Graph>();
+	}
+
+	registerQuad(quad: Quad) {
+		this.quads.add(quad);
+	}
+
+	hasQuad(quad: Quad) {
+		return this.quads.has(quad);
+	}
+
+	//Note: cannot name this getQuads, because NamedNode already uses that for getting all quads of all its properties
+	getContents(): QuadSet {
+		return this.quads;
+	}
+
+	toString() {
+		return (
+			'Graph: [' +
+			this.node.uri.toString() +
+			' - ' +
+			this.quads.size +
+			' quads]'
+		);
+	}
+
+	static create(quads?: QuadSet): Graph {
+		var uri = NamedNode.createNewTempUri();
+		return this._create(uri, quads);
+	}
+
+	private static _create(uri: string, quads?: QuadSet): Graph {
+		var graph = new Graph(uri, quads);
+		this.register(graph);
+		return graph;
+	}
+
+	static register(graph: Graph) {
+		if (this.graphs.has(graph.node.uri)) {
+			throw new Error(
+				'A graph with this URI already exists. You should probably use Graph.getOrCreate instead of Graph.create (' +
+				graph.node.uri +
+				')',
+			);
+		}
+		this.graphs.set(graph.node.uri, graph);
+		// super.register(graph);
+	}
+
+	static unregister(graph: Graph) {
+		if (!this.graphs.has(graph.node.uri)) {
+			throw new Error(
+				'This node has already been removed from the registry: ' +
+				graph.node.uri,
+			);
+		}
+		this.graphs.delete(graph.node.uri);
+		// super.unregister(graph);
+	}
+
+	static getOrCreate(uri: string) {
+		return this.getGraph(uri) || this._create(uri);
+	}
+
+	static getGraph(uri: string, mustExist: boolean = false): Graph | null {
+		//look it up in known full uri node map
+		if (this.graphs.has(uri)) {
+			return this.graphs.get(uri);
+		}
+
+		//by default at the moment, quads are not in any graph unless specifically assigned to one
+		//this may change whenever we truly need to be able to query the quads in the default graph (that are not in any other named graph)
+		//and we will need to think about behaviour, because different stores use different solutions
+		//is the default graph the combined graph of all graphs + quads without graph? (like GraphDB)
+		//or just the graph of quads without graph?
+		//and where do inferred quads go to? (currently no graph but we could put them in the right graph)
+
+		if (mustExist) {
+			throw Error('could not find graph for: ' + uri);
+		}
+		return null;
+	}
+
+	static updateUri(graph: Graph, uri: string) {
+		(graph.node as NamedNode).uri = uri;
+	}
+
+	static getAll(): CoreMap<string, Graph> {
+		return this.graphs;
+	}
+}
+
+class DefaultGraph extends Graph implements TFDefaultGraph {
+	value: '' = '';
+	termType: typeof DefaultGraphTermType = DefaultGraphTermType;
+
+	uri = defaultGraphURI;
+
+	constructor() {
+		//empty string for default graph URI (part of the standard)
+		//https://rdf.js.org/data-model-spec/#defaultgraph-interface
+		super('');
+	}
+
+	toString() {
+		return 'DefaultGraph';
+	}
+}
+
+export const defaultGraph = new DefaultGraph();
+
+export class Quad extends EventEmitter {
+	/**
+	 * Emitter used by the class itself by static methods emitting events.
+	 * Anyone wanting to listen to that should therefore add a listener with Quad.emitter.on(...)
+	 * @internal
+	 */
+	static emitter = new EventEmitter();
+
+	/**
+	 * The number of quads active in this system
+	 */
+	static globalNumQuads: number = 0;
+
+	private static newQuads: QuadSet = new QuadSet();
+	private static removedQuads: QuadSet = new QuadSet();
+
+	//altered quads are those that contain changes made by methods of existing Resources as opposed to methods that use Quad.getOrCreate
+	//this separation is used for example by automatic storage of changes made due to user input, see storage controllers.
+	// private static alteredQuads = new QuadSet();
+	private static alteredQuadsRemoved: QuadSet = new QuadSet();
+	private static alteredQuadsCreated: QuadSet = new QuadSet();
+	private static alteredQuadsUpdated: CoreMap<
+		NamedNode,
+		CoreMap<NamedNode, [Node, Node]>
+		> = new CoreMap(); //NamedNode,string,string]>();
+
+	/**
+	 * @internal
+	 * emitted when new quads have been created
+	 */
+	static TRIPLES_CREATED: string = 'TRIPLES_CREATED';
+
+	/**
+	 * @internal
+	 * emitted when quads have been removed
+	 */
+	static TRIPLES_REMOVED: string = 'TRIPLES_REMOVED';
+
+	/**
+	 * emitted by a quad when that quad is being removed
+	 */
+	static TRIPLE_REMOVED: string = 'TRIPLE_REMOVED';
+
+	/**
+	 * emitted by a quad when the value of that quad is being changed (without removing and creating a new quad locally)
+	 */
+	static VALUE_CHANGED: string = 'VALUE_CHANGED';
+
+	/**
+	 * emitted when quads have been altered by user interaction
+	 * @internal
+	 */
+	static TRIPLES_ALTERED: string = 'TRIPLES_ALTERED';
+
+	private _removed: boolean;
+	private _altered: boolean;
+
+	/**
+	 * Creates the quad
+	 * @param subject - the subject of the quad
+	 * @param predicate
+	 * @param object
+	 */
+	constructor(
+		public subject: NamedNode,
+		public predicate: NamedNode,
+		public object: Node,
+		public graph: Graph = defaultGraph,
+		public implicit: boolean = false,
+		alteration: boolean = false,
+	) {
+		super();
+
+		this.setup(alteration);
+	}
+
+	private setup(alteration: boolean = false) {
+		// if(this.predicate.uri == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" && this.object['uri'] == "http://data.dacore.org/ontologies/core/Editor")
+		// {
+		// 	debugger;
+		// }
+
+		//lets resources take note of this quad in which they occur
+		//first of all we overwrite the property this.object with the result of register because a Literal may return a clone
+		this.object = this.object.registerInverseProperty(this, alteration);
+		this.subject.registerProperty(this, alteration);
+		this.predicate.registerAsPredicate(this, alteration);
+		this.graph.registerQuad(this);
+
+		//new quad events are batched together and emitted on the next tick
+		//so here we make sure the Quad class will emit its batched events on the next tick
+		eventBatcher.register(Quad);
+		//and here we save this quad to a set of newQuads which is a static property of the Quad class
+		Quad.newQuads.add(this);
+
+		//only if its an alteration AND its relevant to storage controllers do we emit the TRIPLES_ALTERED event for this quad
+		if (
+			alteration &&
+			!this.implicit &&
+			!this.subject.isLocalResource &&
+			!this.predicate.isLocalResource &&
+			(!(this.object instanceof NamedNode) ||
+				!(this.object as NamedNode).isLocalResource)
+		) {
+			Quad.alteredQuadsCreated.add(this);
+		}
+		Quad.globalNumQuads++;
+	}
+
+	/**
+	 * Turns off a quad. Meaning it will no longer be active in the graph.
+	 * Comes in handy in very specific use cases when for example quads have already been created, but you want to check what the state was before these quads were created
+	 */
+	turnOff() {
+		this.subject.unregisterProperty(this, false, false);
+		this.predicate.unregisterAsPredicate(this, false, false);
+		this.object.unregisterInverseProperty(this, false, false);
+	}
+
+	/**
+	 * Turns on a quad. Meaning it will be active (again) in the graph.
+	 * Only use this if you've had to turn quads off first.
+	 */
+	turnOn() {
+		this.subject.registerProperty(this, false, false);
+		this.predicate.registerAsPredicate(this, false, false);
+		this.object.registerInverseProperty(this, false, false);
+	}
+
+	/**
+	 * Turn an implicit quad into an explicit quad (because an explicit user action generated it as an independent explicit fact now)
+	 */
+	makeExplicit() {
+		//unregister and make explicit
+		this.turnOff();
+		this.implicit = false;
+		//re-register and make it an 'alteration' so it will be picked up by the storage
+		this.setup(true);
+	}
+
+	/**
+	 * @internal
+	 * Returns true if events of newly created quads or removed quads are currently batched and waiting to be emitted
+	 */
+	static hasBatchedEvents() {
+		return this.newQuads.size > 0 || this.removedQuads.size > 0;
+	}
+
+	/**
+	 * @internal
+	 */
+	static emitBatchedEvents() {
+		if (this.newQuads.size > 0) {
+			this.emitter.emit(Quad.TRIPLES_CREATED, this.newQuads);
+			this.newQuads = new QuadSet();
+		}
+		if (this.removedQuads.size > 0) {
+			this.emitter.emit(Quad.TRIPLES_REMOVED, this.removedQuads);
+			this.removedQuads = new QuadSet();
+		}
+		if (
+			this.alteredQuadsCreated.size > 0 ||
+			this.alteredQuadsRemoved.size > 0 ||
+			this.alteredQuadsUpdated.size > 0
+		) {
+			this.emitter.emit(
+				Quad.TRIPLES_ALTERED,
+				this.alteredQuadsCreated,
+				this.alteredQuadsRemoved,
+				this.alteredQuadsUpdated,
+			);
+			this.alteredQuadsCreated = new QuadSet();
+			this.alteredQuadsRemoved = new QuadSet();
+			this.alteredQuadsUpdated = new CoreMap();
+		}
+	}
+
+	/**
+	 * Get the existing quad for the given subject,predicate and object, or create it if it didn't exists yet.
+	 * @param subject
+	 * @param predicate
+	 * @param object
+	 * @param implicit
+	 * @param alteration - states whether this quad has been created by a user interaction (true) or simply because of updated data has been loaded
+	 */
+	static getOrCreate(
+		subject: NamedNode,
+		predicate: NamedNode,
+		object: Node,
+		graph: Graph = defaultGraph,
+		implicit: boolean = false,
+		alteration: boolean = false,
+	) {
+		return (
+			this.get(subject, predicate, object) ||
+			new Quad(subject, predicate, object, graph, implicit, alteration)
+		);
+	}
+
+	/**
+	 * Gets the existing quad for the given subject,predicate and object.
+	 * Will return any quad with an equivalent object. See Literal.isEquivalentTo() and NamedNode.isEquivalentTo() for more information.
+	 * @param subject
+	 * @param predicate
+	 * @param object
+	 */
+	static get(
+		subject: NamedNode,
+		predicate: NamedNode,
+		object: Node,
+	): Quad | null {
+		if (!subject || !predicate || !object) return null;
+
+		if (subject.has(predicate, object)) {
+			//.has will also check equivalent literalresources, but getQuad does not, so if it returns true
+			//we need to find the literal that already exists as value of this predicate
+			//NOTE: we check if not uriresource because that means its a literalresource, but we dont have to include it in this file (caused dependency circle errors)
+			if (!(object instanceof NamedNode)) {
+				for (let [key, quad] of subject.getQuads(predicate).entries()) {
+					if (object.equals(key)) {
+						return quad;
+					}
+				}
+			} else {
+				return subject.getQuad(predicate, object);
+			}
+		}
+	}
+
+	/**
+	 * Returns true if this quad was created because of a user action/input, as opposed to coming from some data that already existed
+	 */
+	get altered() {
+		return this._altered;
+	}
+
+	/**
+	 * Listen to change of the quads' literal value.
+	 * @param listener
+	 */
+	onValueChange(listener) {
+		this.on(Quad.VALUE_CHANGED, listener);
+	}
+
+	/**
+	 * Stop listening to value changes
+	 * @param listener
+	 */
+	offValueChange(listener) {
+		this.off(Quad.VALUE_CHANGED, listener);
+	}
+
+	/**
+	 * used by Literal to notify this quad of changes to the literel value of its object, therefor the quad is getting modified
+	 * @internal
+	 * @param oldValue
+	 * @param newValue
+	 * @param alteration
+	 */
+	registerValueChange(
+		oldValue: Node,
+		newValue: Node,
+		alteration: boolean = false,
+	) {
+		//setting altered = true here, will be reset / deleted by emitting change events
+		this._altered = true;
+		this.emit(Quad.VALUE_CHANGED, oldValue, newValue, alteration);
+
+		if (
+			alteration &&
+			!this.implicit &&
+			!this.subject.isLocalResource &&
+			!this.predicate.isLocalResource &&
+			(!(this.object instanceof NamedNode) ||
+				!(this.object as NamedNode).isLocalResource)
+		) {
+			eventBatcher.register(Quad);
+			//make sure subject map exists
+			if (!Quad.alteredQuadsUpdated.has(this.subject)) {
+				Quad.alteredQuadsUpdated.set(this.subject, new CoreMap());
+			}
+			let map = Quad.alteredQuadsUpdated.get(this.subject);
+			//if first time we set a new value for this predicate
+			if (!map.has(this.predicate)) {
+				//set it
+				map.set(this.predicate, [oldValue, newValue]);
+			} else {
+				//else overwrite with a new array, reusing the old value of last time (so we keep the oldest old value)
+				map.set(this.predicate, [map.get(this.predicate)[0], newValue]);
+			}
+		}
+	}
+
+	/**
+	 * Remove this quad from the graph
+	 * Will be removed both locally and from the graph database
+	 * @param alteration
+	 */
+	remove(alteration: boolean = false): void {
+		if (this._removed) return;
+
+		//first set removed is true so event handlers can detect the difference between added or removed values
+		this._removed = true;
+
+		this.subject.unregisterProperty(this);
+		this.predicate.unregisterAsPredicate(this);
+		this.object.unregisterInverseProperty(this);
+
+		//removed quad events are batched together and emitted on the next tick
+		//so here we make sure the Quad class will emit its batched events on the next tick
+		eventBatcher.register(Quad);
+		//and here we save this quad to a set of removedQuads which is a static property of the Quad class
+		Quad.removedQuads.add(this);
+
+		if (
+			alteration &&
+			!this.implicit &&
+			!this.subject.isLocalResource &&
+			!this.predicate.isLocalResource &&
+			(!(this.object instanceof NamedNode) ||
+				!(this.object as NamedNode).isLocalResource)
+		) {
+			Quad.alteredQuadsRemoved.add(this);
+		}
+
+		//we need to let this quad emit this event straight away because for example the reasoner needs to listen to this exact quad to retract
+		this.emit(Quad.TRIPLE_REMOVED);
+
+		Quad.globalNumQuads--;
+
+		//TODO:remove all event listeners here?
+	}
+
+	/**
+	 * Cancel the removal of a quad
+	 */
+	undoRemoval() {
+		this.setup();
+		this._removed = false;
+	}
+
+	/**
+	 * Returns true if this quad still exists as an object in memory, but is no longer actively used in the graph
+	 */
+	get isRemoved(): boolean {
+		return this._removed;
+	}
+
+	/**
+	 * Print this quad as a string
+	 */
+	toString() {
+		return (
+			this.subject.toString() +
+			' ' +
+			this.predicate.toString() +
+			' ' +
+			this.object.toString()
+		);
 	}
 }

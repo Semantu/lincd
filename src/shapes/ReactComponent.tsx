@@ -5,11 +5,11 @@
  */
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
-import {NamedNode} from '../models/NamedNode';
-import {Node} from '../models/Node';
+import {NamedNode} from '../models';
+import {Node} from '../models';
 import {Shape} from './Shape';
-import {Literal} from '../models/Literal';
-import {BlankNode} from '../models/BlankNode';
+import {Literal} from '../models';
+import {BlankNode} from '../models';
 
 export {React, ReactDOM};
 

@@ -6,11 +6,11 @@
 //declare var require:Function;
 //require('core-js/fn/set');
 //import * as Set from 'core-js/es6/set';
-import {Quad} from '../models/Quad';
+import {Quad} from '../models';
 import {CoreSet} from './CoreSet';
-import {Node} from '../models/Node';
+import {Node} from '../models';
 import {NodeSet} from './NodeSet';
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 
 export class QuadSet extends CoreSet<Quad> {
 	removeAll() {

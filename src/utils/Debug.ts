@@ -6,9 +6,9 @@
 import {Shape} from '../shapes/Shape';
 import {CoreSet} from '../collections/CoreSet';
 import {Prefix} from './Prefix';
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 import {QuadMap} from '../collections/QuadMap';
-import {Literal} from '../models/Literal';
+import {Literal} from '../models';
 
 export class Debug {
 	static print(node, includeInverseProperties: boolean = true): string {

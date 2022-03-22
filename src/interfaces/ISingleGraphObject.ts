@@ -4,6 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {IShape} from './IShape';
-import {Node} from '../models/Node';
+import {Node} from '../models';
 
 export type ISingleGraphObject = Node | IShape;

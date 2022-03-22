@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {Quad} from '../models/Quad';
+import {Quad} from '../models';
 import {NodeSet} from './NodeSet';
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 
 export class QuadArray extends Array<Quad> {
 	getSubjects(): NodeSet<NamedNode> {

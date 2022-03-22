@@ -2,12 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 import {NodeSet} from '../collections/NodeSet';
 import {QuadSet} from '../collections/QuadSet';
 import {IGraphObject} from './IGraphObject';
 import {ICoreIterable} from './ICoreIterable';
-import {Node} from '../models/Node';
+import {Node} from '../models';
 
 /**
  * a set of objects that all have IGraphObject methods, and this set itself also has those methods so you can call them directly on the set instead of for each item

@@ -4,21 +4,21 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {EventEmitter} from '../events/EventEmitter';
-import {NamedNode} from '../models/NamedNode';
+import {NamedNode} from '../models';
 import {rdf} from '../ontologies/rdf';
 import {PropertySet} from '../collections/PropertySet';
 import {QuadMap} from '../collections/QuadMap';
-import {Literal} from '../models/Literal';
+import {Literal} from '../models';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
-import {Quad} from '../models/Quad';
+import {Quad} from '../models';
 import {QuadArray} from '../collections/QuadArray';
 import {Find} from '../utils/Find';
 import {IShape} from '../interfaces/IShape';
 import {ShapeSet} from '../collections/ShapeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {SearchMap} from '../collections/SearchMap';
-import {Node} from '../models/Node';
+import {Node} from '../models';
 import {CoreSet} from '../collections/CoreSet';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
@@ -508,7 +508,7 @@ export class Shape extends EventEmitter implements IShape {
 	 * @param properties
 	 */
 	static findLocal<T extends Shape>(
-		this: {new (): T},
+		this: {new (node: Node): T; targetType: any},
 		properties: SearchMap,
 		sanitized: boolean = false,
 	): T {

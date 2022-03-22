@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NodeSet} from './NodeSet';
-import {Node} from '../models/Node';
+import {Node} from '../models';
 
 export class PropertySet extends NodeSet {
 	constructor(iterable?: Iterable<Node>) {
