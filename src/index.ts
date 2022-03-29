@@ -3,7 +3,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-// import * as LINCD from './LINCD';
 import {linkedModule} from './utils/Module';
 import * as Node from './models';
 import * as EventEmitter from './events/EventEmitter';
@@ -40,62 +39,16 @@ import * as ReactComponent from './shapes/ReactComponent';
 import * as ShapeDecorators from './utils/ShapeDecorators';
 import * as List from './shapes/List';
 
-import * as rdf from './ontologies/rdf';
-import * as rdfs from './ontologies/rdfs';
-import * as xsd from './ontologies/xsd';
-import * as shacl from './ontologies/shacl';
-import * as IGraphObject from './interfaces/IGraphObject';
-import * as IGraphObjectSet from './interfaces/IGraphObjectSet';
-import * as ICoreIterable from './interfaces/ICoreIterable';
-import * as SHACL_Shape from './shapes/SHACL_Shape';
+import './ontologies/rdf';
+import './ontologies/rdfs';
+import './ontologies/xsd';
+import './ontologies/shacl';
+import './interfaces/IGraphObject';
+import './interfaces/IGraphObjectSet';
+import './interfaces/ICoreIterable';
+import './shapes/SHACL_Shape';
 
 export const nextTick = require('next-tick');
-
-//some interfaces also need to be exported manually here because no other code reached from index requires them
-export * from './models';
-// export * from './interfaces/IGraphObject';
-// export * from './interfaces/IGraphObjectSet';
-// export * from './interfaces/ICoreIterable';
-// export * from './events/EventEmitter';
-// export * from './collections/BlankNodeMap';
-// export * from './collections/CoreSet';
-// export * from './collections/CoreMap';
-// export * from './collections/SearchMap';
-// export * from './collections/PropertySet';
-// export * from './collections/NodeMap';
-// export * from './collections/NodeSet';
-// export * from './collections/QuadArray';
-// export * from './collections/QuadMap';
-// export * from './collections/QuadSet';
-// export * from './models';
-// export * from './models';
-// export * from './models';
-// export * from './models';
-// export * from './models';
-// export * from './models';
-// export {defaultGraph} from './models';
-// export * from './ontologies/shacl';
-// export * from './collections/ShapeSet';
-// export * from './utils/Debug';
-// export * from './utils/URI';
-// export * from './utils/Find';
-// export * from './utils/Order';
-// export * from './utils/Prefix';
-// export * from './utils/NQuads';
-// export * from './utils/ShapeDecorators';
-// export * from './shapes/Shape';
-// export * from './shapes/NodeShape';
-// export * from './shapes/PropertyShape';
-// export * from './shapes/ReactComponent';
-// export * from './shapes/SHACL_Shape';
-// export * from './shapes/List';
-// export * from './LINCD';
-
-//dummy variable making sure these are included in the bundle
-let bundle = {
-	IGraphObject, IGraphObjectSet, ICoreIterable, DefaultGraph, shacl, SHACL_Shape, rdf, rdfs,	xsd
-}
-
 
 export const {linkedComponent, linkedShape} = linkedModule('lincd');
 
@@ -126,12 +79,9 @@ let ownClasses = {
 	ShapeSet,
 	PropertyShape,
 	Debug,
+	DefaultGraph,
 	List,
 	URI,
-	// shacl,
-	// rdf,
-	// xsd,
-	// rdfs,
 	Find,
 	Order,
 	Prefix,
