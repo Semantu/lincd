@@ -6,11 +6,12 @@
 import {Shape} from '../shapes/Shape';
 import {CoreSet} from '../collections/CoreSet';
 import {Prefix} from './Prefix';
-import {NamedNode} from '../models';
+import {Literal,NamedNode} from '../models';
 import {QuadMap} from '../collections/QuadMap';
-import {Literal} from '../models';
 
 export class Debug {
+	//TODO: move stuff back into actual models, keep a general method here that handles numbers etc, so that imports of this file are minimal
+	//TODO: and so that dprint is not undefined if lincd is not imported from index
 	static print(node, includeInverseProperties: boolean = true): string {
 		if (typeof node == 'number') {
 			node = NamedNode.TEMP_URI_BASE + node.toString();

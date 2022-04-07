@@ -462,9 +462,9 @@ export class NamedNode
 	 * This ensures the same node is used for the same uri system wide
 	 * @param pUri
 	 */
-	constructor(value: string = '', private _isLocalResource: boolean = false) {
+	constructor(value: string = '', private _isTemporaryNode: boolean = false) {
 		super(value);
-		if (this._isLocalResource) {
+		if (this._isTemporaryNode) {
 			//created locally, so we know everything about it there is to know
 			this.allPropertiesLoaded = {promise: Promise.resolve(this), done: true};
 		}
@@ -480,12 +480,12 @@ export class NamedNode
 		this.value = uri;
 	}
 
-	get isLocalResource(): boolean {
-		return this._isLocalResource;
+	get isTemporaryNode(): boolean {
+		return this._isTemporaryNode;
 	}
 
-	set isLocalResource(val: boolean) {
-		this._isLocalResource = val;
+	set isTemporaryNode(val: boolean) {
+		this._isTemporaryNode = val;
 	}
 
 	/**
@@ -1470,7 +1470,7 @@ export class NamedNode
 		if (!this.removePromise) {
 			this.removePromise = this.createPromise();
 
-			if (this._isLocalResource) {
+			if (this._isTemporaryNode) {
 				//immediately remove local node
 				this.setRemoved(true);
 			} else {
@@ -1526,7 +1526,7 @@ export class NamedNode
 	 */
 	unsetAll(property: NamedNode): boolean {
 		//if not a local node we will emit events for storage controllers to be picked up
-		if (!this.isLocalResource) {
+		if (!this.isTemporaryNode) {
 			//regardless of how many tripples are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
 			if (!NamedNode.clearedProperties.has(this)) {
 				NamedNode.clearedProperties.set(this, []);
@@ -1589,7 +1589,7 @@ export class NamedNode
 	 */
 	isLoaded(includingInverseProperties: boolean = false): boolean {
 		return (
-			this.isLocalResource ||
+			this.isTemporaryNode ||
 			(includingInverseProperties
 				? this.allPropertiesLoaded && this.allPropertiesLoaded.done
 				: this.outgoingPropertiesLoaded && this.outgoingPropertiesLoaded.done)
@@ -1676,7 +1676,7 @@ export class NamedNode
 	 * @param success
 	 */
 	setSaved(success: boolean) {
-		this.isLocalResource = false;
+		this.isTemporaryNode = false;
 		if (!this.savePromise) this.savePromise = this.createPromise();
 		this.savePromise.done = true;
 		success ? this.savePromise.resolve(true) : this.savePromise.reject(false);
@@ -2022,7 +2022,7 @@ export class NamedNode
 	/**
 	 * Create a new local NamedNode. A temporary URI will be generated for its URI.
 	 * This node will not exist in the graph database (persistent storage) until you call `node.save()`
-	 * Until saved, `node.isLocalResource()` will return true.
+	 * Until saved, `node.isTemporaryNode()` will return true.
 	 */
 	static create(): NamedNode {
 		return this._create(this.createNewTempUri(), true);
@@ -2123,6 +2123,14 @@ export class NamedNode
 		NamedNode.namedNodes.delete(this._value);
 		this._value = newUri;
 		NamedNode.namedNodes.set(this._value, this);
+
+		//if this node had a temporary URI
+		if(this._isTemporaryNode)
+		{
+			//it now has an explicit URI, so it's no longer temporary
+			this._isTemporaryNode = false;
+		}
+
 		this.emit(NamedNode.URI_UPDATED, this, oldUri, newUri);
 
 		eventBatcher.register(NamedNode);
@@ -2143,8 +2151,7 @@ export class BlankNode extends NamedNode {
 
 	termType: any = 'BlankNode';
 	constructor() {
-		//passing true because a BlankNode is always a "local node", as it's URI is only valid in local context
-		super(BlankNode.createUri(), true);
+		super(BlankNode.createUri());
 		NamedNode.register(this);
 	}
 
@@ -2812,10 +2819,10 @@ export class Quad extends EventEmitter {
 		if (
 			alteration &&
 			!this.implicit &&
-			!this.subject.isLocalResource &&
-			!this.predicate.isLocalResource &&
+			!this.subject.isTemporaryNode &&
+			!this.predicate.isTemporaryNode &&
 			(!(this.object instanceof NamedNode) ||
-				!(this.object as NamedNode).isLocalResource)
+				!(this.object as NamedNode).isTemporaryNode)
 		) {
 			Quad.alteredQuadsCreated.add(this);
 		}
@@ -2984,10 +2991,10 @@ export class Quad extends EventEmitter {
 		if (
 			alteration &&
 			!this.implicit &&
-			!this.subject.isLocalResource &&
-			!this.predicate.isLocalResource &&
+			!this.subject.isTemporaryNode &&
+			!this.predicate.isTemporaryNode &&
 			(!(this.object instanceof NamedNode) ||
-				!(this.object as NamedNode).isLocalResource)
+				!(this.object as NamedNode).isTemporaryNode)
 		) {
 			eventBatcher.register(Quad);
 			//make sure subject map exists
@@ -3030,10 +3037,10 @@ export class Quad extends EventEmitter {
 		if (
 			alteration &&
 			!this.implicit &&
-			!this.subject.isLocalResource &&
-			!this.predicate.isLocalResource &&
+			!this.subject.isTemporaryNode &&
+			!this.predicate.isTemporaryNode &&
 			(!(this.object instanceof NamedNode) ||
-				!(this.object as NamedNode).isLocalResource)
+				!(this.object as NamedNode).isTemporaryNode)
 		) {
 			Quad.alteredQuadsRemoved.add(this);
 		}

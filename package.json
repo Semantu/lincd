@@ -1,7 +1,7 @@
 {
 	"name": "lincd",
 	"license": "MPL-2.0",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"description": "Linked Interoperable Code & Data - A javascript library for interoperability & collaboration based on W3C's Linked Data standards",
 	"main": "lib/index.js",
 	"types": "dist/lincd.d.ts",
@@ -10,7 +10,7 @@
 		"build": "npm exec lincd build",
 		"dev": "npm exec lincd dev",
 		"prepublishOnly": "npm exec lincd build production",
-		"postpublish": "npm exec lincd publish"
+		"postpublish": "npm exec lincd register"
 	},
 	"keywords": [
 		"lincd",

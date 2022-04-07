@@ -7,15 +7,12 @@ import {NamedNode} from '../models';
 import {registerComponent} from '../models/Component';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/NodeShape';
-import {Prefix} from '../utils/Prefix';
 
 //global tree
 declare var lincd: any;
 declare var window;
 declare var global;
 
-const moduleURLBase: string = 'http://modules.lincd.org/';
-Prefix.add('lincm', moduleURLBase);
 
 interface DeferredPromise {
 	resolve?: (res: any) => void;
@@ -25,7 +22,8 @@ interface DeferredPromise {
 }
 
 var moduleParsePromises: Map<string, Promise<any>> = new Map();
-var moduleLoadPromises: Map<NamedNode, DeferredPromise> = new Map();
+var loadedModules: Set<NamedNode> = new Set();
+// var moduleLoadPromises: Map<NamedNode, DeferredPromise> = new Map();
 
 export function linkedModule(
 	moduleName: string,
@@ -64,17 +62,18 @@ export function linkedModule(
 
 	//AFTER all the data has been loaded
 	moduleParsedPromise.then(() => {
+		loadedModules.add(moduleResource);
 		// we can officially resolve the module load promise
-		if (!moduleLoadPromises.has(moduleResource)) {
-			moduleLoadPromises.set(moduleResource as NamedNode, {
-				done: true,
-				promise: Promise.resolve(true),
-			});
-		} else {
-			let promiseObject = moduleLoadPromises.get(moduleResource as NamedNode);
-			promiseObject.done = true;
-			promiseObject.resolve(true);
-		}
+		// if (!moduleLoadPromises.has(moduleResource)) {
+		// 	moduleLoadPromises.set(moduleResource as NamedNode, {
+		// 		done: true,
+		// 		promise: Promise.resolve(true),
+		// 	});
+		// } else {
+		// 	let promiseObject = moduleLoadPromises.get(moduleResource as NamedNode);
+		// 	promiseObject.done = true;
+		// 	promiseObject.resolve(true);
+		// }
 	});
 
 	//prepare name for global tree reference
@@ -85,29 +84,32 @@ export function linkedModule(
 		console.warn(
 			'A module with the name ' + moduleName + ' has already been registered.',
 		);
-		return;
 	}
+	else
+	{
+		//initiate an empty object for this module in the global tree
+		lincd._modules[moduleName] = moduleExports || {};
 
-	//initiate an empty object for this module in the global tree
-	lincd._modules[moduleName] = moduleExports || {};
+		//next we will go over each export of each file
+		//and just check that the format is correct
+		for (var key in moduleExports)
+		{
+			var fileExports = moduleExports[key];
 
-	//next we will go over each export of each file
-	//and just check that the format is correct
-	for (var key in moduleExports) {
-		var fileExports = moduleExports[key];
+			if (!fileExports) continue;
 
-		if (!fileExports) continue;
-
-		if (typeof fileExports === 'function') {
-			console.warn(
-				moduleName +
-				"/index.ts exports a class or function under '" +
-				key +
-				"'. Make sure to import * as '" +
-				key +
-				"' and export that from index",
-			);
-			continue;
+			if (typeof fileExports === 'function')
+			{
+				console.warn(
+					moduleName +
+					"/index.ts exports a class or function under '" +
+					key +
+					"'. Make sure to import * as '" +
+					key +
+					"' and export that from index",
+				);
+				continue;
+			}
 		}
 	}
 
@@ -167,13 +169,14 @@ export function linkedModule(
 		//register the component and its shape
 		Shape.registerByType(constructor);
 
-		let URI = `${moduleURLBase + moduleName}/${constructor.name}Shape`;
+		// let URI = `${moduleURLBase + moduleName}/${constructor.name}Shape`;
 		if (!constructor.shape) {
-			console.log('Creating shape from class decorator.');
-			let node = NamedNode.getOrCreate(URI);
-			constructor.shape = NodeShape.getOf(node);
+			// console.log('Creating shape from class decorator.');
+			// let node = NamedNode.getOrCreate(URI);
+			// constructor.shape = NodeShape.getOf(node);
+			constructor.shape = new NodeShape();
 		} else {
-			(constructor.shape.node as NamedNode).uri = URI;
+			// (constructor.shape.node as NamedNode).uri = URI;
 		}
 
 		(constructor.shape as NodeShape).targetClass = constructor.targetClass;
@@ -183,7 +186,7 @@ export function linkedModule(
 	};
 
 	//return the declarators so the module can use them
-	return {linkedComponent, linkedShape, linkedUtil, registerModuleExport};
+	return {linkedComponent, linkedShape, linkedUtil, registerModuleExport, moduleExports:lincd._modules[moduleName]};
 }
 
 export function initTree()
