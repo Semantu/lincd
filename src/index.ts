@@ -3,8 +3,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
+import * as Module from './utils/Module';
 import {linkedModule} from './utils/Module';
 import * as Node from './models';
+import * as BlankNode from './models';
+import * as Graph from './models';
+import * as Literal from './models';
+import * as Quad from './models';
+import * as NamedNode from './models';
+import * as Component from './models';
+import * as DefaultGraph from './models';
+import {defaultGraph} from './models';
 import * as EventEmitter from './events/EventEmitter';
 import * as BlankNodeMap from './collections/BlankNodeMap';
 import * as CoreSet from './collections/CoreSet';
@@ -16,17 +25,9 @@ import * as NodeSet from './collections/NodeSet';
 import * as QuadArray from './collections/QuadArray';
 import * as QuadMap from './collections/QuadMap';
 import * as QuadSet from './collections/QuadSet';
-import * as BlankNode from './models';
-import * as Graph from './models';
-import * as Literal from './models';
-import * as Quad from './models';
-import * as NamedNode from './models';
-import * as Component from './models';
 import * as Shape from './shapes/Shape';
 import * as NodeShape from './shapes/NodeShape';
 import * as PropertyShape from './shapes/PropertyShape';
-import * as DefaultGraph from './models';
-import {defaultGraph} from './models';
 import * as ShapeSet from './collections/ShapeSet';
 import * as Prefix from './utils/Prefix';
 import * as Debug from './utils/Debug';
@@ -34,7 +35,7 @@ import * as URI from './utils/URI';
 import * as Find from './utils/Find';
 import * as Order from './utils/Order';
 import * as NQuads from './utils/NQuads';
-import * as Module from './utils/Module';
+import * as NameSpace from './utils/NameSpace';
 import * as ReactComponent from './shapes/ReactComponent';
 import * as ShapeDecorators from './utils/ShapeDecorators';
 import * as List from './shapes/List';
@@ -80,6 +81,7 @@ let ownClasses = {
 	PropertyShape,
 	Debug,
 	DefaultGraph,
+	NameSpace,
 	List,
 	URI,
 	Find,

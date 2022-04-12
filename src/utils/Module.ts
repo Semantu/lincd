@@ -7,6 +7,7 @@ import {NamedNode} from '../models';
 import {registerComponent} from '../models/Component';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/NodeShape';
+import {Prefix} from "./Prefix";
 
 //global tree
 declare var lincd: any;
@@ -185,8 +186,30 @@ export function linkedModule(
 		return constructor;
 	};
 
+	/**
+	 *
+	 * @param nameSpace the base URI of the ontology
+	 * @param prefixAndFileName the file name MUST match the prefix for this ontology
+	 * @param exports all exports of the file, simply provide "this" as value!
+	 */
+	let linkedOntology = function(nameSpace, prefixAndFileName, exports)
+	{
+		//make sure we can detect this as an ontology later
+		exports['_ns'] = nameSpace;
+		exports['_prefix'] = prefixAndFileName;
+
+		//register the prefix here (so just calling linkedOntology with a prefix will be enough to do that)
+		if(prefixAndFileName)
+		{
+			Prefix.add(prefixAndFileName,nameSpace);
+		}
+
+		//register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
+		registerModuleExport(prefixAndFileName,exports);
+	}
+
 	//return the declarators so the module can use them
-	return {linkedComponent, linkedShape, linkedUtil, registerModuleExport, moduleExports:lincd._modules[moduleName]};
+	return {linkedComponent, linkedShape, linkedUtil, linkedOntology, registerModuleExport, moduleExports:lincd._modules[moduleName]};
 }
 
 export function initTree()
