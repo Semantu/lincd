@@ -192,11 +192,12 @@ export function linkedModule(
 	 * @param prefixAndFileName the file name MUST match the prefix for this ontology
 	 * @param exports all exports of the file, simply provide "this" as value!
 	 */
-	let linkedOntology = function(nameSpace, prefixAndFileName, exports)
+	let linkedOntology = function(nameSpace, prefixAndFileName, exports, loadData?)
 	{
 		//make sure we can detect this as an ontology later
 		exports['_ns'] = nameSpace;
 		exports['_prefix'] = prefixAndFileName;
+		exports['_load'] = loadData;
 
 		//register the prefix here (so just calling linkedOntology with a prefix will be enough to do that)
 		if(prefixAndFileName)
@@ -227,5 +228,12 @@ export function initTree()
 		global['lincd'] = {_modules:{}};
 	}
 }
+
+export function createDataPromise(dataSource)
+{
+	require(dataSource);
+}
+
+
 //when this file is used, make sure the tree is initialized
 initTree();
