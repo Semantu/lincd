@@ -2679,15 +2679,8 @@ export class Graph implements Term {
 			return this.graphs.get(uri);
 		}
 
-		//by default at the moment, quads are not in any graph unless specifically assigned to one
-		//this may change whenever we truly need to be able to query the quads in the default graph (that are not in any other named graph)
-		//and we will need to think about behaviour, because different stores use different solutions
-		//is the default graph the combined graph of all graphs + quads without graph? (like GraphDB)
-		//or just the graph of quads without graph?
-		//and where do inferred quads go to? (currently no graph but we could put them in the right graph)
-
 		if (mustExist) {
-			throw Error('could not find graph for: ' + uri);
+			throw Error('Could not find graph for: ' + uri);
 		}
 		return null;
 	}

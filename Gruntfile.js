@@ -10,4 +10,9 @@ module.exports = buildTools.generateGruntConfig('lincd', {
 	debug: false,
 	analyse: false,
 	filename: 'lincd',
+	tsConfigOverwrites:{
+		compilerOptions: {
+			module: "commonjs"
+		}
+	}
 });

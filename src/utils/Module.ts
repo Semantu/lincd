@@ -192,17 +192,18 @@ export function linkedModule(
 	 * @param prefixAndFileName the file name MUST match the prefix for this ontology
 	 * @param exports all exports of the file, simply provide "this" as value!
 	 */
-	let linkedOntology = function(nameSpace, prefixAndFileName, exports, loadData?)
+	let linkedOntology = function(exports, nameSpace:(term:string)=>NamedNode, prefixAndFileName:string, loadData?)
 	{
 		//make sure we can detect this as an ontology later
 		exports['_ns'] = nameSpace;
 		exports['_prefix'] = prefixAndFileName;
 		exports['_load'] = loadData;
 
-		//register the prefix here (so just calling linkedOntology with a prefix will be enough to do that)
+		//register the prefix here (so just calling linkedOntology with a prefix will automatically register that prefix)
 		if(prefixAndFileName)
 		{
-			Prefix.add(prefixAndFileName,nameSpace);
+			//run the namespace without any term name, this will give back a named node with just the namespace as URI, then get that URI to provide it as full URI
+			Prefix.add(prefixAndFileName,nameSpace('').uri);
 		}
 
 		//register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
