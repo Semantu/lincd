@@ -36,6 +36,6 @@
 	},
 	"devDependencies": {
 		"@types/node": "^17.0.8",
-		"lincd-cli": "^0.1.1"
+		"lincd-cli": "^0.1"
 	}
 }

@@ -15,9 +15,9 @@ import {Node} from '../models';
 import {QuadArray} from '../collections/QuadArray';
 
 export class NQuads {
-	static stringify(object: ICoreIterable<Graph> | QuadSet | QuadArray): String {
+	static stringify(object: ICoreIterable<Graph> | QuadSet | Quad[]): string {
 		var res = '';
-		if (object instanceof QuadSet || object instanceof QuadArray) {
+		if (object instanceof QuadSet || object instanceof Array) {
 			res = this.fromQuads(object, res);
 		} else {
 			object.forEach((graph: Graph) => {
@@ -28,7 +28,7 @@ export class NQuads {
 	}
 
 	private static fromQuads(
-		quadset: QuadSet | QuadArray,
+		quadset: QuadSet | Quad[],
 		resultString: string = '',
 		graph: Graph = null,
 	): string {
