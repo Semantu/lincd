@@ -150,7 +150,7 @@ export class ShapeSet<R extends Shape>
 	getQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
 		for (var instance of this) {
-			for (var [object, quad] of instance.getQuads(property)) {
+			for (var quad of instance.getQuads(property)) {
 				res.add(quad);
 			}
 		}
@@ -168,7 +168,7 @@ export class ShapeSet<R extends Shape>
 	getInverseQuads(property: NamedNode): QuadSet | any {
 		var res = new QuadSet();
 		for (var instance of this) {
-			for (var [subject, quad] of instance.getInverseQuads(property)) {
+			for (var quad of instance.getInverseQuads(property)) {
 				res.add(quad);
 			}
 		}

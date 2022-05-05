@@ -198,16 +198,16 @@ export abstract class Node extends EventEmitter {
 		return undefined;
 	}
 
-	getQuads(property: NamedNode): QuadMap {
-		return new QuadMap();
+	getQuads(property: NamedNode): QuadSet {
+		return new QuadSet();
 	}
 
 	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | undefined {
 		return undefined;
 	}
 
-	getInverseQuads(property: NamedNode): QuadMap {
-		return new QuadMap();
+	getInverseQuads(property: NamedNode): QuadSet {
+		return new QuadSet();
 	}
 
 	getAllInverseQuads(includeImplicit?: boolean): QuadArray {
@@ -502,12 +502,26 @@ export class NamedNode
 		emitEvents: boolean = true,
 	) {
 		var index: NamedNode = quad.predicate;
+		//first make sure we have a QuadMap value for key=predicate
 		if (!this.asSubject.has(index)) {
 			this.asSubject.set(index, new QuadMap());
 			this.properties.set(index, new PropertySet());
 		}
-		this.asSubject.get(index).set(quad.object, quad);
-		this.properties.get(index).__add(quad.object);
+
+		//Add the quad to the QuadMap (see implementation for more details)
+		let quadMap = this.asSubject.get(index);
+
+		//make sure we have a QuadSet ready for the object of this quad
+		quadMap.__set(quad.object,quad);
+
+
+		//Now for the property index (which gives direct access to the object values of a certain predicate)
+		//Because multiple graphs can hold the same subj-pred-obj triple, we want to avoid adding literal values
+		//that have the exact same literal value, so we need to test for equality here before adding it
+		if(!this.properties.get(index).some(object => object.equals(quad.object)))
+		{
+			this.properties.get(index).__add(quad.object);
+		}
 
 		//add this quad to the map of events to send on the next tick
 		if (emitEvents) {
@@ -546,7 +560,7 @@ export class NamedNode
 		if (!this.asObject.has(index)) {
 			this.asObject.set(index, new QuadMap());
 		}
-		this.asObject.get(index).set(quad.subject, quad);
+		this.asObject.get(index).__set(quad.subject, quad);
 
 		//add this quad to the map of events to send on the next tick
 		if (emitEvents) {
@@ -628,15 +642,27 @@ export class NamedNode
 		emitEvents: boolean = true,
 	) {
 		var index: NamedNode = quad.predicate;
-		var quadMap: QuadMap = this.asSubject.get(index);
-		var propertySet: PropertySet = this.properties.get(index);
 
-		if (propertySet) propertySet.__delete(quad.object);
+		//start by looking through the QuadMap (it is more complete than the quick & easy properties index, as it accounts for multiple quads per object value in different graphs)
+		var quadMap: QuadMap = this.asSubject.get(index);
 		if (quadMap) {
-			quadMap.delete(quad.object);
-			if (quadMap.size == 0) {
-				this.asSubject.delete(index);
-				this.properties.delete(index);
+			let quadSet = quadMap.get(quad.object);
+			quadSet.delete(quad);
+			//if we no longer hold any quads for this object
+			if (quadSet.size == 0) {
+				//remove the key
+				quadMap.__delete(quad.object);
+
+				//and then also remove this object from the propertySet index (the index should exist)
+				this.properties.get(index).__delete(quad.object);
+
+				//if we now also no longer hold any values for this predicate
+				if(quadMap.size === 0)
+				{
+					//delete both indices for this predicate
+					this.asSubject.delete(index);
+					this.properties.delete(index);
+				}
 			}
 		}
 
@@ -768,8 +794,9 @@ export class NamedNode
 		if (!value) {
 			throw Error('No value provided to set!');
 		}
-		//only create if it didnt exist yet
+		//only create if it didn't exist yet
 		if (this.has(property, value)) {
+			//and make it explicit if it wasn't yet
 			if (this.getQuad(property, value).implicit) {
 				this.getQuad(property, value).makeExplicit();
 			}
@@ -824,8 +851,7 @@ export class NamedNode
 	 */
 	hasExplicit(property: NamedNode, value: Node): boolean {
 		if (!this.asSubject.has(property)) return false;
-		let quad = this.getQuadByValue(property, value);
-		return quad && !quad.implicit;
+		return this.getQuadsByValue(property, value).some(quad => !quad.implicit);
 	}
 
 	/**
@@ -1034,7 +1060,7 @@ export class NamedNode
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
 	getOneExplicit(property: NamedNode): Node | undefined {
-		for (let [prop, quad] of this.getQuads(property)) {
+		for (let quad of this.getQuads(property)) {
 			if (!quad.implicit) {
 				return quad.object;
 			}
@@ -1297,20 +1323,31 @@ export class NamedNode
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 * @param value - the node that this new graph-edge points to. The object of the quad to be created.
 	 */
-	getQuad(property: NamedNode, value?: Node): Quad | undefined {
+	getQuads(property: NamedNode, value?: Node): QuadSet | undefined {
 		if (!this.asSubject.has(property)) return undefined;
 		if (value) {
-			return this.getQuadByValue(property, value);
+			return this.getQuadsByValue(property, value);
 		} else {
-			return this.asSubject.get(property).first();
+			return this.asSubject.get(property).getQuadSet();
 		}
 	}
+	// getQuad(property: NamedNode, value?: Node): Quad | undefined {
+	// 	if (!this.asSubject.has(property)) return undefined;
+	// 	if (value) {
+	// 		return this.getQuadByValue(property, value);
+	// 	} else {
+	// 		return this.asSubject.get(property).first();
+	// 	}
+	// }
 
-	private getQuadByValue(property: NamedNode, value?: Node): Quad {
-		return value instanceof NamedNode
-			? this.asSubject.get(property).get(value)
-			: this.asSubject.get(property).find((quad) => quad.object.equals(value));
+	private getQuadsByValue(property: NamedNode, value?: Node): QuadSet {
+		return value instanceof NamedNode ? this.asSubject.get(property).get(value) : this.asSubject.get(property).filter((quad) => quad.object.equals(value));
 	}
+	// private getQuadByValue(property: NamedNode, value?: Node): Quad {
+	// 	return value instanceof NamedNode
+	// 		? this.asSubject.get(property).get(value).first()
+	// 		: this.asSubject.get(property).find((quad) => quad.object.equals(value));
+	// }
 
 	/**
 	 * Get all the quads that represent the connection from this node to another node, connected by the given property
@@ -1318,11 +1355,11 @@ export class NamedNode
 	 * and SHOULD GENERALLY NOT BE USED. Use methods to get/set properties instead
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
-	getQuads(property: NamedNode): QuadMap {
-		return this.asSubject.has(property)
-			? this.asSubject.get(property)
-			: new QuadMap();
-	}
+	// getQuads(property: NamedNode): QuadMap {
+	// 	return this.asSubject.has(property)
+	// 		? this.asSubject.get(property)
+	// 		: new QuadMap();
+	// }
 
 	/**
 	 * Get all the quads that represent EXPLICIT connections from this node to another node, connected by the given property
@@ -1330,8 +1367,8 @@ export class NamedNode
 	 * and SHOULD GENERALLY NOT BE USED. Use methods to get/set properties instead
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
-	getExplicitQuads(property: NamedNode): QuadMap {
-		return this.getQuads(property).filter((quad) => !quad.implicit);
+	getExplicitQuads(property: NamedNode): QuadSet {
+		return this.getQuads(property).filter(quad => !quad.implicit);
 	}
 
 	/**
@@ -1340,7 +1377,7 @@ export class NamedNode
 	 * and SHOULD GENERALLY NOT BE USED. Use methods to get/set properties instead
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
-	getExplicitInverseQuads(property: NamedNode): QuadMap {
+	getExplicitInverseQuads(property: NamedNode): QuadSet {
 		return this.getInverseQuads(property).filter((quad) => !quad.implicit);
 	}
 
@@ -1351,14 +1388,14 @@ export class NamedNode
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 * @param subject - if given, will seek out the one quad that makes this connection, if not given, will return the first found inverse quad for the given property
 	 */
-	getInverseQuad(property: NamedNode, subject?: NamedNode): Quad | undefined {
+	/*getInverseQuad(property: NamedNode, subject?: NamedNode): Quad | undefined {
 		if (subject) {
 			if (!this.asObject || !this.asObject.has(property)) return undefined;
 			return this.asObject.get(property).get(subject);
 		} else {
 			return this.asObject.get(property).first();
 		}
-	}
+	}*/
 
 	/**
 	 * Get all quads that represent connections from another node that has this node as its value for the given property
@@ -1366,10 +1403,13 @@ export class NamedNode
 	 * and SHOULD GENERALLY NOT BE USED. Use methods to get/set properties instead
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
-	getInverseQuads(property: NamedNode): QuadMap {
-		return this.asObject && this.asObject.has(property)
-			? this.asObject.get(property)
-			: new QuadMap();
+	getInverseQuads(property: NamedNode): QuadSet | undefined {
+
+		if (!this.asObject.has(property)) return undefined;
+		return this.asObject.get(property).getQuadSet();
+		// return this.asObject && this.asObject.has(property)
+		// 	? this.asObject.get(property)
+		// 	: new QuadMap();
 	}
 
 	/**
@@ -1404,19 +1444,23 @@ export class NamedNode
 	): QuadArray {
 		var res: QuadArray = new QuadArray();
 		this.asSubject.forEach((quadMap) => {
-			quadMap.forEach((quad) => {
-				if (!includeImplicit && quad.implicit) return;
-				res.push(quad);
+			quadMap.forEach((quadSet) => {
+				quadSet.forEach(quad => {
+					if (!includeImplicit && quad.implicit) return;
+					res.push(quad);
+				})
 			});
 		});
 		if (includeAsObject && this.asObject) {
 			this.asObject.forEach((quadSet) => {
-				quadSet.forEach((quad) => {
-					//we manually filter duplicates from the result set here so that we can keep using QuadArray, which is much faster in ES5
-					//and the only duplicates will be a node with itself as subject AND object, so we filter the second occurrence here
-					if (!includeImplicit && quad.implicit) return;
-					if (quad.subject === this) return;
-					res.push(quad);
+				quadSet.forEach((quadSet) => {
+						quadSet.forEach((quad) => {
+							//we manually filter duplicates from the result set here so that we can keep using QuadArray, which is much faster in ES5
+							//and the only duplicates will be a node with itself as subject AND object, so we filter the second occurrence here
+							if (!includeImplicit && quad.implicit) return;
+							if (quad.subject === this) return;
+							res.push(quad);
+						});
 				});
 			});
 		}
@@ -1538,7 +1582,7 @@ export class NamedNode
 				.push([
 					property,
 					this.asSubject.has(property)
-						? new QuadArray(...this.asSubject.get(property).values())
+						? new QuadArray(...this.asSubject.get(property).getQuadSet())
 						: null,
 				]);
 		}
@@ -2219,9 +2263,10 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 	 * @param quad
 	 */
 	registerInverseProperty(quad: Quad): Node {
+		//if this Literal is already being used in another quad
 		if (this.referenceQuad) {
+			//then return a clone
 			return this.clone().registerInverseProperty(quad);
-			// throw new Error("Literals should not be reused, create a clone instead");
 		}
 		this.referenceQuad = quad;
 		return this;
@@ -2486,19 +2531,19 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 		return new NodeSet<NamedNode>();
 	}
 
-	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | undefined {
-		return this.referenceQuad &&
-		this.referenceQuad.predicate === property &&
-		this.referenceQuad.subject === subject
-			? this.referenceQuad
-			: undefined;
-	}
+	// getInverseQuad(property: NamedNode, subject: NamedNode): Quad | undefined {
+	// 	return this.referenceQuad &&
+	// 	this.referenceQuad.predicate === property &&
+	// 	this.referenceQuad.subject === subject
+	// 		? this.referenceQuad
+	// 		: undefined;
+	// }
 
-	getInverseQuads(property: NamedNode): QuadMap {
-		return this.referenceQuad && this.referenceQuad.predicate === property
-			? new QuadMap([[this, this.referenceQuad]])
-			: new QuadMap();
-	}
+	// getInverseQuads(property: NamedNode): QuadMap {
+	// 	return this.referenceQuad && this.referenceQuad.predicate === property
+	// 		? new QuadMap([[this, this.referenceQuad]])
+	// 		: new QuadMap();
+	// }
 
 	getAllInverseQuads(includeImplicit?: boolean): QuadArray {
 		return !includeImplicit || !this.referenceQuad.implicit
@@ -2623,6 +2668,12 @@ export class Graph implements Term {
 	//Note: cannot name this getQuads, because NamedNode already uses that for getting all quads of all its properties
 	getContents(): QuadSet {
 		return this.quads;
+	}
+	setContents(quads:QuadSet) {
+		this.quads = quads;
+		quads.forEach(quad => {
+			quad.graph = this;
+		})
 	}
 
 	toString() {
@@ -2795,7 +2846,7 @@ export class Quad extends EventEmitter {
 		// 	debugger;
 		// }
 
-		//lets resources take note of this quad in which they occur
+		//let nodes take note of this quad in which they occur
 		//first of all we overwrite the property this.object with the result of register because a Literal may return a clone
 		this.object = this.object.registerInverseProperty(this, alteration);
 		this.subject.registerProperty(this, alteration);
@@ -2907,7 +2958,7 @@ export class Quad extends EventEmitter {
 		alteration: boolean = false,
 	) {
 		return (
-			this.get(subject, predicate, object) ||
+			this.get(subject, predicate, object , graph) ||
 			new Quad(subject, predicate, object, graph, implicit, alteration)
 		);
 	}
@@ -2923,23 +2974,33 @@ export class Quad extends EventEmitter {
 		subject: NamedNode,
 		predicate: NamedNode,
 		object: Node,
+		graph: Graph,
 	): Quad | null {
 		if (!subject || !predicate || !object) return null;
 
-		if (subject.has(predicate, object)) {
-			//.has will also check equivalent literalresources, but getQuad does not, so if it returns true
-			//we need to find the literal that already exists as value of this predicate
-			//NOTE: we check if not uriresource because that means its a literalresource, but we dont have to include it in this file (caused dependency circle errors)
-			if (!(object instanceof NamedNode)) {
-				for (let [key, quad] of subject.getQuads(predicate).entries()) {
-					if (object.equals(key)) {
-						return quad;
-					}
-				}
-			} else {
-				return subject.getQuad(predicate, object);
-			}
-		}
+		//TODO: performance.. check if this is used frequently (probably)
+		// possibly a GSPO index from Graph would speed things up. if Graph indexes subjects & then we can access graph.get(subject).get(predicate).find(otherObj => otherObj.equals(object))
+		return subject.getQuads(predicate, object).find(q => q.graph === graph)
+
+		// if (subject.has(predicate, object)) {
+			//.has will also check for equivalent literal object nodes, but getQuad does not, so if has() returns true
+			//then we need to find the literal that already exists as value of this predicate
+			// if (object instanceof Literal) {
+			// 	for( let [objectKey, quadSet] of subject.getAsSubjectQuads().get(predicate))
+			// 	{
+			// 		if (object.equals(objectKey)) {
+			// 			let quad = quadSet.find(quad => quad.graph === graph)
+			// 			if(quad)
+			// 			{
+			// 				return quad;
+			// 			}
+			// 		}
+			// 	}
+			// } else {
+			// return subject.getQuads(predicate, object).find(q => q.graph === graph)
+			// }
+
+		// }
 	}
 
 	/**

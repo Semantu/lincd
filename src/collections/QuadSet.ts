@@ -13,8 +13,8 @@ import {NodeSet} from './NodeSet';
 import {NamedNode} from '../models';
 
 export class QuadSet extends CoreSet<Quad> {
-	removeAll() {
-		this.forEach((quad) => quad.remove());
+	removeAll(alteration: boolean = false) {
+			this.forEach((quad) => quad.remove(alteration));
 	}
 
 	getSubjects(): NodeSet<NamedNode> {

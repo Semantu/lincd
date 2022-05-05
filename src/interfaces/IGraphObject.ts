@@ -53,11 +53,11 @@ export interface IGraphObject {
 
 	getQuad(property: NamedNode, value: Node): Quad | undefined;
 
-	getQuads(property: NamedNode): QuadMap | QuadSet;
+	getQuads(property: NamedNode): QuadSet;
 
 	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | undefined;
 
-	getInverseQuads(property: NamedNode): QuadMap | QuadSet;
+	getInverseQuads(property: NamedNode): QuadSet;
 
 	getAllQuads(includeAsObject?: boolean, includeImplicit?: boolean): QuadArray;
 

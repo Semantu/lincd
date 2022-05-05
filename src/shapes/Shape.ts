@@ -17,6 +17,7 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
+import {QuadSet} from "../collections/QuadSet";
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -368,7 +369,7 @@ export class Shape extends EventEmitter implements IShape {
 		return this._node.getQuad(property, value);
 	}
 
-	getQuads(property: NamedNode): QuadMap {
+	getQuads(property: NamedNode): QuadSet {
 		return this._node.getQuads(property);
 	}
 
@@ -376,7 +377,7 @@ export class Shape extends EventEmitter implements IShape {
 		return this._node.getInverseQuad(property, subject);
 	}
 
-	getInverseQuads(property: NamedNode): QuadMap {
+	getInverseQuads(property: NamedNode): QuadSet {
 		return this._node.getInverseQuads(property);
 	}
 

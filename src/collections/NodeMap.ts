@@ -24,7 +24,7 @@ export class NodeMap<R extends Node>
 	getQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
 		for (var [key, resource] of this) {
-			for (var [object, quad] of resource.getQuads(property)) {
+			for (var quad of resource.getQuads(property)) {
 				res.add(quad);
 			}
 		}
@@ -34,7 +34,7 @@ export class NodeMap<R extends Node>
 	getInverseQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
 		for (var [key, resource] of this) {
-			for (var [subject, quad] of resource.getInverseQuads(property)) {
+			for (var quad of resource.getInverseQuads(property)) {
 				res.add(quad);
 			}
 		}

@@ -18,7 +18,7 @@ export interface ICoreIterable<V> extends Iterable<any> {
 	filter(
 		callbackfn: (value: V, index: any, thisInstance: any) => any,
 		thisArg?: any,
-	): this;
+	): Iterable<any>;
 
 	find(
 		predicate: (value: V, index: any, obj: ICoreIterable<V>) => boolean,

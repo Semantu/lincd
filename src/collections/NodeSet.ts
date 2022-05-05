@@ -171,7 +171,7 @@ export class NodeSet<R extends Node = Node>
 	getQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
 		for (var resource of this) {
-			for (var [object, quad] of resource.getQuads(property)) {
+			for (var quad of resource.getQuads(property)) {
 				res.add(quad);
 			}
 		}
@@ -189,7 +189,7 @@ export class NodeSet<R extends Node = Node>
 	getInverseQuads(property: NamedNode): QuadSet | any {
 		var res = new QuadSet();
 		for (var resource of this) {
-			for (var [subject, quad] of resource.getInverseQuads(property)) {
+			for (var quad of resource.getInverseQuads(property)) {
 				res.add(quad);
 			}
 		}
