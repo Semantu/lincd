@@ -3,11 +3,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {Quad} from '../models';
+import {Graph, Quad} from '../models';
 import {NodeSet} from './NodeSet';
 import {NamedNode} from '../models';
 
+//TODO: test performance of QuadArray vs QuadSet and probably remove QuadArray
 export class QuadArray extends Array<Quad> {
+	removeAll(alteration: boolean = false) {
+		this.forEach((quad) => quad.remove(alteration));
+	}
+
+	moveTo(graph: Graph) {
+		this.forEach((quad) => (quad.graph = graph));
+	}
+
+	makeExplicit() {
+		this.forEach((quad) => quad.makeExplicit());
+	}
+
 	getSubjects(): NodeSet<NamedNode> {
 		//return new NamedNodeSet(this.map(quad => quad.subject).values());
 		//that's short, but probably this is faster:

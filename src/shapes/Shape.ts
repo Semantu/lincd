@@ -365,16 +365,8 @@ export class Shape extends EventEmitter implements IShape {
 		return this._node.getDeep(property, maxDepth);
 	}
 
-	getQuad(property: NamedNode, value: Node): Quad | any {
-		return this._node.getQuad(property, value);
-	}
-
-	getQuads(property: NamedNode): QuadSet {
-		return this._node.getQuads(property);
-	}
-
-	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | any {
-		return this._node.getInverseQuad(property, subject);
+	getQuads(property: NamedNode, value?: Node): QuadSet {
+		return this._node.getQuads(property,value);
 	}
 
 	getInverseQuads(property: NamedNode): QuadSet {

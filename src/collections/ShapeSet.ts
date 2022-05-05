@@ -14,7 +14,7 @@ import {NodeSet} from './NodeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {Node} from '../models';
 
-export class ShapeSet<R extends Shape>
+export class ShapeSet<R extends Shape = Shape>
 	extends CoreSet<R>
 	implements IGraphObjectSet<R>
 {
@@ -138,15 +138,6 @@ export class ShapeSet<R extends Shape>
 		return this.getResources().getDeep(property, maxDepth);
 	}
 
-	getQuad(property: NamedNode, value: Node): Quad | undefined {
-		for (var instance of this) {
-			if (instance.has(property, value)) {
-				return instance.getQuad(property, value);
-			}
-		}
-		return undefined;
-	}
-
 	getQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
 		for (var instance of this) {
@@ -155,14 +146,6 @@ export class ShapeSet<R extends Shape>
 			}
 		}
 		return res;
-	}
-
-	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | any {
-		for (var instance of this) {
-			if (instance.hasInverse(property, subject)) {
-				return instance.getInverseQuad(property, subject);
-			}
-		}
 	}
 
 	getInverseQuads(property: NamedNode): QuadSet | any {

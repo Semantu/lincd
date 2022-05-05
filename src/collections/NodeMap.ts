@@ -164,22 +164,6 @@ export class NodeMap<R extends Node>
 		}
 	}
 
-	getQuad(property: NamedNode, value: Node): Quad | any {
-		for (var [key, resource] of this) {
-			if (resource.has(property, value)) {
-				return resource.getQuad(property, value);
-			}
-		}
-	}
-
-	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | any {
-		for (var [key, resource] of this) {
-			if (resource.hasInverse(property, subject)) {
-				return resource.getInverseQuad(property, subject);
-			}
-		}
-	}
-
 	getAllQuads(
 		includeAsObject: boolean = false,
 		includeImplicit: boolean = false,

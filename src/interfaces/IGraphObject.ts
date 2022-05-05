@@ -3,14 +3,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models';
+import {NamedNode,Node} from '../models';
 import {NodeSet} from '../collections/NodeSet';
-import {Quad} from '../models';
 import {QuadSet} from '../collections/QuadSet';
-import {QuadMap} from '../collections/QuadMap';
 import {QuadArray} from '../collections/QuadArray';
 import {ICoreIterable} from './ICoreIterable';
-import {Node} from '../models';
 
 export interface IGraphObject {
 	getProperties(
@@ -48,14 +45,7 @@ export interface IGraphObject {
 
 	getAllFromPath(...properties: NamedNode[]): NodeSet;
 
-	// getOneWhere(property:NamedNode,filterProperty:NamedNode,filterValue:Node):Node|undefined;
-	// getOneWhereEquivalent(property:NamedNode,filterProperty:NamedNode,filterValue:Node,caseSensitive?:boolean):Node|undefined;
-
-	getQuad(property: NamedNode, value: Node): Quad | undefined;
-
-	getQuads(property: NamedNode): QuadSet;
-
-	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | undefined;
+	getQuads(property: NamedNode, value?: Node): QuadSet;
 
 	getInverseQuads(property: NamedNode): QuadSet;
 

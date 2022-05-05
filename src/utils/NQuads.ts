@@ -15,23 +15,27 @@ import {Node} from '../models';
 import {QuadArray} from '../collections/QuadArray';
 
 export class NQuads {
-	static stringify(object: ICoreIterable<Graph> | QuadSet | Quad[]): string {
-		var res = '';
-		if (object instanceof QuadSet || object instanceof Array) {
-			res = this.fromQuads(object, res);
-		} else {
-			object.forEach((graph: Graph) => {
-				res = this.fromQuads(graph.getContents(), res, graph);
-			});
-		}
+	// static stringify(object: ICoreIterable<Graph> | QuadSet | Quad[]): string {
+	// 	var res = '';
+	// 	if (object instanceof QuadSet || object instanceof Array) {
+	// 		res = this.fromQuads(object, res);
+	// 	} else {
+	// 		object.forEach((graph: Graph) => {
+	// 			res = this.fromQuads(graph.getContents(), res, graph);
+	// 		});
+	// 	}
+	// 	return res;
+	// }
+
+	static fromGraphs(quadset: ICoreIterable<Graph>): string {
+		let res = '';
+		quadset.forEach((graph: Graph) => {
+			res += this.fromQuads(graph.getContents(), graph);
+		});
 		return res;
 	}
-
-	private static fromQuads(
-		quadset: QuadSet | Quad[],
-		resultString: string = '',
-		graph: Graph = null,
-	): string {
+	static fromQuads(quadset: QuadSet | Quad[], graph: Graph = null): string {
+		let resultString: string = '';
 		quadset.forEach((quad) => {
 			//we check for graph.node.uri not to be empty (as it can be for the default graph)
 			//so that we always print an actual URI for the graph

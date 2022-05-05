@@ -159,15 +159,6 @@ export class NodeSet<R extends Node = Node>
 		return result;
 	}
 
-	getQuad(property: NamedNode, value: Node): Quad | undefined {
-		for (var resource of this) {
-			if (resource.has(property, value)) {
-				return resource.getQuad(property, value);
-			}
-		}
-		return undefined;
-	}
-
 	getQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
 		for (var resource of this) {
@@ -176,14 +167,6 @@ export class NodeSet<R extends Node = Node>
 			}
 		}
 		return res;
-	}
-
-	getInverseQuad(property: NamedNode, subject: NamedNode): Quad | any {
-		for (var resource of this) {
-			if (resource.hasInverse(property, subject)) {
-				return resource.getInverseQuad(property, subject);
-			}
-		}
 	}
 
 	getInverseQuads(property: NamedNode): QuadSet | any {

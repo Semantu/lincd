@@ -8,17 +8,16 @@ import {Node} from '../models';
 import {CoreMap} from './CoreMap';
 import {NodeSet} from './NodeSet';
 import {NamedNode} from '../models';
-import {QuadSet} from "./QuadSet";
-import {CoreSet} from "./CoreSet";
-import {ICoreIterable} from "../interfaces/ICoreIterable";
-
+import {QuadSet} from './QuadSet';
+import {CoreSet} from './CoreSet';
+import {ICoreIterable} from '../interfaces/ICoreIterable';
 
 /**
  * A map who's values are sets
  * When you iterate over this map with methods like map and forEach you'll iterate over the values of the sets
  */
-class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreIterable<V> {
-
+class CoreMapToSet<K, S extends CoreSet<V>, V> extends Map<K, S>
+	implements ICoreIterable<V> {
 	/**
 	 * Determines whether all the members of an array satisfy the specified test.
 	 * @param callbackfn A function that accepts up to three arguments. The every method calls the callbackfn function for each element in array1 until the callbackfn returns false, or until the end of the array.
@@ -30,7 +29,7 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 	): boolean {
 		for (let [key, set] of this) {
 			for (let value of set) {
-				if (!callbackfn.apply(thisArg,[value,key,this])) {
+				if (!callbackfn.apply(thisArg, [value, key, this])) {
 					return false;
 				}
 			}
@@ -38,11 +37,10 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 		return true;
 	}
 
-	forEach(callbackfn: any, thisArg?: any): void
-	{
+	forEach(callbackfn: any, thisArg?: any): void {
 		for (let [key, set] of this) {
 			for (let value of set) {
-				callbackfn.apply(thisArg,[value,key,this]);
+				callbackfn.apply(thisArg, [value, key, this]);
 			}
 		}
 	}
@@ -53,12 +51,12 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 	 * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
 	 */
 	some(
-		callbackfn: (value: V, key: K, set:S, map: this) => boolean,
+		callbackfn: (value: V, key: K, set: S, map: this) => boolean,
 		thisArg?: any,
 	): boolean {
 		for (let [key, set] of this) {
 			for (let value of set) {
-				if (callbackfn.apply(thisArg,[value,key,set,this])) {
+				if (callbackfn.apply(thisArg, [value, key, set, this])) {
 					return true;
 				}
 			}
@@ -72,13 +70,13 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 	 * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
 	 */
 	map<R extends CoreSet<any>>(
-		callbackfn: (value: V, key: K, set:S, map: this) => any,
-		resultType:typeof CoreSet = CoreSet,
+		callbackfn: (value: V, key: K, set: S, map: this) => any,
+		resultType: typeof CoreSet = CoreSet,
 		thisArg?: any,
 	): R {
 		//create the result map, whos values will be 'mapped' into new values from the current values of this map
 		//whilst maintaining set organisation
-		var resultSet:CoreSet<any> = new resultType();
+		var resultSet: CoreSet<any> = new resultType();
 		for (let [key, set] of this) {
 			for (let value of set) {
 				//get the right set and add the mapped value to it
@@ -96,18 +94,17 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 	 */
 	filter<R extends CoreSet<any>>(
 		callbackfn: (value: V, key: K, set: S, map: this) => any,
-		resultType:typeof CoreSet = CoreSet,
+		resultType: typeof CoreSet = CoreSet,
 		thisArg?: any,
 	): R {
-
 		//create the result map, whos values will be 'mapped' into new values from the current values of this map
 		//whilst maintaining set organisation
-		var resultSet:CoreSet<any> = new resultType();
+		var resultSet: CoreSet<any> = new resultType();
 		for (let [key, set] of this) {
 			//use the type of the first set to determine the result type
 			for (let value of set) {
 				//if the filter function returns true-ish
-				if (callbackfn.apply(thisArg, [value, key, set,this])) {
+				if (callbackfn.apply(thisArg, [value, key, set, this])) {
 					//add to result set
 					resultSet.add(value);
 				}
@@ -117,7 +114,9 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 	}
 
 	first(): V | null {
-		return this.values().next().value.first();
+		return this.values()
+			.next()
+			.value.first();
 	}
 
 	/**
@@ -130,7 +129,7 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 	): V | undefined {
 		for (let [key, set] of this) {
 			for (let value of set) {
-				if (predicate.apply(thisArg,[value,key,this])) {
+				if (predicate.apply(thisArg, [value, key, this])) {
 					return value;
 				}
 			}
@@ -141,7 +140,7 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 	toString() {
 		let res = 'MapToSets:\n';
 		for (let [key, set] of this) {
-			res += '\t[' + key.toString() + '] => '+set.toString()+'\n';
+			res += '\t[' + key.toString() + '] => ' + set.toString() + '\n';
 		}
 		return res;
 	}
@@ -149,24 +148,23 @@ class CoreMapToSet<K,S extends CoreSet<V>,V> extends Map<K, S> implements ICoreI
 
 export class QuadMap extends CoreMapToSet<Node, QuadSet, Quad> {
 	removeAll(alteration: boolean = false) {
-		this.forEach((quads) => quads.removeAll(alteration));
+		this.forEach((quad) => quad.remove(alteration));
 	}
 
 	getSubjects(): NodeSet<NamedNode> {
-		return this.map(quad => quad.subject,NodeSet) as NodeSet<NamedNode>;
+		return this.map((quad) => quad.subject, NodeSet) as NodeSet<NamedNode>;
 	}
 
 	getPredicates(): NodeSet<NamedNode> {
-		return this.map(quad => quad.predicate,NodeSet) as NodeSet<NamedNode>;
+		return this.map((quad) => quad.predicate, NodeSet) as NodeSet<NamedNode>;
 	}
 
 	getObjects(): NodeSet {
-		return this.map(quad => quad.predicate,NodeSet);
+		return this.map((quad) => quad.predicate, NodeSet);
 	}
 
-	getQuadSet():QuadSet
-	{
-		return this.map(q => q);
+	getQuadSet(): QuadSet {
+		return this.map((q) => q);
 	}
 
 	delete(v): boolean {
@@ -180,14 +178,12 @@ export class QuadMap extends CoreMapToSet<Node, QuadSet, Quad> {
 		return super.delete(v);
 	}
 
-	__set(k:Node,v:Quad)
-	{
+	__set(k: Node, v: Quad) {
 		//make sure we have a QuadSet ready for that key
 		if (!this.has(k)) {
 			this.set(k, new QuadSet());
 		}
 		//then add this quad to that set
 		this.get(k).add(v);
-
 	}
 }

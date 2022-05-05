@@ -3,8 +3,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {DefaultGraph as TFDefaultGraph,Literal as ILiteral,NamedNode as INamedNode,Term} from 'rdflib/lib/tf-types';
-import {DefaultGraphTermType,TermType} from 'rdflib/lib/types';
+import {
+	DefaultGraph as TFDefaultGraph,
+	Literal as ILiteral,
+	NamedNode as INamedNode,
+	Term,
+} from 'rdflib/lib/tf-types';
+import {DefaultGraphTermType, TermType} from 'rdflib/lib/types';
 import {defaultGraphURI} from 'rdflib/lib/utils/default-graph-uri';
 
 import {QuadSet} from './collections/QuadSet';
@@ -18,7 +23,7 @@ import {IShape} from './interfaces/IShape';
 import {IGraphObject} from './interfaces/IGraphObject';
 
 import {PropertySet} from './collections/PropertySet';
-import {BatchedEventEmitter,eventBatcher} from './events/EventBatcher';
+import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
 
@@ -194,11 +199,7 @@ export abstract class Node extends EventEmitter {
 		return new NodeSet();
 	}
 
-	getQuad(property: NamedNode, value: Node): Quad | undefined {
-		return undefined;
-	}
-
-	getQuads(property: NamedNode): QuadSet {
+	getQuads(property: NamedNode, value?: Node): QuadSet {
 		return new QuadSet();
 	}
 
@@ -285,10 +286,8 @@ export abstract class Node extends EventEmitter {
  * The other one being Literal
  * See also: https://www.w3.org/TR/rdf-concepts/#section-Graph-URIref
  */
-export class NamedNode
-	extends Node
-	implements IGraphObject, BatchedEventEmitter, INamedNode
-{
+export class NamedNode extends Node
+	implements IGraphObject, BatchedEventEmitter, INamedNode {
 	/**
 	 * The base of temporary URI's
 	 * @internal
@@ -309,13 +308,15 @@ export class NamedNode
 	private static clearedProperties: CoreMap<
 		NamedNode,
 		[NamedNode, QuadArray][]
-		> = new CoreMap<NamedNode, [NamedNode, QuadArray][]>();
+	> = new CoreMap<NamedNode, [NamedNode, QuadArray][]>();
 	private static nodesToSave: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToLoad: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToRemove: NodeSet<NamedNode> = new NodeSet();
-	private static nodesURIUpdated: CoreMap<NamedNode, [string, string]> =
-		new CoreMap();
+	private static nodesURIUpdated: CoreMap<
+		NamedNode,
+		[string, string]
+	> = new CoreMap();
 
 	//### event types ###
 
@@ -423,7 +424,7 @@ export class NamedNode
 	properties: CoreMap<NamedNode, PropertySet> = new CoreMap<
 		NamedNode,
 		PropertySet
-		>();
+	>();
 
 	//keeping track of changes to be emitted in one batched event
 	//NOTE: the quad sets in these maps will contain both newly ADDED and REMOVED quads
@@ -512,14 +513,14 @@ export class NamedNode
 		let quadMap = this.asSubject.get(index);
 
 		//make sure we have a QuadSet ready for the object of this quad
-		quadMap.__set(quad.object,quad);
-
+		quadMap.__set(quad.object, quad);
 
 		//Now for the property index (which gives direct access to the object values of a certain predicate)
 		//Because multiple graphs can hold the same subj-pred-obj triple, we want to avoid adding literal values
 		//that have the exact same literal value, so we need to test for equality here before adding it
-		if(!this.properties.get(index).some(object => object.equals(quad.object)))
-		{
+		if (
+			!this.properties.get(index).some((object) => object.equals(quad.object))
+		) {
 			this.properties.get(index).__add(quad.object);
 		}
 
@@ -657,8 +658,7 @@ export class NamedNode
 				this.properties.get(index).__delete(quad.object);
 
 				//if we now also no longer hold any values for this predicate
-				if(quadMap.size === 0)
-				{
+				if (quadMap.size === 0) {
 					//delete both indices for this predicate
 					this.asSubject.delete(index);
 					this.properties.delete(index);
@@ -695,7 +695,7 @@ export class NamedNode
 		var index: NamedNode = quad.predicate;
 		var quadMap: QuadMap = this.asObject.get(index);
 		if (quadMap) {
-			quadMap.delete(quad.subject);
+			quadMap.__delete(quad.subject);
 			if (quadMap.size == 0) {
 				this.asObject.delete(index);
 			}
@@ -794,14 +794,14 @@ export class NamedNode
 		if (!value) {
 			throw Error('No value provided to set!');
 		}
-		//only create if it didn't exist yet
+		//if there is already a quad with exactly this prop-value pair
 		if (this.has(property, value)) {
-			//and make it explicit if it wasn't yet
-			if (this.getQuad(property, value).implicit) {
-				this.getQuad(property, value).makeExplicit();
-			}
+			//make all quads with this pair explicit if they were not yet
+			this.getQuads(property, value).makeExplicit();
+			//yet return false because nothing was changes in the propreties
 			return false;
 		}
+		//if this pair didn't exist yet, create a new quad
 		new Quad(this, property, value, undefined, false, true);
 		return true;
 	}
@@ -851,7 +851,7 @@ export class NamedNode
 	 */
 	hasExplicit(property: NamedNode, value: Node): boolean {
 		if (!this.asSubject.has(property)) return false;
-		return this.getQuadsByValue(property, value).some(quad => !quad.implicit);
+		return this.getQuadsByValue(property, value).some((quad) => !quad.implicit);
 	}
 
 	/**
@@ -1323,43 +1323,24 @@ export class NamedNode
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 * @param value - the node that this new graph-edge points to. The object of the quad to be created.
 	 */
-	getQuads(property: NamedNode, value?: Node): QuadSet | undefined {
-		if (!this.asSubject.has(property)) return undefined;
+	getQuads(property: NamedNode, value?: Node): QuadSet {
+		if (!this.asSubject.has(property)) return new QuadSet();
 		if (value) {
 			return this.getQuadsByValue(property, value);
 		} else {
 			return this.asSubject.get(property).getQuadSet();
 		}
 	}
-	// getQuad(property: NamedNode, value?: Node): Quad | undefined {
-	// 	if (!this.asSubject.has(property)) return undefined;
-	// 	if (value) {
-	// 		return this.getQuadByValue(property, value);
-	// 	} else {
-	// 		return this.asSubject.get(property).first();
-	// 	}
-	// }
 
 	private getQuadsByValue(property: NamedNode, value?: Node): QuadSet {
-		return value instanceof NamedNode ? this.asSubject.get(property).get(value) : this.asSubject.get(property).filter((quad) => quad.object.equals(value));
+		return value instanceof NamedNode
+			? this.asSubject.get(property).has(value)
+				? this.asSubject.get(property).get(value)
+				: new QuadSet()
+			: this.asSubject
+					.get(property)
+					.filter((quad) => quad.object.equals(value));
 	}
-	// private getQuadByValue(property: NamedNode, value?: Node): Quad {
-	// 	return value instanceof NamedNode
-	// 		? this.asSubject.get(property).get(value).first()
-	// 		: this.asSubject.get(property).find((quad) => quad.object.equals(value));
-	// }
-
-	/**
-	 * Get all the quads that represent the connection from this node to another node, connected by the given property
-	 * NOTE: accessing quads is a very low level functionality required for the framework itself
-	 * and SHOULD GENERALLY NOT BE USED. Use methods to get/set properties instead
-	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 */
-	// getQuads(property: NamedNode): QuadMap {
-	// 	return this.asSubject.has(property)
-	// 		? this.asSubject.get(property)
-	// 		: new QuadMap();
-	// }
 
 	/**
 	 * Get all the quads that represent EXPLICIT connections from this node to another node, connected by the given property
@@ -1368,7 +1349,7 @@ export class NamedNode
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
 	getExplicitQuads(property: NamedNode): QuadSet {
-		return this.getQuads(property).filter(quad => !quad.implicit);
+		return this.getQuads(property).filter((quad) => !quad.implicit);
 	}
 
 	/**
@@ -1382,29 +1363,12 @@ export class NamedNode
 	}
 
 	/**
-	 * Get the quad that represents the connections from another node that has this node as its value for the given property
-	 * NOTE: accessing quads is a very low level functionality required for the framework itself
-	 * and SHOULD GENERALLY NOT BE USED. Use methods to get/set properties instead
-	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 * @param subject - if given, will seek out the one quad that makes this connection, if not given, will return the first found inverse quad for the given property
-	 */
-	/*getInverseQuad(property: NamedNode, subject?: NamedNode): Quad | undefined {
-		if (subject) {
-			if (!this.asObject || !this.asObject.has(property)) return undefined;
-			return this.asObject.get(property).get(subject);
-		} else {
-			return this.asObject.get(property).first();
-		}
-	}*/
-
-	/**
 	 * Get all quads that represent connections from another node that has this node as its value for the given property
 	 * NOTE: accessing quads is a very low level functionality required for the framework itself
 	 * and SHOULD GENERALLY NOT BE USED. Use methods to get/set properties instead
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
 	getInverseQuads(property: NamedNode): QuadSet | undefined {
-
 		if (!this.asObject.has(property)) return undefined;
 		return this.asObject.get(property).getQuadSet();
 		// return this.asObject && this.asObject.has(property)
@@ -1444,23 +1408,19 @@ export class NamedNode
 	): QuadArray {
 		var res: QuadArray = new QuadArray();
 		this.asSubject.forEach((quadMap) => {
-			quadMap.forEach((quadSet) => {
-				quadSet.forEach(quad => {
-					if (!includeImplicit && quad.implicit) return;
-					res.push(quad);
-				})
+			quadMap.forEach((quad) => {
+				if (!includeImplicit && quad.implicit) return;
+				res.push(quad);
 			});
 		});
 		if (includeAsObject && this.asObject) {
-			this.asObject.forEach((quadSet) => {
-				quadSet.forEach((quadSet) => {
-						quadSet.forEach((quad) => {
-							//we manually filter duplicates from the result set here so that we can keep using QuadArray, which is much faster in ES5
-							//and the only duplicates will be a node with itself as subject AND object, so we filter the second occurrence here
-							if (!includeImplicit && quad.implicit) return;
-							if (quad.subject === this) return;
-							res.push(quad);
-						});
+			this.asObject.forEach((quadMap) => {
+				quadMap.forEach((quad) => {
+					//we manually filter duplicates from the result set here so that we can keep using QuadArray, which is much faster in ES5
+					//and the only duplicates will be a node with itself as subject AND object, so we filter the second occurrence here
+					if (!includeImplicit && quad.implicit) return;
+					if (quad.subject === this) return;
+					res.push(quad);
 				});
 			});
 		}
@@ -1510,21 +1470,28 @@ export class NamedNode
 	 * @param values
 	 */
 	remove() {
-		//lets only do this once (each instance will also call node.destruct)
-		if (!this.removePromise) {
-			this.removePromise = this.createPromise();
+		//NOTE: for now we simply remove all data and emit an event
+		//TODO: when we actually handle storage, we may need access to the quads that need to be removed,
+		// so we may need to make a clone of all quads before removing them locally
+		this.setRemoved(true);
+		NamedNode.nodesToRemove.add(this);
+		eventBatcher.register(NamedNode);
 
-			if (this._isTemporaryNode) {
-				//immediately remove local node
-				this.setRemoved(true);
-			} else {
-				//first we emit the event that will remove the node from storage before actually removing the quads
-				//because we will need to fully load the node and its quads during removal from storage
-				NamedNode.nodesToRemove.add(this);
-				eventBatcher.register(NamedNode);
-			}
-		}
-		return this.removePromise.promise;
+		//lets only do this once (each instance will also call node.destruct)
+		// if (!this.removePromise) {
+		// 	this.removePromise = this.createPromise();
+		//
+		// 	if (this._isTemporaryNode) {
+		// 		//immediately remove local node
+		// 		this.setRemoved(true);
+		// 	} else {
+		// 		//first we emit the event that will remove the node from storage before actually removing the quads
+		// 		//because we will need to fully load the node and its quads during removal from storage
+		// 		NamedNode.nodesToRemove.add(this);
+		// 		eventBatcher.register(NamedNode);
+		// 	}
+		// }
+		// return this.removePromise.promise;
 	}
 
 	/**
@@ -1557,7 +1524,7 @@ export class NamedNode
 	 */
 	unset(property: NamedNode, value: Node): boolean {
 		if (this.has(property, value)) {
-			this.getQuad(property, value).remove(true);
+			this.getQuads(property, value).removeAll(true);
 			return true;
 		}
 		return false;
@@ -2088,10 +2055,10 @@ export class NamedNode
 		if (this.namedNodes.has(node.uri)) {
 			throw new Error(
 				'A node with this URI already exists:' +
-				node.uri +
-				' You should probably use NamedNode.getOrCreate instead of NamedNode.create (' +
-				node.uri +
-				')',
+					node.uri +
+					' You should probably use NamedNode.getOrCreate instead of NamedNode.create (' +
+					node.uri +
+					')',
 			);
 		}
 		this.namedNodes.set(node.uri, node);
@@ -2157,9 +2124,9 @@ export class NamedNode
 		if (NamedNode.namedNodes.has(newUri)) {
 			throw new Error(
 				'Cannot update URI. A node with this URI already exists: ' +
-				newUri +
-				'. You tried to update the URI of ' +
-				this._value,
+					newUri +
+					'. You tried to update the URI of ' +
+					this._value,
 			);
 		}
 
@@ -2169,8 +2136,7 @@ export class NamedNode
 		NamedNode.namedNodes.set(this._value, this);
 
 		//if this node had a temporary URI
-		if(this._isTemporaryNode)
-		{
+		if (this._isTemporaryNode) {
 			//it now has an explicit URI, so it's no longer temporary
 			this._isTemporaryNode = false;
 		}
@@ -2531,20 +2497,6 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 		return new NodeSet<NamedNode>();
 	}
 
-	// getInverseQuad(property: NamedNode, subject: NamedNode): Quad | undefined {
-	// 	return this.referenceQuad &&
-	// 	this.referenceQuad.predicate === property &&
-	// 	this.referenceQuad.subject === subject
-	// 		? this.referenceQuad
-	// 		: undefined;
-	// }
-
-	// getInverseQuads(property: NamedNode): QuadMap {
-	// 	return this.referenceQuad && this.referenceQuad.predicate === property
-	// 		? new QuadMap([[this, this.referenceQuad]])
-	// 		: new QuadMap();
-	// }
-
 	getAllInverseQuads(includeImplicit?: boolean): QuadArray {
 		return !includeImplicit || !this.referenceQuad.implicit
 			? new QuadArray(this.referenceQuad)
@@ -2660,6 +2612,9 @@ export class Graph implements Term {
 	registerQuad(quad: Quad) {
 		this.quads.add(quad);
 	}
+	unregisterQuad(quad: Quad) {
+		this.quads.delete(quad);
+	}
 
 	hasQuad(quad: Quad) {
 		return this.quads.has(quad);
@@ -2669,11 +2624,11 @@ export class Graph implements Term {
 	getContents(): QuadSet {
 		return this.quads;
 	}
-	setContents(quads:QuadSet) {
+	setContents(quads: QuadSet) {
 		this.quads = quads;
-		quads.forEach(quad => {
+		quads.forEach((quad) => {
 			quad.graph = this;
-		})
+		});
 	}
 
 	toString() {
@@ -2701,8 +2656,8 @@ export class Graph implements Term {
 		if (this.graphs.has(graph.node.uri)) {
 			throw new Error(
 				'A graph with this URI already exists. You should probably use Graph.getOrCreate instead of Graph.create (' +
-				graph.node.uri +
-				')',
+					graph.node.uri +
+					')',
 			);
 		}
 		this.graphs.set(graph.node.uri, graph);
@@ -2713,11 +2668,10 @@ export class Graph implements Term {
 		if (!this.graphs.has(graph.node.uri)) {
 			throw new Error(
 				'This node has already been removed from the registry: ' +
-				graph.node.uri,
+					graph.node.uri,
 			);
 		}
 		this.graphs.delete(graph.node.uri);
-		// super.unregister(graph);
 	}
 
 	static getOrCreate(uri: string) {
@@ -2788,7 +2742,7 @@ export class Quad extends EventEmitter {
 	private static alteredQuadsUpdated: CoreMap<
 		NamedNode,
 		CoreMap<NamedNode, [Node, Node]>
-		> = new CoreMap(); //NamedNode,string,string]>();
+	> = new CoreMap(); //NamedNode,string,string]>();
 
 	/**
 	 * @internal
@@ -2831,7 +2785,7 @@ export class Quad extends EventEmitter {
 		public subject: NamedNode,
 		public predicate: NamedNode,
 		public object: Node,
-		public graph: Graph = defaultGraph,
+		private _graph: Graph = defaultGraph,
 		public implicit: boolean = false,
 		alteration: boolean = false,
 	) {
@@ -2851,7 +2805,7 @@ export class Quad extends EventEmitter {
 		this.object = this.object.registerInverseProperty(this, alteration);
 		this.subject.registerProperty(this, alteration);
 		this.predicate.registerAsPredicate(this, alteration);
-		this.graph.registerQuad(this);
+		this._graph.registerQuad(this);
 
 		//new quad events are batched together and emitted on the next tick
 		//so here we make sure the Quad class will emit its batched events on the next tick
@@ -2871,6 +2825,15 @@ export class Quad extends EventEmitter {
 			Quad.alteredQuadsCreated.add(this);
 		}
 		Quad.globalNumQuads++;
+	}
+
+	get graph() {
+		return this._graph;
+	}
+	set graph(newGraph: Graph) {
+		this._graph.unregisterQuad(this);
+		this._graph = newGraph;
+		this._graph.registerQuad(this);
 	}
 
 	/**
@@ -2897,11 +2860,13 @@ export class Quad extends EventEmitter {
 	 * Turn an implicit quad into an explicit quad (because an explicit user action generated it as an independent explicit fact now)
 	 */
 	makeExplicit() {
-		//unregister and make explicit
-		this.turnOff();
-		this.implicit = false;
-		//re-register and make it an 'alteration' so it will be picked up by the storage
-		this.setup(true);
+		if (this.implicit) {
+			//unregister and make explicit
+			this.turnOff();
+			this.implicit = false;
+			//re-register and make it an 'alteration' so it will be picked up by the storage
+			this.setup(true);
+		}
 	}
 
 	/**
@@ -2958,7 +2923,7 @@ export class Quad extends EventEmitter {
 		alteration: boolean = false,
 	) {
 		return (
-			this.get(subject, predicate, object , graph) ||
+			this.get(subject, predicate, object, graph) ||
 			new Quad(subject, predicate, object, graph, implicit, alteration)
 		);
 	}
@@ -2980,27 +2945,7 @@ export class Quad extends EventEmitter {
 
 		//TODO: performance.. check if this is used frequently (probably)
 		// possibly a GSPO index from Graph would speed things up. if Graph indexes subjects & then we can access graph.get(subject).get(predicate).find(otherObj => otherObj.equals(object))
-		return subject.getQuads(predicate, object).find(q => q.graph === graph)
-
-		// if (subject.has(predicate, object)) {
-			//.has will also check for equivalent literal object nodes, but getQuad does not, so if has() returns true
-			//then we need to find the literal that already exists as value of this predicate
-			// if (object instanceof Literal) {
-			// 	for( let [objectKey, quadSet] of subject.getAsSubjectQuads().get(predicate))
-			// 	{
-			// 		if (object.equals(objectKey)) {
-			// 			let quad = quadSet.find(quad => quad.graph === graph)
-			// 			if(quad)
-			// 			{
-			// 				return quad;
-			// 			}
-			// 		}
-			// 	}
-			// } else {
-			// return subject.getQuads(predicate, object).find(q => q.graph === graph)
-			// }
-
-		// }
+		return subject.getQuads(predicate, object).find((q) => q._graph === graph);
 	}
 
 	/**

@@ -6,7 +6,7 @@
 //declare var require:Function;
 //require('core-js/fn/set');
 //import * as Set from 'core-js/es6/set';
-import {Quad} from '../models';
+import {Graph,Quad} from '../models';
 import {CoreSet} from './CoreSet';
 import {Node} from '../models';
 import {NodeSet} from './NodeSet';
@@ -15,6 +15,16 @@ import {NamedNode} from '../models';
 export class QuadSet extends CoreSet<Quad> {
 	removeAll(alteration: boolean = false) {
 			this.forEach((quad) => quad.remove(alteration));
+	}
+
+	moveTo(graph:Graph)
+	{
+		this.forEach(quad => quad.graph = graph);
+	}
+
+	makeExplicit()
+	{
+		this.forEach(quad => quad.makeExplicit())
 	}
 
 	getSubjects(): NodeSet<NamedNode> {
@@ -82,7 +92,7 @@ export class QuadSet extends CoreSet<Quad> {
 			.concat(this.getNamedNodeObjects());
 	}
 
-	getResources(): NodeSet {
+	getNodes(): NodeSet {
 		return new NodeSet()
 			.concat(this.getSubjects())
 			.concat(this.getPredicates())
