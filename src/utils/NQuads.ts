@@ -13,6 +13,7 @@ import {Literal} from '../models';
 import {Quad} from '../models';
 import {Node} from '../models';
 import {QuadArray} from '../collections/QuadArray';
+import {includeBlankNodes} from './Collect';
 
 export class NQuads {
 	// static stringify(object: ICoreIterable<Graph> | QuadSet | Quad[]): string {
@@ -27,15 +28,18 @@ export class NQuads {
 	// 	return res;
 	// }
 
-	static fromGraphs(quadset: ICoreIterable<Graph>): string {
+	static fromGraphs(graphs: ICoreIterable<Graph>): string {
 		let res = '';
-		quadset.forEach((graph: Graph) => {
+		graphs.forEach((graph: Graph) => {
 			res += this.fromQuads(graph.getContents(), graph);
 		});
 		return res;
 	}
 	static fromQuads(quadset: QuadSet | Quad[], graph: Graph = null): string {
 		let resultString: string = '';
+
+		includeBlankNodes(quadset);
+
 		quadset.forEach((quad) => {
 			//we check for graph.node.uri not to be empty (as it can be for the default graph)
 			//so that we always print an actual URI for the graph

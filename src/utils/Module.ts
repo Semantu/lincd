@@ -7,13 +7,13 @@ import {NamedNode} from '../models';
 import {registerComponent} from '../models/Component';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/NodeShape';
-import {Prefix} from "./Prefix";
+import {Prefix} from './Prefix';
+import nextTick from 'next-tick';
 
 //global tree
 declare var lincd: any;
 declare var window;
 declare var global;
-
 
 interface DeferredPromise {
 	resolve?: (res: any) => void;
@@ -85,29 +85,25 @@ export function linkedModule(
 		console.warn(
 			'A module with the name ' + moduleName + ' has already been registered.',
 		);
-	}
-	else
-	{
+	} else {
 		//initiate an empty object for this module in the global tree
 		lincd._modules[moduleName] = moduleExports || {};
 
 		//next we will go over each export of each file
 		//and just check that the format is correct
-		for (var key in moduleExports)
-		{
+		for (var key in moduleExports) {
 			var fileExports = moduleExports[key];
 
 			if (!fileExports) continue;
 
-			if (typeof fileExports === 'function')
-			{
+			if (typeof fileExports === 'function') {
 				console.warn(
 					moduleName +
-					"/index.ts exports a class or function under '" +
-					key +
-					"'. Make sure to import * as '" +
-					key +
-					"' and export that from index",
+						"/index.ts exports a class or function under '" +
+						key +
+						"'. Make sure to import * as '" +
+						key +
+						"' and export that from index",
 				);
 				continue;
 			}
@@ -115,7 +111,7 @@ export function linkedModule(
 	}
 
 	//#Create declarators for this module
-	let registerInTree = function (object) {
+	let registerInTree = function(object) {
 		lincd._modules[moduleName][object.name] = object;
 	};
 
@@ -131,12 +127,12 @@ export function linkedModule(
 	// 	};
 	// };
 
-	let registerModuleExport = function (exportName,exportedObject) {
+	let registerModuleExport = function(exportName, exportedObject) {
 		lincd._modules[moduleName][exportName] = exportedObject;
 	};
 
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
-	let linkedUtil = function (constructor) {
+	let linkedUtil = function(constructor) {
 		//add the component class of this module to the global tree
 		registerInTree(constructor);
 
@@ -146,7 +142,7 @@ export function linkedModule(
 
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
 	// let linkedComponent = function (config: {shape: typeof Shape}) {
-	let linkedComponent = function (shape: typeof Shape) {
+	let linkedComponent = function(shape: typeof Shape) {
 		return (constructor) => {
 			//add the component class of this module to the global tree
 			registerInTree(constructor);
@@ -163,7 +159,7 @@ export function linkedModule(
 	};
 
 	//create a declarator function which Shapes of this module can use register themselves and add themselves to the global tree
-	let linkedShape = function (constructor) {
+	let linkedShape = function(constructor) {
 		//add the component class of this module to the global tree
 		registerInTree(constructor);
 
@@ -192,49 +188,62 @@ export function linkedModule(
 	 * @param prefixAndFileName the file name MUST match the prefix for this ontology
 	 * @param exports all exports of the file, simply provide "this" as value!
 	 */
-	let linkedOntology = function(exports, nameSpace:(term:string)=>NamedNode, prefixAndFileName:string, loadData?)
-	{
+	let linkedOntology = function(
+		exports,
+		nameSpace: (term: string) => NamedNode,
+		prefixAndFileName: string,
+		loadData?,
+	) {
+		// let linkedOntology = function(
+		// 	fn: () => [Object, (term: string) => NamedNode, string, () => Promise<any>],
+		// ) {
+		//the ontology file will call linkedOntology() whilst its parsing
+		// but the exports of the file will only be available once parsing has fully completed. So we execute the given function after the next tick
+		// nextTick(() => {
+		// 	let [exports, nameSpace, prefixAndFileName, loadData] = fn();
 		//make sure we can detect this as an ontology later
 		exports['_ns'] = nameSpace;
 		exports['_prefix'] = prefixAndFileName;
 		exports['_load'] = loadData;
 
 		//register the prefix here (so just calling linkedOntology with a prefix will automatically register that prefix)
-		if(prefixAndFileName)
-		{
+		if (prefixAndFileName) {
 			//run the namespace without any term name, this will give back a named node with just the namespace as URI, then get that URI to provide it as full URI
-			Prefix.add(prefixAndFileName,nameSpace('').uri);
+			Prefix.add(prefixAndFileName, nameSpace('').uri);
 		}
 
 		//register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
-		registerModuleExport(prefixAndFileName,exports);
-	}
+		registerModuleExport(prefixAndFileName, exports);
+		// });
+	};
 
 	//return the declarators so the module can use them
-	return {linkedComponent, linkedShape, linkedUtil, linkedOntology, registerModuleExport, moduleExports:lincd._modules[moduleName]};
+	return {
+		linkedComponent,
+		linkedShape,
+		linkedUtil,
+		linkedOntology,
+		registerModuleExport,
+		moduleExports: lincd._modules[moduleName],
+	};
 }
 
-export function initTree()
-{
+export function initTree() {
 	if (typeof window !== 'undefined') {
-		if(typeof window['lincd'] === 'undefined')
-		{
-			window['lincd'] = {_modules:{}};
+		if (typeof window['lincd'] === 'undefined') {
+			window['lincd'] = {_modules: {}};
 		}
 	} else if (typeof global !== 'undefined') {
-		if(typeof global['lincd'] === 'undefined')
-		{
-			global['lincd'] = {_modules:{}};
+		if (typeof global['lincd'] === 'undefined') {
+			global['lincd'] = {_modules: {}};
 		}
-		global['lincd'] = {_modules:{}};
+		global['lincd'] = {_modules: {}};
 	}
 }
 
-export function createDataPromise(dataSource)
-{
+export function createDataPromise(dataSource) {
 	require(dataSource);
 }
-
 
 //when this file is used, make sure the tree is initialized
 initTree();

@@ -20,6 +20,14 @@ export class Prefix {
 		this.uriToPrefix.set(fullURI, prefix);
 		this.prefixToUri.set(prefix, fullURI);
 	}
+
+	static delete(prefix: string) {
+		if (this.prefixToUri.has(prefix)) {
+			let fullURI = this.getFullURI(prefix);
+			this.uriToPrefix.delete(fullURI);
+			this.prefixToUri.delete(prefix);
+		}
+	}
 	static clear() {
 		this.uriToPrefix = new CoreMap<string, string>();
 		this.prefixToUri = new CoreMap<string, string>();
