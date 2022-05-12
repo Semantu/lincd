@@ -78,7 +78,7 @@ export function linkedModule(
 	});
 
 	//prepare name for global tree reference
-	moduleName = moduleName.replace('-', '_');
+	moduleName = moduleName.replace(/-/g, '_');
 
 	//if something with this name already registered in the global tree
 	if (moduleName in lincd._modules) {
