@@ -3,17 +3,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
+//import everything from each file we want to make available to other libraries
 import * as Module from './utils/Module';
 import {linkedModule} from './utils/Module';
-import * as Node from './models';
-import * as BlankNode from './models';
-import * as Graph from './models';
-import * as Literal from './models';
-import * as Quad from './models';
-import * as NamedNode from './models';
-import * as Component from './models';
-import * as DefaultGraph from './models';
-import {defaultGraph} from './models';
+import * as models from './models';
+import * as StoreController from './controllers/StoreController';
 import * as EventEmitter from './events/EventEmitter';
 import * as BlankNodeMap from './collections/BlankNodeMap';
 import * as CoreSet from './collections/CoreSet';
@@ -39,25 +33,27 @@ import * as NameSpace from './utils/NameSpace';
 import * as ReactComponent from './shapes/ReactComponent';
 import * as ShapeDecorators from './utils/ShapeDecorators';
 import * as List from './shapes/List';
+import * as IGraphObject from './interfaces/IGraphObject';
+import * as IGraphObjectSet from './interfaces/IGraphObjectSet';
+import * as ICoreIterable from './interfaces/ICoreIterable';
+import * as IQuadStore from './interfaces/IQuadStore';
+import * as SHACL_Shape from './shapes/SHACL_Shape';
 
+//import anything else that needs to be bundled but not available to the outside world
 import './ontologies/rdf';
 import './ontologies/rdfs';
 import './ontologies/xsd';
 import './ontologies/shacl';
-import './interfaces/IGraphObject';
-import './interfaces/IGraphObjectSet';
-import './interfaces/ICoreIterable';
-import './shapes/SHACL_Shape';
 
 export const nextTick = require('next-tick');
 
 export const {linkedComponent, linkedShape} = linkedModule('lincd');
 
-//we do not export all the classes directly, because we don't want people to import {NamedNode} from '@dacore/core' for example
-//because these sort of imports do not work well with tree shaking
-//instead we export all classes here as _moduleExports for internal exposure (and in-browser cross module availability) of the available classes
-
-let ownClasses = {
+//we don't want people to import {NamedNode} from '@dacore/core' for example
+//because this does not work well with tree shaking
+//therefor we do not export all the classes here from the index directly
+//instead we export all classes here as _moduleExports for internal exposure (and in-browser cross module availability)
+let publicFiles = {
 	Node,
 	EventEmitter,
 	BlankNodeMap,
@@ -70,17 +66,13 @@ let ownClasses = {
 	QuadArray,
 	QuadMap,
 	QuadSet,
-	BlankNode,
-	Graph,
-	Literal,
-	Quad,
-	NamedNode,
+	models,
+	StoreController,
 	Shape,
 	NodeShape,
 	ShapeSet,
 	PropertyShape,
 	Debug,
-	DefaultGraph,
 	NameSpace,
 	List,
 	URI,
@@ -92,19 +84,22 @@ let ownClasses = {
 	ShapeDecorators,
 	ReactComponent,
 	Module,
-	Component,
-	defaultGraph,
+	IGraphObject,
+	IGraphObjectSet,
+	ICoreIterable,
+	IQuadStore,
+	SHACL_Shape,
 };
 //register the library globally and make all classes available directly from it
 var lincdExport = {};
-for (let key in ownClasses) {
-	let exportedClass = ownClasses[key];
-	for (let key2 in exportedClass) {
-		lincdExport[key2] = exportedClass[key2];
+for (let key in publicFiles) {
+	let exportedClasses = publicFiles[key];
+	for (let key2 in exportedClasses) {
+		lincdExport[key2] = exportedClasses[key2];
 	}
 }
 if (typeof window !== 'undefined') {
-	Object.assign(window['lincd'],lincdExport);
+	Object.assign(window['lincd'], lincdExport);
 } else if (typeof global !== 'undefined') {
-	Object.assign(global['lincd'],lincdExport);
+	Object.assign(global['lincd'], lincdExport);
 }

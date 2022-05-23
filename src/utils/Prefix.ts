@@ -12,6 +12,7 @@ export class Prefix {
 	static getUriToPrefixMap() {
 		return this.uriToPrefix;
 	}
+
 	static getPrefixToUriMap() {
 		return this.prefixToUri;
 	}
@@ -28,10 +29,12 @@ export class Prefix {
 			this.prefixToUri.delete(prefix);
 		}
 	}
+
 	static clear() {
 		this.uriToPrefix = new CoreMap<string, string>();
 		this.prefixToUri = new CoreMap<string, string>();
 	}
+
 	static getPrefix(fullURI: string): string {
 		if (this.uriToPrefix.has(fullURI)) {
 			return this.uriToPrefix.get(fullURI);
@@ -39,6 +42,7 @@ export class Prefix {
 		let match = this.findMatch(fullURI);
 		if (match) return match[1];
 	}
+
 	static getFullURI(prefix: string): string {
 		return this.prefixToUri.get(prefix);
 	}
@@ -57,6 +61,7 @@ export class Prefix {
 			return match[1] + ':' + fullURI.substr(match[0].length);
 		}
 	}
+
 	static toPrefixedIfPossible(fullURI: string) {
 		return this.toPrefixed(fullURI) || fullURI;
 	}

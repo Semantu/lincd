@@ -4,18 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {CoreSet} from './CoreSet';
-import {NamedNode} from '../models';
-import {Quad} from '../models';
+import {NamedNode, Node} from '../models';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet';
 import {QuadSet} from './QuadSet';
 import {QuadArray} from './QuadArray';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {Node} from '../models';
 
-export class NodeSet<R extends Node = Node>
-	extends CoreSet<R>
-	implements IGraphObjectSet<Node>
-{
+export class NodeSet<R extends Node = Node> extends CoreSet<R>
+	implements IGraphObjectSet<Node> {
 	constructor(iterable?: Iterable<R>) {
 		super(iterable);
 	}

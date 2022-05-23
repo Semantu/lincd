@@ -8,6 +8,7 @@ import {Shape} from '../shapes/Shape';
 
 interface IClassConstruct {
 	new (): any;
+
 	prototype: any;
 }
 

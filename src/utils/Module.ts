@@ -8,7 +8,6 @@ import {registerComponent} from '../models/Component';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/NodeShape';
 import {Prefix} from './Prefix';
-import nextTick from 'next-tick';
 
 //global tree
 declare var lincd: any;
@@ -24,6 +23,7 @@ interface DeferredPromise {
 
 var moduleParsePromises: Map<string, Promise<any>> = new Map();
 var loadedModules: Set<NamedNode> = new Set();
+
 // var moduleLoadPromises: Map<NamedNode, DeferredPromise> = new Map();
 
 export function linkedModule(

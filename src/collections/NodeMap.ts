@@ -5,18 +5,14 @@
  */
 import {CoreMap} from './CoreMap';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet';
-import {NamedNode} from '../models';
-import {Quad} from '../models';
+import {NamedNode, Node} from '../models';
 import {QuadSet} from './QuadSet';
 import {QuadArray} from './QuadArray';
 import {NodeSet} from './NodeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {Node} from '../models';
 
-export class NodeMap<R extends Node>
-	extends CoreMap<string, R>
-	implements IGraphObjectSet<R>
-{
+export class NodeMap<R extends Node> extends CoreMap<string, R>
+	implements IGraphObjectSet<R> {
 	constructor(iterable?: Iterable<[string, R]>) {
 		super(iterable);
 	}

@@ -4,10 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {EventEmitter} from '../events/EventEmitter';
-import {Literal,NamedNode,Node,Quad} from '../models';
+import {Literal, NamedNode, Node} from '../models';
 import {rdf} from '../ontologies/rdf';
 import {PropertySet} from '../collections/PropertySet';
-import {QuadMap} from '../collections/QuadMap';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {QuadArray} from '../collections/QuadArray';
@@ -17,7 +16,7 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
-import {QuadSet} from "../collections/QuadSet";
+import {QuadSet} from '../collections/QuadSet';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -62,13 +61,19 @@ export class Shape extends EventEmitter implements IShape {
 
 	protected _node: Node;
 	private _instanceType: NamedNode;
-	private static instancePromises: Map<Node, Map<NamedNode, Promise<Shape>>> =
-		new Map();
+	private static instancePromises: Map<
+		Node,
+		Map<NamedNode, Promise<Shape>>
+	> = new Map();
 	private static instances: Map<Node, Map<NamedNode, Shape>> = new Map();
-	private static baseTypeInstances: Map<Node, Map<NamedNode, Shape>> =
-		new Map();
-	private static baseTypePromises: Map<Node, Map<NamedNode, Promise<Shape>>> =
-		new Map();
+	private static baseTypeInstances: Map<
+		Node,
+		Map<NamedNode, Shape>
+	> = new Map();
+	private static baseTypePromises: Map<
+		Node,
+		Map<NamedNode, Promise<Shape>>
+	> = new Map();
 	protected static instancesLoaded: Map<
 		NamedNode,
 		{promise: Promise<NodeSet<NamedNode>>; done: boolean}
@@ -366,7 +371,7 @@ export class Shape extends EventEmitter implements IShape {
 	}
 
 	getQuads(property: NamedNode, value?: Node): QuadSet {
-		return this._node.getQuads(property,value);
+		return this._node.getQuads(property, value);
 	}
 
 	getInverseQuads(property: NamedNode): QuadSet {
@@ -391,6 +396,15 @@ export class Shape extends EventEmitter implements IShape {
 
 	set label(val: string) {
 		this.overwrite(rdfs.label, new Literal(val));
+	}
+
+	//TODO: move to rdfs:Resource or owl:Thing shape (and decide which one of those we want to promote)
+	get type() {
+		return this.getOne(rdf.type) as NamedNode;
+	}
+
+	set type(val: NamedNode) {
+		this.overwrite(rdf.type, val);
 	}
 
 	/**
@@ -650,11 +664,11 @@ interface Constructor<M> {
 
 export interface ShapeLike<M extends Shape> extends Constructor<M> {
 	targetClass: NamedNode;
+
 	getSetOf<M extends Shape>(
 		this: ShapeLike<M>,
 		resources: ICoreIterable<Node>,
 	): ShapeSet<M>;
 
 	getLocalInstanceResources(explicitInstancesOnly?: boolean): NodeSet;
-
 }

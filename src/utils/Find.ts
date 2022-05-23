@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NodeSet} from '../collections/NodeSet';
-import {NamedNode,Node,Quad} from '../models';
+import {NamedNode, Node, Quad} from '../models';
 import {rdf} from '../ontologies/rdf';
 import {rdfs} from '../ontologies/rdfs';
 import {QuadSet} from '../collections/QuadSet';
@@ -13,7 +13,6 @@ import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {SearchMap} from '../collections/SearchMap';
 
 export class Find {
-
 	static byPropertyValues(
 		valuesToProperties: SearchMap,
 		targetType?: NamedNode,

@@ -12,12 +12,10 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
 		return new (<any>this.constructor)(...args) as this;
 	}
 
-	filter(
-		fn: (value: R, index: any, thisInstance: any) => any,
-	): this {
+	filter(fn: (value: R, index: any, thisInstance: any) => any): this {
 		var res: this = this.createNew();
 		for (var item of this) {
-			if (fn(item,item,this)) {
+			if (fn(item, item, this)) {
 				res.add(item);
 			}
 		}

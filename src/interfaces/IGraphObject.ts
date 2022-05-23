@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode,Node} from '../models';
+import {NamedNode, Node} from '../models';
 import {NodeSet} from '../collections/NodeSet';
 import {QuadSet} from '../collections/QuadSet';
 import {QuadArray} from '../collections/QuadArray';

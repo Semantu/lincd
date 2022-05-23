@@ -5,9 +5,7 @@
  */
 import {NodeSet} from '../collections/NodeSet';
 import {rdf} from '../ontologies/rdf';
-import {NamedNode} from '../models';
-import {Node} from '../models';
-import {BlankNode} from '../models';
+import {BlankNode, NamedNode, Node} from '../models';
 import {Shape} from './Shape';
 
 export class List extends Shape {
@@ -33,6 +31,7 @@ export class List extends Shape {
 	isEmpty() {
 		return !this.hasProperty(rdf.first);
 	}
+
 	addItem(item: Node) {
 		//we need to check if the list is empty when adding items one by one
 		//we keep this out of _append for performance reasons
@@ -53,6 +52,7 @@ export class List extends Shape {
 			return items.shift();
 		}
 	}
+
 	addItems(items: NodeSet | Node[]) {
 		let endPoint;
 		if (this.isEmpty()) {
@@ -110,6 +110,7 @@ export class List extends Shape {
 		list.set(rdf.rest, rdf.nil);
 		return list;
 	}
+
 	private static _append(item: Node, last: NamedNode): NamedNode {
 		let next = this._createListEntry(item);
 		last.overwrite(rdf.rest, next);

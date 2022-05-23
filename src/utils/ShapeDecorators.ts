@@ -3,13 +3,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models';
-import {Node} from '../models';
+import {BlankNode, Literal, NamedNode, Node} from '../models';
 import {Shape} from '../shapes/Shape';
 import {PropertyShape} from '../shapes/PropertyShape';
 import {NodeSet} from '../collections/NodeSet';
-import {Literal} from '../models';
-import {BlankNode} from '../models';
 import {NodeShape} from '../shapes/NodeShape';
 
 export interface NodeShapeConfig {
@@ -22,6 +19,7 @@ export interface NodeShapeConfig {
 	 */
 	ignoredProperties: NodeSet<NamedNode>;
 }
+
 export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
 	nodeKind?: typeof Literal;
 	/**
@@ -75,6 +73,7 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
 	 */
 	dataType?: NamedNode;
 }
+
 export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
 	nodeKind?: typeof NamedNode | typeof BlankNode;
 	/**
@@ -82,6 +81,7 @@ export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
 	 */
 	class?: NamedNode;
 }
+
 export interface PropertyShapeConfig {
 	/**
 	 * The property path of this property shape.
@@ -138,6 +138,7 @@ export interface PropertyShapeConfig {
 	 */
 	in?: NodeSet;
 }
+
 export interface ParameterConfig {
 	optional?: number;
 }
@@ -149,7 +150,7 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
 	return linkedProperty(config);
 };
 export const linkedProperty = (config: PropertyShapeConfig) => {
-	return function (
+	return function(
 		target: any,
 		propertyKey: string,
 		descriptor: PropertyDescriptor,

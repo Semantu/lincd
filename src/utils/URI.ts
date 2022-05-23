@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 export class URI {
-
 	/**
 	 * Function: sanitize
 	 * Returns a sanitized string, typically for URLs.

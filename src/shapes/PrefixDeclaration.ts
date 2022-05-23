@@ -10,6 +10,7 @@ export class PrefixDeclaration extends SHACL_Shape {
 	get prefix(): string {
 		return this.getOne(shacl.prefix).value;
 	}
+
 	set prefix(value: string) {
 		this.overwrite(shacl.prefix, new Literal(value));
 	}

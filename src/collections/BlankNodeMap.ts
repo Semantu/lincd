@@ -3,8 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models';
-import {BlankNode} from '../models';
+import {BlankNode, NamedNode} from '../models';
 import {NodeMap} from './NodeMap';
 
 //TODO: rename to something more fitting now that it also handles TMP NamedNodes

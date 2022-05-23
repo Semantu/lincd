@@ -6,7 +6,7 @@
 import {Shape} from '../shapes/Shape';
 import {CoreSet} from '../collections/CoreSet';
 import {Prefix} from './Prefix';
-import {Literal,NamedNode} from '../models';
+import {Literal, NamedNode} from '../models';
 import {QuadMap} from '../collections/QuadMap';
 
 export class Debug {
@@ -60,9 +60,8 @@ export class Debug {
 		}
 		return print;
 	}
-
-
 }
+
 //attach dprint to global or window object
 let g =
 	typeof window !== 'undefined'

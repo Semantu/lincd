@@ -4,15 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {Graph} from '../models';
+import {BlankNode, Graph, Literal, NamedNode, Node, Quad} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import {Shape} from '../shapes/Shape';
-import {BlankNode} from '../models';
-import {NamedNode} from '../models';
-import {Literal} from '../models';
-import {Quad} from '../models';
-import {Node} from '../models';
-import {QuadArray} from '../collections/QuadArray';
 import {includeBlankNodes} from './Collect';
 
 export class NQuads {
@@ -35,6 +29,7 @@ export class NQuads {
 		});
 		return res;
 	}
+
 	static fromQuads(quadset: QuadSet | Quad[], graph: Graph = null): string {
 		let resultString: string = '';
 
@@ -54,6 +49,7 @@ export class NQuads {
 		});
 		return resultString;
 	}
+
 	private static toString(
 		element: Node | Graph | Quad | string,
 		escapeNewLines: boolean = true,

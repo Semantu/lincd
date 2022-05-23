@@ -10,6 +10,7 @@ import {SHACL_Shape} from './SHACL_Shape';
 
 export class NodeShape extends SHACL_Shape {
 	static targetClass: NamedNode = shacl.NodeShape;
+
 	addPropertyShape(property: PropertyShape) {
 		this.set(shacl.property, property.namedNode);
 	}
@@ -17,6 +18,7 @@ export class NodeShape extends SHACL_Shape {
 	get targetNode(): NamedNode {
 		return this.getOne(shacl.targetNode) as NamedNode;
 	}
+
 	set targetNode(value) {
 		this.overwrite(shacl.targetNode, value);
 	}
@@ -24,6 +26,7 @@ export class NodeShape extends SHACL_Shape {
 	get targetClass(): NamedNode {
 		return this.getOne(shacl.targetClass) as NamedNode;
 	}
+
 	set targetClass(value) {
 		this.overwrite(shacl.targetClass, value);
 	}

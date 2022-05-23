@@ -5,16 +5,14 @@
  */
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
-import {NamedNode} from '../models';
-import {Node} from '../models';
+import {BlankNode, Literal, NamedNode, Node} from '../models';
 import {Shape} from './Shape';
-import {Literal} from '../models';
-import {BlankNode} from '../models';
 
 export {React, ReactDOM};
 
 export interface FunctionalReactComponent {
 	(props: any): any;
+
 	shape: typeof Shape;
 	/**
 	 * The renderType that this component extends/implements. By default: ReactComponent
@@ -44,7 +42,7 @@ export interface ReactComponentProps {
 export class ReactComponent<
 	P,
 	S,
-	ShapeType extends Shape = null,
+	ShapeType extends Shape = null
 > extends React.Component<P & ReactComponentProps, S> {
 	protected _mounted: boolean;
 	static shape: typeof Shape;
@@ -70,7 +68,7 @@ export class ReactComponent<
 				//or
 				// this._shape = ShapeType.getOf(this.props.source);
 			} else if (this.props.source instanceof shapeClass) {
-				this._shape = this.props.source as any as ShapeType;
+				this._shape = (this.props.source as any) as ShapeType;
 			}
 
 			if (!this._shape) {

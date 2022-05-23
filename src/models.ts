@@ -40,6 +40,7 @@ export abstract class Node extends EventEmitter {
 	get value(): string {
 		return this._value;
 	}
+
 	set value(val: string) {
 		this._value = val;
 	}
@@ -237,6 +238,7 @@ export abstract class Node extends EventEmitter {
 	unsetAll(property: NamedNode): boolean {
 		return false;
 	}
+
 	isLoaded(includingIncomingProperties?: boolean): boolean {
 		return false;
 	}
@@ -244,6 +246,7 @@ export abstract class Node extends EventEmitter {
 	promiseLoaded(loadInverseProperties?: boolean): Promise<boolean> {
 		return null;
 	}
+
 	getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet {
 		return new NodeSet();
 	}
@@ -1939,9 +1942,11 @@ export class NamedNode extends Node
 	getAsSubjectQuads() {
 		return this.asSubject;
 	}
+
 	getAsPredicateQuads() {
 		return this.asPredicate;
 	}
+
 	getAsObjectQuads() {
 		return this.asObject;
 	}
@@ -2160,6 +2165,7 @@ export class BlankNode extends NamedNode {
 	private static counter: number = 0;
 
 	termType: any = 'BlankNode';
+
 	constructor() {
 		super(BlankNode.createUri());
 		NamedNode.register(this);
@@ -2472,6 +2478,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 	getReferenceQuad() {
 		return this.referenceQuad;
 	}
+
 	hasInverseProperty(property: NamedNode): boolean {
 		return this.referenceQuad && this.referenceQuad.predicate === property;
 	}
@@ -2612,6 +2619,7 @@ export class Graph implements Term {
 	registerQuad(quad: Quad) {
 		this.quads.add(quad);
 	}
+
 	unregisterQuad(quad: Quad) {
 		this.quads.delete(quad);
 	}
@@ -2624,6 +2632,7 @@ export class Graph implements Term {
 	getContents(): QuadSet {
 		return this.quads;
 	}
+
 	setContents(quads: QuadSet) {
 		this.quads = quads;
 		quads.forEach((quad) => {
@@ -2748,18 +2757,18 @@ export class Quad extends EventEmitter {
 	 * @internal
 	 * emitted when new quads have been created
 	 */
-	static TRIPLES_CREATED: string = 'TRIPLES_CREATED';
+	static QUADS_CREATED: string = 'QUADS_CREATED';
 
 	/**
 	 * @internal
 	 * emitted when quads have been removed
 	 */
-	static TRIPLES_REMOVED: string = 'TRIPLES_REMOVED';
+	static QUADS_REMOVED: string = 'QUADS_REMOVED';
 
 	/**
 	 * emitted by a quad when that quad is being removed
 	 */
-	static TRIPLE_REMOVED: string = 'TRIPLE_REMOVED';
+	static QUAD_REMOVED: string = 'QUAD_REMOVED';
 
 	/**
 	 * emitted by a quad when the value of that quad is being changed (without removing and creating a new quad locally)
@@ -2770,7 +2779,7 @@ export class Quad extends EventEmitter {
 	 * emitted when quads have been altered by user interaction
 	 * @internal
 	 */
-	static TRIPLES_ALTERED: string = 'TRIPLES_ALTERED';
+	static QUADS_ALTERED: string = 'QUADS_ALTERED';
 
 	private _removed: boolean;
 	private _altered: boolean;
@@ -2813,7 +2822,7 @@ export class Quad extends EventEmitter {
 		//and here we save this quad to a set of newQuads which is a static property of the Quad class
 		Quad.newQuads.add(this);
 
-		//only if its an alteration AND its relevant to storage controllers do we emit the TRIPLES_ALTERED event for this quad
+		//only if its an alteration AND its relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
 		if (
 			alteration &&
 			!this.implicit &&
@@ -2830,6 +2839,7 @@ export class Quad extends EventEmitter {
 	get graph() {
 		return this._graph;
 	}
+
 	set graph(newGraph: Graph) {
 		this._graph.unregisterQuad(this);
 		this._graph = newGraph;
@@ -2882,11 +2892,11 @@ export class Quad extends EventEmitter {
 	 */
 	static emitBatchedEvents() {
 		if (this.newQuads.size > 0) {
-			this.emitter.emit(Quad.TRIPLES_CREATED, this.newQuads);
+			this.emitter.emit(Quad.QUADS_CREATED, this.newQuads);
 			this.newQuads = new QuadSet();
 		}
 		if (this.removedQuads.size > 0) {
-			this.emitter.emit(Quad.TRIPLES_REMOVED, this.removedQuads);
+			this.emitter.emit(Quad.QUADS_REMOVED, this.removedQuads);
 			this.removedQuads = new QuadSet();
 		}
 		if (
@@ -2895,7 +2905,7 @@ export class Quad extends EventEmitter {
 			this.alteredQuadsUpdated.size > 0
 		) {
 			this.emitter.emit(
-				Quad.TRIPLES_ALTERED,
+				Quad.QUADS_ALTERED,
 				this.alteredQuadsCreated,
 				this.alteredQuadsRemoved,
 				this.alteredQuadsUpdated,
@@ -3045,7 +3055,7 @@ export class Quad extends EventEmitter {
 		}
 
 		//we need to let this quad emit this event straight away because for example the reasoner needs to listen to this exact quad to retract
-		this.emit(Quad.TRIPLE_REMOVED);
+		this.emit(Quad.QUAD_REMOVED);
 
 		Quad.globalNumQuads--;
 
