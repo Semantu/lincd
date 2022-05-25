@@ -54,35 +54,39 @@ export class ReactComponent<
 	}
 
 	get source(): ShapeType {
-		if (!this._shape) {
+		if (typeof this._shape === 'undefined') {
 			let shapeClass = (this.constructor as typeof ReactComponent).shape;
-			//TODO, replace with instanceof Node
-			if (
-				this.props.source instanceof NamedNode ||
-				this.props.source instanceof BlankNode ||
-				this.props.source instanceof Literal
-			) {
-				//this will throw if the rdf:type is not correct or the data does not have this shape
-				// Shacl.validate(node,shapeClass);
-				this._shape = this.props.source.getAs(shapeClass) as ShapeType;
-				//or
-				// this._shape = ShapeType.getOf(this.props.source);
-			} else if (this.props.source instanceof shapeClass) {
-				this._shape = (this.props.source as any) as ShapeType;
+
+			//not providing a source is allowed
+			if (!this.props.source) {
+				this._shape = null;
+			} else {
+				//TODO, replace with instanceof Node
+				if (
+					this.props.source instanceof NamedNode ||
+					this.props.source instanceof BlankNode ||
+					this.props.source instanceof Literal
+				) {
+					//this will throw if the rdf:type is not correct or the data does not have this shape
+					// Shacl.validate(node,shapeClass);
+					this._shape = this.props.source.getAs(shapeClass) as ShapeType;
+					//or
+					// this._shape = ShapeType.getOf(this.props.source);
+				} else if (this.props.source instanceof shapeClass) {
+					this._shape = (this.props.source as any) as ShapeType;
+				} else {
+					throw new Error(
+						'Please provide a NamedNode with rdf:type ' +
+							this.constructor.prototype.shape.type.uri +
+							' OR an instance of ' +
+							this.constructor.prototype.shape.name +
+							" as 'source' prop to this type of component: " +
+							this.constructor.prototype.name,
+					);
+				}
 			}
 
-			if (!this._shape) {
-				throw new Error(
-					'Please provide a NamedNode with rdf:type ' +
-						this.constructor.prototype.shape.type.uri +
-						' OR an instance of ' +
-						this.constructor.prototype.shape.name +
-						" as 'source' prop to this type of component: " +
-						this.constructor.prototype.name,
-				);
-			}
-
-			if (this._shape.node instanceof NamedNode) {
+			if (this._shape && this._shape.node instanceof NamedNode) {
 				this._shape.node.onChangeAny((changes, property) => {
 					console.log(
 						'Properties of source ' +

@@ -24,8 +24,11 @@ export class Debug {
 		if (node instanceof Shape) {
 			node = node.node;
 		}
-		if (node instanceof CoreSet) {
-			return 'Set [\n' + node.map((r) => this.print(r)).join(',') + '\n]';
+		if (node instanceof Set || Array.isArray(node)) {
+			let r: string[] = [];
+			node.forEach((item) => r.push(this.print(item)));
+			return `Set [\n${r.join('\n')}\n]`;
+			// return 'Set [\n' + node.map((r) => this.print(r)).join(',') + '\n]';
 		}
 		if (node instanceof Literal) {
 			return node.toString();

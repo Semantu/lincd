@@ -61,22 +61,22 @@ export class PropertyShape extends SHACL_Shape {
 		this.overwrite(shacl.minCount, new Literal(value.toString(), xsd.integer));
 	}
 
-	get name(): Literal {
-		return this.getOne(shacl.name) as Literal;
+	get name(): string {
+		return this.getValue(shacl.name);
 	}
 
 	// Setter overloading - would be nice to have one for String and another for Literal:
 	// https://github.com/microsoft/TypeScript/issues/2521
-	set name(value: Literal) {
-		this.overwrite(shacl.name, value);
+	set name(value: string) {
+		this.overwrite(shacl.name, new Literal(value));
 	}
 
-	get optional(): Literal {
-		return this.getOne(shacl.optional) as Literal;
+	get optional(): string {
+		return this.getValue(shacl.optional);
 	}
 
-	set optional(value: Literal) {
-		this.overwrite(shacl.optional, value);
+	set optional(value: string) {
+		this.overwrite(shacl.optional, new Literal(value, xsd.boolean));
 	}
 
 	get path(): NamedNode {
