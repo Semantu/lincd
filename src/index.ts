@@ -40,10 +40,10 @@ import * as IQuadStore from './interfaces/IQuadStore';
 import * as SHACL_Shape from './shapes/SHACL_Shape';
 
 //import anything else that needs to be bundled but not available to the outside world
-import './ontologies/rdf';
-import './ontologies/rdfs';
-import './ontologies/xsd';
-import './ontologies/shacl';
+import * as rdf from './ontologies/rdf';
+import * as rdfs from './ontologies/rdfs';
+import * as xsd from './ontologies/xsd';
+import * as shacl from './ontologies/shacl';
 
 export const nextTick = require('next-tick');
 
@@ -89,6 +89,10 @@ let publicFiles = {
 	ICoreIterable,
 	IQuadStore,
 	SHACL_Shape,
+	rdf,
+	rdfs,
+	xsd,
+	shacl,
 };
 //register the library globally and make all classes available directly from it
 var lincdExport = {};
