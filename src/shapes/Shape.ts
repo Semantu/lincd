@@ -61,19 +61,6 @@ export class Shape extends EventEmitter implements IShape {
 
 	protected _node: Node;
 	private _instanceType: NamedNode;
-	private static instancePromises: Map<
-		Node,
-		Map<NamedNode, Promise<Shape>>
-	> = new Map();
-	private static instances: Map<Node, Map<NamedNode, Shape>> = new Map();
-	private static baseTypeInstances: Map<
-		Node,
-		Map<NamedNode, Shape>
-	> = new Map();
-	private static baseTypePromises: Map<
-		Node,
-		Map<NamedNode, Promise<Shape>>
-	> = new Map();
 	protected static instancesLoaded: Map<
 		NamedNode,
 		{promise: Promise<NodeSet<NamedNode>>; done: boolean}
@@ -90,19 +77,6 @@ export class Shape extends EventEmitter implements IShape {
 	constructor(resource?: Node) {
 		super();
 		this.setupNode(resource);
-
-		//for directly created Instances (through new SomeInstance())
-		//we need to manually registerInstance this instance in the registerInstance of instances
-		if (!Shape.instanceIsRegistered(this)) {
-			Shape.registerInstance(
-				this.node,
-				this.instanceType,
-				Promise.resolve(this),
-			);
-		}
-		if (!Shape.instanceIsRegisteredSync(this)) {
-			Shape.registerInstanceSync(this.node, this.instanceType, this);
-		}
 	}
 
 	/**
@@ -135,7 +109,6 @@ export class Shape extends EventEmitter implements IShape {
 	static registerByType(shapeClass: typeof Shape, type?: NamedNode) {
 		if (!type) {
 			//TODO: add support for sh:targetNode, sh:targetObjectsOf and sh:targetSubjectsOf. Those would be fine as alternatives to targetClass (and the latter 2 define a PropertyShape)
-
 			//warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
 			if (!shapeClass.hasOwnProperty('targetClass')) {
 				console.warn(
@@ -181,14 +154,14 @@ export class Shape extends EventEmitter implements IShape {
 	 * Makes sure that the node that this instance represents has the right rdf.type
 	 * Also makes sure that this instance is destructed if the node is removed
 	 * @internal
-	 * @param resource
+	 * @param node
 	 */
-	setupNode(resource: Node) {
-		if (resource) {
-			//to keep typing simple, we made this.node as NamedNode and Literal Instances will have to use this.literalResource
-			this._node = resource as NamedNode;
+	setupNode(node: Node) {
+		if (node) {
+			this._node = node;
 		} else {
-			//Instances of rdfs:Literal overwrite this method to setup a literal node
+			//this code gets triggered when you call new SomeShapeClass() without providing a node
+			//some classes prefer a certain term type. E.g. RdfsLiteral will create a Literal node, and NodeShape will create a BlankNode
 			let termType = this.constructor['preferredTermType'] || NamedNode;
 			this._node = termType.create();
 			this._node.set(rdf.type, this.instanceType);
@@ -204,7 +177,6 @@ export class Shape extends EventEmitter implements IShape {
 	 * Destructs the instance. Removes event listeners etc. Overwrite in each subclass of this class that uses custom event listeners
 	 */
 	destruct() {
-		Shape.unregister(this);
 		if (this._node instanceof NamedNode) {
 			this._node.removeAllListeners();
 		}
@@ -389,7 +361,7 @@ export class Shape extends EventEmitter implements IShape {
 		return this._node.getAllQuads(includeAsObject, includeImplicit);
 	}
 
-	//TODO: move to rdfs:Resource or owl:Thing shape (and decide which one of those we want to promote)
+	//TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
 	get label() {
 		return this.getValue(rdfs.label);
 	}
@@ -398,7 +370,7 @@ export class Shape extends EventEmitter implements IShape {
 		this.overwrite(rdfs.label, new Literal(val));
 	}
 
-	//TODO: move to rdfs:Resource or owl:Thing shape (and decide which one of those we want to promote)
+	//TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
 	get type() {
 		return this.getOne(rdf.type) as NamedNode;
 	}
@@ -580,77 +552,6 @@ export class Shape extends EventEmitter implements IShape {
 		});
 		return set;
 		// return ShapeSet.getFromClass(resources, this.type) as ShapeSet<T>;
-	}
-
-	private static instanceIsRegistered(instance: Shape) {
-		return (
-			Shape.instancePromises.get(instance.node) &&
-			Shape.instancePromises.get(instance.node).get(instance.instanceType)
-		);
-	}
-
-	private static instanceIsRegisteredSync(instance: Shape) {
-		return (
-			Shape.instances.get(instance.node) &&
-			Shape.instances.get(instance.node).get(instance.instanceType)
-		);
-	}
-
-	private static registerInstance(
-		resource: Node,
-		instanceType: NamedNode,
-		promise: Promise<Shape>,
-	) {
-		//if not requested before for this node
-		if (!this.instancePromises.has(resource)) {
-			//create node instance map
-			this.instancePromises.set(resource, new Map());
-		}
-
-		//return the promise for this node and this type that resolves to the required Shape
-		this.instancePromises.get(resource).set(instanceType, promise);
-	}
-
-	/**
-	 * Only use this for very special cases when you need to create an instance manually but still want to registerInstance it.
-	 * For example this is currently used to create an instance of rdfs:Class as Class, without that class itself already being available to create the instance
-	 * @internal
-	 * @param resource
-	 * @param instanceType
-	 * @param instance
-	 */
-	static registerInstanceSync(
-		resource: Node,
-		instanceType: NamedNode,
-		instance: Shape,
-	) {
-		//if not requested before for this node
-		if (!this.instances.has(resource)) {
-			//create node instance map
-			this.instances.set(resource, new Map());
-		}
-
-		//return the promise for this node and this type that resolves to the required Shape
-		this.instances.get(resource).set(instanceType, instance);
-	}
-
-	private static unregister(instance: Shape) {
-		var resourceInstancePromises = this.instancePromises.get(
-			instance.namedNode,
-		);
-		if (resourceInstancePromises) {
-			resourceInstancePromises.delete(instance.instanceType);
-			if (resourceInstancePromises.size == 0) {
-				this.instancePromises.delete(instance.namedNode);
-			}
-		}
-		var resourceInstanceMap = this.instances.get(instance.namedNode);
-		if (resourceInstanceMap) {
-			resourceInstanceMap.delete(instance.instanceType);
-			if (resourceInstanceMap.size == 0) {
-				this.instances.delete(instance.namedNode);
-			}
-		}
 	}
 }
 
