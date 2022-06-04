@@ -131,7 +131,7 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R>
 	}
 
 	getDeep(property: NamedNode, maxDepth: number = Infinity): NodeSet {
-		return this.getResources().getDeep(property, maxDepth);
+		return this.getNodes().getDeep(property, maxDepth);
 	}
 
 	getQuads(property: NamedNode): QuadSet {
@@ -172,8 +172,8 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R>
 
 	getAllInverseQuads(includeImplicit?: boolean): QuadArray {
 		var res = new QuadArray();
-		for (var resource of this) {
-			for (var item of resource.getAllInverseQuads(includeImplicit)) {
+		for (var node of this) {
+			for (var item of node.getAllInverseQuads(includeImplicit)) {
 				if (res.indexOf(item) === -1) {
 					res.push(item);
 				}
@@ -252,7 +252,7 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R>
 		return res;
 	}
 
-	getResources(): NodeSet {
+	getNodes(): NodeSet {
 		var res = new NodeSet();
 		for (var instance of this) {
 			res.add(instance.node);

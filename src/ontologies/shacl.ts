@@ -10,7 +10,7 @@ var base: string = 'http://www.w3.org/ns/shacl#';
 export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);
 Prefix.add('shacl', base);
 
-//add your ontology resources here
+//add your ontology nodes here
 var _class: NamedNode = NamedNode.getOrCreate(base + 'class');
 var datatype: NamedNode = NamedNode.getOrCreate(base + 'datatype');
 var declare: NamedNode = NamedNode.getOrCreate(base + 'declare');
@@ -30,6 +30,7 @@ var prefix: NamedNode = NamedNode.getOrCreate(base + 'prefix');
 var PropertyShape: NamedNode = NamedNode.getOrCreate(base + 'PropertyShape');
 var targetClass: NamedNode = NamedNode.getOrCreate(base + 'targetClass');
 var targetNode: NamedNode = NamedNode.getOrCreate(base + 'targetNode');
+var node: NamedNode = NamedNode.getOrCreate(base + 'node');
 var Shape: NamedNode = NamedNode.getOrCreate(base + 'Shape');
 
 //make sure every node is also exported here
@@ -41,6 +42,7 @@ export const shacl = {
 	maxCount,
 	minCount,
 	name,
+	node,
 	NodeShape,
 	optional,
 	Parameter,

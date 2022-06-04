@@ -95,12 +95,10 @@ export class QuadSet extends CoreSet<Quad> {
 			.concat(this.getObjects());
 	}
 
-	hasResource(resource: Node) {
+	hasNode(node: Node) {
 		return this.some((quad) => {
 			return (
-				quad.subject === resource ||
-				quad.predicate === resource ||
-				quad.object === resource
+				quad.subject === node || quad.predicate === node || quad.object === node
 			);
 		});
 	}

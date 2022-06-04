@@ -50,7 +50,7 @@ export abstract class Node extends EventEmitter {
 	 * NOTE: this node MUST have the static.type of the given class as its rdf:type property
 	 * @param type - a class that extends Shape and thus who's instances represent a node as an instance of one specific type.
 	 */
-	getAs<T extends IShape>(type: {new (): T; getOf(resource: Node): T}): T {
+	getAs<T extends IShape>(type: {new (): T; getOf(node: Node): T}): T {
 		return type.getOf(this);
 	}
 
@@ -64,7 +64,7 @@ export abstract class Node extends EventEmitter {
 	 */
 	getStrictlyAs<T extends IShape>(type: {
 		new (): T;
-		getStrictlyOf(resource: Node): T;
+		getStrictlyOf(node: Node): T;
 	}): T {
 		return type.getStrictlyOf(this);
 	}
@@ -324,10 +324,10 @@ export class NamedNode extends Node
 	//### event types ###
 
 	/**
-	 * event emitted when resources need to be stored
+	 * event emitted when nodes need to be stored
 	 * @internal
 	 */
-	static STORE_RESOURCES: string = 'STORE_RESOURCES';
+	static STORE_NODES: string = 'STORE_NODES';
 
 	/**
 	 * Event emitted when previous values have been overwritten (for example with update or moverwrite)
@@ -337,10 +337,10 @@ export class NamedNode extends Node
 	static CLEARED_PROPERTIES: string = 'CLEARED_PROPERTIES';
 
 	/**
-	 * event emitted when resources need to be removed
+	 * event emitted when nodes need to be removed
 	 * @internal
 	 */
-	static REMOVE_RESOURCES: string = 'REMOVE_RESOURCES';
+	static REMOVE_NODES: string = 'REMOVE_NODES';
 
 	/**
 	 * event emitted when the URI of a node has been updated
@@ -348,10 +348,10 @@ export class NamedNode extends Node
 	static URI_UPDATED: string = 'URI_UPDATED';
 
 	/**
-	 * event emitted when resources need to be loaded
+	 * event emitted when nodes need to be loaded
 	 * @internal
 	 */
-	static LOAD_RESOURCES: string = 'LOAD_RESOURCES';
+	static LOAD_NODES: string = 'LOAD_NODES';
 
 	/**
 	 * event emitted by a single node when its properties have changed
@@ -396,7 +396,7 @@ export class NamedNode extends Node
 	/**
 	 * event emitted by a single node when it's been removed
 	 */
-	static RESOURCE_REMOVED: string = 'RESOURCE_REMOVED';
+	static NODE_REMOVED: string = 'NODE_REMOVED';
 
 	/**
 	 * map of QuadMaps indexed by property where this node occurs as subject
@@ -543,7 +543,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * Inverse property can be thought of as "this node is the value (object) of another resources' property"
+	 * Inverse property can be thought of as "this node is the value (object) of another nodes' property"
 	 * This method is used by the class Quad to communicate its existence to the quads object
 	 * NOT FOR GENERAL USE
 	 * @internal
@@ -556,7 +556,7 @@ export class NamedNode extends Node
 		alteration: boolean = false,
 		emitEvents: boolean = true,
 	): Node {
-		//asObject is not always initialised - to save some memory on resources without incoming properties (only used as subject)
+		//asObject is not always initialised - to save some memory on nodes without incoming properties (only used as subject)
 		if (!this.asObject) {
 			this.asObject = new CoreMap<NamedNode, QuadMap>();
 		}
@@ -585,7 +585,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * This method is used by the class Quad to communicate with its resources
+	 * This method is used by the class Quad to communicate with its nodes
 	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param quad
@@ -636,7 +636,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * This method is used by the class Quad to communicate with its resources
+	 * This method is used by the class Quad to communicate with its nodes
 	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
@@ -686,7 +686,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * This method is used by the class Quad to communicate with its resources
+	 * This method is used by the class Quad to communicate with its nodes
 	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
@@ -722,7 +722,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * This method is used by the class Quad to communicate with its resources
+	 * This method is used by the class Quad to communicate with its nodes
 	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
@@ -813,7 +813,7 @@ export class NamedNode extends Node
 	 * Set multiple values at once for a single property.
 	 * You can use this for example to state that this node (a person) has a 'hasFriend' connection to multiple people (friends) in 1 statement
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 * @param values - an array or set of resources. Can be NamedNodes or Literals
+	 * @param values - an array or set of nodes. Can be NamedNodes or Literals
 	 */
 	mset(property: NamedNode, values: ICoreIterable<Node>): boolean {
 		//if(save) dacore.system.storageQueueStart(this);
@@ -887,7 +887,7 @@ export class NamedNode extends Node
 	/**
 	 * Returns true if this node has the given value as the value of the given property with an EXACT match (meaning the same object in memory)
 	 * So works the same as has() except for Literals this only returns true if the value of the property is exactly the same object as the given value
-	 * UNLIKE `has()` which checks if the literal value, datatype and language tag of two literal resources are equivalent
+	 * UNLIKE `has()` which checks if the literal value, datatype and language tag of two literal nodes are equivalent
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 * @param value - a single node. Can be a NamedNode or Literal
 	 */
@@ -939,7 +939,7 @@ export class NamedNode extends Node
 		}
 	}
 
-	getAs<T extends IShape>(type: {new (): T; getOf(resource: Node): T}): T {
+	getAs<T extends IShape>(type: {new (): T; getOf(node: Node): T}): T {
 		return type.getOf(this);
 	}
 
@@ -1007,7 +1007,7 @@ export class NamedNode extends Node
 	/**
 	 * Returns a set of all the properties this node has.
 	 * That is, all unique predicates of quads where this node is the subject
-	 * @param includeFromIncomingArcs if true, also includes predicates (properties) of quads where this node is the VALUE of another resources' property. Default: false
+	 * @param includeFromIncomingArcs if true, also includes predicates (properties) of quads where this node is the VALUE of another nodes' property. Default: false
 	 */
 	getProperties(includeFromIncomingArcs: boolean = false): NodeSet<NamedNode> {
 		if (includeFromIncomingArcs) {
@@ -1024,7 +1024,7 @@ export class NamedNode extends Node
 	/**
 	 * Returns a set of all the properties used by this node in EXPLICIT facts (quads)
 	 * See the documentation for more information about implicit vs explicit facts
-	 * @param includeFromIncomingArcs if true, also includes predicates (properties) of quads where this node is the VALUE of another resources' property. Default: false
+	 * @param includeFromIncomingArcs if true, also includes predicates (properties) of quads where this node is the VALUE of another nodes' property. Default: false
 	 */
 	getExplicitProperties(
 		includeFromIncomingArcs: boolean = false,
@@ -1037,7 +1037,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * Returns a set of all the properties used by other resources where this node is the VALUE of that property
+	 * Returns a set of all the properties used by other nodes where this node is the VALUE of that property
 	 * For example if this node is Jenny and the following is true: Mike foaf:hasFriend Jenny, calling this method on Jenny will return hasFriend
 	 */
 	getInverseProperties() {
@@ -1136,15 +1136,15 @@ export class NamedNode extends Node
 	 * Returns any value (node, node) that is connected to this node with one or more connections of the given property.
 	 * For example getDeep(hasFriend) will return all the people that are my friends or friends of friends
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 * @param maxDepth - the maximum number of connections that resulting resources are removed from this node. In the example above maxDepth=2 would return only friends and friends of friends
+	 * @param maxDepth - the maximum number of connections that resulting nodes are removed from this node. In the example above maxDepth=2 would return only friends and friends of friends
 	 */
 	getDeep(property: NamedNode, maxDepth: number = Infinity): NodeSet {
 		var result = new NodeSet();
 		var stack = new NodeSet([this as Node]);
 		while (stack.size > 0 && maxDepth > 0) {
 			var nextLevelStack = new NodeSet();
-			for (let resource of stack) {
-				for (var value of resource.getAll(property)) {
+			for (let node of stack) {
+				for (var value of node.getAll(property)) {
 					if (!result.has(value)) {
 						result.add(value);
 						nextLevelStack.add(value);
@@ -1160,7 +1160,7 @@ export class NamedNode extends Node
 	/**
 	 * Returns the first found value following the given properties in the given order.
 	 * For example: getOneFromPath([hasFriend,hasFather]) would return the first found father out of the set 'fathers of my friends'
-	 * @param properties - an array of NamedNodes. Which are resources with rdf:type rdf:Property, the edges in the graph, the predicates of quads.
+	 * @param properties - an array of NamedNodes. Which are nodes with rdf:type rdf:Property, the edges in the graph, the predicates of quads.
 	 */
 	getOneFromPath(...properties: NamedNode[]): Node | undefined {
 		//we just need one, so we do a depth-first algorithm which will be more performant, so:
@@ -1186,7 +1186,7 @@ export class NamedNode extends Node
 	/**
 	 * Returns all values that can be reached by following the given properties in order.
 	 * For example getAllFromPath([hasFriend,hasFather]) will return all fathers of all my (direct) friends
-	 * @param properties - an array of NamedNodes. Which are resources with rdf:type rdf:Property, the edges in the graph, the predicates of quads.
+	 * @param properties - an array of NamedNodes. Which are nodes with rdf:type rdf:Property, the edges in the graph, the predicates of quads.
 	 */
 	getAllFromPath(...properties: NamedNode[]): NodeSet {
 		//we just need all paths, so we can do a breadth first implementation
@@ -1205,15 +1205,15 @@ export class NamedNode extends Node
 	 * Same as getDeep() but for inverse properties.
 	 * Best understood with an example: if this is a person. this.getInverseDeep(hasChild) would return all this persons ancestors (which had children that eventually had this person as their child)
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 * @param maxDepth - the maximum number of connections that resulting resources are removed from this node. In the example above maxDepth=2 would return only the parents and grand parents
+	 * @param maxDepth - the maximum number of connections that resulting nodes are removed from this node. In the example above maxDepth=2 would return only the parents and grand parents
 	 */
 	getInverseDeep(property: NamedNode, maxDepth: number = Infinity): NodeSet {
 		var result = new NodeSet();
 		var stack = new NodeSet([this as Node]);
 		while (stack.size > 0 && maxDepth > 0) {
 			var nextLevelStack = new NodeSet();
-			for (let resource of stack) {
-				for (var value of resource.getAllInverse(property)) {
+			for (let node of stack) {
+				for (var value of node.getAllInverse(property)) {
 					if (!result.has(value)) {
 						result.add(value);
 						nextLevelStack.add(value);
@@ -1230,7 +1230,7 @@ export class NamedNode extends Node
 	 * Returns true if the given value can be reached with one or more connections of the given property
 	 * Example: if this is a person. this.hasDeep(hasFriend,Mike) returns true if this person has Mike as a friend, or if any this persons friends or friends of friends have Mike as a friend.
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 * @param maxDepth - the maximum number of connections that resulting resources are removed from this node. In the example above maxDepth=2 would return true only if Mike is the persons friend, or friend of a friend
+	 * @param maxDepth - the maximum number of connections that resulting nodes are removed from this node. In the example above maxDepth=2 would return true only if Mike is the persons friend, or friend of a friend
 	 */
 	hasDeep(
 		property: NamedNode,
@@ -1241,8 +1241,8 @@ export class NamedNode extends Node
 		var stack = new NodeSet([this as Node]);
 		while (stack.size > 0 && maxDepth > 0) {
 			var nextLevelStack = new NodeSet();
-			for (let resource of stack) {
-				for (var propertyValue of resource.getAll(property)) {
+			for (let node of stack) {
+				for (var propertyValue of node.getAll(property)) {
 					if (propertyValue === value) {
 						return true;
 					}
@@ -1260,7 +1260,7 @@ export class NamedNode extends Node
 
 	/**
 	 * Returns the first node that has this node as the valu eof the given property.
-	 * Same as getOne() but for 'inverse properties'. Meaning resources that have this node as their value.
+	 * Same as getOne() but for 'inverse properties'. Meaning nodes that have this node as their value.
 	 * Example: if this is a person. this.getOneInverse(hasChild) returns one of the persons parents
 	 * NOTE: the order of multiple (inverse) values CANNOT be guaranteed. Therefore use this value if it DOESN'T matter to you which of multiple possible inverse values for this property you'll get OR if you're certain there will be only one value.
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
@@ -1272,8 +1272,8 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * Returns all the resources that have this node as the value of the given property.
-	 * Same as getAll() but for 'inverse properties'. Meaning resources that have this node as their value.
+	 * Returns all the nodes that have this node as the value of the given property.
+	 * Same as getAll() but for 'inverse properties'. Meaning nodes that have this node as their value.
 	 * Example: if this is a person. this.getAllInverse(hasChild) returns all the persons parents
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
@@ -1284,7 +1284,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * Returns all the resources that have this node as the EXPLICIT value of the given property.
+	 * Returns all the nodes that have this node as the EXPLICIT value of the given property.
 	 * Same as getAll() but only considers explicit facts (excluding implicit facts generated by the reasoner)
 	 * Example: if this is a person. this.getAllInverse(hasChild) returns all the persons parents, as long as the fact that these are this persons parents is explicitly stated
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
@@ -1307,7 +1307,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * Get all the resources that have this node as their value for any of the given properties
+	 * Get all the nodes that have this node as their value for any of the given properties
 	 * Same as getMultiple() but for the opposite direction
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
@@ -1436,12 +1436,14 @@ export class NamedNode extends Node
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 * @param value - a single node. Can be a NamedNode or Literal
 	 */
-	overwrite(property: NamedNode, value: Node): boolean {
-		if (this.getAll(property).size == 1 && this.has(property, value))
+	overwrite(property: NamedNode, value: Node | null): boolean {
+		if (this.getAll(property).size == 1 && value && this.has(property, value))
 			return false;
 
 		this.unsetAll(property);
-		return this.set(property, value);
+		if (value) {
+			return this.set(property, value);
+		}
 	}
 
 	/**
@@ -1508,7 +1510,7 @@ export class NamedNode extends Node
 		this.asSubject.forEach((quads) => quads.removeAll());
 		if (this.asObject) this.asObject.forEach((quads) => quads.removeAll());
 
-		this.emit(NamedNode.RESOURCE_REMOVED, this);
+		this.emit(NamedNode.NODE_REMOVED, this);
 		this.removeAllListeners();
 
 		if (this.removePromise) {
@@ -1535,7 +1537,7 @@ export class NamedNode extends Node
 
 	/**
 	 * unset (remove) all values of a certain property.
-	 * Removes all connections (edges) in the graph between this node and other resources, where the given property is used as the connecting 'edge' between them
+	 * Removes all connections (edges) in the graph between this node and other nodes, where the given property is used as the connecting 'edge' between them
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
 	unsetAll(property: NamedNode): boolean {
@@ -1671,7 +1673,7 @@ export class NamedNode extends Node
 
 	/**
 	 * Save this node into the graph database.
-	 * Newly created resources will exist only in local memory until you call this function
+	 * Newly created nodes will exist only in local memory until you call this function
 	 * Returns a promise that resolves only once the node has been stored
 	 */
 	save(): Promise<NamedNode> {
@@ -1708,11 +1710,11 @@ export class NamedNode extends Node
 	 * NOTE: does NOT clone the inverse properties (where this node is the value of another node its properties)
 	 */
 	clone(): NamedNode {
-		var resource = NamedNode.create();
+		var node = NamedNode.create();
 		this.getAllQuads().forEach((quad: Quad) => {
-			resource.set(quad.predicate, quad.object);
+			node.set(quad.predicate, quad.object);
 		});
-		return resource as this;
+		return node as this;
 	}
 
 	/**
@@ -1957,7 +1959,7 @@ export class NamedNode extends Node
 	 */
 
 	/**
-	 * Emits the batched (property) events of the NamedNode CLASS (meaning events that relate to all resources)
+	 * Emits the batched (property) events of the NamedNode CLASS (meaning events that relate to all nodes)
 	 * Used internally by the framework to batch and emit change events
 	 * NOT FOR GENERAL USE
 	 * @internal
@@ -1969,18 +1971,18 @@ export class NamedNode extends Node
 		}
 
 		if (this.nodesToRemove.size) {
-			this.emitter.emit(NamedNode.REMOVE_RESOURCES, this.nodesToRemove);
+			this.emitter.emit(NamedNode.REMOVE_NODES, this.nodesToRemove);
 			this.nodesToRemove = new NodeSet<NamedNode>();
 		}
 
 		if (this.nodesToSave.size) {
-			this.emitter.emit(NamedNode.STORE_RESOURCES, this.nodesToSave);
+			this.emitter.emit(NamedNode.STORE_NODES, this.nodesToSave);
 			this.nodesToSave = new NodeSet<NamedNode>();
 		}
 
 		if (this.nodesToLoad.size || this.nodesToLoadFully.size) {
 			this.emitter.emit(
-				NamedNode.LOAD_RESOURCES,
+				NamedNode.LOAD_NODES,
 				this.nodesToLoad,
 				this.nodesToLoadFully,
 			);
@@ -2027,7 +2029,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * Resets the map of resources that is known in this local environment
+	 * Resets the map of nodes that is known in this local environment
 	 * Mostly used for test functionality
 	 */
 	static reset() {
@@ -2045,13 +2047,13 @@ export class NamedNode extends Node
 	}
 
 	private static _create(uri: string, isLocalNode: boolean = false): NamedNode {
-		var resource = new NamedNode(uri, isLocalNode);
-		this.register(resource);
-		return resource;
+		var node = new NamedNode(uri, isLocalNode);
+		this.register(node);
+		return node;
 	}
 
 	/**
-	 * Registers a URIResource to the locally known list of resources
+	 * Registers a NamedNode to the locally known list of nodes
 	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param node
@@ -2070,7 +2072,7 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * Unregisters a URIResource from the locally known list of resources
+	 * Unregisters a NamedNode from the locally known list of nodes
 	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param node
@@ -2085,18 +2087,18 @@ export class NamedNode extends Node
 	}
 
 	/**
-	 * Returns a map of all locally known resources.
+	 * Returns a map of all locally known nodes.
 	 * The map will have URI's as keys and NamedNodes as values
-	 * @param resource
+	 * @param node
 	 */
 	static getAllNamedNodes(): NodeMap<NamedNode> {
 		return this.namedNodes;
 	}
 
 	/**
-	 * Returns a map of all locally known resources.
+	 * Returns a map of all locally known nodes.
 	 * The map will have URI's as keys and NamedNodes as values
-	 * @param resource
+	 * @param node
 	 */
 	static createNewTempUri() {
 		return this.TEMP_URI_BASE + this.tempCounter++; //+'/';+Date.now()+Math.random();
@@ -2106,7 +2108,7 @@ export class NamedNode extends Node
 	 * The proper way to obtain a node from a URI.
 	 * If requested before, this returns the existing NamedNode for the given URI.
 	 * Or, if this is the first request for this URI, it creates a new NamedNode first, and returns that
-	 * Using this method over `new NamedNode()` makes sure all resources are registered, and no duplicates will exist.
+	 * Using this method over `new NamedNode()` makes sure all nodes are registered, and no duplicates will exist.
 	 * `new NamedNode()` should therefore never be used.
 	 * @param uri
 	 */
@@ -2181,8 +2183,8 @@ export class BlankNode extends NamedNode {
 }
 
 /**
- * One of the two main classes of resources (nodes) in the graph.
- * Literals are endpoints. They do NOT have outgoing connections (edges) to other resources in the graph.
+ * One of the two main classes of nodes (nodes) in the graph.
+ * Literals are endpoints. They do NOT have outgoing connections (edges) to other nodes in the graph.
  * Though a NamedNode can point to a Literal.
  * Each literal node has a literal value, like a string.
  * Besides that is can also have a language tag or a data type.
@@ -2215,7 +2217,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 		super(value);
 	}
 
-	getAs<T extends IShape>(type: {new (): T; getOf(resource: Node): T}): T {
+	getAs<T extends IShape>(type: {new (): T; getOf(node: Node): T}): T {
 		return type.getOf(this);
 	}
 
@@ -2224,7 +2226,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 	 * @param quad
 	 */
 	registerProperty(quad: Quad): void {
-		throw new Error('Literal resources should not be used as subjects');
+		throw new Error('Literal nodes should not be used as subjects');
 	}
 
 	/**
@@ -2249,7 +2251,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 	 * @param quad
 	 */
 	unregisterProperty(quad: Quad): void {
-		throw new Error('Literal resources should not be used as subjects');
+		throw new Error('Literal nodes should not be used as subjects');
 	}
 
 	/**
@@ -2352,7 +2354,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 	}
 
 	/**
-	 * Returns true if both are literal resources, with equal literal values, equal language tags and equal data types
+	 * Returns true if both are literal nodes, with equal literal values, equal language tags and equal data types
 	 * Other than NamedNodes, two different literal node instances can be deemed equivalent if all their properties are the same
 	 * @param other
 	 * @param caseSensitive
@@ -2362,7 +2364,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 	}
 
 	/**
-	 * Returns true if both are literal resources, with equal literal values (CASE INSENSITIVE CHECK), equal language tags and equal data types
+	 * Returns true if both are literal nodes, with equal literal values (CASE INSENSITIVE CHECK), equal language tags and equal data types
 	 * Other than NamedNodes, two different literal node instances can be deemed equivalent if all their properties are the same
 	 * @param other
 	 */
@@ -2610,7 +2612,7 @@ export class Graph implements Term {
 
 	//Static methods
 	/**
-	 * Resets the map of resources that is known in this environment
+	 * Resets the map of nodes that is known in this environment
 	 */
 	static reset() {
 		this.graphs = new CoreMap<string, Graph>();

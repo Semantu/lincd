@@ -1,5 +1,5 @@
 import {Literal, NamedNode} from 'lincd/src';
-import {SHACL_Shape} from './SHACL_Shape';
+import {SHACL_Shape} from './SHACL';
 import {shacl} from '../ontologies/shacl';
 import {linkedShape} from '../index';
 

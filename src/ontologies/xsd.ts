@@ -22,7 +22,7 @@ var Bytes: NamedNode = NamedNode.getOrCreate(base + 'Bytes');
 var long: NamedNode = NamedNode.getOrCreate(base + 'long');
 
 //not yet required by core so why define it?
-//export var boolean:NamedNode = resources.getOrCreate(base+"boolean");
+//export var boolean:NamedNode = nodes.getOrCreate(base+"boolean");
 
 export const xsd = {
 	_ontologyResource,

@@ -6,7 +6,7 @@
 import {NamedNode} from '../models';
 import {registerComponent} from '../models/Component';
 import {Shape} from '../shapes/Shape';
-import {NodeShape} from '../shapes/NodeShape';
+import {NodeShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 
 //global tree

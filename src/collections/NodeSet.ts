@@ -19,24 +19,24 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 	//we cannot use NamedNodeSet here because of requirement loops
 	getProperties(includeFromIncomingArcs: boolean = false): NodeSet<NamedNode> {
 		var res = new NodeSet<NamedNode>();
-		for (var resource of this) {
-			res = res.concat(resource.getProperties(includeFromIncomingArcs));
+		for (var node of this) {
+			res = res.concat(node.getProperties(includeFromIncomingArcs));
 		}
 		return res;
 	}
 
 	getInverseProperties(): NodeSet<NamedNode> {
 		var res = new NodeSet<NamedNode>();
-		for (var resource of this) {
-			res = res.concat(resource.getInverseProperties());
+		for (var node of this) {
+			res = res.concat(node.getInverseProperties());
 		}
 		return res;
 	}
 
 	getOne(property: NamedNode): Node | undefined {
-		for (var resource of this) {
-			if (resource.hasProperty(property)) {
-				return resource.getOne(property);
+		for (var node of this) {
+			if (node.hasProperty(property)) {
+				return node.getOne(property);
 			}
 		}
 		return undefined;
@@ -49,16 +49,16 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 	 */
 	getAll(property: NamedNode): NodeSet {
 		var res = new NodeSet();
-		for (var resource of this) {
-			res = res.concat(resource.getAll(property));
+		for (var node of this) {
+			res = res.concat(node.getAll(property));
 		}
 		return res;
 	}
 
 	getValues(property: NamedNode): string[] {
 		var res = [];
-		for (var resource of this) {
-			res.push(resource.getValue(property));
+		for (var node of this) {
+			res.push(node.getValue(property));
 		}
 		return res;
 	}
@@ -100,9 +100,9 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 	}
 
 	getOneInverse(property: NamedNode): NamedNode | undefined {
-		for (var resource of this) {
-			if (resource.hasInverseProperty(property)) {
-				return resource.getOneInverse(property);
+		for (var node of this) {
+			if (node.hasInverseProperty(property)) {
+				return node.getOneInverse(property);
 			}
 		}
 		return undefined;
@@ -110,8 +110,8 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 
 	getAllInverse(property: NamedNode): NodeSet<NamedNode> {
 		var res = new NodeSet<NamedNode>();
-		for (var resource of this) {
-			res = res.concat(resource.getAllInverse(property));
+		for (var node of this) {
+			res = res.concat(node.getAllInverse(property));
 		}
 		return res;
 	}
@@ -128,9 +128,9 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 
 	getMultiple(properties: ICoreIterable<NamedNode>): NodeSet {
 		var res = new NodeSet();
-		for (var resource of this) {
+		for (var node of this) {
 			for (var property of properties) {
-				res = res.concat(resource.getAll(property));
+				res = res.concat(node.getAll(property));
 			}
 		}
 		return res;
@@ -141,8 +141,8 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 		var stack: NodeSet = this;
 		while (stack.size > 0 && maxDepth > 0) {
 			var nextLevelStack = new NodeSet();
-			for (let resource of stack) {
-				for (var value of resource.getAll(property)) {
+			for (let node of stack) {
+				for (var value of node.getAll(property)) {
 					if (!result.has(value)) {
 						result.add(value);
 						nextLevelStack.add(value);
@@ -157,8 +157,8 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 
 	getQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
-		for (var resource of this) {
-			for (var quad of resource.getQuads(property)) {
+		for (var node of this) {
+			for (var quad of node.getQuads(property)) {
 				res.add(quad);
 			}
 		}
@@ -167,8 +167,8 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 
 	getInverseQuads(property: NamedNode): QuadSet | any {
 		var res = new QuadSet();
-		for (var resource of this) {
-			for (var quad of resource.getInverseQuads(property)) {
+		for (var node of this) {
+			for (var quad of node.getInverseQuads(property)) {
 				res.add(quad);
 			}
 		}
@@ -180,8 +180,8 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 		includeImplicit: boolean = false,
 	): QuadArray {
 		var res = new QuadArray();
-		for (var resource of this) {
-			for (var item of resource.getAllQuads(includeAsObject, includeImplicit)) {
+		for (var node of this) {
+			for (var item of node.getAllQuads(includeAsObject, includeImplicit)) {
 				if (res.indexOf(item) === -1) {
 					res.push(item);
 				}
@@ -193,8 +193,8 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 
 	getAllInverseQuads(includeImplicit?: boolean): QuadArray {
 		var res = new QuadArray();
-		for (var resource of this) {
-			for (var item of resource.getAllInverseQuads(includeImplicit)) {
+		for (var node of this) {
+			for (var item of node.getAllInverseQuads(includeImplicit)) {
 				if (res.indexOf(item) === -1) {
 					res.push(item);
 				}
@@ -207,19 +207,19 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 		//TODO: test performance with
 		//return this.filter(r => r.has(property,value));
 		var res = this.createNew();
-		for (var resource of this) {
-			if (resource.has(property, value)) {
+		for (var node of this) {
+			if (node.has(property, value)) {
 				//as any apparently needed, strange that NamedNode is not seen as matching to R?
-				res.add(resource as any);
+				res.add(node as any);
 			}
 		}
 		return res;
 	}
 
 	getWhere(property: NamedNode, value: Node): Node | undefined {
-		for (var resource of this) {
-			if (resource.has(property, value)) {
-				return resource;
+		for (var node of this) {
+			if (node.has(property, value)) {
+				return node;
 			}
 		}
 		return undefined;
@@ -227,55 +227,55 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 
 	setEach(property: NamedNode, value: Node): boolean {
 		let res = false;
-		for (var resource of this) {
-			res = resource.set(property, value) && res;
+		for (var node of this) {
+			res = node.set(property, value) && res;
 		}
 		return res;
 	}
 
 	msetEach(property: NamedNode, values: ICoreIterable<Node>): boolean {
 		let res = false;
-		for (var resource of this) {
-			res = resource.mset(property, values) && res;
+		for (var node of this) {
+			res = node.mset(property, values) && res;
 		}
 		return res;
 	}
 
 	updateEach(property: NamedNode, value: Node): boolean {
 		let res = false;
-		for (var resource of this) {
-			res = resource.overwrite(property, value) && res;
+		for (var node of this) {
+			res = node.overwrite(property, value) && res;
 		}
 		return res;
 	}
 
 	mupdateEach(property: NamedNode, values: ICoreIterable<Node>): boolean {
 		let res = false;
-		for (var resource of this) {
-			res = resource.moverwrite(property, values) && res;
+		for (var node of this) {
+			res = node.moverwrite(property, values) && res;
 		}
 		return res;
 	}
 
 	unsetEach(property: NamedNode, value: Node): boolean {
 		let res = false;
-		for (var resource of this) {
-			res = resource.unset(property, value) && res;
+		for (var node of this) {
+			res = node.unset(property, value) && res;
 		}
 		return res;
 	}
 
 	unsetAllEach(property: NamedNode): boolean {
 		let res = false;
-		for (var resource of this) {
-			res = resource.unsetAll(property) && res;
+		for (var node of this) {
+			res = node.unsetAll(property) && res;
 		}
 		return res;
 	}
 
 	promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
 		return Promise.all(
-			this.map((resource) => resource.promiseLoaded(loadInverseProperties)),
+			this.map((node) => node.promiseLoaded(loadInverseProperties)),
 		)
 			.then((res) => {
 				return res.every((result) => result === true);
@@ -286,15 +286,13 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R>
 	}
 
 	isLoaded(includingInverseProperties: boolean = false): boolean {
-		return this.every((resource) =>
-			resource.isLoaded(includingInverseProperties),
-		);
+		return this.every((node) => node.isLoaded(includingInverseProperties));
 	}
 
 	toString(): string {
 		return (
 			'NodeSet {\n' +
-			[...this].map((resource) => '\t' + resource.toString()).join(',\n') +
+			[...this].map((node) => '\t' + node.toString()).join(',\n') +
 			'\n}'
 		);
 	}

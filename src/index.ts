@@ -20,8 +20,8 @@ import * as QuadArray from './collections/QuadArray';
 import * as QuadMap from './collections/QuadMap';
 import * as QuadSet from './collections/QuadSet';
 import * as Shape from './shapes/Shape';
-import * as NodeShape from './shapes/NodeShape';
-import * as PropertyShape from './shapes/PropertyShape';
+import * as SHACLShapes from './shapes/SHACL';
+// import * as PropertyShape from './shapes/PropertyShape';
 import * as ShapeSet from './collections/ShapeSet';
 import * as Prefix from './utils/Prefix';
 import * as Debug from './utils/Debug';
@@ -37,9 +37,7 @@ import * as IGraphObject from './interfaces/IGraphObject';
 import * as IGraphObjectSet from './interfaces/IGraphObjectSet';
 import * as ICoreIterable from './interfaces/ICoreIterable';
 import * as IQuadStore from './interfaces/IQuadStore';
-import * as SHACL_Shape from './shapes/SHACL_Shape';
-
-//import anything else that needs to be bundled but not available to the outside world
+// import * as SHACL_Shape from './shapes/SHACL';
 import * as rdf from './ontologies/rdf';
 import * as rdfs from './ontologies/rdfs';
 import * as xsd from './ontologies/xsd';
@@ -69,9 +67,7 @@ let publicFiles = {
 	models,
 	StoreController,
 	Shape,
-	NodeShape,
 	ShapeSet,
-	PropertyShape,
 	Debug,
 	NameSpace,
 	List,
@@ -88,7 +84,7 @@ let publicFiles = {
 	IGraphObjectSet,
 	ICoreIterable,
 	IQuadStore,
-	SHACL_Shape,
+	SHACLShapes,
 	rdf,
 	rdfs,
 	xsd,
@@ -96,10 +92,10 @@ let publicFiles = {
 };
 //register the library globally and make all classes available directly from it
 var lincdExport = {};
-for (let key in publicFiles) {
-	let exportedClasses = publicFiles[key];
-	for (let key2 in exportedClasses) {
-		lincdExport[key2] = exportedClasses[key2];
+for (let fileKey in publicFiles) {
+	let exportedClasses = publicFiles[fileKey];
+	for (let className in exportedClasses) {
+		lincdExport[className] = exportedClasses[className];
 	}
 }
 if (typeof window !== 'undefined') {

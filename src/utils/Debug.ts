@@ -17,9 +17,9 @@ export class Debug {
 			node = NamedNode.TEMP_URI_BASE + node.toString();
 		}
 		if (typeof node == 'string') {
-			let uriResource = NamedNode.getNamedNode(node);
-			if (!uriResource) return node;
-			node = uriResource;
+			let namedNode = NamedNode.getNamedNode(node);
+			if (!namedNode) return node;
+			node = namedNode;
 		}
 		if (node instanceof Shape) {
 			node = node.node;

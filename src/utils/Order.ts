@@ -16,20 +16,20 @@ export class Order {
 
 	/**
 	 * Counts the number of connections each node makes to antoher
-	 * and then returns a new set of the same resources sorted by that numb connections with the most connections first
-	 * @param resources
+	 * and then returns a new set of the same nodes sorted by that numb connections with the most connections first
+	 * @param nodes
 	 * @param property
 	 * @param shortestPathFirst
 	 * @returns {NodeSet<NamedNode>}
 	 */
 	static byCrossPaths(
-		resources: NodeSet,
+		nodes: NodeSet,
 		property: NamedNode,
 		shortestPathFirst: boolean = false,
 	): NodeSet {
-		var counts = this.getCrossPaths(resources, property);
+		var counts = this.getCrossPaths(nodes, property);
 		if (shortestPathFirst) {
-			return resources.sort((r1, r2) => {
+			return nodes.sort((r1, r2) => {
 				//use strings as backup when counts are equal to make sure sorting is always the same
 				if (counts.get(r1) == counts.get(r2)) {
 					return r1.toString() >= r2.toString() ? 1 : -1;
@@ -38,7 +38,7 @@ export class Order {
 			});
 		} else {
 			//by default return the longest path first
-			return resources.sort((r1, r2) => {
+			return nodes.sort((r1, r2) => {
 				//use strings as backup when counts are equal to make sure sorting is always the same
 				if (counts.get(r1) == counts.get(r2)) {
 					return r1.toString() >= r2.toString() ? -1 : 1;
@@ -49,23 +49,23 @@ export class Order {
 	}
 
 	private static getCrossPaths(
-		resources: NodeSet,
+		nodes: NodeSet,
 		property: NamedNode,
 	): Map<Node, number> {
 		var counts: Map<Node, number> = new Map();
-		resources.forEach((resource) => {
+		nodes.forEach((node) => {
 			var crossRelations = 0;
-			resources.forEach((resource2) => {
+			nodes.forEach((resource2) => {
 				//'cross' => against others => not against self
-				if (resource === resource2) return;
+				if (node === resource2) return;
 
-				if (resource.has(property, resource2)) {
+				if (node.has(property, resource2)) {
 					//counts.set(node.uri,[counts.get(node.uri)[0]++,node]);
 					//counts[node.uri]++;
 					crossRelations++;
 				}
 			});
-			counts.set(resource, crossRelations);
+			counts.set(node, crossRelations);
 		});
 		return counts;
 	}

@@ -33,7 +33,7 @@ interface IClassConstruct {
  * Each Shape class has a static type property pointing to the rdfs:Class that it represents.
  * Each instance of a class that extends this Shape class points to a single node (NamedNode or Literal), that MUST have this rdfs:Class as its rdf:type in the graph.
  *
- * Classes that extend this class can thereby help simplify interactions with resources that have a certain rdf:type by replacing low level property access (NamedNode.getAll(), getOne() etc) with high level methods that do not require knowledge of the underlying graph structure.
+ * Classes that extend this class can thereby help simplify interactions with nodes that have a certain rdf:type by replacing low level property access (NamedNode.getAll(), getOne() etc) with high level methods that do not require knowledge of the underlying graph structure.
  *
  * An Example:
  * ```
@@ -72,11 +72,11 @@ export class Shape extends EventEmitter implements IShape {
 	 * If no node is given, a new NamedNode will be generated and it's rdf:type will be set.
 	 * Only use this constructor directly if you want to create a new node as well.
 	 * If you want to create an instance of an existing node, use `node.getAs(Class)` or `Class.getOf(node)`
-	 * @param resource
+	 * @param node
 	 */
-	constructor(resource?: Node) {
+	constructor(node?: Node) {
 		super();
-		this.setupNode(resource);
+		this.setupNode(node);
 	}
 
 	/**
@@ -169,7 +169,7 @@ export class Shape extends EventEmitter implements IShape {
 
 		//@TODO: do for literalresources as well if they implement events at some point?
 		if (this._node instanceof NamedNode) {
-			this._node.on(NamedNode.RESOURCE_REMOVED, this.destruct.bind(this));
+			this._node.on(NamedNode.NODE_REMOVED, this.destruct.bind(this));
 		}
 	}
 
@@ -411,7 +411,7 @@ export class Shape extends EventEmitter implements IShape {
 
 	/**
 	 * Returns true if this instance has had its promiseLoaded function called and the loading has completed
-	 * NOTE: will return false if the instance has never loaded, regardless of whether the uriResource it represents is already loaded, and even if this instance would not load anything else
+	 * NOTE: will return false if the instance has never loaded, regardless of whether the namedNode it represents is already loaded, and even if this instance would not load anything else
 	 */
 	isLoaded(includingInverseProperties: boolean = false): boolean {
 		return this.node instanceof NamedNode
@@ -503,16 +503,16 @@ export class Shape extends EventEmitter implements IShape {
 		//without this the compiler complains about the methods of `this` being called
 		// https://www.typescriptlang.org/docs/handbook/generics.html#using-class-types-in-generics
 		// https://stackoverflow.com/questions/34098023/typescript-self-referencing-return-type-for-static-methods-in-inheriting-classe?rq=1
-		return this.getSetOf(this.getLocalInstanceResources());
+		return this.getSetOf(this.getLocalInstanceNodes());
 	}
 
 	//TODO: to find Shape instances we need to not just check type, but all the constraints of this shape class
 	static getNumLocalInstances(): number {
-		return this.getLocalInstanceResources().size;
+		return this.getLocalInstanceNodes().size;
 	}
 
 	//TODO: to find Shape instances we need to not just check type, but all the constraints of this shape class
-	static getLocalInstanceResources(
+	static getLocalInstanceNodes(
 		explicitInstancesOnly: boolean = false,
 	): NodeSet {
 		if (explicitInstancesOnly) {
@@ -539,19 +539,19 @@ export class Shape extends EventEmitter implements IShape {
 
 	static getSetOf<T extends Shape>(
 		this: ShapeLike<T>,
-		resources: ICoreIterable<Node>,
+		nodes: ICoreIterable<Node>,
 	): ShapeSet<T> {
 		// (this as any).typeCheck();
-		if (!resources) {
+		if (!nodes) {
 			throw new Error('No node provided to create an instance of');
 		}
 
 		let set = new ShapeSet<T>();
-		resources.forEach((resource) => {
-			set.add(new this(resource));
+		nodes.forEach((node) => {
+			set.add(new this(node));
 		});
 		return set;
-		// return ShapeSet.getFromClass(resources, this.type) as ShapeSet<T>;
+		// return ShapeSet.getFromClass(nodes, this.type) as ShapeSet<T>;
 	}
 }
 
@@ -568,8 +568,8 @@ export interface ShapeLike<M extends Shape> extends Constructor<M> {
 
 	getSetOf<M extends Shape>(
 		this: ShapeLike<M>,
-		resources: ICoreIterable<Node>,
+		nodes: ICoreIterable<Node>,
 	): ShapeSet<M>;
 
-	getLocalInstanceResources(explicitInstancesOnly?: boolean): NodeSet;
+	getLocalInstanceNodes(explicitInstancesOnly?: boolean): NodeSet;
 }

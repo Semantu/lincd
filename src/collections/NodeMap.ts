@@ -19,8 +19,8 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 
 	getQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
-		for (var [key, resource] of this) {
-			for (var quad of resource.getQuads(property)) {
+		for (var [key, node] of this) {
+			for (var quad of node.getQuads(property)) {
 				res.add(quad);
 			}
 		}
@@ -29,8 +29,8 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 
 	getInverseQuads(property: NamedNode): QuadSet {
 		var res = new QuadSet();
-		for (var [key, resource] of this) {
-			for (var quad of resource.getInverseQuads(property)) {
+		for (var [key, node] of this) {
+			for (var quad of node.getInverseQuads(property)) {
 				res.add(quad);
 			}
 		}
@@ -39,25 +39,25 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 
 	getAll(property: NamedNode): NodeSet {
 		var res = new NodeSet();
-		for (var [key, resource] of this) {
-			res = res.concat(resource.getAll(property));
+		for (var [key, node] of this) {
+			res = res.concat(node.getAll(property));
 		}
 		return res;
 	}
 
 	getAllInverse(property: NamedNode): NodeSet<NamedNode> {
 		var res = new NodeSet<NamedNode>();
-		for (var [key, resource] of this) {
-			res = res.concat(resource.getAllInverse(property));
+		for (var [key, node] of this) {
+			res = res.concat(node.getAllInverse(property));
 		}
 		return res;
 	}
 
 	getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet {
 		var res = new NodeSet();
-		for (var [key, resource] of this) {
+		for (var [key, node] of this) {
 			for (var property of properties) {
-				res = res.concat(resource.getAllInverse(property));
+				res = res.concat(node.getAllInverse(property));
 			}
 		}
 		return res;
@@ -65,9 +65,9 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 
 	getMultiple(properties: ICoreIterable<NamedNode>): NodeSet {
 		var res = new NodeSet();
-		for (var [key, resource] of this) {
+		for (var [key, node] of this) {
 			for (var property of properties) {
-				res = res.concat(resource.getAll(property));
+				res = res.concat(node.getAll(property));
 			}
 		}
 		return res;
@@ -78,8 +78,8 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 		var stack: NodeSet = new NodeSet(this.values());
 		while (stack.size > 0 && maxDepth > 0) {
 			var nextLevelStack = new NodeSet();
-			for (let resource of stack) {
-				for (var value of resource.getAll(property)) {
+			for (let node of stack) {
+				for (var value of node.getAll(property)) {
 					if (!result.has(value)) {
 						result.add(value);
 						nextLevelStack.add(value);
@@ -130,32 +130,32 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 
 	getProperties(includeFromIncomingArcs: boolean = false): NodeSet<NamedNode> {
 		var res = new NodeSet<NamedNode>();
-		for (var [key, resource] of this) {
-			res = res.concat(resource.getProperties(includeFromIncomingArcs));
+		for (var [key, node] of this) {
+			res = res.concat(node.getProperties(includeFromIncomingArcs));
 		}
 		return res;
 	}
 
 	getInverseProperties(): NodeSet<NamedNode> {
 		var res = new NodeSet<NamedNode>();
-		for (var [key, resource] of this) {
-			res = res.concat(resource.getInverseProperties());
+		for (var [key, node] of this) {
+			res = res.concat(node.getInverseProperties());
 		}
 		return res;
 	}
 
 	getOne(property: NamedNode): Node | any {
-		for (var [key, resource] of this) {
-			if (resource.hasProperty(property)) {
-				return resource.getOne(property);
+		for (var [key, node] of this) {
+			if (node.hasProperty(property)) {
+				return node.getOne(property);
 			}
 		}
 	}
 
 	getOneInverse(property: NamedNode): NamedNode | any {
-		for (var [key, resource] of this) {
-			if (resource.hasInverseProperty(property)) {
-				return resource.getOneInverse(property);
+		for (var [key, node] of this) {
+			if (node.hasInverseProperty(property)) {
+				return node.getOneInverse(property);
 			}
 		}
 	}
@@ -165,8 +165,8 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 		includeImplicit: boolean = false,
 	): QuadArray {
 		var res = new QuadArray();
-		for (var [key, resource] of this) {
-			for (var item of resource.getAllQuads(includeAsObject, includeImplicit)) {
+		for (var [key, node] of this) {
+			for (var item of node.getAllQuads(includeAsObject, includeImplicit)) {
 				if (res.indexOf(item) === -1) {
 					res.push(item);
 				}
@@ -177,8 +177,8 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 
 	getAllInverseQuads(includeImplicit?: boolean): QuadArray {
 		var res = new QuadArray();
-		for (var [key, resource] of this) {
-			for (var item of resource.getAllInverseQuads(includeImplicit)) {
+		for (var [key, node] of this) {
+			for (var item of node.getAllInverseQuads(includeImplicit)) {
 				if (res.indexOf(item) === -1) {
 					res.push(item);
 				}
@@ -191,19 +191,19 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 		//TODO: test performance with
 		//return this.filter(r => r.has(property,value));
 		var res = this.createNew();
-		for (var [key, resource] of this) {
-			if (resource.has(property, value)) {
+		for (var [key, node] of this) {
+			if (node.has(property, value)) {
 				//as any apparently needed, strange that NamedNode is not seen as matching to R?
-				res.set(key, resource);
+				res.set(key, node);
 			}
 		}
 		return res;
 	}
 
 	getWhere(property: NamedNode, value: Node): Node | undefined {
-		for (var [key, resource] of this) {
-			if (resource.has(property, value)) {
-				return resource;
+		for (var [key, node] of this) {
+			if (node.has(property, value)) {
+				return node;
 			}
 		}
 		return undefined;
@@ -211,56 +211,56 @@ export class NodeMap<R extends Node> extends CoreMap<string, R>
 
 	setEach(property: NamedNode, value: Node): boolean {
 		let res = false;
-		for (var [key, resource] of this) {
-			res = resource.set(property, value) && res;
+		for (var [key, node] of this) {
+			res = node.set(property, value) && res;
 		}
 		return res;
 	}
 
 	msetEach(property: NamedNode, values: ICoreIterable<Node>): boolean {
 		let res = false;
-		for (var [key, resource] of this) {
-			res = resource.mset(property, values) && res;
+		for (var [key, node] of this) {
+			res = node.mset(property, values) && res;
 		}
 		return res;
 	}
 
 	updateEach(property: NamedNode, value: Node): boolean {
 		let res = false;
-		for (var [key, resource] of this) {
-			res = resource.overwrite(property, value) && res;
+		for (var [key, node] of this) {
+			res = node.overwrite(property, value) && res;
 		}
 		return res;
 	}
 
 	mupdateEach(property: NamedNode, values: ICoreIterable<Node>): boolean {
 		let res = false;
-		for (var [key, resource] of this) {
-			res = resource.moverwrite(property, values) && res;
+		for (var [key, node] of this) {
+			res = node.moverwrite(property, values) && res;
 		}
 		return res;
 	}
 
 	unsetEach(property: NamedNode, value: Node): boolean {
 		let res = false;
-		for (var [key, resource] of this) {
-			res = resource.unset(property, value) && res;
+		for (var [key, node] of this) {
+			res = node.unset(property, value) && res;
 		}
 		return res;
 	}
 
 	unsetAllEach(property: NamedNode): boolean {
 		let res = false;
-		for (var [key, resource] of this) {
-			res = resource.unsetAll(property) && res;
+		for (var [key, node] of this) {
+			res = node.unsetAll(property) && res;
 		}
 		return res;
 	}
 
 	promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
 		return Promise.all(
-			[...this.values()].map((resource) =>
-				resource.promiseLoaded(loadInverseProperties),
+			[...this.values()].map((node) =>
+				node.promiseLoaded(loadInverseProperties),
 			),
 		)
 			.then((res) => {

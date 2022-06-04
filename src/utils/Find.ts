@@ -68,7 +68,7 @@ export class Find {
 		sanitized: boolean,
 		exactMatch: boolean,
 	): boolean {
-		//if local resources are allowed not allowed and the object is a local node, dont continue
+		//if local nodes are allowed not allowed and the object is a local node, dont continue
 
 		if (propertyValueResource instanceof NamedNode) return false;
 
@@ -92,7 +92,7 @@ export class Find {
 	 * @param searchValue
 	 * @param properties a single property, a set of properties, a property type or '*' to indicate ANY property
 	 * @param targetType only include quads whos subject is of this type
-	 * @param includeLocalResources if false, temporary / local resources will be excluded from results
+	 * @param includeLocalResources if false, temporary / local nodes will be excluded from results
 	 * @param exactMatch if true, only returns exact matches, if false, returns values that START WITH the given searchValue
 	 * @param sanitized indicates whether the searchValue has been sanitized
 	 * @param subjects if given, will only return quads who's subject occurs in this set
@@ -145,7 +145,7 @@ export class Find {
 
 			//go through the quads for this property
 			potentialQuads.forEach((quad) => {
-				//option to exclude local resources
+				//option to exclude local nodes
 				if (!includeLocalResources && quad.subject.isTemporaryNode) return;
 
 				//option to only include subjects of a certain type

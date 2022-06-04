@@ -5,9 +5,8 @@
  */
 import {BlankNode, Literal, NamedNode, Node} from '../models';
 import {Shape} from '../shapes/Shape';
-import {PropertyShape} from '../shapes/PropertyShape';
 import {NodeSet} from '../collections/NodeSet';
-import {NodeShape} from '../shapes/NodeShape';
+import {NodeShape, PropertyShape} from '../shapes/SHACL';
 
 export interface NodeShapeConfig {
 	/**
