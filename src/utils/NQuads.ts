@@ -7,7 +7,6 @@ import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {BlankNode, Graph, Literal, NamedNode, Node, Quad} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import {Shape} from '../shapes/Shape';
-import {includeBlankNodes} from './Collect';
 
 export class NQuads {
 	// static stringify(object: ICoreIterable<Graph> | QuadSet | Quad[]): string {
@@ -33,7 +32,7 @@ export class NQuads {
 	static fromQuads(quadset: QuadSet | Quad[], graph: Graph = null): string {
 		let resultString: string = '';
 
-		includeBlankNodes(quadset);
+		BlankNode.includeBlankNodes(quadset);
 
 		quadset.forEach((quad) => {
 			//we check for graph.node.uri not to be empty (as it can be for the default graph)

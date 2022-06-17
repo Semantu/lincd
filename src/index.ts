@@ -37,6 +37,7 @@ import * as IGraphObject from './interfaces/IGraphObject';
 import * as IGraphObjectSet from './interfaces/IGraphObjectSet';
 import * as ICoreIterable from './interfaces/ICoreIterable';
 import * as IQuadStore from './interfaces/IQuadStore';
+import * as Component from './interfaces/Component';
 // import * as SHACL_Shape from './shapes/SHACL';
 import * as rdf from './ontologies/rdf';
 import * as rdfs from './ontologies/rdfs';
@@ -84,6 +85,7 @@ let publicFiles = {
 	IGraphObjectSet,
 	ICoreIterable,
 	IQuadStore,
+	Component,
 	SHACLShapes,
 	rdf,
 	rdfs,

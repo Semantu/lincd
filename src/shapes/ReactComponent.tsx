@@ -53,7 +53,7 @@ export class ReactComponent<
 		this.state = {} as any;
 	}
 
-	get source(): ShapeType {
+	get sourceShape(): ShapeType {
 		if (typeof this._shape === 'undefined') {
 			let shapeClass = (this.constructor as typeof ReactComponent).shape;
 

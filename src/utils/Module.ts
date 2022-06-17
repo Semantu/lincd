@@ -8,6 +8,7 @@ import {registerComponent} from '../models/Component';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
+import {ComponentProps, FunctionalComponent} from '../interfaces/Component';
 
 //global tree
 declare var lincd: any;
@@ -142,13 +143,52 @@ export function linkedModule(
 
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
 	// let linkedComponent = function (config: {shape: typeof Shape}) {
-	let linkedComponent = function(shape: typeof Shape) {
-		return (constructor) => {
+	function linkedComponent<ShapeType extends Shape, P = any>(
+		shapeClass: typeof Shape,
+		functionalComponent: FunctionalComponent<P, ShapeType>,
+	): FunctionalComponent<ComponentProps<ShapeType>>;
+	function linkedComponent<ShapeType extends Shape, P = any>(
+		shape: typeof Shape,
+	);
+	function linkedComponent<ShapeType extends Shape, P = any>(
+		shapeClass: typeof Shape,
+		functionalComponent?:
+			| typeof Shape
+			| FunctionalComponent<ComponentProps<ShapeType>>,
+	): FunctionalComponent<ComponentProps<ShapeType>> | typeof Shape {
+		type FC = FunctionalComponent<ComponentProps<ShapeType>>;
+		if (functionalComponent) {
+			//add the component class of this module to the global tree
+			registerInTree(functionalComponent);
+
+			//link the shape to the functional component
+			(functionalComponent as FC).shape = shapeClass;
+
+			//register the component and its shape
+			registerComponent(functionalComponent as FC, shapeClass);
+
+			//return a new functional component which wraps the original
+			return (props: P & ComponentProps<ShapeType>) => {
+				//when this function is ran, we add a new property 'sourceShape'
+				let newProps = {...props};
+				if (props.source) {
+					//for which we create a new instance of the given shapeClass, which is the same as ShapeType (shapeClass is a runtime variable, ShapeType is used for the typing system)
+					newProps.sourceShape = new shapeClass(props.source) as ShapeType;
+				}
+				//and then run the original with the transformed props
+				return (functionalComponent as FunctionalComponent<P>)(newProps);
+			};
+		}
+
+		//this is for Components declared with ES Classes
+		//in this case the function we're in will be used as a decorator: @linkedComponent(SomeShapeClass)
+		//so here we get the constructor of the class when the decorator runs
+		let decoratorFunction = function(constructor) {
 			//add the component class of this module to the global tree
 			registerInTree(constructor);
 
 			//link the shape
-			constructor.shape = shape;
+			constructor.shape = shapeClass;
 
 			//register the component and its shape
 			registerComponent(constructor);
@@ -156,7 +196,8 @@ export function linkedModule(
 			//return the original class without modifications
 			return constructor;
 		};
-	};
+		return decoratorFunction;
+	}
 
 	//create a declarator function which Shapes of this module can use register themselves and add themselves to the global tree
 	let linkedShape = function(constructor) {

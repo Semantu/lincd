@@ -162,6 +162,7 @@ export class Shape extends EventEmitter implements IShape {
 		} else {
 			//this code gets triggered when you call new SomeShapeClass() without providing a node
 			//some classes prefer a certain term type. E.g. RdfsLiteral will create a Literal node, and NodeShape will create a BlankNode
+			//TODO: also look at inheritance chain, so that a class without preferredTermType that extends a class with preferredTermType still gets that inherited termType
 			let termType = this.constructor['preferredTermType'] || NamedNode;
 			this._node = termType.create();
 			this._node.set(rdf.type, this.instanceType);

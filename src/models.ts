@@ -26,6 +26,7 @@ import {PropertySet} from './collections/PropertySet';
 import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
+import {BlankNodeMap} from './collections/BlankNodeMap';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -2173,12 +2174,58 @@ export class BlankNode extends NamedNode {
 		NamedNode.register(this);
 	}
 
+	get uri(): string {
+		return this._value;
+	}
+
+	set uri(uri: string) {
+		throw new Error(
+			'You should not set the URI of a BlankNode. Make sure the node is created as a NamedNode. BlankNode data:\n' +
+				BlankNode.includeBlankNodes(this.getAllQuads()).toString(),
+		);
+	}
+
 	static create(): BlankNode {
 		return new BlankNode();
 	}
 
 	static createUri() {
 		return '_:' + this.counter++;
+	}
+
+	static includeBlankNodes(
+		quads: QuadSet | Quad[],
+		blankNodes: BlankNodeMap = new BlankNodeMap(),
+	) {
+		let add =
+			quads instanceof QuadSet ? quads.add.bind(quads) : quads.push.bind(quads);
+		for (var quad of quads) {
+			if (quad.object instanceof BlankNode) {
+				blankNodes.set(quad.object.uri, quad.object);
+				this.addBlankNodeQuads(quad.object, add, blankNodes);
+			}
+		}
+		return quads;
+	}
+	private static addBlankNodeQuads(
+		blankNode: BlankNode,
+		add: (n: any) => void,
+		blankNodes: BlankNodeMap,
+	) {
+		blankNode.getAllQuads().forEach((quad) => {
+			if (!(quad instanceof Quad)) {
+				throw new Error('Not a quad');
+			}
+			add(quad);
+			//also, iteratively include quads of blank-node values of blank-nodes
+			if (quad.object instanceof BlankNode) {
+				//if we've not seen this blank node yet during this collection (avoiding loops from circular references between blank nodes)
+				if (!blankNodes.has(quad.object.uri)) {
+					blankNodes.set(quad.object.uri, quad.object);
+					this.addBlankNodeQuads(quad.object, add, blankNodes);
+				}
+			}
+		});
 	}
 }
 
