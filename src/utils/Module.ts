@@ -146,7 +146,7 @@ export function linkedModule(
 	function linkedComponent<ShapeType extends Shape, P = any>(
 		shapeClass: typeof Shape,
 		functionalComponent: FunctionalComponent<P, ShapeType>,
-	): FunctionalComponent<ComponentProps<ShapeType>>;
+	): FunctionalComponent<ComponentProps<ShapeType> & P>;
 	function linkedComponent<ShapeType extends Shape, P = any>(
 		shape: typeof Shape,
 	);

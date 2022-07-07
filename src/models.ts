@@ -27,6 +27,7 @@ import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
 import {BlankNodeMap} from './collections/BlankNodeMap';
+import { Debug } from "./utils/Debug";
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -290,8 +291,10 @@ export abstract class Node extends EventEmitter {
  * The other one being Literal
  * See also: https://www.w3.org/TR/rdf-concepts/#section-Graph-URIref
  */
-export class NamedNode extends Node
-	implements IGraphObject, BatchedEventEmitter, INamedNode {
+export class NamedNode
+	extends Node
+	implements IGraphObject, BatchedEventEmitter, INamedNode
+{
 	/**
 	 * The base of temporary URI's
 	 * @internal
@@ -317,10 +320,8 @@ export class NamedNode extends Node
 	private static nodesToLoad: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToRemove: NodeSet<NamedNode> = new NodeSet();
-	private static nodesURIUpdated: CoreMap<
-		NamedNode,
-		[string, string]
-	> = new CoreMap();
+	private static nodesURIUpdated: CoreMap<NamedNode, [string, string]> =
+		new CoreMap();
 
 	//### event types ###
 
@@ -1343,7 +1344,7 @@ export class NamedNode extends Node
 				: new QuadSet()
 			: this.asSubject
 					.get(property)
-					.filter((quad) => quad.object.equals(value));
+					.filter((quad) => quad.object.equals(value),QuadSet);
 	}
 
 	/**
@@ -1727,7 +1728,7 @@ export class NamedNode extends Node
 	}
 
 	print(includeIncomingProperties: boolean = true) {
-		dprint(this, includeIncomingProperties);
+		return Debug.print(this, includeIncomingProperties);
 	}
 
 	/**
@@ -2193,38 +2194,52 @@ export class BlankNode extends NamedNode {
 		return '_:' + this.counter++;
 	}
 
-	static includeBlankNodes(
-		quads: QuadSet | Quad[],
-		blankNodes: BlankNodeMap = new BlankNodeMap(),
-	) {
-		let add =
-			quads instanceof QuadSet ? quads.add.bind(quads) : quads.push.bind(quads);
-		for (var quad of quads) {
-			if (quad.object instanceof BlankNode) {
-				blankNodes.set(quad.object.uri, quad.object);
-				this.addBlankNodeQuads(quad.object, add, blankNodes);
-			}
-		}
-		return quads;
-	}
+  static includeBlankNodes(
+    quads: QuadSet | Quad[],
+    includeObjectBlankNodes: boolean=true,
+    includeSubjectBlankNodes: boolean=false,
+    blankNodes: BlankNodeMap = new BlankNodeMap()
+  ) {
+    let add =
+      quads instanceof Set ? quads.add.bind(quads) : quads.push.bind(quads);
+    quads.forEach((quad) => {
+      if (includeObjectBlankNodes && quad.object instanceof BlankNode) {
+        this.addBlankNodeQuads(quad.object, add, blankNodes);
+      }
+      if (includeSubjectBlankNodes && quad.subject instanceof BlankNode) {
+        //also add quads of subjects that are blank nodes, iteratively, but don't include the blank node objects of those quads
+        this.addBlankNodeQuads(quad.subject, add, blankNodes,true);
+      }
+    });
+    return quads;
+  }
+
 	private static addBlankNodeQuads(
 		blankNode: BlankNode,
 		add: (n: any) => void,
 		blankNodes: BlankNodeMap,
+		inverseIteration: boolean=false,
 	) {
+		// console.log('adding quads of ' + blankNode.uri);
+		blankNodes.set(blankNode.uri, blankNode);
 		blankNode.getAllQuads().forEach((quad) => {
 			if (!(quad instanceof Quad)) {
 				throw new Error('Not a quad');
 			}
 			add(quad);
 			//also, iteratively include quads of blank-node values of blank-nodes
-			if (quad.object instanceof BlankNode) {
+			if (!inverseIteration && quad.object instanceof BlankNode) {
 				//if we've not seen this blank node yet during this collection (avoiding loops from circular references between blank nodes)
 				if (!blankNodes.has(quad.object.uri)) {
-					blankNodes.set(quad.object.uri, quad.object);
 					this.addBlankNodeQuads(quad.object, add, blankNodes);
 				}
-			}
+      }
+			if (inverseIteration && quad.subject instanceof BlankNode) {
+				//if we've not seen this blank node yet during this collection (avoiding loops from circular references between blank nodes)
+				if (!blankNodes.has(quad.subject.uri)) {
+					this.addBlankNodeQuads(quad.subject, add, blankNodes,true);
+				}
+      }
 		});
 	}
 }
@@ -2597,7 +2612,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 	}
 
 	print(includeIncomingProperties: boolean = true) {
-		dprint(this, includeIncomingProperties);
+		return Debug.print(this, includeIncomingProperties);
 	}
 
 	static isLiteralString(literalString: string): boolean {

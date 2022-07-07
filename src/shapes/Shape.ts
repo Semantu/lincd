@@ -17,6 +17,7 @@ import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
+import { Debug } from "../utils/Debug";
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -441,7 +442,8 @@ export class Shape extends EventEmitter implements IShape {
 	}
 
 	print(includeIncomingProperties: boolean = true) {
-		dprint(this, includeIncomingProperties);
+    return Debug.print(this.node,includeIncomingProperties);
+		// typeof (typeof window !== 'undefined' ? window['dprint'] : global.dprint)(this, includeIncomingProperties);
 	}
 
 	/**

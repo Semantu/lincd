@@ -124,10 +124,10 @@ export class PropertyShape extends SHACL_Shape {
 	}
 
 	get path(): NamedNode {
-		return this.getOne(shacl.property) as NamedNode;
+		return this.getOne(shacl.path) as NamedNode;
 	}
 
 	set path(value: NamedNode) {
-		this.overwrite(shacl.property, value);
+		this.overwrite(shacl.path, value);
 	}
 }

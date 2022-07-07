@@ -25,7 +25,7 @@ export class List extends Shape {
 	}
 
 	getContents() {
-		return List.getContentNodes(this.namedNode);
+		return List.getContents(this.namedNode);
 	}
 
 	isEmpty() {
@@ -138,14 +138,21 @@ export class List extends Shape {
 		return List.getOf(list);
 	}
 
-	private static getContentNodes(list: NamedNode, result = new NodeSet()) {
+  /**
+   * Returns the contents of a rdf.List
+   * Will return an empty set if the given node is not a list
+   * @param list
+   * @param result
+   * @private
+   */
+	static getContents(list: NamedNode, result = new NodeSet()):NodeSet {
 		if (list.hasProperty(rdf.first)) {
 			result.add(list.getOne(rdf.first));
 		}
 		if (list.hasProperty(rdf.rest)) {
 			let rest = list.getOne(rdf.rest) as NamedNode;
 			if (rest !== rdf.nil) {
-				return List.getContentNodes(rest, result);
+				return List.getContents(rest, result);
 			}
 		}
 		return result;

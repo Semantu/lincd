@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {ICoreIterable} from '../interfaces/ICoreIterable';
+import { Debug } from "../utils/Debug";
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -127,6 +128,6 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
 	}
 
 	print(includeIncomingProperties: boolean = true) {
-		dprint(this, includeIncomingProperties);
+		return Debug.print(this, includeIncomingProperties);
 	}
 }
