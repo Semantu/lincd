@@ -86,8 +86,12 @@ export abstract class Node extends EventEmitter {
 		return false;
 	}
 
-	has(property: NamedNode, value: Node): boolean {
-		return false;
+  setValue(property: NamedNode, value: string) {
+    return false;
+  }
+
+  has(property: NamedNode, value: Node): boolean {
+  	return false;
 	}
 
 	hasValue(property: NamedNode, value: string): boolean {
@@ -811,7 +815,17 @@ export class NamedNode
 		return true;
 	}
 
-	/**
+  /**
+   * Same as set() except this method allows you to pass a string as value and converts it to a Literal for you
+   * @param property
+   * @param value
+   */
+  setValue(property: NamedNode, value: string)
+  {
+    return this.set(property,new Literal(value));
+  }
+
+    /**
 	 * Set multiple values at once for a single property.
 	 * You can use this for example to state that this node (a person) has a 'hasFriend' connection to multiple people (friends) in 1 statement
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad

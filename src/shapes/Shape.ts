@@ -242,6 +242,10 @@ export class Shape extends EventEmitter implements IShape {
 		return this._node.set(property, value);
 	}
 
+	setValue(property: NamedNode, value: string) {
+		return this._node.setValue(property, value);
+	}
+
 	mset(property: NamedNode, values: ICoreIterable<Node>): boolean {
 		return this._node.mset(property, values);
 	}
