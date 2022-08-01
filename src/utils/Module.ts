@@ -225,15 +225,17 @@ export function linkedModule(
 
 	/**
 	 *
+	 * @param exports all exports of the file, simply provide "this" as value!
+	 * @param dataFilePath the path leading to the ontology's data file
 	 * @param nameSpace the base URI of the ontology
 	 * @param prefixAndFileName the file name MUST match the prefix for this ontology
-	 * @param exports all exports of the file, simply provide "this" as value!
 	 */
 	let linkedOntology = function(
 		exports,
 		nameSpace: (term: string) => NamedNode,
 		prefixAndFileName: string,
-		loadData?,
+		loadData?: Function,
+		dataFilePath?: string,
 	) {
 		// let linkedOntology = function(
 		// 	fn: () => [Object, (term: string) => NamedNode, string, () => Promise<any>],
@@ -243,6 +245,7 @@ export function linkedModule(
 		// nextTick(() => {
 		// 	let [exports, nameSpace, prefixAndFileName, loadData] = fn();
 		//make sure we can detect this as an ontology later
+		exports['_data'] = dataFilePath;
 		exports['_ns'] = nameSpace;
 		exports['_prefix'] = prefixAndFileName;
 		exports['_load'] = loadData;
