@@ -43,7 +43,7 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
 		return this.values().next().value;
 	}
 
-	getFirst(n: number = 1) {
+	getFirst(n: number) {
 		return this.createNew([...this].slice(0, n));
 	}
 

@@ -122,7 +122,7 @@ export class ReactComponent<
 
 	/**
 	 * Intended to be used to pass on properties of this component to the most top-level JSX element in render methods
-	 * Specifically for "native" elements like <div> <h1> <span> as opposed to a class that extends ReactComponent, use passComponentProps for that
+	 * Specifically for "native" elements like div h1 & span as opposed to a class that extends ReactComponent, use passComponentProps for that
 	 * @param props
 	 * @param filterOut
 	 */
