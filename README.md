@@ -28,94 +28,130 @@ With the help of modules built with `lincd.js` you can integrate data from diffe
 Are currently actively developed.
 [Signup here](http://eepurl.com/hVBG0n) to be notified as LINCD is launching
 
+[//]: # ()
 [//]: # (## Examples)
 
 [//]: # ()
+[//]: # ()
 [//]: # (## Documentation)
 
+[//]: # ()
 [//]: # (- Consuming a LINCD components)
 
+[//]: # ()
 [//]: # ()
 [//]: # (### Building your own LINCD Modules)
 
 [//]: # ()
+[//]: # ()
 [//]: # (With LINCD.js, you can link code to [SHACL Shapes]&#40;https://www.w3.org/TR/shacl/#shapes&#41;. )
 
+[//]: # ()
 [//]: # ()
 [//]: # (By doing so, you make your code easily applicable to anyone who structures their data with these Shapes.)
 
 [//]: # ()
+[//]: # ()
 [//]: # (Modules built with LINCD.js can be published to the LINCD repository &#40;with `npm run publish`&#41; which makes your module and it's required data Shapes easy to find and use.  )
 
+[//]: # ()
 [//]: # ()
 [//]: # (See the documentation )
 
 [//]: # ()
+[//]: # ()
 [//]: # (---)
 
+[//]: # ()
 [//]: # (Create and share code modules across different environments using W3C’s Linked Data standards.)
 
 [//]: # ()
 [//]: # ()
 [//]: # ()
 [//]: # ()
+[//]: # ()
 [//]: # (- Link your code to SHACL Shapes)
 
-[//]: # (- )
-
+[//]: # ()
 [//]: # (- )
 
 [//]: # ()
+[//]: # (- )
+
+[//]: # ()
+[//]: # ()
 [//]: # (    Reads and writes RDF/XML, Turtle and N3; Reads RDFa and JSON-LD)
 
+[//]: # ()
 [//]: # (    Read/Write Linked Data client, using WebDav or SPARQL/Update)
 
+[//]: # ()
 [//]: # (    Real-Time Collaborative editing with web sockets and PATCHes)
 
+[//]: # ()
 [//]: # (    Local API for querying a store)
 
+[//]: # ()
 [//]: # (    Compatible with RDFJS task force spec)
 
+[//]: # ()
 [//]: # (    SPARQL queries &#40;not full SPARQL - just graph match and optional&#41;)
 
+[//]: # ()
 [//]: # (    Smushing of nodes from owl:sameAs, and owl:{f,inverseF}unctionProperty)
 
+[//]: # ()
 [//]: # (    Tracks provenance of triples keeps metadata &#40;in RDF&#41; from HTTP accesses)
 
 [//]: # ()
 [//]: # ()
+[//]: # ()
 [//]: # (## LINCD - Linked Interoperable Code & Data)
 
+[//]: # ()
 [//]: # (The LINCD Protocol specifies how )
 
 [//]: # ()
 [//]: # ()
+[//]: # ()
 [//]: # (## Installation)
 
+[//]: # ()
 [//]: # (```)
 
+[//]: # ()
 [//]: # (npm install lincd)
 
+[//]: # ()
 [//]: # (```)
 
+[//]: # ()
 [//]: # ()
 [//]: # (## Usage)
 
+[//]: # ()
 [//]: # (Javascript)
 
-[//]: # (```)
-
-[//]: # (let lincd = require&#40;"lincd"&#41;)
-
+[//]: # ()
 [//]: # (```)
 
 [//]: # ()
-[//]: # (Typescript)
+[//]: # (let lincd = require&#40;"lincd"&#41;)
 
+[//]: # ()
 [//]: # (```)
 
+[//]: # ()
+[//]: # ()
+[//]: # (Typescript)
+
+[//]: # ()
+[//]: # (```)
+
+[//]: # ()
 [//]: # (import lincd from "lincd")
 
+[//]: # ()
 [//]: # (```)
 
 ## Contributing

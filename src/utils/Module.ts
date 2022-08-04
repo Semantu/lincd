@@ -158,17 +158,8 @@ export function linkedModule(
 	): FunctionalComponent<ComponentProps<ShapeType>> | typeof Shape {
 		type FC = FunctionalComponent<ComponentProps<ShapeType>>;
 		if (functionalComponent) {
-			//add the component class of this module to the global tree
-			registerInTree(functionalComponent);
-
-			//link the shape to the functional component
-			(functionalComponent as FC).shape = shapeClass;
-
-			//register the component and its shape
-			registerComponent(functionalComponent as FC, shapeClass);
-
-			//return a new functional component which wraps the original
-			return (props: P & ComponentProps<ShapeType>) => {
+			//create a new functional component which wraps the original
+			let wrappedComponent = (props: P & ComponentProps<ShapeType>) => {
 				//when this function is ran, we add a new property 'sourceShape'
 				let newProps = {...props};
 				if (props.source) {
@@ -178,6 +169,19 @@ export function linkedModule(
 				//and then run the original with the transformed props
 				return (functionalComponent as FunctionalComponent<P>)(newProps);
 			};
+      //copy the name (have to do it this way, name is protected)
+      Object.defineProperty(wrappedComponent, "name", { value: functionalComponent.name });
+      //keep a copy of the original for strict checking of equality when compared to
+      wrappedComponent['original'] = functionalComponent;
+
+      //link the wrapped functional component to its shape
+      (wrappedComponent as FC).shape = shapeClass;
+      //add the component class of this module to the global tree
+      registerInTree(wrappedComponent);
+      //register the component and its shape
+      registerComponent(wrappedComponent as FC, shapeClass);
+
+      return wrappedComponent;
 		}
 
 		//this is for Components declared with ES Classes
@@ -226,7 +230,7 @@ export function linkedModule(
 	/**
 	 *
 	 * @param exports all exports of the file, simply provide "this" as value!
-	 * @param dataFilePath the path leading to the ontology's data file
+	 * @param dataSource the path leading to the ontology's data file
 	 * @param nameSpace the base URI of the ontology
 	 * @param prefixAndFileName the file name MUST match the prefix for this ontology
 	 */
@@ -234,8 +238,8 @@ export function linkedModule(
 		exports,
 		nameSpace: (term: string) => NamedNode,
 		prefixAndFileName: string,
-		loadData?: Function,
-		dataFilePath?: string,
+		loadData?,
+    dataSource?:string,
 	) {
 		// let linkedOntology = function(
 		// 	fn: () => [Object, (term: string) => NamedNode, string, () => Promise<any>],
@@ -245,10 +249,10 @@ export function linkedModule(
 		// nextTick(() => {
 		// 	let [exports, nameSpace, prefixAndFileName, loadData] = fn();
 		//make sure we can detect this as an ontology later
-		exports['_data'] = dataFilePath;
 		exports['_ns'] = nameSpace;
 		exports['_prefix'] = prefixAndFileName;
 		exports['_load'] = loadData;
+		exports['_data'] = dataSource;
 
 		//register the prefix here (so just calling linkedOntology with a prefix will automatically register that prefix)
 		if (prefixAndFileName) {

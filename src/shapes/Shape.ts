@@ -544,6 +544,10 @@ export class Shape extends EventEmitter implements IShape {
 		return new this(node);
 	}
 
+  static getFromURI<T extends Shape>(this: ShapeLike<T>, uri:string): T {
+    return new this(NamedNode.getOrCreate(uri))
+  }
+
 	static getSetOf<T extends Shape>(
 		this: ShapeLike<T>,
 		nodes: ICoreIterable<Node>,
