@@ -21,7 +21,6 @@ import * as QuadMap from './collections/QuadMap';
 import * as QuadSet from './collections/QuadSet';
 import * as Shape from './shapes/Shape';
 import * as SHACLShapes from './shapes/SHACL';
-// import * as PropertyShape from './shapes/PropertyShape';
 import * as ShapeSet from './collections/ShapeSet';
 import * as Prefix from './utils/Prefix';
 import * as Debug from './utils/Debug';
@@ -29,6 +28,7 @@ import * as URI from './utils/URI';
 import * as Find from './utils/Find';
 import * as Order from './utils/Order';
 import * as NQuads from './utils/NQuads';
+import * as ForwardReasoning from './utils/ForwardReasoning';
 import * as NameSpace from './utils/NameSpace';
 import * as ReactComponent from './shapes/ReactComponent';
 import * as ShapeDecorators from './utils/ShapeDecorators';
@@ -38,7 +38,6 @@ import * as IGraphObjectSet from './interfaces/IGraphObjectSet';
 import * as ICoreIterable from './interfaces/ICoreIterable';
 import * as IQuadStore from './interfaces/IQuadStore';
 import * as Component from './interfaces/Component';
-// import * as SHACL_Shape from './shapes/SHACL';
 import * as rdf from './ontologies/rdf';
 import * as rdfs from './ontologies/rdfs';
 import * as xsd from './ontologies/xsd';
@@ -73,6 +72,7 @@ let publicFiles = {
 	NameSpace,
 	List,
 	URI,
+  ForwardReasoning,
 	Find,
 	Order,
 	Prefix,
