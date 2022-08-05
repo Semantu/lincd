@@ -229,9 +229,10 @@ export function linkedModule(
 
 	/**
 	 *
+	 * @param exports all exports of the file, simply provide "this" as value!
+	 * @param dataSource the path leading to the ontology's data file
 	 * @param nameSpace the base URI of the ontology
 	 * @param prefixAndFileName the file name MUST match the prefix for this ontology
-	 * @param exports all exports of the file, simply provide "this" as value!
 	 */
 	let linkedOntology = function(
 		exports,
