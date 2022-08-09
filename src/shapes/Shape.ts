@@ -163,8 +163,8 @@ export class Shape extends EventEmitter implements IShape {
 		} else {
 			//this code gets triggered when you call new SomeShapeClass() without providing a node
 			//some classes prefer a certain term type. E.g. RdfsLiteral will create a Literal node, and NodeShape will create a BlankNode
-			//TODO: also look at inheritance chain, so that a class without preferredTermType that extends a class with preferredTermType still gets that inherited termType
-			let termType = this.constructor['preferredTermType'] || NamedNode;
+			//TODO: also look at inheritance chain, so that a class without preferredNodeKind that extends a class with preferredTermType still gets that inherited termType
+			let termType = this.constructor['nodeKind'] || this.constructor['preferredNodeKind'] || NamedNode;
 			this._node = termType.create();
 			this._node.set(rdf.type, this.instanceType);
 		}
@@ -394,7 +394,24 @@ export class Shape extends EventEmitter implements IShape {
 		return this.has(rdf.type, type);
 	}
 
-	/**
+  static isInstanceOfTargetClass(node:Node)
+  {
+    return node.has(rdf.type,this.targetClass);
+  }
+
+  static getInstanceByType<T extends IShape>(node:Node,...shapes: {new (): T; targetClass:NamedNode,getOf(node: Node): T}[]): T {
+
+    let matchingShape = shapes.find(shape => {
+      return node.has(rdf.type,shape.targetClass)
+    });
+    if(matchingShape)
+    {
+      return matchingShape.getOf(node);
+    }
+  }
+
+
+  /**
 	 * Other than NamedNode.promiseLoaded, a Shape will preload whatever data it requires to fulfill the constraints of the shape
 	 * NOTE: loading is handled by the current StorageController, by default there is no StorageController
 	 * @param {boolean} loadInverseProperties

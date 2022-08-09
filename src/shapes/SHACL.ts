@@ -61,7 +61,7 @@ export class NodeShape extends SHACL_Shape {
 
 export class PropertyShape extends SHACL_Shape {
 	static targetClass: NamedNode = shacl.PropertyShape;
-	static preferredTermType = BlankNode;
+	static preferredNodeKind = BlankNode;
 
 	get class(): NamedNode {
 		return this.getOne(shacl.class) as NamedNode;
