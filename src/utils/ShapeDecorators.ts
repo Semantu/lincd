@@ -84,8 +84,10 @@ export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
 export interface PropertyShapeConfig {
 	/**
 	 * The property path of this property shape.
-	 * Currently only 1 property is supported.
-	 * Provide a NamedNode with rdf:type rdf:Property
+   *
+	 * Currently, only 1 property is supported.
+	 *
+   * Provide a NamedNode that has is a `rdf:Property`
 	 */
 	path: NamedNode;
 
@@ -94,9 +96,17 @@ export interface PropertyShapeConfig {
 	 * Shorthand for minCount=1
 	 */
 	required?: boolean;
+
 	/**
-	 * Each value must be of this node type.
-	 * Choose from NamedNode or BlankNode or Literal and provide the actual class as value.
+   Each value must be of this node type.
+
+	 Choose from NamedNode or BlankNode or Literal and provide the actual class as value
+
+   @example
+```tsx
+import {BlankNode,NamedNode,Literal} from "lincd/lib/models";
+@linkedProperty({nodeKind:NamedNode})
+```
 	 */
 	nodeKind?: typeof Node;
 
@@ -148,6 +158,25 @@ export const literalProperty = (config: LiteralPropertyShapeConfig) => {
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
 	return linkedProperty(config);
 };
+/**
+ * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
+ * Using this generator generates a [SHACL Property Shape](https://www.w3.org/TR/shacl/#property-shapes)
+ * @param config - configures the property shape with a plain javascript object that follows the [PropertyShapeConfig](/lincd.js/interfaces/utils_ShapeDecorators.PropertyShapeConfig) interface.
+ *
+ * @example
+ * ```
+ * @linkedProperty({
+ *   path:foaf.name,
+ *   required:true,
+ *   nodeKind:Literal,
+ *   maxLength:1,
+ *   defaultValue:"John"
+ * })
+ * get name(){
+ *   return this.getValue(foaf.name) || "John"
+ * }
+ * ```
+ */
 export const linkedProperty = (config: PropertyShapeConfig) => {
 	return function(
 		target: any,

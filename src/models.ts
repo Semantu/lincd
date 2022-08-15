@@ -289,11 +289,23 @@ export abstract class Node extends EventEmitter {
 
 /**
  * A Named Node in the graph is a node that has outgoing edges to other nodes.
+ *
  * In RDF specifications, a Named Node is a URI Node.
  * You can manage this by setting and getting 'properties' of this node, which will reflect in which nodes this node is connected with.
  * A Named Node is one of the two types of nodes in a graph in the semantic web / RDF.
  * The other one being Literal
- * See also: https://www.w3.org/TR/rdf-concepts/#section-Graph-URIref
+ * @see https://www.w3.org/TR/rdf-concepts/#section-Graph-URIref
+ *
+ * @example
+ *
+ * Use NamedNode.getOrCreate() if you have a URI
+ * Use NamedNode.create() to create a new NamedNode without specifying a URI
+ * Do NOT use the constructor
+ *
+ * ```
+ * let node = NamedNode.create();
+ * let node = NamedNode.getOrCreate("http://url.of.some/node")
+ * ```
  */
 export class NamedNode
 	extends Node
@@ -470,18 +482,21 @@ export class NamedNode
 	/**
 	 * WARNING: Do not directly create a Node, instead use NamedNode.getOrCreate(uri)
 	 * This ensures the same node is used for the same uri system wide
-	 * @param pUri
+	 * @param uri - the URI (more generic form of a URL) of the NamedNode
+   * @param _isTemporaryNode - set to true if this node is only temporarily available in the local environment
 	 */
-	constructor(value: string = '', private _isTemporaryNode: boolean = false) {
-		super(value);
+	constructor(uri: string = '', private _isTemporaryNode: boolean = false) {
+		super(uri);
 		if (this._isTemporaryNode) {
 			//created locally, so we know everything about it there is to know
 			this.allPropertiesLoaded = {promise: Promise.resolve(this), done: true};
 		}
 	}
 
-	//from rdflib.js https://github.com/linkeddata/rdflib.js/blob/bbf456390afe7743020e0c8c4db20b10cfb808c7/src/named-node.ts#L88
-	/** "Alias for value, favored by Tim" ... René agrees with Tim */
+	/**
+   * JSLib.js documentation states: "Alias for value, favored by Tim" ... LINCD author René agrees with Tim
+   * @see https://github.com/linkeddata/rdflib.js/blob/bbf456390afe7743020e0c8c4db20b10cfb808c7/src/named-node.ts#L88
+   */
 	get uri(): string {
 		return this._value;
 	}
@@ -490,6 +505,10 @@ export class NamedNode
 		this.value = uri;
 	}
 
+  /**
+   * Returns true if this node has a temporary URI and only exists in the local environment.
+   * e.g. this is usually true if you create a new NamedNode without having specified a URI yet
+   */
 	get isTemporaryNode(): boolean {
 		return this._isTemporaryNode;
 	}
@@ -499,8 +518,7 @@ export class NamedNode
 	}
 
 	/**
-	 * A way for quads to signal the subject of the quad about a new property
-	 * NOT FOR GENERAL USE
+	 * Used by Quads to signal their subject about a new property
 	 * @internal
 	 * @param quad
 	 * @param alteration
@@ -551,7 +569,6 @@ export class NamedNode
 	/**
 	 * Inverse property can be thought of as "this node is the value (object) of another nodes' property"
 	 * This method is used by the class Quad to communicate its existence to the quads object
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param quad
 	 * @param alteration
@@ -592,7 +609,6 @@ export class NamedNode
 
 	/**
 	 * This method is used by the class Quad to communicate with its nodes
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param quad
 	 * @param alteration
@@ -622,7 +638,6 @@ export class NamedNode
 
 	/**
 	 * Called when this node occurs as predicate in a quad
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
 	registerAsPredicate(
@@ -643,7 +658,6 @@ export class NamedNode
 
 	/**
 	 * This method is used by the class Quad to communicate with its nodes
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
 	unregisterProperty(
@@ -693,7 +707,6 @@ export class NamedNode
 
 	/**
 	 * This method is used by the class Quad to communicate with its nodes
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
 	unregisterInverseProperty(
@@ -729,7 +742,6 @@ export class NamedNode
 
 	/**
 	 * This method is used by the class Quad to communicate with its nodes
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
 	unregisterAsPredicate(
@@ -1517,7 +1529,6 @@ export class NamedNode
 
 	/**
 	 * Used internally by the framework to indicate a node has successfully been removed or not.
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param res
 	 */
@@ -1667,7 +1678,6 @@ export class NamedNode
 
 	/**
 	 * Used by the framework to indicate the loading of a node has completed.
-	 * NOT FOR GENERAL USE - you should generally not need this method
 	 * @internal
 	 * @param inversePropertiesLoaded
 	 */
@@ -1703,7 +1713,6 @@ export class NamedNode
 
 	/**
 	 * Used internally by the framework to denote a node has been saved
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param success
 	 */
@@ -1913,7 +1922,6 @@ export class NamedNode
 	/**
 	 * Emits the batched (property) events of a NamedNode INSTANCE (meaning for this specific node)
 	 * Used internally by the framework to manage emitting change events
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
 	emitBatchedEvents() {
@@ -1977,7 +1985,6 @@ export class NamedNode
 	/**
 	 * Emits the batched (property) events of the NamedNode CLASS (meaning events that relate to all nodes)
 	 * Used internally by the framework to batch and emit change events
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
 	static emitBatchedEvents(resolve, reject) {
@@ -2015,7 +2022,6 @@ export class NamedNode
 	/**
 	 * Returns true if this node has any batched events waiting to be emitted
 	 * Used internally by the framework to batch and emit change events
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 */
 	static hasBatchedEvents() {
@@ -2070,7 +2076,6 @@ export class NamedNode
 
 	/**
 	 * Registers a NamedNode to the locally known list of nodes
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param node
 	 */
@@ -2089,7 +2094,6 @@ export class NamedNode
 
 	/**
 	 * Unregisters a NamedNode from the locally known list of nodes
-	 * NOT FOR GENERAL USE
 	 * @internal
 	 * @param node
 	 */

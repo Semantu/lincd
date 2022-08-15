@@ -22,6 +22,165 @@ interface DeferredPromise {
 	promise: Promise<any>;
 }
 
+/**
+ * This object, returned by [linkedModule()](/docs/lincd.js/modules/utils_Module#linkedmodule),
+ * contains the decorators to link different parts of a LINCD module.
+ */
+export interface LinkedModuleObject
+{
+  /**
+   * Links a component to its shape.
+   *
+   * Can be used as a function to create functional components
+   * Can be also used as a class decorator for components written as classes.
+   * When a component is linked, it will receive an extra property "sourceShape" which will be an instance of the linked Shape.
+   *
+   * Note that the shape needs to be provided twice, as a type and as a value, see examples below.
+   * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
+   * @param functionalComponent - when this method is used for functional components, provide a functional component as second argument.
+   *
+   * @example
+   * Linked Functional Component example:
+   * ```tsx
+   * import {Person} from "../shapes/Person";
+   * export const PersonView = linkedComponent<Person>(Person,(source,sourceShape) => {
+   *  //source is a NamedNode, whilst sourceShape is the same NamedNode but as an instance of Person
+   *  let person = sourceShape
+   *  return <div>Hello {person.name}</div>
+   * }
+   * ```
+   *
+   * @example
+   * Class Component example:
+   * ```tsx
+   * @linkedComponent(Person)
+   * export class PersonView extends ReactComponent<any, any, Person> {
+   *   render() {
+   *     let person = this.sourceShape;
+   *     return <h1>Hello {person.name}</h1>;
+   *   }
+   * }
+   * ```
+   */
+  linkedComponent:<ShapeType extends Shape, P = any>(
+    shapeClass: typeof Shape,
+    functionalComponent?:
+      | typeof Shape
+      | FunctionalComponent<ComponentProps<ShapeType>>,
+  ) => FunctionalComponent<ComponentProps<ShapeType>> | typeof Shape;
+  /**
+   * Links a typescript class to a SHACL shape.
+   * This decorator creates a SHACL shape and looks at the static property [targetClass](/docs/lincd.js/classes/shapes_Shape.Shape#targetclass)
+   * The rest of the shape is typically 'shaped' by methods that use [property decorators](/docs/lincd.js/modules/utils_ShapeDecorators).
+   *
+   * @example
+   * Example of a typescript class using the \@linkedShape decorator:
+   * ```tsx
+   * @linkedShape
+   * export class Person extends Shape {
+   *   /**
+   *    * indicates that instances of this shape need to have this rdf.type
+   *    *\/
+   *   static targetClass: NamedNode = schema.Person;
+   *
+   *   /**
+   *    * indicates that instances of this shape need to have this rdf.type
+   *    *\/
+   *   @literalProperty({
+   *     path: schema.givenName,
+   *     required: true,
+   *     maxCount: 1,
+   *   })
+   *   get name() {
+   *     return this.getValue(schema.givenName);
+   *   }
+   *
+   *   set name(val: string) {
+   *     this.overwrite(schema.givenName, new Literal(val));
+   *   }
+   * }
+   * ```
+   */
+  linkedShape:(constructor:typeof Shape)=>typeof Shape;
+  /**
+   * Use this decorator to make any other classes or functions available on demand to other LINCD modules.
+   * It does not change the object it is applied on.
+   * This is specifically required for their use in an open-ended LINCD application.
+   *
+   * @example
+   * An example helper utility using the \@linkedUtil decorator:
+   * ```tsx
+   * @linkedUtil
+   * export class Sort {
+   *   static byName(persons:Person[]) {
+   *     return persons.sort((p1,p2) => p1.name < p2.name ? -1 : 1)
+   *   }
+   * ```
+   */
+  linkedUtil:(constructor:any)=>any;
+  /**
+   * Used to notify LINCD.js of an ontology.
+   * See also the [Ontology guides](/docs/guides/ontologies).
+   *
+   * @param allFileExports - all the objects that are exported by the ontology file (use `import * as _this from "./path-to-this-file")`)
+   * @param nameSpace - the result of [createNameSpace](/docs/lincd.js/modules/utils_NameSpace#createnamespace). This allows consumers to generate NamedNodes that may not be listed in this ontology if needed
+   * @param prefixAndFileName - a suggested prefix chosen by you. Make sure the suggestedPrefix matches the file name and the name of the exported object that groups all entities together
+   * @param loadDataFunction - a method that loads _and parses_ the raw ontology data. This means the ontology will be loaded into the local graph. The returned result is mostly a JSONLDParsePromise (from lincd-jsonld/lib/JSONLD, not bundled in LINCD.js)
+   * @param dataSource - the relative path to the raw data of the ontology
+   * @example
+   * Example of an Ontology File that used linkedOntology()
+   * ```tsx
+   * import {NamedNode} from 'lincd/lib/models';
+   * import {JSONLD} from 'lincd-jsonld/lib/JSONLD';
+   * import {createNameSpace} from 'lincd/lib/utils/NameSpace';
+   * import {linkedOntology} from '../module';
+   * import * as _this from './my-ontology';
+   *
+   * let dataFile = '../data/my-ontology.json';
+   * export var loadData = () => JSONLD.parsePromise(import(dataFile));
+   *
+   * export var ns = createNameSpace('http://www.my-ontology.com/');
+   *
+   * export var _self: NamedNode = ns('');
+   *
+   * // Classes
+   * export var ExampleClass: NamedNode = ns('ExampleClass');
+   *
+   * // Properties
+   * export var exampleProperty: NamedNode = ns('exampleProperty');
+   *
+   * export const myOntology = {
+   *   ExampleClass,
+   *   exampleProperty,
+   * };
+   *
+   * linkedOntology(_this, ns, 'myOntology', loadData, dataFile);
+   * ```
+   */
+  linkedOntology:(
+    allFileExports,
+    nameSpace: (term: string) => NamedNode,
+    suggestedPrefixAndFileName: string,
+    loadDataFunction?:()=>Promise<any>,
+    dataSource?:string,
+  )=>void;
+
+  /**
+   * Low level method used by other decorators to write to the modules' object in the LINCD tree.
+   * You should typically not need this.
+   * @param exportFileName - the file name that this exported object is available under. Needs to be unique across the module.
+   * @param exportedObject - the exported object (the class, constant, function, etc)
+   */
+  registerModuleExport:(exportFileName:string,exportedObject:any)=>void;
+
+  /**
+   * A reference to the modules' object in the LINCD tree.
+   * Contains all linked components of the module.
+   */
+  moduleExports:any;
+}
+
+
 var moduleParsePromises: Map<string, Promise<any>> = new Map();
 var loadedModules: Set<NamedNode> = new Set();
 
@@ -266,14 +425,14 @@ export function linkedModule(
 	};
 
 	//return the declarators so the module can use them
-	return {
-		linkedComponent,
-		linkedShape,
-		linkedUtil,
-		linkedOntology,
-		registerModuleExport,
-		moduleExports: lincd._modules[moduleName],
-	};
+  return {
+    linkedComponent,
+    linkedShape,
+    linkedUtil,
+    linkedOntology,
+    registerModuleExport,
+    moduleExports: lincd._modules[moduleName],
+  } as LinkedModuleObject;
 }
 
 export function initTree() {

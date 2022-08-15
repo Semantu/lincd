@@ -30,34 +30,54 @@ interface IClassConstruct {
 /**
  * The base class of all classes that represent a rdfs:Class in the graph.
  *
- * This class helps form a bridge between the graph (RDF) world & the Object Oriented typescript world.
+ * This class helps form a bridge between the graph (RDF) world & the Object-Oriented typescript world.
  * Each Shape class has a static type property pointing to the rdfs:Class that it represents.
  * Each instance of a class that extends this Shape class points to a single node (NamedNode or Literal), that MUST have this rdfs:Class as its rdf:type in the graph.
  *
  * Classes that extend this class can thereby help simplify interactions with nodes that have a certain rdf:type by replacing low level property access (NamedNode.getAll(), getOne() etc) with high level methods that do not require knowledge of the underlying graph structure.
  *
+ * @example
  * An Example:
- * ```
+ * ```tsx
+ * @linkedShape
  * class Person extends Shape {
  *  static type = foaf.Person
  *  get friends() {
  *    return this.getAll(foaf.hasFriend)
  *  }
  * }
- * let personResource = NamedNode.getOrCreate();
- * personResource.set(rdf.type,foaf.Person);
  *
- * let person = personResource.getAs(Person);//creates an instance of the class Person, which points to (represents) personResource.
- * console.log(person.friends); //will log all the friends of the personResource (currently none)
+ * let personNode = NamedNode.getOrCreate();
+ * personNode.set(rdf.type,foaf.Person);
+ *
+ * //creates an instance of the class Person, which points to (represents) personResource.
+ * let person = new Person(personNode);
+ *
+ * //will log all the friends of the personResource (currently none)
+ * console.log(person.friends);
+ * ```
  */
 export class Shape extends EventEmitter implements IShape {
 	/**
-	 * Points to the rdfs:Class that this typescript class represents.
-	 * Each class extending Shape MUST define this explicitly.
-	 * The appointed NamedNode value must be a rdfs:Class ([value] rdf:type rdfs:Class in the graph)
-	 * An example value would be foaf.Person (which has rdf:type rdfs:Class) for a typescript class called Person, thus representing foaf.Person
+	 * Points to the rdfs:Class that this typescript class represents. Each class extending Shape MUST define this explicitly.
+	 The appointed NamedNode value must be a rdfs:Class ([value] rdf:type rdfs:Class in the graph)
+
+   @example
+   An example Shape class that states that all matching nodes must have `rdf:type foaf:Person`.
+   ```tsx
+import {foaf} from "./ontologies/foaf";
+@linkedShape
+export class Person extends Shape {
+ static targetClass:NamedNode = foaf.Person;
+}
+```
 	 */
 	static targetClass: NamedNode = null;
+
+  /**
+   * Tracks which types (named nodes) map to which Shapes
+   * @internal
+   */
 	static typesToShapes: Map<NamedNode, CoreSet<IClassConstruct>> = new Map();
 
 	protected _node: Node;
@@ -107,6 +127,11 @@ export class Shape extends EventEmitter implements IShape {
 		}
 	}
 
+  /**
+   * @internal
+   * @param shapeClass
+   * @param type
+   */
 	static registerByType(shapeClass: typeof Shape, type?: NamedNode) {
 		if (!type) {
 			//TODO: add support for sh:targetNode, sh:targetObjectsOf and sh:targetSubjectsOf. Those would be fine as alternatives to targetClass (and the latter 2 define a PropertyShape)
@@ -127,28 +152,28 @@ export class Shape extends EventEmitter implements IShape {
 		this.typesToShapes.get(type).add(shapeClass);
 	}
 
-	static getClassForType(
+  /**
+   * Get a the matching shape classes that have a targetClass equal to the given type node
+   * @internal
+   * @param type
+   * @param allowSuperClass
+   */
+	static getClassesForType(
 		type: NamedNode,
 		allowSuperClass: boolean = false,
-	): typeof Shape {
+	): CoreSet<typeof Shape> {
 		let instanceClasses = this.typesToShapes.get(type);
-		if (instanceClasses.size > 0) {
-			//TODO: how do we determine the right shape? If we use this method at all, we probably need different methods, that get all the classes, or filter by properties of the node, etc
-			return instanceClasses.first() as typeof Shape;
-		}
-		//TODO: do we allow this in lincd?
-		else if (allowSuperClass) {
-			let subClasses = type.getAll(rdfs.subClassOf) as any;
+		if (allowSuperClass) {
+			let subClasses = type.getDeep(rdfs.subClassOf) as any;
 			// subClasses = Order.typesByDepth(subClasses);
 			subClasses.delete(type); //<-- only delete after ordering, as it will be a new set and not the original PropertySet
-			subClasses.some((subViewType) => {
+			subClasses.forEach((subViewType) => {
 				if (this.typesToShapes.has(subViewType)) {
-					instanceClasses = this.typesToShapes.get(subViewType);
-					return true;
+					instanceClasses = instanceClasses.concat(this.typesToShapes.get(subViewType));
 				}
 			});
 		}
-		return instanceClasses.first() as typeof Shape;
+		return instanceClasses as CoreSet<typeof Shape>;
 	}
 
 	/**
