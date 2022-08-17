@@ -8,14 +8,17 @@ import * as React from 'react';
 import {BlankNode, Literal, NamedNode, Node} from '../models';
 import {Shape} from './Shape';
 
+/**
+ * @deprecated
+ */
 export {React, ReactDOM};
 
 export interface ReactComponentProps {
 	source?: Node;
-	className?: string;
 }
 
 /**
+ * @deprecated
  * Adds extra utility methods to React.Component, like working with styles/css classes,
  * passing props and keeping track of whether the component is mounted (for now)
  */
@@ -24,7 +27,6 @@ export class ReactComponent<
 	S,
 	ShapeType extends Shape = null
 > extends React.Component<P & ReactComponentProps, S> {
-	protected _mounted: boolean;
 	static shape: typeof Shape;
 	private _shape: ShapeType;
 

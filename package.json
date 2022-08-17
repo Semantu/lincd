@@ -27,6 +27,7 @@
 	"author": "René Verheij",
 	"dependencies": {
 		"@types/react-dom": "^18.0.6",
+		"@types/react": "^18.0.17",
 		"eventemitter3": "3.1.0",
 		"next-tick": "^1.0.0",
 		"rdflib": "^2.2.17",

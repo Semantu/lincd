@@ -44,6 +44,11 @@ import * as rdfs from './ontologies/rdfs';
 import * as xsd from './ontologies/xsd';
 import * as shacl from './ontologies/shacl';
 
+import * as ReactDOM from 'react-dom';
+import * as React from 'react';
+
+export {React, ReactDOM};
+
 export const nextTick = require('next-tick');
 
 export const {linkedComponent, linkedShape} = linkedModule('lincd');
