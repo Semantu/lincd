@@ -8,20 +8,34 @@ import {registerComponent} from '../models/Component';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
-import {ComponentProps, FunctionalComponent} from '../interfaces/Component';
+import {LinkedComponentProps, FunctionalComponent} from '../interfaces/Component';
+// import {LinkedComponentClass} from './LinkedComponentClass';
+import React from 'react';
 
 //global tree
 declare var lincd: any;
 declare var window;
 declare var global;
 
-interface DeferredPromise {
+/*interface DeferredPromise {
 	resolve?: (res: any) => void;
 	reject?: () => void;
 	done: boolean;
 	promise: Promise<any>;
-}
+}*/
 
+export class LinkedComponentClass<ShapeType extends Shape,P={},S={}> extends React.Component<P & LinkedComponentProps<ShapeType>,S>
+{
+  get sourceShape():ShapeType
+  {
+    let shapeClass = this.constructor['shape'];
+    if(!shapeClass)
+    {
+      throw new Error(`${this.constructor.name} is not linked to a shape`);
+    }
+    return new shapeClass(this.props.source) as ShapeType;
+  }
+}
 /**
  * This object, returned by [linkedModule()](/docs/lincd.js/modules/utils_Module#linkedmodule),
  * contains the decorators to link different parts of a LINCD module.
@@ -53,6 +67,7 @@ export interface LinkedModuleObject
    * @example
    * Class Component example:
    * ```tsx
+   * import {React} from "react";
    * @linkedComponent(Person)
    * export class PersonView extends ReactComponent<any, any, Person> {
    *   render() {
@@ -62,12 +77,20 @@ export interface LinkedModuleObject
    * }
    * ```
    */
-  linkedComponent:<ShapeType extends Shape, P = any>(
+  linkedComponent:<ShapeType extends Shape, P = {}>(
     shapeClass: typeof Shape,
     functionalComponent?:
-      | typeof Shape
-      | FunctionalComponent<ComponentProps<ShapeType>>,
-  ) => FunctionalComponent<ComponentProps<ShapeType>> | typeof Shape;
+      FunctionalComponent<P,ShapeType>,
+  )=> FunctionalComponent<P,ShapeType>;
+
+  /**
+   * Links a class based component to its shape
+   * @param shapeClass
+   */
+  linkedComponentClass:<ShapeType extends Shape,P={}>(
+    shapeClass:typeof Shape,
+  )=>(<T extends typeof LinkedComponentClass<ShapeType,P>>(constructor:T)=>T);
+
   /**
    * Links a typescript class to a SHACL shape.
    * This decorator creates a SHACL shape and looks at the static property [targetClass](/docs/lincd.js/classes/shapes_Shape.Shape#targetclass)
@@ -101,7 +124,7 @@ export interface LinkedModuleObject
    * }
    * ```
    */
-  linkedShape:(constructor:typeof Shape)=>typeof Shape;
+  linkedShape:<T extends typeof Shape>(constructor:T)=>T;
   /**
    * Use this decorator to make any other classes or functions available on demand to other LINCD modules.
    * It does not change the object it is applied on.
@@ -265,7 +288,7 @@ export function linkedModule(
 						key +
 						"' and export that from index",
 				);
-				continue;
+				// continue;
 			}
 		}
 	}
@@ -302,31 +325,27 @@ export function linkedModule(
 
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
 	// let linkedComponent = function (config: {shape: typeof Shape}) {
-	function linkedComponent<ShapeType extends Shape, P = any>(
-		shapeClass: typeof Shape,
-		functionalComponent: FunctionalComponent<P, ShapeType>,
-	): FunctionalComponent<ComponentProps<ShapeType> & P>;
-	function linkedComponent<ShapeType extends Shape, P = any>(
-		shape: typeof Shape,
-	);
-	function linkedComponent<ShapeType extends Shape, P = any>(
+	// function linkedComponent<ShapeType extends Shape, P = any>(
+	// 	shapeClass: typeof Shape,
+	// 	functionalComponent: FunctionalComponent<P, ShapeType>,
+	// ): FunctionalComponent<ComponentProps<ShapeType> & P>;
+	// function linkedComponent<ShapeType extends Shape, P = any>(
+	// 	shapeClass: typeof Shape,
+	// );
+
+	function linkedComponent<ShapeType extends Shape, P = {}>(
 		shapeClass: typeof Shape,
 		functionalComponent?:
-			| typeof Shape
-			| FunctionalComponent<ComponentProps<ShapeType>>,
-	): FunctionalComponent<ComponentProps<ShapeType>> | typeof Shape {
-		type FC = FunctionalComponent<ComponentProps<ShapeType>>;
-		if (functionalComponent) {
+      FunctionalComponent<P,ShapeType>,
+	): FunctionalComponent<P,ShapeType> {
+		type FC = FunctionalComponent<P,ShapeType>;
+		// if (functionalComponent) {
 			//create a new functional component which wraps the original
-			let wrappedComponent = (props: P & ComponentProps<ShapeType>) => {
+			let wrappedComponent:FC = (props: P & LinkedComponentProps<ShapeType>) => {
 				//when this function is ran, we add a new property 'sourceShape'
-				let newProps = {...props};
-				if (props.source) {
-					//for which we create a new instance of the given shapeClass, which is the same as ShapeType (shapeClass is a runtime variable, ShapeType is used for the typing system)
-					newProps.sourceShape = new shapeClass(props.source) as ShapeType;
-				}
+        let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
 				//and then run the original with the transformed props
-				return (functionalComponent as FunctionalComponent<P>)(newProps);
+				return functionalComponent(linkedProps);
 			};
       //copy the name (have to do it this way, name is protected)
       Object.defineProperty(wrappedComponent, "name", { value: functionalComponent.name });
@@ -341,26 +360,78 @@ export function linkedModule(
       registerComponent(wrappedComponent as FC, shapeClass);
 
       return wrappedComponent;
-		}
-
-		//this is for Components declared with ES Classes
-		//in this case the function we're in will be used as a decorator: @linkedComponent(SomeShapeClass)
-		//so here we get the constructor of the class when the decorator runs
-		let decoratorFunction = function(constructor) {
-			//add the component class of this module to the global tree
-			registerInTree(constructor);
-
-			//link the shape
-			constructor.shape = shapeClass;
-
-			//register the component and its shape
-			registerComponent(constructor);
-
-			//return the original class without modifications
-			return constructor;
-		};
-		return decoratorFunction;
+		// }
+    // else
+    // {
+    //   //this is for Components declared with ES Classes
+    //   //in this case the function we're in will be used as a decorator: @linkedComponent(SomeShapeClass)
+    //   //class decorators return a function that receives a constructor and returns a constructor.
+    //   let decoratorFunction = function(constructor) {
+    //     //add the component class of this module to the global tree
+    //     registerInTree(constructor);
+    //
+    //     //link the shape
+    //     constructor.shape = shapeClass;
+    //
+    //     //register the component and its shape
+    //     registerComponent(constructor);
+    //
+    //     //return the original class without modifications
+    //     return constructor;
+    //
+    //     /*return class extends React.Component<ComponentProps<ShapeType>> {
+    //
+    //       get sourceShape():ShapeType
+    //       {
+    //         return new shapeClass(this.props.source) as ShapeType;
+    //       }
+    //
+    //       render() {
+    //         return React.createElement(WrappedComponent,this.props)
+    //       }
+    //     }*/
+    //
+    //   };
+    //   return decoratorFunction;
+    // }
 	}
+
+  function linkedComponentClass<ShapeType extends Shape,P={}>(
+    shapeClass:typeof Shape,
+  ):<T extends typeof LinkedComponentClass<ShapeType,P>>(constructor:T)=>T
+  {
+    //this is for Components declared with ES Classes
+    //in this case the function we're in will be used as a decorator: @linkedComponent(SomeShapeClass)
+    //class decorators return a function that receives a constructor and returns a constructor.
+    let decoratorFunction = function<T>(constructor) {
+
+      //add the component class of this module to the global tree
+      registerInTree(constructor);
+
+      //link the shape
+      constructor['shape'] = shapeClass;
+
+      //register the component and its shape
+      registerComponent(constructor as any);
+
+      //return the original class without modifications
+      // return constructor;
+
+      //return a new class which extends the given component class
+      return class extends constructor {
+
+        //all we change is that we insert some properties
+        constructor(props) {
+          let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
+          super(linkedProps);
+        }
+      } as any as T;
+
+    };
+    return decoratorFunction;
+  }
+
+
 
 	//create a declarator function which Shapes of this module can use register themselves and add themselves to the global tree
 	let linkedShape = function(constructor) {
@@ -427,6 +498,7 @@ export function linkedModule(
 	//return the declarators so the module can use them
   return {
     linkedComponent,
+    linkedComponentClass,
     linkedShape,
     linkedUtil,
     linkedOntology,
@@ -446,6 +518,16 @@ export function initTree() {
 		}
 		global['lincd'] = {_modules: {}};
 	}
+}
+
+function getLinkedComponentProps<ShapeType extends Shape,P>(props:LinkedComponentProps<ShapeType> & P,shapeClass):LinkedComponentProps<ShapeType> & P
+{
+  let newProps = {...props};
+  if (props.source) {
+    //for which we create a new instance of the given shapeClass, which is the same as ShapeType (shapeClass is a runtime variable, ShapeType is used for the typing system)
+    newProps.sourceShape = new shapeClass(props.source);
+  }
+  return newProps;
 }
 
 export function createDataPromise(dataSource) {

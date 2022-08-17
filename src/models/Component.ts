@@ -23,7 +23,7 @@ export function registerComponent(
 		//warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
 		if (!exportedComponent.hasOwnProperty('shape')) {
 			console.warn(
-				`Component ${exportedComponent.name} is not linked to a shape. Please define 'static shape:NamedNode'`,
+				`Component ${exportedComponent.displayName || exportedComponent.name} is not linked to a shape. Please define 'static shape:NamedNode'`,
 			);
 			return;
 		}

@@ -10,26 +10,6 @@ import {Shape} from './Shape';
 
 export {React, ReactDOM};
 
-export interface FunctionalReactComponent {
-	(props: any): any;
-
-	shape: typeof Shape;
-	/**
-	 * The renderType that this component extends/implements. By default: ReactComponent
-	 */
-	renderType?: any;
-}
-
-export const functionalReactComponent = (
-	shape: typeof Shape,
-	component: (props: any) => any,
-): FunctionalReactComponent => {
-	// (component as FunctionalReactComponent).viewType = viewType;
-	(component as FunctionalReactComponent).shape = shape;
-	(component as FunctionalReactComponent).renderType = ReactComponent;
-	return component as FunctionalReactComponent;
-};
-
 export interface ReactComponentProps {
 	source?: Node;
 	className?: string;
@@ -100,63 +80,5 @@ export class ReactComponent<
 			}
 		}
 		return this._shape;
-	}
-
-	/**
-	 * Joins an array of CSS class names into a single string
-	 * Also adds this.props.className as the first class if it's set
-	 * @param names - an array of css class names
-	 * @returns {string}
-	 */
-	class(...names: string[]) {
-		return ReactComponent.getClass(...names);
-	}
-
-	/**
-	 * returns the given class names plus the class name from this.props.className
-	 * @param names
-	 */
-	mainClass(...names: string[]) {
-		return ReactComponent.mainClass(this.props, ...names);
-	}
-
-	/**
-	 * Intended to be used to pass on properties of this component to the most top-level JSX element in render methods
-	 * Specifically for "native" elements like div h1 & span as opposed to a class that extends ReactComponent, use passComponentProps for that
-	 * @param props
-	 * @param filterOut
-	 */
-	passProps(filterOut?: string[]) {
-		//shallow copy all properties into a new props object
-		let props = {...(this.props as any)};
-
-		//auto passing on of this.props as component props
-		if (filterOut) {
-			//copy all properties except those explicitly filtered
-			for (var key of filterOut) {
-				delete props[key];
-			}
-		}
-
-		delete props['refCallback'];
-
-		return props;
-	}
-
-	static mainClass(props, ...names: string[]) {
-		//convert names to one string and if a className is given in props, add it
-		return (
-			this.getClass(...names) + (props.className ? ' ' + props.className : '')
-		);
-	}
-
-	/**
-	 * Converts an array of strings to a single string with
-	 * @param props
-	 * @param styles
-	 * @param names
-	 */
-	static getClass(...names: string[]): string {
-		return names.join(' ');
 	}
 }

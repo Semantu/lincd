@@ -28,6 +28,7 @@ import * as URI from './utils/URI';
 import * as Find from './utils/Find';
 import * as Order from './utils/Order';
 import * as NQuads from './utils/NQuads';
+import * as LinkedComponentClass from './utils/LinkedComponentClass';
 import * as ForwardReasoning from './utils/ForwardReasoning';
 import * as NameSpace from './utils/NameSpace';
 import * as ReactComponent from './shapes/ReactComponent';
@@ -86,6 +87,7 @@ let publicFiles = {
 	ICoreIterable,
 	IQuadStore,
 	Component,
+  LinkedComponentClass,
 	SHACLShapes,
 	rdf,
 	rdfs,
