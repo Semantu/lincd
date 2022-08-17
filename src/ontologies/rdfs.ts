@@ -14,6 +14,7 @@ export var subPropertyOf: NamedNode = NamedNode.getOrCreate(
 	base + 'subPropertyOf',
 );
 var subClassOf: NamedNode = NamedNode.getOrCreate(base + 'subClassOf');
+var isDefinedBy: NamedNode = NamedNode.getOrCreate(base + 'isDefinedBy');
 var label: NamedNode = NamedNode.getOrCreate(base + 'label');
 var Literal: NamedNode = NamedNode.getOrCreate(base + 'Literal');
 var Datatype: NamedNode = NamedNode.getOrCreate(base + 'Datatype');
@@ -24,6 +25,7 @@ export const rdfs = {
 	_ontologyResource,
 	subPropertyOf,
 	subClassOf,
+  isDefinedBy,
 	label,
 	Literal,
 	Datatype,
