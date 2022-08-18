@@ -31,38 +31,23 @@ type ClassDecorator = <T extends { new(...args:any[]):{}}>(constructor:T)=>T;
 export interface LinkedModuleObject
 {
   /**
-   * Links a component to its shape.
-   *
-   * Can be used as a function to create functional components
-   * Can be also used as a class decorator for components written as classes.
-   * When a component is linked, it will receive an extra property "sourceShape" which will be an instance of the linked Shape.
+   * Links a functional component to its shape
+   * Once linked, the component receives an extra property "sourceShape" which will be an instance of the linked Shape.
    *
    * Note that the shape needs to be provided twice, as a type and as a value, see examples below.
    * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
-   * @param functionalComponent - when this method is used for functional components, provide a functional component as second argument.
+   * @param functionalComponent - a functional rect component
    *
    * @example
    * Linked Functional Component example:
    * ```tsx
    * import {Person} from "../shapes/Person";
-   * export const PersonView = linkedComponent<Person>(Person,(source,sourceShape) => {
-   *  //source is a NamedNode, whilst sourceShape is the same NamedNode but as an instance of Person
-   *  let person = sourceShape
-   *  return <div>Hello {person.name}</div>
-   * }
-   * ```
-   *
-   * @example
-   * Class Component example:
-   * ```tsx
-   * import {React} from "react";
-   * @linkedComponent(Person)
-   * export class PersonView extends ReactComponent<any, any, Person> {
-   *   render() {
-   *     let person = this.sourceShape;
-   *     return <h1>Hello {person.name}</h1>;
-   *   }
-   * }
+   * export const PersonView = linkedComponent<Person>(Person, ({source, sourceShape}) => {
+   *   //source is a NamedNode, and sourceShape is an instance of Person (for the same named node)
+   *   let person = sourceShape;
+   *   //get the name of the person from the graph
+   *   return <h1>Hello {person.name}!</h1>;
+   * });
    * ```
    */
   linkedComponent:<ShapeType extends Shape, P = {}>(
@@ -71,6 +56,32 @@ export interface LinkedModuleObject
       FunctionalComponent<P,ShapeType>,
   )=> FunctionalComponent<P,ShapeType>;
 
+  /**
+   * Class decorator that links a class-based component to its shape.
+   * Once linked, the component receives an extra property "sourceShape" which will be an instance of the linked Shape.
+   *
+   * Note that your class needs to extend [LinkedComponentClass](/docs/lincd.js/classes/utils_LinkedComponentClass.LinkedComponentClass), which extends React.Component.
+   * And you will need to provide the same Shape class that you use as a parameter for the decorator as a type generic to LinkedComponentClass (see example).
+   * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
+   *
+   * @example
+   * Linked component class example:
+   * ```tsx
+   * import {React} from "react";
+   * import {linkedComponentClass} from "../module";
+   * import {LinkedComponentClass} from "lincd/lib/utils/LinkedComponentClass";
+   * @linkedComponentClass(Person)
+   * export class PersonView extends LinkedComponentClass<Person> {
+   *   render() {
+   *     //typescript knows that person is of type Person
+   *     let person = this.props.sourceShape;
+   *
+   *     //get the name of the person from the graph
+   *     return <h1>Hello {person.name}!</h1>;
+   *   }
+   * }
+   * ```
+   */
   linkedComponentClass:<ShapeType extends Shape,P={}>(
     shapeClass:typeof Shape,
   )=>ClassDecorator
@@ -109,6 +120,7 @@ export interface LinkedModuleObject
    * ```
    */
   linkedShape:<T extends typeof Shape>(constructor:T)=>T;
+
   /**
    * Use this decorator to make any other classes or functions available on demand to other LINCD modules.
    * It does not change the object it is applied on.
@@ -125,6 +137,7 @@ export interface LinkedModuleObject
    * ```
    */
   linkedUtil:(constructor:any)=>any;
+
   /**
    * Used to notify LINCD.js of an ontology.
    * See also the [Ontology guides](/docs/guides/ontologies).
@@ -467,9 +480,15 @@ function registerComponent(
 function getLinkedComponentProps<ShapeType extends Shape,P>(props:LinkedComponentProps<ShapeType> & P,shapeClass):LinkedComponentProps<ShapeType> & P
 {
   let newProps = {...props};
-  if (props.source) {
+
+  //set the sourceShape from the source
+  if (props.source && !props.sourceShape) {
     //for which we create a new instance of the given shapeClass, which is the same as ShapeType (shapeClass is a runtime variable, ShapeType is used for the typing system)
     newProps.sourceShape = new shapeClass(props.source);
+  }
+  //set the source from the sourceShape
+  if (props.sourceShape && !props.source) {
+    newProps.source = newProps.sourceShape.node;
   }
   return newProps;
 }
