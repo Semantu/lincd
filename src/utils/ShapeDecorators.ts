@@ -161,7 +161,7 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
  * Using this generator generates a [SHACL Property Shape](https://www.w3.org/TR/shacl/#property-shapes)
- * @param config - configures the property shape with a plain javascript object that follows the [PropertyShapeConfig](/lincd.js/interfaces/utils_ShapeDecorators.PropertyShapeConfig) interface.
+ * @param config - configures the property shape with a plain javascript object that follows the [PropertyShapeConfig](/docs/lincd.js/interfaces/utils_ShapeDecorators.PropertyShapeConfig) interface.
  *
  * @example
  * ```

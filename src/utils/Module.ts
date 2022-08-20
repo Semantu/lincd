@@ -140,7 +140,7 @@ export interface LinkedModuleObject
 
   /**
    * Used to notify LINCD.js of an ontology.
-   * See also the [Ontology guides](/docs/guides/ontologies).
+   * See also the [Ontology guides](/docs/guides/linked-code/ontologies).
    *
    * @param allFileExports - all the objects that are exported by the ontology file (use `import * as _this from "./path-to-this-file")`)
    * @param nameSpace - the result of [createNameSpace](/docs/lincd.js/modules/utils_NameSpace#createnamespace). This allows consumers to generate NamedNodes that may not be listed in this ontology if needed
