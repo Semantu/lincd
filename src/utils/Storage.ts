@@ -49,7 +49,7 @@ export abstract class Storage {
 	private static onStoreNodes(nodes: NodeSet<NamedNode>) {
     //TODO: no need to convert to QuadSet once we phase out QuadArray
     let nodesWithTempURIs = nodes.filter(node => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0);
-    this.defaultStore.generateURIs(nodesWithTempURIs
+    this.defaultStore.generateURIs(nodesWithTempURIs);
     this.defaultStore.addMultiple(new QuadSet(nodes.getAllQuads()));
   }
 
