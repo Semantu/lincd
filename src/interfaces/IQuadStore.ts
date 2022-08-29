@@ -1,5 +1,6 @@
 import {QuadSet} from '../collections/QuadSet';
-import {Quad} from '../models';
+import {NamedNode,Quad} from '../models';
+import {NodeSet} from '../collections/NodeSet';
 
 export interface IQuadStore {
 	add(quad: Quad): Promise<any>;
@@ -9,4 +10,6 @@ export interface IQuadStore {
 	delete(quad: Quad): Promise<any>;
 
 	deleteMultiple?(quads: QuadSet): Promise<any>;
+
+  generateURIs(nodes:NodeSet<NamedNode>):void;
 }

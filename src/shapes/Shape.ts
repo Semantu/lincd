@@ -57,7 +57,7 @@ interface IClassConstruct {
  * console.log(person.friends);
  * ```
  */
-export class Shape extends EventEmitter implements IShape {
+export abstract class Shape extends EventEmitter implements IShape {
 	/**
 	 * Points to the rdfs:Class that this typescript class represents. Each class extending Shape MUST define this explicitly.
 	 The appointed NamedNode value must be a rdfs:Class ([value] rdf:type rdfs:Class in the graph)
@@ -149,7 +149,7 @@ export class Person extends Shape {
 		if (!this.typesToShapes.has(type)) {
 			this.typesToShapes.set(type, new CoreSet());
 		}
-		this.typesToShapes.get(type).add(shapeClass);
+		this.typesToShapes.get(type).add(shapeClass as any);
 	}
 
   /**
@@ -173,7 +173,7 @@ export class Person extends Shape {
 				}
 			});
 		}
-		return instanceClasses as CoreSet<typeof Shape>;
+		return instanceClasses as any as CoreSet<typeof Shape>;
 	}
 
 	/**

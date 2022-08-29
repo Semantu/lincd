@@ -7,7 +7,7 @@
 import * as Module from './utils/Module';
 import {linkedModule} from './utils/Module';
 import * as models from './models';
-import * as StoreController from './controllers/StoreController';
+import * as Storage from './utils/Storage';
 import * as EventEmitter from './events/EventEmitter';
 import * as BlankNodeMap from './collections/BlankNodeMap';
 import * as CoreSet from './collections/CoreSet';
@@ -71,7 +71,7 @@ let publicFiles = {
 	QuadMap,
 	QuadSet,
 	models,
-	StoreController,
+  Storage,
 	Shape,
 	ShapeSet,
 	Debug,
