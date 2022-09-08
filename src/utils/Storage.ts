@@ -34,35 +34,48 @@ export abstract class Storage {
 	}
 
 	private static onQuadsCreated(quads: QuadSet) {
-		quads.forEach((quad) => {
-      //if there is a registered store that stores this graph
-			if (this.graphStores.has(quad.graph)) {
-        //let that store handle adding this quad
-				this.graphStores.get(quad.graph).add(quad);
-			} else if(this.defaultStore) {
-        //by default, let the default store handle it
-				this.defaultStore.add(quad);
-			}
-		});
+    let storeMap: CoreMap<IQuadStore,QuadSet> = this.getTargetStoreMap(quads);
+    storeMap.forEach((quads,store) => {
+      store.addMultiple(quads);
+    })
 	}
 
-	private static onStoreNodes(nodes: NodeSet<NamedNode>) {
+	private static onQuadsRemoved(quads: QuadSet)
+  {
+    let storeMap: CoreMap<IQuadStore,QuadSet> = this.getTargetStoreMap(quads);
+    storeMap.forEach((quads,store) => {
+      store.deleteMultiple(quads);
+    })
+  }
+
+  private static onStoreNodes(nodes: NodeSet<NamedNode>) {
     //TODO: no need to convert to QuadSet once we phase out QuadArray
     let nodesWithTempURIs = nodes.filter(node => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0);
     this.defaultStore.generateURIs(nodesWithTempURIs);
     this.defaultStore.addMultiple(new QuadSet(nodes.getAllQuads()));
   }
 
-	private static onQuadsRemoved(quads: QuadSet) {
-		quads.forEach((quad) => {
+  private static getTargetStoreMap(quads:QuadSet):CoreMap<IQuadStore,QuadSet>
+  {
+    let storeMap:CoreMap<IQuadStore,QuadSet> = new CoreMap();
+    quads.forEach((quad) => {
       //if there is a registered store that stores this graph
-			if (this.graphStores.has(quad.graph)) {
+      let store;
+      if (this.graphStores.has(quad.graph)) {
         //let that store handle adding this quad
-				this.graphStores.get(quad.graph).delete(quad);
-			} else if(this.defaultStore) {
+        store = this.graphStores.get(quad.graph);
+      } else if(this.defaultStore) {
         //by default, let the default store handle it
-				this.defaultStore.delete(quad);
-			}
-		});
+        store = this.defaultStore;
+      }
+      //build up a map of new quads per store
+      if(!storeMap.has(store))
+      {
+        storeMap.set(store,new QuadSet());
+      }
+      storeMap.get(store).add(quad);
+    });
+
+    return storeMap;
 	}
 }

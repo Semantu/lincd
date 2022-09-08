@@ -10,6 +10,7 @@ import {NodeShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 import {LinkedComponentProps,FunctionalComponent,Component} from '../interfaces/Component';
 import {CoreSet} from '../collections/CoreSet';
+import * as module from 'module';
 
 //global tree
 declare var lincd: any;
@@ -287,6 +288,10 @@ export function linkedModule(
 
 	//#Create declarators for this module
 	let registerInTree = function(object) {
+    if(object.name in lincd._modules[moduleName])
+    {
+      console.warn(`Key ${object.name} was already defined for module ${moduleName}. Overwriting with new value`);
+    }
 		lincd._modules[moduleName][object.name] = object;
 	};
 
@@ -389,12 +394,12 @@ export function linkedModule(
 		//register the component and its shape
 		Shape.registerByType(constructor);
 
-		// let URI = `${moduleURLBase + moduleName}/${constructor.name}Shape`;
-		if (!constructor.shape) {
+		if (!Object.getOwnPropertyNames(constructor).includes('shape')) {
 			// console.log('Creating shape from class decorator.');
-			// let node = NamedNode.getOrCreate(URI);
-			// constructor.shape = NodeShape.getOf(node);
-			constructor.shape = new NodeShape();
+      let URI = `${NamedNode.TEMP_URI_BASE}/${moduleName}/shape/${constructor.name}`;
+			let node = NamedNode.getOrCreate(URI);
+			constructor.shape = new NodeShape(node);
+			// constructor.shape = new NodeShape();
 		} else {
 			// (constructor.shape.node as NamedNode).uri = URI;
 		}

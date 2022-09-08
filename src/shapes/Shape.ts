@@ -95,7 +95,7 @@ export class Person extends Shape {
 	 * If you want to create an instance of an existing node, use `node.getAs(Class)` or `Class.getOf(node)`
 	 * @param node
 	 */
-	constructor(node?: Node) {
+	constructor(node?: Node|any) {
 		super();
 		this.setupNode(node);
 	}

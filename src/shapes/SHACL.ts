@@ -9,6 +9,8 @@ import {shacl} from '../ontologies/shacl';
 import {List} from './List';
 import {xsd} from '../ontologies/xsd';
 import {ShapeSet} from '../collections/ShapeSet';
+import {CoreSet} from 'src/collections/CoreSet';
+import {NodeSet} from '../collections/NodeSet';
 
 export class SHACL_Shape extends Shape {
 	static targetClass: NamedNode = shacl.Shape;
@@ -57,6 +59,23 @@ export class NodeShape extends SHACL_Shape {
 	set inList(value: List) {
 		this.overwrite(shacl.in, value.node);
 	}
+
+  /**
+   * Returns all the classes and properties that are references by this shape
+   */
+  getOntologyEntities():NodeSet<NamedNode>
+  {
+    let entities = new NodeSet<NamedNode>();
+    if(this.targetClass)
+    {
+      entities.add(this.targetClass)
+    }
+    //add ontology entities of all property shapes
+    this.getPropertyShapes().forEach(propertyShape => {
+      entities = entities.concat(propertyShape.getOntologyEntities());
+    })
+    return entities;
+  }
 }
 
 export class PropertyShape extends SHACL_Shape {
@@ -130,4 +149,20 @@ export class PropertyShape extends SHACL_Shape {
 	set path(value: NamedNode) {
 		this.overwrite(shacl.path, value);
 	}
+
+  /**
+   * Returns all the classes and properties that are references by this shape
+   */
+  getOntologyEntities():NodeSet<NamedNode>
+  {
+    //start with values of those properties that have a NamedNode as value
+    let entities = new NodeSet<NamedNode>([this.class,this.path,this.datatype].filter(value => value && true));
+    if(this.nodeShape)
+    {
+      //if a node shape is defined, also add all the entities of that node shape
+      entities = entities.concat(this.nodeShape.getOntologyEntities());
+    }
+    return entities;
+  }
+
 }
