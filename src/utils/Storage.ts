@@ -18,10 +18,10 @@ export abstract class Storage {
 	static init() {
 		if (!this._initialized) {
       //listen to any quad changes in local memory
-			Quad.emitter.on(Quad.QUADS_CREATED, (...args) =>
-				this.onQuadsCreated.apply(this, args),
-			);
-			Quad.emitter.on(Quad.QUADS_REMOVED, this.onQuadsRemoved.bind(this));
+			// Quad.emitter.on(Quad.QUADS_CREATED, (...args) =>
+			// 	this.onQuadsCreated.apply(this, args),
+			// );
+			// Quad.emitter.on(Quad.QUADS_REMOVED, this.onQuadsRemoved.bind(this));
       NamedNode.emitter.on(NamedNode.STORE_NODES, this.onStoreNodes.bind(this));
 
 			this._initialized = true;
