@@ -110,6 +110,13 @@ import {BlankNode,NamedNode,Literal} from "lincd/lib/models";
 	 */
 	nodeKind?: typeof Node;
 
+  /**
+   * The shape that values of this property path need to confirm to.
+   * You need to provide a class that extends Shape.
+   * This is LINCDs equivalent of shacl:node
+   */
+  shape?: typeof Shape;
+
 	/**
 	 * Minimum number of values required
 	 */
@@ -183,12 +190,6 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
 		propertyKey: string,
 		descriptor: PropertyDescriptor,
 	) {
-		// console.log('Property method ' + config.path.toString() + ' initialised.');
-		if (!target.constructor.shape) {
-			// console.log('Creating shape from method decorators.');
-			target.constructor.shape = new NodeShape();
-		}
-		let shape: NodeShape = target.constructor.shape;
 
 		let property = new PropertyShape();
 		property.path = config.path;
@@ -202,7 +203,38 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
 			property.maxCount = config.maxCount;
 		}
 
-		shape.addPropertyShape(property);
+    //we accept a shape configuration, which translates to a sh:nodeShape
+    if(config.shape)
+    {
+      let nodeShape = config.shape['shape'];
+      if(nodeShape)
+      {
+        property.nodeShape = nodeShape;
+      }
+    }
+
+    // console.log('Property method ' + config.path.toString() + ' initialised.');
+    // if (!target.constructor.shape) {
+    // 	console.log('Creating shape from method decorators.');
+    // 	target.constructor.shape = new NodeShape();
+    // }
+
+    //if the shape has already been initiated (with linkedShape)
+    let shape: NodeShape = target.constructor.shape;
+    if(shape)
+    {
+      //then add it directly
+      shape.addPropertyShape(property);
+    }
+    else
+    {
+      //if not, then store property shapes in a temporary array in the constructor
+      if(!target.constructor['propertyShapes'])
+      {
+        target.constructor['propertyShapes'] = [];
+      }
+      target.constructor['propertyShapes'].push(property);
+    }
 		// console.log(target, propertyKey, descriptor);
 
 		//
