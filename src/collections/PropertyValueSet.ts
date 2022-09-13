@@ -4,10 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NodeSet} from './NodeSet';
-import {Node} from '../models';
+import {NamedNode,Node} from '../models';
 
-export class PropertySet extends NodeSet {
-	constructor(iterable?: Iterable<Node>) {
+export class PropertyValueSet extends NodeSet {
+	constructor(private subject:Node,private property:NamedNode,iterable?: Iterable<Node>) {
 		super(iterable);
 	}
 
@@ -16,16 +16,18 @@ export class PropertySet extends NodeSet {
 	}
 
 	add(v): this {
-		throw new Error(
-			'Do not add values directly to a PropertySet. Instead use a copy of the set before manipulating it. Either create a new set or use methods like sort() and filter() which also return a new set.',
-		);
+    this.subject.set(this.property,v);
+		// throw new Error(
+		// 	'Do not add values directly to a PropertySet. Instead use a copy of the set before manipulating it. Either create a new set or use methods like sort() and filter() which also return a new set.',
+		// );
 		return this;
 	}
 
 	delete(v): boolean {
-		throw new Error(
-			'Do not delete values directly to a PropertySet. Instead use a copy of the set before manipulating it. Either create a new set or use methods like sort() and filter() which also return a new set.',
-		);
+    this.subject.unset(this.property,v);
+		// throw new Error(
+		// 	'Do not delete values directly to a PropertySet. Instead use a copy of the set before manipulating it. Either create a new set or use methods like sort() and filter() which also return a new set.',
+		// );
 		return false;
 	}
 

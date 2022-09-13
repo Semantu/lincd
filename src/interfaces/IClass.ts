@@ -5,10 +5,10 @@
  */
 import {Node} from '../models';
 import {Shape} from '../shapes/Shape';
-import {PropertySet} from '../collections/PropertySet';
+import {PropertyValueSet} from '../collections/PropertyValueSet';
 
 export interface IClass {
-	getSuperClassNodes(includeImplicit?: boolean): PropertySet;
+	getSuperClassNodes(includeImplicit?: boolean): PropertyValueSet;
 
 	createInstance(node?: Node, appendix?: string): Promise<Shape>;
 

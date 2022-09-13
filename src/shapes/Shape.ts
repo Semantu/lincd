@@ -6,7 +6,7 @@
 import {EventEmitter} from '../events/EventEmitter';
 import {Literal, NamedNode, Node} from '../models';
 import {rdf} from '../ontologies/rdf';
-import {PropertySet} from '../collections/PropertySet';
+import {PropertyValueSet} from '../collections/PropertyValueSet';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {QuadArray} from '../collections/QuadArray';
@@ -239,7 +239,7 @@ export class Person extends Shape {
 		return this._node.getOne(property);
 	}
 
-	getAll(property: NamedNode): PropertySet | undefined {
+	getAll(property: NamedNode): PropertyValueSet | undefined {
 		return (this._node as NamedNode).getAll(property);
 	}
 
