@@ -1,8 +1,12 @@
 import {QuadSet} from '../collections/QuadSet';
-import {NamedNode,Quad} from '../models';
+import {Graph,NamedNode,Quad} from '../models';
 import {NodeSet} from '../collections/NodeSet';
+import {ICoreIterable} from './ICoreIterable';
 
 export interface IQuadStore {
+
+  update(toAdd:ICoreIterable<Quad>,toRemove:ICoreIterable<Quad>):Promise<any>;
+
 	add(quad: Quad): Promise<any>;
 
 	addMultiple?(quads: QuadSet): Promise<any>;
@@ -11,5 +15,7 @@ export interface IQuadStore {
 
 	deleteMultiple?(quads: QuadSet): Promise<any>;
 
-  generateURIs(nodes:NodeSet<NamedNode>):void;
+  setURI(...nodes:NamedNode[]):void;
+
+  getDefaultGraph():Graph;
 }

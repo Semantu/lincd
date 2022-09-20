@@ -3,14 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {BlankNode, Literal, NamedNode} from '../models';
+import {BlankNode, Literal, NamedNode, Node} from '../models';
 import {Shape} from './Shape';
 import {shacl} from '../ontologies/shacl';
 import {List} from './List';
 import {xsd} from '../ontologies/xsd';
 import {ShapeSet} from '../collections/ShapeSet';
-import {CoreSet} from 'src/collections/CoreSet';
 import {NodeSet} from '../collections/NodeSet';
+import {rdf} from '../ontologies/rdf';
 
 export class SHACL_Shape extends Shape {
 	static targetClass: NamedNode = shacl.Shape;
@@ -76,6 +76,46 @@ export class NodeShape extends SHACL_Shape {
     })
     return entities;
   }
+
+  validate(node:Node):boolean
+  {
+    if(this.targetClass)
+    {
+      if(!(node instanceof NamedNode && node.has(rdf.type,this.targetClass)))
+      {
+        return false
+      }
+    }
+    let propertyShapes = this.getPropertyShapes();
+    if(propertyShapes.size > 0)
+    {
+      if(node instanceof Literal)
+      {
+        return false;
+      }
+      else if(node instanceof NamedNode)
+      {
+        if(!this.getPropertyShapes().every(propertyShape => {
+          return propertyShape.validate(node);
+        }))
+        {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  static getShapesOf(node:Node)
+  {
+    return this.getLocalInstances().filter(shape => {
+      return shape.validate(node);
+    });
+  }
+}
+
+export class ValidationResult {
+
 }
 
 export class PropertyShape extends SHACL_Shape {
@@ -165,4 +205,48 @@ export class PropertyShape extends SHACL_Shape {
     return entities;
   }
 
+  validate(node:NamedNode):boolean
+  {
+    //TODO: make property nodes support property paths beyond a single property
+    let property = this.path;
+    let values = node instanceof NamedNode ? node.getAll(property) : null;
+    if(this.class)
+    {
+      if(!values.every(value => value instanceof NamedNode && value.has(rdf.type,this.class)))
+      {
+        return false;
+      }
+    }
+    if(this.datatype)
+    {
+      if(!values.every(value => value instanceof Literal && value.datatype === this.datatype))
+      {
+        return false;
+      }
+    }
+    if(this.nodeShape)
+    {
+      //every value should be a valid instance of this nodeShape
+      let nodeShape = this.nodeShape;
+      if(!values.every(value => nodeShape.validate(value)))
+      {
+        return false;
+      }
+    }
+    if(this.minCount)
+    {
+      if(values.size < this.minCount)
+      {
+        return false;
+      }
+    }
+    if(this.maxCount)
+    {
+      if(values.size > this.maxCount)
+      {
+        return false;
+      }
+    }
+    return true;
+  }
 }

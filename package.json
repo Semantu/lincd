@@ -9,6 +9,7 @@
 	"scripts": {
 		"build": "npm exec lincd build",
 		"dev": "npm exec lincd dev",
+		"test": "jest",
 		"prepublishOnly": "npm exec lincd build production",
 		"postpublish": "npm exec lincd register"
 	},
@@ -36,7 +37,10 @@
 		"typedoc": "^0.23.7"
 	},
 	"devDependencies": {
+		"@types/jest": "^29.0.3",
 		"@types/node": "^17.0.8",
-		"lincd-cli": "^0.1"
+		"jest": "^29.0.3",
+		"lincd-cli": "^0.1",
+		"ts-jest": "^29.0.1"
 	}
 }
