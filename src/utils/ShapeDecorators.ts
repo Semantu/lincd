@@ -165,7 +165,7 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
  *
  * @example
  * ```
- * @linkedProperty({
+ * \@linkedProperty({
  *   path:foaf.name,
  *   required:true,
  *   nodeKind:Literal,
@@ -192,6 +192,7 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
 
 		let property = new PropertyShape();
 		property.path = config.path;
+		property.label = propertyKey;
 		if (config.required) {
 			property.minCount = 1;
 		} else if (config.minCount) {
@@ -200,6 +201,10 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
 
 		if (config.maxCount) {
 			property.maxCount = config.maxCount;
+		}
+
+		if (config['dataType']) {
+			property.datatype = config['dataType'];
 		}
 
 		shape.addPropertyShape(property);
