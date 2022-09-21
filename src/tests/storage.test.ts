@@ -5,6 +5,7 @@ import {Storage} from '../utils/Storage';
 import {Graph,Literal,NamedNode,Quad} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import { rdfs } from '../ontologies/rdfs';
+import {rdf} from '../ontologies/rdf';
 
 class TestStore implements IQuadStore {
   defaultGraph = Graph.create();
@@ -35,7 +36,7 @@ class TestStore implements IQuadStore {
     return null;
   }
 
-  setURI(...nodes:NamedNode[]):void {
+  setURI(...nodes:NamedNode[]):Promise<any> {
     return null;
   }
 
@@ -104,5 +105,14 @@ describe('default store', () => {
     node.remove();
     await Storage.promiseUpdated();
     expect(store.contents.size).toBe(0);
+  });
+  test('promiseUpdated waits for both storing nodes and altering nodes to complete', async () => {
+    store.reset();
+    let node = NamedNode.create();
+    node.setValue(rdfs.label,"test5");
+    node.save();
+    node.set(rdf.type,node);
+    await Storage.promiseUpdated();
+    expect(store.contents.size).toBe(2);
   });
 });

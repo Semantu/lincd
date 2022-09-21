@@ -524,15 +524,15 @@ export class NamedNode
 		alteration: boolean = false,
 		emitEvents: boolean = true,
 	) {
-		var index: NamedNode = quad.predicate;
+		var predicate: NamedNode = quad.predicate;
 		//first make sure we have a QuadMap value for key=predicate
-		if (!this.asSubject.has(index)) {
-			this.asSubject.set(index, new QuadMap());
-			this.properties.set(index, new PropertySet());
+		if (!this.asSubject.has(predicate)) {
+			this.asSubject.set(predicate, new QuadMap());
+			this.properties.set(predicate, new PropertySet());
 		}
 
 		//Add the quad to the QuadMap (see implementation for more details)
-		let quadMap = this.asSubject.get(index);
+		let quadMap = this.asSubject.get(predicate);
 
 		//make sure we have a QuadSet ready for the object of this quad
 		quadMap.__set(quad.object, quad);
@@ -541,9 +541,9 @@ export class NamedNode
 		//Because multiple graphs can hold the same subj-pred-obj triple, we want to avoid adding literal values
 		//that have the exact same literal value, so we need to test for equality here before adding it
 		if (
-			!this.properties.get(index).some((object) => object.equals(quad.object))
+			!this.properties.get(predicate).some((object) => object.equals(quad.object))
 		) {
-			this.properties.get(index).__add(quad.object);
+			this.properties.get(predicate).__add(quad.object);
 		}
 
 		//add this quad to the map of events to send on the next tick
@@ -667,26 +667,31 @@ export class NamedNode
 		alteration: boolean = false,
 		emitEvents: boolean = true,
 	) {
-		var index: NamedNode = quad.predicate;
+		var predicate: NamedNode = quad.predicate;
 
 		//start by looking through the QuadMap (it is more complete than the quick & easy properties index, as it accounts for multiple quads per object value in different graphs)
-		var quadMap: QuadMap = this.asSubject.get(index);
+		var quadMap: QuadMap = this.asSubject.get(predicate);
 		if (quadMap) {
-			let quadSet = quadMap.get(quad.object);
-			quadSet.delete(quad);
+			let valueQuads = quadMap.get(quad.object);
+			valueQuads.delete(quad);
 			//if we no longer hold any quads for this object
-			if (quadSet.size == 0) {
+			if (valueQuads.size == 0) {
 				//remove the key
 				quadMap.__delete(quad.object);
 
-				//and then also remove this object from the propertySet index (the index should exist)
-				this.properties.get(index).__delete(quad.object);
+        //for this.properties we just keep ONE value for identical literals (in case multiple graphs hold the same subject-pred-obj triple)
+        //so here we check if any other object that is still registered equals the current object
+        if(![...quadMap.keys()].some(object => quad.object.equals(object)))
+        {
+          //if that's not the case, then also remove this object from the propertySet index (the index should exist)
+          this.properties.get(predicate).__delete(quad.object);
+        }
 
 				//if we now also no longer hold any values for this predicate
 				if (quadMap.size === 0) {
 					//delete both indices for this predicate
-					this.asSubject.delete(index);
-					this.properties.delete(index);
+					this.asSubject.delete(predicate);
+					this.properties.delete(predicate);
 				}
 			}
 		}
@@ -2082,11 +2087,11 @@ export class NamedNode
 		this._value = newUri;
 		NamedNode.namedNodes.set(this._value, this);
 
-		//if this node had a temporary URI
-		if (this._isTemporaryNode) {
-			//it now has an explicit URI, so it's no longer temporary
-			this._isTemporaryNode = false;
-		}
+		// //if this node had a temporary URI
+		// if (this._isTemporaryNode) {
+		// 	//it now has an explicit URI, so it's no longer temporary
+		// 	this._isTemporaryNode = false;
+		// }
 
 		this.emit(NamedNode.URI_UPDATED, this, oldUri, newUri);
 
@@ -3110,7 +3115,9 @@ export class Quad extends EventEmitter {
 			' ' +
 			this.predicate.toString() +
 			' ' +
-			this.object.toString()
+			this.object.toString() +
+			' ' +
+			this.graph.toString()
 		);
 	}
 }

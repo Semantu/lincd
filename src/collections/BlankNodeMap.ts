@@ -33,12 +33,13 @@ export class BlankNodeMap extends NodeMap<NamedNode> {
 	}
 
 	getOrCreateNamedNode(uri: string): NamedNode {
-		//if its a TMP node
+    //the temp URI's in one environment may already be used in another environment
+    //so we need to check for temporary URI's and convert them to a local temporary URI
 		if (
 			uri.substr(0, NamedNode.TEMP_URI_BASE.length) == NamedNode.TEMP_URI_BASE
 		) {
 			if (!this.has(uri)) {
-				//create a new temp node that has a LOCAL TMP URI
+				//create a new temp node that has a LOCAL temp URI
 				var tmpResource: NamedNode = NamedNode.create();
 				this.set(uri, tmpResource);
 				this.originalUris.set(tmpResource.uri, uri);
