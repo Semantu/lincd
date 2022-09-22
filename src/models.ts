@@ -2072,6 +2072,10 @@ export class NamedNode
 		return this.namedNodes.get(uri);
 	}
 
+  get value():string {
+    return this._value;
+  }
+
 	set value(newUri: string) {
 		if (NamedNode.namedNodes.has(newUri)) {
 			throw new Error(
@@ -2905,7 +2909,18 @@ export class Quad extends EventEmitter {
 		return this._graph;
 	}
 
-	set graph(newGraph: Graph) {
+  /**
+   * Removes this quad and creates a new quad with the same subject,predicate,object, but a new graph.
+   * Returns the new quad
+   * @param newGraph
+   */
+  moveToGraph(newGraph:Graph):Quad {
+    let newQuad = new Quad(this.subject,this.predicate,this.object,newGraph,this.implicit,true);
+    this.remove(true);
+    return newQuad;
+  }
+
+	/*set graph(newGraph: Graph) {
     if(newGraph !== this._graph)
     {
       //NOTE: we could have gone a different way with Quad.moveToGraph(quad,newGraph) / quad.moveto(newGraph), which removes the old one and returns a new quad
@@ -2929,7 +2944,7 @@ export class Quad extends EventEmitter {
 
       this.mimicEventsOnUpdate(oldQuad);
     }
-	}
+	}*/
 
   private mimicEventsOnUpdate(oldQuad:Quad)
   {

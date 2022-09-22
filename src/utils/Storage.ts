@@ -212,7 +212,7 @@ export abstract class Storage
         //move the quad to the target graph (both old and new graph will be updated)
         if (quad.graph !== graph)
         {
-          quad.graph = graph;
+          quad.moveToGraph(graph);
           //also keep track of which nodes had a quad that moved to a different graph
           if (!alteredNodes.has(quad.subject))
           {
@@ -240,7 +240,7 @@ export abstract class Storage
         if (quad.graph !== graph)
         {
           //then update it
-          quad.graph = graph;
+          quad.moveToGraph(graph);
         }
       });
     });
@@ -261,6 +261,9 @@ export abstract class Storage
 
   private static onQuadsAltered(quadsCreated: QuadSet,quadsRemoved: QuadSet)
   {
+    //quads may have been removed since they have been created and emitted filter that out here
+    quadsCreated = quadsCreated.filter(q => !q.isRemoved);
+
     //first see if any new quads need to move to the right graphs (note that this will possibly add "mimiced" quads (with the previous graph as their graph) to quadsRemoved)
     this.assignQuadsToGraph(quadsCreated);
 
@@ -274,9 +277,11 @@ export abstract class Storage
     //go over each store that has added/removed quads
     return Promise.all(
       stores.map((store) => {
-        store.update(addMap.get(store) || [],removeMap.get(store) || []);
+        return store.update(addMap.get(store) || [],removeMap.get(store) || []);
       }),
-    ).catch((err) => {
+    ).then(res => {
+      return res;
+    }).catch((err) => {
       console.warn('Error during storage update: ' + err);
     });
   }
@@ -305,7 +310,7 @@ export abstract class Storage
     return defaultGraph;
   }
 
-  private static async onStoreNodes(nodes: NodeSet<NamedNode>)
+  private static async onStoreNodes(nodes: NodeSet<NamedNode>):Promise<any>
   {
     //TODO: no need to convert to QuadSet once we phase out QuadArray
     let nodesWithTempURIs = nodes.filter(
@@ -314,7 +319,7 @@ export abstract class Storage
 
     let storeMap = this.getTargetStoreMapForNodes(nodesWithTempURIs);
     await Promise.all(
-      storeMap.map((temporaryNodes,store) => {
+      [...storeMap.entries()].map(([store,temporaryNodes]) => {
         return store.setURI(...temporaryNodes);
       }),
     );
