@@ -9,7 +9,7 @@ import {linkedModule} from './utils/Module';
 import * as models from './models';
 import * as Storage from './utils/Storage';
 import * as EventEmitter from './events/EventEmitter';
-import * as BlankNodeMap from './collections/BlankNodeMap';
+import * as NodeURIMappings from './collections/NodeURIMappings';
 import * as CoreSet from './collections/CoreSet';
 import * as CoreMap from './collections/CoreMap';
 import * as SearchMap from './collections/SearchMap';
@@ -60,7 +60,7 @@ export const {linkedComponent, linkedShape} = linkedModule('lincd');
 let publicFiles = {
 	Node,
 	EventEmitter,
-	BlankNodeMap,
+	NodeURIMappings,
 	CoreSet,
 	CoreMap,
 	SearchMap,

@@ -26,7 +26,7 @@ import {PropertySet} from './collections/PropertySet';
 import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
-import {BlankNodeMap} from './collections/BlankNodeMap';
+import {NodeURIMappings} from './collections/NodeURIMappings';
 import { Debug } from "./utils/Debug";
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
@@ -2057,8 +2057,8 @@ export class NamedNode
 	 * `new NamedNode()` should therefore never be used.
 	 * @param uri
 	 */
-	static getOrCreate(uri: string) {
-		return this.getNamedNode(uri) || this._create(uri);
+	static getOrCreate(uri: string,isTemporaryNode:boolean=false) {
+		return this.getNamedNode(uri) || this._create(uri,isTemporaryNode);
 	}
 
 	/**
@@ -2145,7 +2145,7 @@ export class BlankNode extends NamedNode {
     quads: QuadSet | Quad[],
     includeObjectBlankNodes: boolean=true,
     includeSubjectBlankNodes: boolean=false,
-    blankNodes: BlankNodeMap = new BlankNodeMap()
+    blankNodes: NodeURIMappings = new NodeURIMappings()
   ) {
     let add =
       quads instanceof Set ? quads.add.bind(quads) : quads.push.bind(quads);
@@ -2164,7 +2164,7 @@ export class BlankNode extends NamedNode {
 	private static addBlankNodeQuads(
 		blankNode: BlankNode,
 		add: (n: any) => void,
-		blankNodes: BlankNodeMap,
+		blankNodes: NodeURIMappings,
 		inverseIteration: boolean=false,
 	) {
 		// console.log('adding quads of ' + blankNode.uri);
