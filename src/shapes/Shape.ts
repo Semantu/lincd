@@ -57,7 +57,7 @@ interface IClassConstruct {
  * console.log(person.friends);
  * ```
  */
-export class Shape extends EventEmitter implements IShape {
+export abstract class Shape extends EventEmitter implements IShape {
 	/**
 	 * Points to the rdfs:Class that this typescript class represents. Each class extending Shape MUST define this explicitly.
 	 The appointed NamedNode value must be a rdfs:Class ([value] rdf:type rdfs:Class in the graph)
@@ -81,8 +81,7 @@ export class Person extends Shape {
 	static typesToShapes: Map<NamedNode, CoreSet<IClassConstruct>> = new Map();
 
 	protected _node: Node;
-	private _instanceType: NamedNode;
-	protected static instancesLoaded: Map<
+  protected static instancesLoaded: Map<
 		NamedNode,
 		{promise: Promise<NodeSet<NamedNode>>; done: boolean}
 	> = new Map();
@@ -95,7 +94,7 @@ export class Person extends Shape {
 	 * If you want to create an instance of an existing node, use `node.getAs(Class)` or `Class.getOf(node)`
 	 * @param node
 	 */
-	constructor(node?: Node) {
+	constructor(node?: Node|any) {
 		super();
 		this.setupNode(node);
 	}
@@ -104,27 +103,12 @@ export class Person extends Shape {
 	 * returns the rdf:Class that this type of instance represents.
 	 */
 	get instanceType(): NamedNode {
-		if (this._instanceType) {
-			return this._instanceType;
-		} else if (this.constructor['targetClass']) {
+    if (this.constructor['targetClass']) {
 			return this.constructor['targetClass'];
 		}
 		throw new Error(
-			'Static type property missing. Therefor you cannot create an instance with `new`. Use Shape.create(type) or implement `static type = ...` in the class.',
+			'The constructor of this instance has not defined a static targetClass.',
 		);
-	}
-
-	/**
-	 * @internal
-	 * sets the rdf:Class that this type of instance represents.
-	 * NOT FOR GENERAL USE
-	 */
-	set instanceType(instanceType: NamedNode) {
-		if (!this._instanceType) {
-			this._instanceType = instanceType;
-		} else {
-			throw Error('InstanceType cannot be overwritten');
-		}
 	}
 
   /**
@@ -149,7 +133,7 @@ export class Person extends Shape {
 		if (!this.typesToShapes.has(type)) {
 			this.typesToShapes.set(type, new CoreSet());
 		}
-		this.typesToShapes.get(type).add(shapeClass);
+		this.typesToShapes.get(type).add(shapeClass as any);
 	}
 
   /**
@@ -173,7 +157,7 @@ export class Person extends Shape {
 				}
 			});
 		}
-		return instanceClasses as CoreSet<typeof Shape>;
+		return instanceClasses as any as CoreSet<typeof Shape>;
 	}
 
 	/**
@@ -587,6 +571,16 @@ export class Person extends Shape {
 	}
 
   static getFromURI<T extends Shape>(this: ShapeLike<T>, uri:string): T {
+    let node = NamedNode.getNamedNode(uri);
+    if(node) {
+      return new this(node);
+    }
+    else
+    {
+      node = NamedNode.getOrCreate(uri);
+      node.set(rdf.type, this.targetClass);
+      return new this(node);
+    }
     return new this(NamedNode.getOrCreate(uri))
   }
 

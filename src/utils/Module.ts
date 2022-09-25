@@ -4,12 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NamedNode} from '../models';
-// import {registerComponent} from '../models/Component';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 import {LinkedComponentProps,FunctionalComponent,Component} from '../interfaces/Component';
 import {CoreSet} from '../collections/CoreSet';
+import {rdf} from '../ontologies/rdf';
+import {rdfs} from '../ontologies/rdfs';
+import {lincd as lincdOntology} from "../ontologies/lincd";
 
 //global tree
 declare var lincd: any;
@@ -253,41 +255,20 @@ export function linkedModule(
 		// }
 	});
 
-	//prepare name for global tree reference
-	moduleName = moduleName.replace(/-/g, '_');
+  let moduleURI = `${NamedNode.TEMP_URI_BASE}${moduleName}`;
+  let moduleNode = NamedNode.getOrCreate(moduleURI);
+  moduleNode.set(rdf.type,lincdOntology.Module);
+  moduleNode.setValue(rdfs.label,moduleName);
 
-	//if something with this name already registered in the global tree
-	if (moduleName in lincd._modules) {
-		console.warn(
-			'A module with the name ' + moduleName + ' has already been registered.',
-		);
-	} else {
-		//initiate an empty object for this module in the global tree
-		lincd._modules[moduleName] = moduleExports || {};
-
-		//next we will go over each export of each file
-		//and just check that the format is correct
-		for (var key in moduleExports) {
-			var fileExports = moduleExports[key];
-
-			if (!fileExports) continue;
-
-			if (typeof fileExports === 'function') {
-				console.warn(
-					moduleName +
-						"/index.ts exports a class or function under '" +
-						key +
-						"'. Make sure to import * as '" +
-						key +
-						"' and export that from index",
-				);
-			}
-		}
-	}
+  let moduleTreeObject = registerModuleInTree(moduleName,moduleExports);
 
 	//#Create declarators for this module
 	let registerInTree = function(object) {
-		lincd._modules[moduleName][object.name] = object;
+    if(object.name in moduleTreeObject)
+    {
+      console.warn(`Key ${object.name} was already defined for module ${moduleName}. Overwriting with new value`);
+    }
+    moduleTreeObject[object.name] = object;
 	};
 
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
@@ -303,7 +284,7 @@ export function linkedModule(
 	// };
 
 	let registerModuleExport = function(exportName, exportedObject) {
-		lincd._modules[moduleName][exportName] = exportedObject;
+    moduleTreeObject[exportName] = exportedObject;
 	};
 
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
@@ -389,17 +370,42 @@ export function linkedModule(
 		//register the component and its shape
 		Shape.registerByType(constructor);
 
-		// let URI = `${moduleURLBase + moduleName}/${constructor.name}Shape`;
-		if (!constructor.shape) {
-			// console.log('Creating shape from class decorator.');
-			// let node = NamedNode.getOrCreate(URI);
-			// constructor.shape = NodeShape.getOf(node);
-			constructor.shape = new NodeShape();
+    //if no shape object has been attached to the constructor
+		if (!Object.getOwnPropertyNames(constructor).includes('shape')) {
+
+      //create a new node shape for this shapeClass
+      let URI = `${NamedNode.TEMP_URI_BASE}${moduleName}/shape/${constructor.name}`;
+			constructor.shape = NodeShape.getFromURI(URI);
+
+      //also create a representation in the graph of the shape class itself
+      let shapeClassURI = `${NamedNode.TEMP_URI_BASE}${moduleName}/shapeClass/${constructor.name}`
+      let shapeClass = NamedNode.getOrCreate(shapeClassURI);
+      shapeClass.set(lincdOntology.definesShape,constructor.shape.node);
+      shapeClass.set(rdf.type,lincdOntology.ShapeClass);
+
+      //and connect it back to the module
+      shapeClass.set(lincdOntology.module,moduleNode);
+
+      //if linkedProperties have already registered themselves
+      if(constructor.propertyShapes)
+      {
+        //then add them to this node shape now
+        constructor.propertyShapes.forEach(propertyShape => {
+          (constructor.shape as NodeShape).addPropertyShape(propertyShape);
+        })
+        //and remove the temporary key
+        delete constructor.propertyShapes;
+      }
+
 		} else {
 			// (constructor.shape.node as NamedNode).uri = URI;
+      console.warn("This ShapeClass already has a shape: ",constructor.shape);
 		}
 
-		(constructor.shape as NodeShape).targetClass = constructor.targetClass;
+    if(constructor.targetClass)
+    {
+      (constructor.shape as NodeShape).targetClass = constructor.targetClass;
+    }
 
 		//return the original class without modifications
 		return constructor;
@@ -451,7 +457,7 @@ export function linkedModule(
     linkedUtil,
     linkedOntology,
     registerModuleExport,
-    moduleExports: lincd._modules[moduleName],
+    moduleExports: moduleTreeObject,
   } as LinkedModuleObject;
 }
 
@@ -477,6 +483,40 @@ function registerComponent(
   shapeToComponents.get(shape).add(exportedComponent);
 }
 
+function registerModuleInTree(moduleName,moduleExports)
+{
+  //prepare name for global tree reference
+  let moduleTreeKey = moduleName.replace(/-/g, '_');
+  //if something with this name already registered in the global tree
+  if (moduleTreeKey in lincd._modules) {
+    console.warn(
+      'A module with the name ' + moduleName + ' has already been registered.',
+    );
+  } else {
+    //initiate an empty object for this module in the global tree
+    lincd._modules[moduleTreeKey] = moduleExports || {};
+
+    //next we will go over each export of each file
+    //and just check that the format is correct
+    for (var key in moduleExports) {
+      var fileExports = moduleExports[key];
+
+      if (!fileExports) continue;
+
+      if (typeof fileExports === 'function') {
+        console.warn(
+          moduleName +
+          "/index.ts exports a class or function under '" +
+          key +
+          "'. Make sure to import * as '" +
+          key +
+          "' and export that from index",
+        );
+      }
+    }
+  }
+  return lincd._modules[moduleTreeKey]
+}
 function getLinkedComponentProps<ShapeType extends Shape,P>(props:LinkedComponentProps<ShapeType> & P,shapeClass):LinkedComponentProps<ShapeType> & P
 {
   let newProps = {...props};

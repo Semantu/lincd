@@ -51,7 +51,7 @@ export class ReactComponent<
 				) {
 					//this will throw if the rdf:type is not correct or the data does not have this shape
 					// Shacl.validate(node,shapeClass);
-					this._shape = this.props.source.getAs(shapeClass) as ShapeType;
+					this._shape = this.props.source.getAs(shapeClass as any) as ShapeType;
 					//or
 					// this._shape = ShapeType.getOf(this.props.source);
 				} else if (this.props.source instanceof shapeClass) {
