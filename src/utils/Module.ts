@@ -255,8 +255,8 @@ export function linkedModule(
 		// }
 	});
 
-  let moduleURI = `${NamedNode.TEMP_URI_BASE}${moduleName}`;
-  let moduleNode = NamedNode.getOrCreate(moduleURI);
+  let moduleNode = NamedNode.create();
+  moduleNode.uri = `${NamedNode.TEMP_URI_BASE}${moduleName}`;
   moduleNode.set(rdf.type,lincdOntology.Module);
   moduleNode.setValue(rdfs.label,moduleName);
 
@@ -374,12 +374,13 @@ export function linkedModule(
 		if (!Object.getOwnPropertyNames(constructor).includes('shape')) {
 
       //create a new node shape for this shapeClass
-      let URI = `${NamedNode.TEMP_URI_BASE}${moduleName}/shape/${constructor.name}`;
-			constructor.shape = NodeShape.getFromURI(URI);
+      let shapeNode = NamedNode.create();
+      shapeNode.uri =`${NamedNode.TEMP_URI_BASE}${moduleName}/shape/${constructor.name}`;
+			constructor.shape = new NodeShape(shapeNode);
 
       //also create a representation in the graph of the shape class itself
-      let shapeClassURI = `${NamedNode.TEMP_URI_BASE}${moduleName}/shapeClass/${constructor.name}`
-      let shapeClass = NamedNode.getOrCreate(shapeClassURI);
+      let shapeClass = NamedNode.create();
+      shapeClass.uri = `${NamedNode.TEMP_URI_BASE}${moduleName}/shapeClass/${constructor.name}`
       shapeClass.set(lincdOntology.definesShape,constructor.shape.node);
       shapeClass.set(rdf.type,lincdOntology.ShapeClass);
 
@@ -539,16 +540,25 @@ export function createDataPromise(dataSource) {
 
 
 export function initTree() {
-  if (typeof window !== 'undefined') {
-    if (typeof window['lincd'] === 'undefined') {
-      window['lincd'] = {_modules: {}};
-    }
-  } else if (typeof global !== 'undefined') {
-    if (typeof global['lincd'] === 'undefined') {
-      global['lincd'] = {_modules: {}};
-    }
-    global['lincd'] = {_modules: {}};
+  let globalObject = typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : undefined);
+  if('lincd' in globalObject)
+  {
+    throw new Error("Multiple versions of LINCD are loaded");
   }
+  else
+  {
+    globalObject['lincd'] = {_modules:{}};
+  }
+  // if (typeof window !== 'undefined') {
+  //   if (typeof window['lincd'] === 'undefined') {
+  //     window['lincd'] = {_modules: {}};
+  //   }
+  // } else if (typeof global !== 'undefined') {
+  //   if (typeof global['lincd'] === 'undefined') {
+  //     global['lincd'] = {_modules: {}};
+  //   }
+  //   global['lincd'] = {_modules: {}};
+  // }
 }
 
 //when this file is used, make sure the tree is initialized

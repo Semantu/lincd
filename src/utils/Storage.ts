@@ -7,17 +7,22 @@ import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {eventBatcher} from '../events/EventBatcher';
+import nextTick from 'next-tick';
 
 export abstract class Storage
 {
   private static defaultStore: IQuadStore;
   private static _initialized: boolean;
   private static graphToStore: CoreMap<Graph,IQuadStore> = new CoreMap();
-  private static typeStores: CoreMap<NamedNode,IQuadStore> = new CoreMap();
   private static shapesToGraph: CoreMap<typeof Shape,Graph> = new CoreMap();
   private static nodeShapesToGraph: CoreMap<NodeShape,Graph> = new CoreMap();
   private static defaultStorageGraph: Graph;
-  private static processingPromise: { promise: Promise<void>; resolve?: any; reject?: any };
+  private static processingPromise: {
+    promise: Promise<void>;
+    resolve?: any;
+    reject?: any;
+  };
+  private static storedEvents: any;
 
   static init()
   {
@@ -28,11 +33,124 @@ export abstract class Storage
       //   this.onQuadsCreated.apply(this,args),
       // );
       // Quad.emitter.on(Quad.QUADS_REMOVED,this.onQuadsRemoved.bind(this));
-      Quad.emitter.on(Quad.QUADS_ALTERED,this.onQuadsAltered.bind(this));
-      NamedNode.emitter.on(NamedNode.STORE_NODES,this.onStoreNodes.bind(this));
+
+      Quad.emitter.on(
+        Quad.QUADS_ALTERED,
+        this.onEvent.bind(this,Quad.QUADS_ALTERED),
+      );
+      NamedNode.emitter.on(
+        NamedNode.STORE_NODES,
+        this.onEvent.bind(this,NamedNode.STORE_NODES),
+      );
+
+      // Quad.emitter.on(Quad.QUADS_ALTERED,this.onQuadsAltered.bind(this));
+      // NamedNode.emitter.on(NamedNode.STORE_NODES,this.onStoreNodes.bind(this));
+
       // NamedNode.emitter.on(NamedNode.REMOVE_NODES,this.onStoreNodes.bind(this));
 
       this._initialized = true;
+    }
+  }
+
+  static onEvent(eventType,...args)
+  {
+    //so either a TRIPLES_ALTERED, CLEARED_PROPERTIES, STORE_RESOURCES or REMOVE_RESOURCES event comes in
+
+    //if we havn't stored any events yet
+    if (!this.storedEvents)
+    {
+      //start storing
+      this.storedEvents = {};
+
+      //and let's process whatever we store in this event cycle on the next tick
+      if(!this.processingPromise)
+      {
+        this.startProcessingOnNextTick();
+      }
+    }
+
+    //save the event to be processed later
+    if (!this.storedEvents[eventType])
+    {
+      this.storedEvents[eventType] = [];
+    }
+    this.storedEvents[eventType].push(args);
+  }
+
+  private static startProcessingOnNextTick()
+  {
+    //create the processing promise, so that any request for promiseUpdate() will already get the promise that resolves after these events are handled
+    var resolve, reject;
+    var promise = new Promise<any>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    this.processingPromise = { promise, resolve, reject };
+
+    //start processing the stored events on the next tick
+    nextTick(() => {
+      this.processStoredEvents();
+    });
+  }
+
+  static async processStoredEvents()
+  {
+    let storedEvents = this.storedEvents;
+    this.storedEvents = null;
+
+    //we store and then process events, so we can determine in which order we process them.
+    //the order of this array determines the order.
+    //each entry in the array that is looped is an event type + handler
+    let processOrder: [string,Function][] = [
+      [NamedNode.STORE_NODES,this.onStoreNodes],
+      [Quad.QUADS_ALTERED,this.onQuadsAltered],
+    ]
+
+    let success = true;
+    for (const [eventType,handler] of processOrder)
+    {
+      if (storedEvents[eventType])
+      {
+        success = success && await Promise.all(
+          storedEvents[eventType].map((args) => {
+            return handler.apply(this,args);
+          }),
+        ).then(() => true).catch((err) => {
+          console.warn("Error whilst processing " + eventType,err);
+          return false
+        });
+      }
+    }
+
+    this.finalizeProcess(success);
+  }
+  private static finalizeProcess(success:boolean)
+  {
+    if (success)
+    {
+      //if we changed graphs in the process, there may be more events waiting
+      if(eventBatcher.hasBatchedEvents())
+      {
+        //let's make sure we process those as well before resolving
+        eventBatcher.dispatchBatchedEvents();
+      }
+      //if we now have work to do
+      if(this.storedEvents)
+      {
+        //do that and come back here later
+        this.processStoredEvents();
+      }
+      else
+      {
+        //no more storage work to do for sure! let's resolve
+        this.processingPromise.resolve();
+        this.processingPromise = null;
+      }
+    }
+    else
+    {
+      this.processingPromise.reject();
+      this.processingPromise = null;
     }
   }
 
@@ -40,14 +158,14 @@ export abstract class Storage
   {
     this.defaultStore = store;
     let defaultGraph = store.getDefaultGraph();
-    if(defaultGraph)
+    if (defaultGraph)
     {
       this.setDefaultStorageGraph(defaultGraph);
       this.setStoreForGraph(store,defaultGraph);
     }
     else
     {
-      console.warn("Default store did not return a default graph.")
+      console.warn('Default store did not return a default graph.');
     }
     this.init();
   }
@@ -57,9 +175,9 @@ export abstract class Storage
     this.defaultStorageGraph = graph;
   }
 
-  static storeShapesInGraph(graph: Graph,...shapeClasses: (typeof Shape)[])
+  static storeShapesInGraph(graph: Graph,...shapeClasses: typeof Shape[])
   {
-    shapeClasses.forEach(shapeClass => {
+    shapeClasses.forEach((shapeClass) => {
       this.shapesToGraph.set(shapeClass,graph);
       if (shapeClass['shape'])
       {
@@ -69,7 +187,7 @@ export abstract class Storage
     this.init();
   }
 
-  static setStoreForGraph(store:IQuadStore,graph)
+  static setStoreForGraph(store: IQuadStore,graph)
   {
     this.graphToStore.set(graph,store);
   }
@@ -79,7 +197,7 @@ export abstract class Storage
    * @param store
    * @param shapes
    */
-  static storeShapesInStore(store: IQuadStore,...shapes: (typeof Shape)[])
+  static storeShapesInStore(store: IQuadStore,...shapes: typeof Shape[])
   {
     let graph = store.getDefaultGraph();
     this.storeShapesInGraph(graph,...shapes);
@@ -90,69 +208,61 @@ export abstract class Storage
     let map = this.getTargetGraphMap(quads);
     let alteredNodes = new CoreMap<NamedNode,Graph>();
     map.forEach((quads,graph) => {
-      quads.forEach(quad => {
+      quads.forEach((quad) => {
         //move the quad to the target graph (both old and new graph will be updated)
-        if(quad.graph !== graph)
+        if (quad.graph !== graph)
         {
-          quad.graph = graph;
+          quad.moveToGraph(graph);
           //also keep track of which nodes had a quad that moved to a different graph
-          if(!alteredNodes.has(quad.subject))
+          if (!alteredNodes.has(quad.subject))
           {
             alteredNodes.set(quad.subject,graph);
           }
         }
-      })
-    })
+      });
+    });
 
     //now that all quads have been updated, we need to check one more thing
     //changes in quads MAY have changed which shapes the subject nodes are an instance of
     //thus the target graph of the whole node may have changed, so:
     this.moveAllQuadsOfNodeIfRequired(alteredNodes);
   }
-  private static moveAllQuadsOfNodeIfRequired(alteredNodes:CoreMap<NamedNode,Graph>)
+
+  private static moveAllQuadsOfNodeIfRequired(
+    alteredNodes: CoreMap<NamedNode,Graph>,
+  )
   {
     //for all subjects who have a quad that moved to a different graph
     alteredNodes.forEach((graph,subjectNode) => {
       //go over each quad of that node
-      subjectNode.getAllQuads().forEach(quad => {
+      subjectNode.getAllQuads().forEach((quad) => {
         //and if that quad is not in the same graph as the target graph that we just determined for that node
-        if(quad.graph !== graph)
+        if (quad.graph !== graph)
         {
           //then update it
-          quad.graph = graph;
+          quad.moveToGraph(graph);
         }
-      })
-    })
+      });
+    });
   }
 
-  static promiseUpdated():Promise<void>
+  static promiseUpdated(): Promise<void>
   {
-    //if we're already processing storage updates
-    // if (this.processingPromise) {
-    //   //they can simply wait for that
-    //   return this.processingPromise.promise;
-    // }
-    //if not...
     //we wait till all events are dispatched
     return eventBatcher.promiseDone().then(() => {
       //if that triggered a storage update
-      if (this.processingPromise) {
+      if (this.processingPromise)
+      {
         //we will wait for that
         return this.processingPromise.promise;
       }
-      // else {
-        //if not.. there was nothing to update, so the promise will resolve
-      // }
     });
   }
-  private static onQuadsAltered(quadsCreated:QuadSet,quadsRemoved:QuadSet)
+
+  private static onQuadsAltered(quadsCreated: QuadSet,quadsRemoved: QuadSet)
   {
-    var resolve, reject;
-    var promise = new Promise<void>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    this.processingPromise = { promise, resolve, reject };
+    //quads may have been removed since they have been created and emitted filter that out here
+    quadsCreated = quadsCreated.filter(q => !q.isRemoved);
 
     //first see if any new quads need to move to the right graphs (note that this will possibly add "mimiced" quads (with the previous graph as their graph) to quadsRemoved)
     this.assignQuadsToGraph(quadsCreated);
@@ -162,35 +272,19 @@ export abstract class Storage
     let removeMap = this.getTargetStoreMap(quadsRemoved);
 
     //combine the keys of both maps (which are stores)
-    let stores = [...addMap.keys(),...removeMap.keys()]
+    let stores = [...addMap.keys(),...removeMap.keys()];
 
     //go over each store that has added/removed quads
-    Promise.all(stores.map(store => {
-      store.update(addMap.get(store) || [] ,removeMap.get(store) || []);
-    })).then(() => {
-      //storage update is now complete
-      resolve();
-    }).catch(err => {
-      console.warn("Error during storage update: "+err);
-      reject();
-    })
-
+    return Promise.all(
+      stores.map((store) => {
+        return store.update(addMap.get(store) || [],removeMap.get(store) || []);
+      }),
+    ).then(res => {
+      return res;
+    }).catch((err) => {
+      console.warn('Error during storage update: ' + err);
+    });
   }
-  // private static onQuadsCreated(quads: QuadSet)
-  // {
-  //   this.assignQuadsToGraph(quads);
-    /*
-        subjectsToQuads.forEach((quads,subject) => {
-          let graph:Graph = this.getTargetGraph(subject);
-          graph.addMultiple(quads);
-        })
-
-
-        let storeMap: CoreMap<IQuadStore,QuadSet> = this.getTargetStoreMap(quads);
-        storeMap.forEach((quads,store) => {
-          store.addMultiple(quads);
-        })*/
-  // }
 
   private static getTargetGraph(subject: NamedNode): Graph
   {
@@ -216,35 +310,31 @@ export abstract class Storage
     return defaultGraph;
   }
 
-  // private static onQuadsRemoved(quads: QuadSet)
-  // {
-    // let storeMap: CoreMap<IQuadStore,QuadSet> = this.getTargetStoreMap(quads);
-    // storeMap.forEach((quads,store) => {
-    //   store.deleteMultiple(quads);
-    // })
-  // }
-
-  private static onStoreNodes(nodes: NodeSet<NamedNode>)
+  private static async onStoreNodes(nodes: NodeSet<NamedNode>):Promise<any>
   {
     //TODO: no need to convert to QuadSet once we phase out QuadArray
-    let nodesWithTempURIs = nodes.filter(node => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0);
+    let nodesWithTempURIs = nodes.filter(
+      (node) => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0,
+    );
 
-    nodesWithTempURIs.forEach((node) => {
-      let targetStore = this.getTargetStoreForNode(node);
-      targetStore.setURI(node);
-    });
-
+    let storeMap = this.getTargetStoreMapForNodes(nodesWithTempURIs);
+    await Promise.all(
+      [...storeMap.entries()].map(([store,temporaryNodes]) => {
+        return store.setURI(...temporaryNodes);
+      }),
+    );
     //move all the quads to the right graph.
     //note that IF this is a new graph, this will trigger onQuadsAltered, which will notify the right stores to store these quads
     this.assignQuadsToGraph(nodes.getAllQuads());
   }
 
-  private static getTargetStoreForNode(node:NamedNode)
+  private static getTargetStoreForNode(node: NamedNode)
   {
     let graph = this.getTargetGraph(node);
     return this.getTargetStoreForGraph(graph);
   }
-  private static getTargetStoreForGraph(graph:Graph)
+
+  private static getTargetStoreForGraph(graph: Graph)
   {
     return this.graphToStore.get(graph);
     // if(this.graphToStore.has(graph))
@@ -252,10 +342,13 @@ export abstract class Storage
     // }
     // return this.defaultStore;
   }
-  private static groupQuadsBySubject(quads: ICoreIterable<Quad>): CoreMap<NamedNode,Quad[]>
+
+  private static groupQuadsBySubject(
+    quads: ICoreIterable<Quad>,
+  ): CoreMap<NamedNode,Quad[]>
   {
     let subjectsToQuads: CoreMap<NamedNode,Quad[]> = new CoreMap();
-    quads.forEach(quad => {
+    quads.forEach((quad) => {
       if (!subjectsToQuads.has(quad.subject))
       {
         subjectsToQuads.set(quad.subject,[]);
@@ -265,27 +358,52 @@ export abstract class Storage
     return subjectsToQuads;
   }
 
-  private static getTargetGraphMap(quads: ICoreIterable<Quad>): CoreMap<Graph,Quad[]>
+  private static getTargetGraphMap(
+    quads: ICoreIterable<Quad>,
+  ): CoreMap<Graph,Quad[]>
   {
-    let graphMap:CoreMap<Graph,Quad[]> = new CoreMap();
+    let graphMap: CoreMap<Graph,Quad[]> = new CoreMap();
     let quadsBySubject = this.groupQuadsBySubject(quads);
     quadsBySubject.forEach((quads,subjectNode) => {
       let targetGraph = this.getTargetGraph(subjectNode);
-      if(!graphMap.has(targetGraph))
+      if (!graphMap.has(targetGraph))
       {
-        graphMap.set(targetGraph,[])
+        graphMap.set(targetGraph,[]);
       }
       graphMap.set(targetGraph,graphMap.get(targetGraph).concat(quads));
     });
     return graphMap;
   }
-  private static getTargetStoreMap(quads: ICoreIterable<Quad>): CoreMap<IQuadStore,Quad[]>
+
+  private static getTargetStoreMapForNodes(
+    nodes: NodeSet<NamedNode>,
+  ): CoreMap<IQuadStore,NamedNode[]>
   {
-    let storeMap:CoreMap<IQuadStore,Quad[]> = new CoreMap();
+    let storeMap: CoreMap<IQuadStore,NamedNode[]> = new CoreMap();
+    nodes.forEach((node) => {
+      let store = this.getTargetStoreForNode(node);
+      //if store is null, this means no store is observing this node. This will usually happen for the default graph which contains temporary nodes
+      if (store)
+      {
+        if (!storeMap.has(store))
+        {
+          storeMap.set(store,[]);
+        }
+        storeMap.get(store).push(node);
+      }
+    });
+    return storeMap;
+  }
+
+  private static getTargetStoreMap(
+    quads: ICoreIterable<Quad>,
+  ): CoreMap<IQuadStore,Quad[]>
+  {
+    let storeMap: CoreMap<IQuadStore,Quad[]> = new CoreMap();
     quads.forEach((quad) => {
       let store = this.getTargetStoreForGraph(quad.graph);
       //if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
-      if(store)
+      if (store)
       {
         if (!storeMap.has(store))
         {
@@ -295,27 +413,5 @@ export abstract class Storage
       }
     });
     return storeMap;
-
-    /*//if we already created a targetGraphMap
-    if(targetGraphMap)
-    {
-      //then we can save some work and just translate graphs to stores
-      targetGraphMap.forEach((quads,graph) => {
-        storeMap.set(this.getTargetStoreForGraph(graph),quads);
-      })
-      return storeMap;
-    }
-
-    //if not, we make from scratch:
-    let quadsBySubject = this.groupQuadsBySubject(quads);
-    quadsBySubject.forEach((quads,subjectNode) => {
-      let targetStore = this.getTargetStoreForNode(subjectNode);
-      if(!storeMap.has(targetStore))
-      {
-        storeMap.set(targetStore,[])
-      }
-      storeMap.set(targetStore,storeMap.get(targetStore).concat(quads));
-    });
-    return storeMap;*/
   }
 }

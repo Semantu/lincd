@@ -13,7 +13,7 @@ export class QuadArray extends Array<Quad> {
 	}
 
 	moveTo(graph: Graph) {
-		this.forEach((quad) => (quad.graph = graph));
+		this.forEach((quad) => (quad.moveToGraph(graph)));
 	}
 
 	makeExplicit() {

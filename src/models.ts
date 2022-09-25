@@ -26,7 +26,7 @@ import {PropertySet} from './collections/PropertySet';
 import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
-import {BlankNodeMap} from './collections/BlankNodeMap';
+import {NodeURIMappings} from './collections/NodeURIMappings';
 import { Debug } from "./utils/Debug";
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
@@ -524,15 +524,15 @@ export class NamedNode
 		alteration: boolean = false,
 		emitEvents: boolean = true,
 	) {
-		var index: NamedNode = quad.predicate;
+		var predicate: NamedNode = quad.predicate;
 		//first make sure we have a QuadMap value for key=predicate
-		if (!this.asSubject.has(index)) {
-			this.asSubject.set(index, new QuadMap());
-			this.properties.set(index, new PropertySet());
+		if (!this.asSubject.has(predicate)) {
+			this.asSubject.set(predicate, new QuadMap());
+			this.properties.set(predicate, new PropertySet());
 		}
 
 		//Add the quad to the QuadMap (see implementation for more details)
-		let quadMap = this.asSubject.get(index);
+		let quadMap = this.asSubject.get(predicate);
 
 		//make sure we have a QuadSet ready for the object of this quad
 		quadMap.__set(quad.object, quad);
@@ -541,9 +541,9 @@ export class NamedNode
 		//Because multiple graphs can hold the same subj-pred-obj triple, we want to avoid adding literal values
 		//that have the exact same literal value, so we need to test for equality here before adding it
 		if (
-			!this.properties.get(index).some((object) => object.equals(quad.object))
+			!this.properties.get(predicate).some((object) => object.equals(quad.object))
 		) {
-			this.properties.get(index).__add(quad.object);
+			this.properties.get(predicate).__add(quad.object);
 		}
 
 		//add this quad to the map of events to send on the next tick
@@ -667,26 +667,31 @@ export class NamedNode
 		alteration: boolean = false,
 		emitEvents: boolean = true,
 	) {
-		var index: NamedNode = quad.predicate;
+		var predicate: NamedNode = quad.predicate;
 
 		//start by looking through the QuadMap (it is more complete than the quick & easy properties index, as it accounts for multiple quads per object value in different graphs)
-		var quadMap: QuadMap = this.asSubject.get(index);
+		var quadMap: QuadMap = this.asSubject.get(predicate);
 		if (quadMap) {
-			let quadSet = quadMap.get(quad.object);
-			quadSet.delete(quad);
+			let valueQuads = quadMap.get(quad.object);
+			valueQuads.delete(quad);
 			//if we no longer hold any quads for this object
-			if (quadSet.size == 0) {
+			if (valueQuads.size == 0) {
 				//remove the key
 				quadMap.__delete(quad.object);
 
-				//and then also remove this object from the propertySet index (the index should exist)
-				this.properties.get(index).__delete(quad.object);
+        //for this.properties we just keep ONE value for identical literals (in case multiple graphs hold the same subject-pred-obj triple)
+        //so here we check if any other object that is still registered equals the current object
+        if(![...quadMap.keys()].some(object => quad.object.equals(object)))
+        {
+          //if that's not the case, then also remove this object from the propertySet index (the index should exist)
+          this.properties.get(predicate).__delete(quad.object);
+        }
 
 				//if we now also no longer hold any values for this predicate
 				if (quadMap.size === 0) {
 					//delete both indices for this predicate
-					this.asSubject.delete(index);
-					this.properties.delete(index);
+					this.asSubject.delete(predicate);
+					this.properties.delete(predicate);
 				}
 			}
 		}
@@ -2052,8 +2057,8 @@ export class NamedNode
 	 * `new NamedNode()` should therefore never be used.
 	 * @param uri
 	 */
-	static getOrCreate(uri: string) {
-		return this.getNamedNode(uri) || this._create(uri);
+	static getOrCreate(uri: string,isTemporaryNode:boolean=false) {
+		return this.getNamedNode(uri) || this._create(uri,isTemporaryNode);
 	}
 
 	/**
@@ -2066,6 +2071,10 @@ export class NamedNode
 	static getNamedNode(uri: string): NamedNode | undefined {
 		return this.namedNodes.get(uri);
 	}
+
+  get value():string {
+    return this._value;
+  }
 
 	set value(newUri: string) {
 		if (NamedNode.namedNodes.has(newUri)) {
@@ -2082,11 +2091,11 @@ export class NamedNode
 		this._value = newUri;
 		NamedNode.namedNodes.set(this._value, this);
 
-		//if this node had a temporary URI
-		if (this._isTemporaryNode) {
-			//it now has an explicit URI, so it's no longer temporary
-			this._isTemporaryNode = false;
-		}
+		// //if this node had a temporary URI
+		// if (this._isTemporaryNode) {
+		// 	//it now has an explicit URI, so it's no longer temporary
+		// 	this._isTemporaryNode = false;
+		// }
 
 		this.emit(NamedNode.URI_UPDATED, this, oldUri, newUri);
 
@@ -2136,7 +2145,7 @@ export class BlankNode extends NamedNode {
     quads: QuadSet | Quad[],
     includeObjectBlankNodes: boolean=true,
     includeSubjectBlankNodes: boolean=false,
-    blankNodes: BlankNodeMap = new BlankNodeMap()
+    blankNodes: NodeURIMappings = new NodeURIMappings()
   ) {
     let add =
       quads instanceof Set ? quads.add.bind(quads) : quads.push.bind(quads);
@@ -2155,7 +2164,7 @@ export class BlankNode extends NamedNode {
 	private static addBlankNodeQuads(
 		blankNode: BlankNode,
 		add: (n: any) => void,
-		blankNodes: BlankNodeMap,
+		blankNodes: NodeURIMappings,
 		inverseIteration: boolean=false,
 	) {
 		// console.log('adding quads of ' + blankNode.uri);
@@ -2900,7 +2909,18 @@ export class Quad extends EventEmitter {
 		return this._graph;
 	}
 
-	set graph(newGraph: Graph) {
+  /**
+   * Removes this quad and creates a new quad with the same subject,predicate,object, but a new graph.
+   * Returns the new quad
+   * @param newGraph
+   */
+  moveToGraph(newGraph:Graph):Quad {
+    let newQuad = new Quad(this.subject,this.predicate,this.object,newGraph,this.implicit,true);
+    this.remove(true);
+    return newQuad;
+  }
+
+	/*set graph(newGraph: Graph) {
     if(newGraph !== this._graph)
     {
       //NOTE: we could have gone a different way with Quad.moveToGraph(quad,newGraph) / quad.moveto(newGraph), which removes the old one and returns a new quad
@@ -2924,7 +2944,7 @@ export class Quad extends EventEmitter {
 
       this.mimicEventsOnUpdate(oldQuad);
     }
-	}
+	}*/
 
   private mimicEventsOnUpdate(oldQuad:Quad)
   {
@@ -3110,7 +3130,9 @@ export class Quad extends EventEmitter {
 			' ' +
 			this.predicate.toString() +
 			' ' +
-			this.object.toString()
+			this.object.toString() +
+			' ' +
+			this.graph.toString()
 		);
 	}
 }

@@ -5,9 +5,10 @@
  */
 import {BlankNode, NamedNode} from '../models';
 import {NodeMap} from './NodeMap';
+import {NodeSet} from './NodeSet';
 
 //TODO: rename to something more fitting now that it also handles TMP NamedNodes
-export class BlankNodeMap extends NodeMap<NamedNode> {
+export class NodeURIMappings extends NodeMap<NamedNode> {
 	originalUris: Map<string, string> = new Map();
 
 	/**
@@ -20,7 +21,7 @@ export class BlankNodeMap extends NodeMap<NamedNode> {
 	 * @param {string} givenUri
 	 * @returns {BlankNode}
 	 */
-	getOrCreate(givenUri: string): BlankNode {
+  getNamedNodeOrCreateBlankNode(givenUri: string): BlankNode {
 		//TODO: rename this method to getOrCreateBlankNode
 		if (this.has(givenUri)) {
 			return this.get(givenUri);
@@ -31,14 +32,19 @@ export class BlankNodeMap extends NodeMap<NamedNode> {
 			return blankNode;
 		}
 	}
+  getBlankNodes():NodeSet<BlankNode>
+  {
+    return new NodeSet(this.filter(n => n instanceof BlankNode).values());
+  }
 
 	getOrCreateNamedNode(uri: string): NamedNode {
-		//if its a TMP node
+    //the temp URI's in one environment may already be used in another environment
+    //so we need to check for temporary URI's and convert them to a local temporary URI
 		if (
 			uri.substr(0, NamedNode.TEMP_URI_BASE.length) == NamedNode.TEMP_URI_BASE
 		) {
 			if (!this.has(uri)) {
-				//create a new temp node that has a LOCAL TMP URI
+				//create a new temp node that has a LOCAL temp URI
 				var tmpResource: NamedNode = NamedNode.create();
 				this.set(uri, tmpResource);
 				this.originalUris.set(tmpResource.uri, uri);
