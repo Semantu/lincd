@@ -393,7 +393,7 @@ export function linkedModule(
         //then add them to this node shape now
         constructor.propertyShapes.forEach(propertyShape => {
           //update the URI (by extending the URI of the shape)
-          propertyShape.namedNode.uri = constructor.shape.namedNode.uri + `/property/${propertyKey}`;
+          propertyShape.namedNode.uri = constructor.shape.namedNode.uri + `/property/${propertyShape.label}`;
 
           (constructor.shape as NodeShape).addPropertyShape(propertyShape);
         })
