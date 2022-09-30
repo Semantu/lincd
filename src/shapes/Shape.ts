@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {EventEmitter} from '../events/EventEmitter';
-import {Literal, NamedNode, Node} from '../models';
+import {Literal, NamedNode, Node, BlankNode} from '../models';
 import {rdf} from '../ontologies/rdf';
 import {PropertySet} from '../collections/PropertySet';
 import {rdfs} from '../ontologies/rdfs';
@@ -174,7 +174,12 @@ export class Person extends Shape {
 			//some classes prefer a certain term type. E.g. RdfsLiteral will create a Literal node, and NodeShape will create a BlankNode
 			//TODO: also look at inheritance chain, so that a class without preferredNodeKind that extends a class with preferredTermType still gets that inherited termType
 			let termType = this.constructor['nodeKind'] || this.constructor['preferredNodeKind'] || NamedNode;
-			this._node = termType.create();
+      //create a new temporary node, a Literal, NamedNode or BlankNode
+			this._node = termType.create(true);
+      // if(termType === NamedNode || termType === BlankNode)
+      // {
+      //   this._node['isTemporaryNode'] = true;
+      // }
 			this._node.set(rdf.type, this.instanceType);
 		}
 

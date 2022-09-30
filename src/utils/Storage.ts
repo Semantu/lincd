@@ -200,6 +200,7 @@ export abstract class Storage
   static storeShapesInStore(store: IQuadStore,...shapes: typeof Shape[])
   {
     let graph = store.getDefaultGraph();
+    this.setStoreForGraph(store,graph);
     this.storeShapesInGraph(graph,...shapes);
   }
 

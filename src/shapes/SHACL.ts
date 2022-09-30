@@ -120,7 +120,6 @@ export class ValidationResult {
 
 export class PropertyShape extends SHACL_Shape {
 	static targetClass: NamedNode = shacl.PropertyShape;
-	static preferredNodeKind = BlankNode;
 
 	get class(): NamedNode {
 		return this.getOne(shacl.class) as NamedNode;

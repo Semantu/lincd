@@ -2117,8 +2117,8 @@ export class BlankNode extends NamedNode {
 
 	termType: any = 'BlankNode';
 
-	constructor() {
-		super(BlankNode.createUri());
+	constructor(uri?:string,isTemporaryNode:boolean=false) {
+		super(uri || BlankNode.createUri(),isTemporaryNode);
 		NamedNode.register(this);
 	}
 
@@ -2133,8 +2133,8 @@ export class BlankNode extends NamedNode {
 		);
 	}
 
-	static create(): BlankNode {
-		return new BlankNode();
+	static create(isTemporaryNode:boolean=false): BlankNode {
+		return new BlankNode(null,isTemporaryNode);
 	}
 
 	static createUri() {

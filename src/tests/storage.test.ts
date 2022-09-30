@@ -24,7 +24,7 @@ class TestStore implements IQuadStore {
     return null;
   }
 
-  addMultiple?(quads: QuadSet): Promise<any> {
+  addMultiple(quads: QuadSet): Promise<any> {
     return null;
   }
 
@@ -32,7 +32,7 @@ class TestStore implements IQuadStore {
     return null;
   }
 
-  deleteMultiple?(quads: QuadSet): Promise<any> {
+  deleteMultiple(quads: QuadSet): Promise<any> {
     return null;
   }
 

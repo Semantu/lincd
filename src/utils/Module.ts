@@ -392,6 +392,9 @@ export function linkedModule(
       {
         //then add them to this node shape now
         constructor.propertyShapes.forEach(propertyShape => {
+          //update the URI (by extending the URI of the shape)
+          propertyShape.namedNode.uri = constructor.shape.namedNode.uri + `/property/${propertyKey}`;
+
           (constructor.shape as NodeShape).addPropertyShape(propertyShape);
         })
         //and remove the temporary key
@@ -534,9 +537,9 @@ function getLinkedComponentProps<ShapeType extends Shape,P>(props:LinkedComponen
   return newProps;
 }
 
-export function createDataPromise(dataSource) {
-	require(dataSource);
-}
+// export function createDataPromise(dataSource) {
+// 	require(dataSource);
+// }
 
 
 export function initTree() {
