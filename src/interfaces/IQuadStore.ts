@@ -5,15 +5,17 @@ import {ICoreIterable} from './ICoreIterable';
 
 export interface IQuadStore {
 
+  // describe(nodes:NamedNode):Promise<QuadSet>;
+
   update(toAdd:ICoreIterable<Quad>,toRemove:ICoreIterable<Quad>):Promise<any>;
 
 	add(quad: Quad): Promise<any>;
 
-	addMultiple?(quads: QuadSet): Promise<any>;
+	addMultiple(quads: QuadSet): Promise<any>;
 
 	delete(quad: Quad): Promise<any>;
 
-	deleteMultiple?(quads: QuadSet): Promise<any>;
+	deleteMultiple(quads: QuadSet): Promise<any>;
 
   setURI(...nodes:NamedNode[]):Promise<any>;
 
