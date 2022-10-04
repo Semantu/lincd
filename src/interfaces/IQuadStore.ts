@@ -5,7 +5,10 @@ import {ICoreIterable} from './ICoreIterable';
 
 export interface IQuadStore {
 
-  // describe(nodes:NamedNode):Promise<QuadSet>;
+  /**
+   * Prepares the store to be used.
+   */
+  init():Promise<any>;
 
   update(toAdd:ICoreIterable<Quad>,toRemove:ICoreIterable<Quad>):Promise<any>;
 

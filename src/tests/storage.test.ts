@@ -10,6 +10,9 @@ import {rdf} from '../ontologies/rdf';
 class TestStore implements IQuadStore {
   defaultGraph = Graph.create();
   contents:QuadSet = new QuadSet();
+  init() {
+    return null;
+  }
   reset()
   {
     this.contents = new QuadSet();

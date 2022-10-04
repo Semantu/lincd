@@ -157,6 +157,7 @@ export abstract class Storage
   static setDefaultStore(store: IQuadStore)
   {
     this.defaultStore = store;
+    this.defaultStore.init();
     let defaultGraph = store.getDefaultGraph();
     if (defaultGraph)
     {
