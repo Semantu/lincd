@@ -534,11 +534,6 @@ function getLinkedComponentProps<ShapeType extends Shape,P>(props:LinkedComponen
   return newProps;
 }
 
-export function createDataPromise(dataSource) {
-	require(dataSource);
-}
-
-
 export function initTree() {
   let globalObject = typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : undefined);
   if('lincd' in globalObject)
