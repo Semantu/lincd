@@ -315,7 +315,7 @@ export class NamedNode
 	 * The base of temporary URI's
 	 * @internal
 	 */
-	public static TEMP_URI_BASE: string = 'lincd://temp/';
+	public static TEMP_URI_BASE: string = 'lin://tmp/';
 
 	private static namedNodes: NodeMap<NamedNode> = new NodeMap();
 	private static tempCounter: number = 0;
