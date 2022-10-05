@@ -37,7 +37,7 @@
 		"typedoc": "^0.23.7"
 	},
 	"devDependencies": {
-		"@types/jest": "^29.0.3",
+		"@jest/globals": "^29.1.2",
 		"@types/node": "^17.0.8",
 		"jest": "^29.0.3",
 		"lincd-cli": "^0.1",
