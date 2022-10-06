@@ -374,14 +374,14 @@ export function linkedModule(
 		if (!Object.getOwnPropertyNames(constructor).includes('shape')) {
 
       //create a new node shape for this shapeClass
-      let shapeNode = NamedNode.create();
-      shapeNode.uri =`${NamedNode.TEMP_URI_BASE}${moduleName}/shape/${constructor.name}`;
-			constructor.shape = new NodeShape(shapeNode);
+			let shape:NodeShape = new NodeShape();
+      shape.namedNode.uri =`${NamedNode.TEMP_URI_BASE}${moduleName}/shape/${constructor.name}`;
+      constructor.shape = shape;
 
       //also create a representation in the graph of the shape class itself
       let shapeClass = NamedNode.create();
       shapeClass.uri = `${NamedNode.TEMP_URI_BASE}${moduleName}/shapeClass/${constructor.name}`
-      shapeClass.set(lincdOntology.definesShape,constructor.shape.node);
+      shapeClass.set(lincdOntology.definesShape,shape.node);
       shapeClass.set(rdf.type,lincdOntology.ShapeClass);
 
       //and connect it back to the module
@@ -393,9 +393,9 @@ export function linkedModule(
         //then add them to this node shape now
         constructor.propertyShapes.forEach(propertyShape => {
           //update the URI (by extending the URI of the shape)
-          propertyShape.namedNode.uri = constructor.shape.namedNode.uri + `/property/${propertyShape.label}`;
+          propertyShape.namedNode.uri = shape.namedNode.uri + `/property/${propertyShape.label}`;
 
-          (constructor.shape as NodeShape).addPropertyShape(propertyShape);
+          shape.addPropertyShape(propertyShape);
         })
         //and remove the temporary key
         delete constructor.propertyShapes;
