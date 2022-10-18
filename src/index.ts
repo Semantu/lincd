@@ -5,7 +5,7 @@
  */
 //import everything from each file we want to make available to other libraries
 import * as Module from './utils/Module';
-import {linkedModule} from './utils/Module';
+import {linkedPackage} from './utils/Module';
 import * as models from './models';
 import * as Storage from './utils/Storage';
 import * as EventEmitter from './events/EventEmitter';
@@ -51,7 +51,7 @@ export {React, ReactDOM};
 
 export const nextTick = require('next-tick');
 
-export const {linkedComponent, linkedShape} = linkedModule('lincd');
+export const {linkedComponent, linkedShape} = linkedPackage('lincd');
 
 //we don't want people to import {NamedNode} from '@dacore/core' for example
 //because this does not work well with tree shaking

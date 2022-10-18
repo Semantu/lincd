@@ -47,7 +47,7 @@ export class Prefix {
 		return this.prefixToUri.get(prefix);
 	}
 
-	private static findMatch(fullURI: string) {
+	static findMatch(fullURI: string) {
 		for (let [ontologyURI, prefix] of this.uriToPrefix.entries()) {
 			if (fullURI.substr(0, ontologyURI.length) == ontologyURI) {
 				return [ontologyURI, prefix];

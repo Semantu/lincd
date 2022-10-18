@@ -19,18 +19,24 @@ declare var window;
 declare var global;
 declare var require;
 
-var moduleParsePromises: Map<string, Promise<any>> = new Map();
-var loadedModules: Set<NamedNode> = new Set();
+var packageParsePromises: Map<string, Promise<any>> = new Map();
+var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape, CoreSet<Component>> = new Map();
 
 // type LinkedComponentClassDecorator<ShapeType,P> = <T extends typeof LinkedComponentClass<ShapeType,P>>(constructor:T)=>T;
 type ClassDecorator = <T extends { new(...args:any[]):{}}>(constructor:T)=>T;
 
+// type EventConfig<Events extends { kind: string }> = {
+//   // [E in Events as E["kind"]]: (event: E) => void;
+//   [E in Events as String<E>]: (event: E) => void;
+// }
+//<Person,{bla}> => {bla:string} & {person:Person}
+
 /**
- * This object, returned by [linkedModule()](/docs/lincd.js/modules/utils_Module#linkedmodule),
+ * This object, returned by [linkedPackage()](/docs/lincd.js/modules/utils_Module#linkedPackage),
  * contains the decorators to link different parts of a LINCD module.
  */
-export interface LinkedModuleObject
+export interface LinkedPackageObject
 {
   /**
    * Links a functional component to its shape
@@ -52,11 +58,13 @@ export interface LinkedModuleObject
    * });
    * ```
    */
-  linkedComponent:<ShapeType extends Shape, P = {}>(
+  linkedComponent:<ShapeType extends Shape, P={}>(
     shapeClass: typeof Shape,
     functionalComponent?:
       FunctionalComponent<P,ShapeType>,
-  )=> FunctionalComponent<P,ShapeType>;
+  // )=> FunctionalComponent<P,ShapeType>;
+  )=> FunctionalComponent<Omit<Omit<P, 'source'>,'sourceShape'> & LinkedComponentProps<ShapeType>,ShapeType>;
+
 
   /**
    * Class decorator that links a class-based component to its shape.
@@ -70,7 +78,7 @@ export interface LinkedModuleObject
    * Linked component class example:
    * ```tsx
    * import {React} from "react";
-   * import {linkedComponentClass} from "../module";
+   * import {linkedComponentClass} from "../package";
    * import {LinkedComponentClass} from "lincd/lib/utils/LinkedComponentClass";
    * @linkedComponentClass(Person)
    * export class PersonView extends LinkedComponentClass<Person> {
@@ -87,6 +95,14 @@ export interface LinkedModuleObject
   linkedComponentClass:<ShapeType extends Shape,P={}>(
     shapeClass:typeof Shape,
   )=>ClassDecorator
+
+  /**
+   * Register a file (a javascript module) and all its exported objects.
+   * Specifically helpful for registering multiple functional components if you declare them without a function name
+   * @param _this
+   * @param _module
+   */
+  registerPackageModule(_module):void;
 
   /**
    * Links a typescript class to a SHACL shape.
@@ -155,7 +171,7 @@ export interface LinkedModuleObject
    * import {NamedNode} from 'lincd/lib/models';
    * import {JSONLD} from 'lincd-jsonld/lib/JSONLD';
    * import {createNameSpace} from 'lincd/lib/utils/NameSpace';
-   * import {linkedOntology} from '../module';
+   * import {linkedOntology} from '../package';
    * import * as _this from './my-ontology';
    *
    * let dataFile = '../data/my-ontology.json';
@@ -193,40 +209,40 @@ export interface LinkedModuleObject
    * @param exportFileName - the file name that this exported object is available under. Needs to be unique across the module.
    * @param exportedObject - the exported object (the class, constant, function, etc)
    */
-  registerModuleExport:(exportFileName:string,exportedObject:any)=>void;
+  registerPackageExport:(exportedObject:any)=>void;
 
   /**
    * A reference to the modules' object in the LINCD tree.
    * Contains all linked components of the module.
    */
-  moduleExports:any;
+  packageExports:any;
 }
 
 // var moduleLoadPromises: Map<NamedNode, DeferredPromise> = new Map();
 
-export function linkedModule(
-	moduleName: string,
-	moduleExports?: any,
-	moduleResource?: NamedNode,
-	moduleDataPromise?: Promise<any>,
+export function linkedPackage(
+	packageName: string,
+	packageExports?: any,
+	packageNode?: NamedNode,
+	packageDataPromise?: Promise<any>,
 	ontologyDataPromises?: [NamedNode, Promise<any>][],
 ) {
 	//handle module data and ontology data
 	if (!ontologyDataPromises) ontologyDataPromises = [];
 
 	//module is parsed when all of those are parsed
-	var moduleParsedPromise = Promise.all([
-		moduleDataPromise || true,
+	var packageParsedPromise = Promise.all([
+		packageDataPromise || true,
 		...ontologyDataPromises,
 	]);
 
-	moduleParsePromises.set(moduleName, moduleParsedPromise);
+	packageParsePromises.set(packageName, packageParsedPromise);
 
 	//if no module node was given, we will determine the URI of the module for them
 	//TODO: (assuming that the module data does not include a URI already?)
-	if (!moduleResource) {
-		moduleResource = NamedNode.getOrCreate(
-			'http://data.lincd.pro/modules/npm/' + moduleName,
+	if (!packageNode) {
+		packageNode = NamedNode.getOrCreate(
+			'http://data.lincd.pro/modules/npm/' + packageName,
 		);
 	}
 
@@ -240,8 +256,8 @@ export function linkedModule(
 	});
 
 	//AFTER all the data has been loaded
-	moduleParsedPromise.then(() => {
-		loadedModules.add(moduleResource);
+	packageParsedPromise.then(() => {
+		loadedPackages.add(packageNode);
 		// we can officially resolve the module load promise
 		// if (!moduleLoadPromises.has(moduleResource)) {
 		// 	moduleLoadPromises.set(moduleResource as NamedNode, {
@@ -255,20 +271,21 @@ export function linkedModule(
 		// }
 	});
 
-  let moduleNode = NamedNode.create();
-  moduleNode.uri = `${NamedNode.TEMP_URI_BASE}${moduleName}`;
-  moduleNode.set(rdf.type,lincdOntology.Module);
-  moduleNode.setValue(rdfs.label,moduleName);
+  //TODO: see if we can just use one package node, see packageNode above
+  let localPackageNode = NamedNode.create();
+  localPackageNode.uri = `${NamedNode.TEMP_URI_BASE}${packageName}`;
+  localPackageNode.set(rdf.type,lincdOntology.Module);
+  localPackageNode.setValue(rdfs.label,packageName);
 
-  let moduleTreeObject = registerModuleInTree(moduleName,moduleExports);
+  let packageTreeObject = registerPackageInTree(packageName,packageExports);
 
 	//#Create declarators for this module
-	let registerInTree = function(object) {
-    if(object.name in moduleTreeObject)
+  let registerPackageExport = function(object) {
+    if(object.name in packageTreeObject)
     {
-      console.warn(`Key ${object.name} was already defined for module ${moduleName}. Overwriting with new value`);
+      console.warn(`Key ${object.name} was already defined for package ${packageName}. Note that LINCD currently only supports unique names across your entire package. Overwriting ${object.name} with new value`);
     }
-    moduleTreeObject[object.name] = object;
+    packageTreeObject[object.name] = object;
 	};
 
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
@@ -276,21 +293,29 @@ export function linkedModule(
 	//
 	// 	return (constructor) => {
 	// 		//add the component class of this module to the global tree
-	// 		registerInTree(constructor);
+	// 		registerPackageExport(constructor);
 	//
 	// 		//return the original class without modifications
 	// 		return constructor;
 	// 	};
 	// };
 
-	let registerModuleExport = function(exportName, exportedObject) {
-    moduleTreeObject[exportName] = exportedObject;
+	let registerInPackageTree = function(exportName,exportedObject) {
+    packageTreeObject[exportName] = exportedObject;
 	};
 
+  function registerPackageModule(
+    _module):void {
+
+    for(var key in _module.exports)
+    {
+      registerInPackageTree(key,_module.exports[key]);
+    }
+  }
 	//create a declarator function which Components of this module can use register themselves and add themselves to the global tree
 	let linkedUtil = function(constructor) {
 		//add the component class of this module to the global tree
-		registerInTree(constructor);
+		registerPackageExport(constructor);
 
 		//return the original class without modifications
 		return constructor;
@@ -301,7 +326,7 @@ export function linkedModule(
 		shapeClass: typeof Shape,
 		functionalComponent?:
       FunctionalComponent<P,ShapeType>,
-	): FunctionalComponent<P,ShapeType> {
+	): FunctionalComponent<Omit<Omit<P, 'source'>,'sourceShape'> & LinkedComponentProps<ShapeType>,ShapeType> {
 		type FC = FunctionalComponent<P,ShapeType>;
     //create a new functional component which wraps the original
     let wrappedComponent:FC = (props: P & LinkedComponentProps<ShapeType>) => {
@@ -310,15 +335,21 @@ export function linkedModule(
       //and then run the original with the transformed props
       return functionalComponent(linkedProps);
     };
-    //copy the name (have to do it this way, name is protected)
-    Object.defineProperty(wrappedComponent, "name", { value: functionalComponent.name });
     //keep a copy of the original for strict checking of equality when compared to
     wrappedComponent['original'] = functionalComponent;
 
     //link the wrapped functional component to its shape
     (wrappedComponent as FC).shape = shapeClass;
-    //add the component class of this module to the global tree
-    registerInTree(wrappedComponent);
+    //IF this component is a function that has a name
+    if(functionalComponent.name)
+    {
+      //then copy the name (have to do it this way, name is protected)
+      Object.defineProperty(wrappedComponent, "name", { value: functionalComponent.name });
+      //and add the component class of this module to the global tree
+      registerPackageExport(wrappedComponent);
+    }
+    //NOTE: if it does NOT have a name, the developer will need to manually use registerPackageExport
+
     //register the component and its shape
     registerComponent(wrappedComponent as FC, shapeClass);
 
@@ -336,7 +367,7 @@ export function linkedModule(
     let decoratorFunction = function<T>(constructor) {
 
       //add the component class of this module to the global tree
-      registerInTree(constructor);
+      registerPackageExport(constructor);
 
       //link the shape
       constructor['shape'] = shapeClass;
@@ -362,10 +393,11 @@ export function linkedModule(
     return decoratorFunction;
   }
 
+
 	//create a declarator function which Shapes of this module can use register themselves and add themselves to the global tree
 	let linkedShape = function(constructor) {
 		//add the component class of this module to the global tree
-		registerInTree(constructor);
+		registerPackageExport(constructor);
 
 		//register the component and its shape
 		Shape.registerByType(constructor);
@@ -375,17 +407,17 @@ export function linkedModule(
 
       //create a new node shape for this shapeClass
 			let shape:NodeShape = new NodeShape();
-      shape.namedNode.uri =`${NamedNode.TEMP_URI_BASE}${moduleName}/shape/${constructor.name}`;
+      shape.namedNode.uri =`${NamedNode.TEMP_URI_BASE}${packageName}/shape/${constructor.name}`;
       constructor.shape = shape;
 
       //also create a representation in the graph of the shape class itself
       let shapeClass = NamedNode.create();
-      shapeClass.uri = `${NamedNode.TEMP_URI_BASE}${moduleName}/shapeClass/${constructor.name}`
+      shapeClass.uri = `${NamedNode.TEMP_URI_BASE}${packageName}/shapeClass/${constructor.name}`
       shapeClass.set(lincdOntology.definesShape,shape.node);
       shapeClass.set(rdf.type,lincdOntology.ShapeClass);
 
       //and connect it back to the module
-      shapeClass.set(lincdOntology.module,moduleNode);
+      shapeClass.set(lincdOntology.module,localPackageNode);
 
       //if linkedProperties have already registered themselves
       if(constructor.propertyShapes)
@@ -449,7 +481,7 @@ export function linkedModule(
 		}
 
 		//register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
-		registerModuleExport(prefixAndFileName, exports);
+    registerInPackageTree(prefixAndFileName, exports);
 		// });
 	};
 
@@ -460,9 +492,10 @@ export function linkedModule(
     linkedShape,
     linkedUtil,
     linkedOntology,
-    registerModuleExport,
-    moduleExports: moduleTreeObject,
-  } as LinkedModuleObject;
+    registerPackageExport,
+    registerPackageModule,
+    packageExports: packageTreeObject,
+  } as LinkedPackageObject;
 }
 
 function registerComponent(
@@ -487,7 +520,7 @@ function registerComponent(
   shapeToComponents.get(shape).add(exportedComponent);
 }
 
-function registerModuleInTree(moduleName,moduleExports)
+function registerPackageInTree(moduleName,packageExports)
 {
   //prepare name for global tree reference
   let moduleTreeKey = moduleName.replace(/-/g, '_');
@@ -498,26 +531,7 @@ function registerModuleInTree(moduleName,moduleExports)
     );
   } else {
     //initiate an empty object for this module in the global tree
-    lincd._modules[moduleTreeKey] = moduleExports || {};
-
-    //next we will go over each export of each file
-    //and just check that the format is correct
-    for (var key in moduleExports) {
-      var fileExports = moduleExports[key];
-
-      if (!fileExports) continue;
-
-      if (typeof fileExports === 'function') {
-        console.warn(
-          moduleName +
-          "/index.ts exports a class or function under '" +
-          key +
-          "'. Make sure to import * as '" +
-          key +
-          "' and export that from index",
-        );
-      }
-    }
+    lincd._modules[moduleTreeKey] = packageExports || {};
   }
   return lincd._modules[moduleTreeKey]
 }

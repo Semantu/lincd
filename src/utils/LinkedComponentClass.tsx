@@ -8,7 +8,7 @@ import {NamedNode} from '../models';
  * This class extends React.Component.
  * Besides the usual react functionality, it provides extra properties like 'sourceShape' and also automatically rerenders when properties of the source node are changed in the graph.
  *
- * Note that this class needs to be used together with the decorator [@linkedComponentClass](/docs/lincd.js/interfaces/utils_Module.LinkedModuleObject#linkedcomponentclass)
+ * Note that this class needs to be used together with the decorator [@linkedComponentClass](/docs/lincd.js/interfaces/utils_Module.LinkedPackageObject#linkedcomponentclass)
  *
  * It receives 3 type parameters, first the ShapeClass (required) and then the usual props and state types of react.
  * As ShapeClass you will need to provide the same class as you used in the `@linkedComponentClass`.
@@ -17,7 +17,7 @@ import {NamedNode} from '../models';
  * Linked component class example:
  * ```tsx
  * import {React} from "react";
- * import {linkedComponentClass} from "../module";
+ * import {linkedComponentClass} from "../package";
  * impoprt {LinkedComponentClass} from "lincd/lib/utils/LinkedComponentClass";
  * @linkedComponentClass(Person)
  * export class PersonView extends LinkedComponentClass<Person> {

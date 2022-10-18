@@ -228,7 +228,7 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
     if(shape)
     {
       //update the URI (by extending the URI of the shape)
-      property.namedNode.uri = shape.namedNode.uri + `/property/${propertyKey}`;
+      property.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;
 
       //then add it directly
       shape.addPropertyShape(property);

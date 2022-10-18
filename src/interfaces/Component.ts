@@ -15,7 +15,15 @@ export interface FunctionalComponent<P, ShapeType extends Shape = Shape> extends
 	(props: P & LinkedComponentProps<ShapeType>): any;
 	shape?: typeof Shape;
 }
+export interface FunctionalComponentDeclaration<P extends LinkedComponentDeclarationProps, ShapeType extends Shape = Shape> extends React.FC<P> {
+	(props: P & LinkedComponentProps<ShapeType>): any;
+	shape?: typeof Shape;
+}
 
+export interface LinkedComponentDeclarationProps<ShapeType extends Shape = Shape> {
+  source:Node,
+  sourceShape:ShapeType;
+}
 export interface LinkedComponentProps<ShapeType extends Shape = Shape> {
   /**
    * A node in the graph that serves as the main data source of this component. The thing that this component visualises. .
