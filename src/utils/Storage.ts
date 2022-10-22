@@ -62,7 +62,8 @@ export abstract class Storage
       //start storing
       this.storedEvents = {};
 
-      //and let's process whatever we store in this event cycle on the next tick
+      //and if we're not already in an active processing cycle
+      //then let's start processing whatever we store in this event cycle on the next tick
       if(!this.processingPromise)
       {
         this.startProcessingOnNextTick();
@@ -105,6 +106,37 @@ export abstract class Storage
       [NamedNode.STORE_NODES,this.onStoreNodes],
       [Quad.QUADS_ALTERED,this.onQuadsAltered],
     ]
+
+    //combine multiple events that want to add/remove quads into 1
+    if(storedEvents[Quad.QUADS_ALTERED] && storedEvents[Quad.QUADS_ALTERED].length > 1)
+    {
+      let created = new QuadSet();
+      let removed = new QuadSet();
+      storedEvents[Quad.QUADS_ALTERED].forEach(([quadsCreated,quadsRemoved]:[QuadSet,QuadSet]) => {
+        quadsCreated.forEach(q => created.add(q));
+        quadsRemoved.forEach(q => removed.add(q));
+      });
+      //remove things that have been created & removed during the previous execution cycle
+      removed.forEach(q => {
+        if(created.has(q))
+        {
+          removed.delete(q);
+          created.delete(q);
+        }
+      })
+      //replace stored events with one stored event that has again 2 args, the combined sets
+      storedEvents[Quad.QUADS_ALTERED] = [[created,removed]];
+    }
+    //combine multiple events that want to store nodes into 1
+    if(storedEvents[NamedNode.STORE_NODES] && storedEvents[NamedNode.STORE_NODES].length > 1)
+    {
+      let toStore = new NodeSet();
+      storedEvents[NamedNode.STORE_NODES].forEach(([nodesCreated]:[NodeSet]) => {
+        nodesCreated.forEach(n => toStore.add(n));
+      });
+      //replace stored events with one stored event that has again 2 args, the combined sets
+      storedEvents[NamedNode.STORE_NODES] = [[toStore]];
+    }
 
     let success = true;
     for (const [eventType,handler] of processOrder)

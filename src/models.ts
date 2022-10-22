@@ -28,7 +28,6 @@ import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
 import {NodeURIMappings} from './collections/NodeURIMappings';
 import { Debug } from "./utils/Debug";
-
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
 export abstract class Node extends EventEmitter {
@@ -721,12 +720,20 @@ export class NamedNode
 		alteration: boolean = false,
 		emitEvents: boolean = true,
 	) {
-		var index: NamedNode = quad.predicate;
-		var quadMap: QuadMap = this.asObject.get(index);
+    //start by looking through the QuadMap (it is more complete than the quick & easy properties index, as it accounts for identical sub-pred-obj triples that occur in different graphs)
+    //here we get a map of all the quads for the given predicate, grouped by subject (each map contains identical triples, but with different graphs)
+		var quadMap: QuadMap = this.asObject.get(quad.predicate);
 		if (quadMap) {
-			quadMap.__delete(quad.subject);
+      let quadSet = quadMap.get(quad.subject);
+      //remove this quad
+      quadSet.delete(quad);
+      //if we no longer hold any quads for this subject
+      if(quadSet.size === 0)
+      {
+        quadMap.__delete(quad.subject);
+      }
 			if (quadMap.size == 0) {
-				this.asObject.delete(index);
+				this.asObject.delete(quad.predicate);
 			}
 		}
 
@@ -3135,4 +3142,13 @@ export class Quad extends EventEmitter {
 			this.graph.toString()
 		);
 	}
+}
+
+let getNode = function(uri:string) {
+  return NamedNode.getOrCreate(uri);
+}
+if(typeof window !== 'undefined') {
+  window['getNode'] = getNode;
+} else if(typeof global !== 'undefined') {
+  global['getNode'] = getNode;
 }

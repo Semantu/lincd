@@ -226,7 +226,7 @@ export function linkedPackage(
 	packageNode?: NamedNode,
 	packageDataPromise?: Promise<any>,
 	ontologyDataPromises?: [NamedNode, Promise<any>][],
-) {
+):LinkedPackageObject {
 	//handle module data and ontology data
 	if (!ontologyDataPromises) ontologyDataPromises = [];
 
