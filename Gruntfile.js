@@ -7,6 +7,7 @@ module.exports = buildTools.generateGruntConfig('lincd', {
 		'react-dom': 'ReactDOM',
 		'prop-types': 'PropTypes',
 	},
+  declarations:false,
 	debug: false,
 	analyse: false,
 	filename: 'lincd',
