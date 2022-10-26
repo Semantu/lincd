@@ -28,6 +28,7 @@ import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
 import {NodeURIMappings} from './collections/NodeURIMappings';
 import { Debug } from "./utils/Debug";
+import {CoreSet} from './collections/CoreSet';
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
 export abstract class Node extends EventEmitter {
@@ -329,7 +330,7 @@ export class NamedNode
 	private static nodesToSave: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToLoad: NodeSet<NamedNode> = new NodeSet();
 	private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
-	private static nodesToRemove: NodeSet<NamedNode> = new NodeSet();
+	private static nodesToRemove: CoreSet<[NamedNode,QuadArray]> = new CoreSet();
 	private static nodesURIUpdated: CoreMap<NamedNode, [string, string]> =
 		new CoreMap();
 
@@ -1509,20 +1510,21 @@ export class NamedNode
 	}
 
 	/**
-	 * Removes this node from the graph, locally and remotely.
+	 * Removes this node from the graph, locally and remotely, in all connected QuadStores.
    * All properties will be unset, both where this node is the subject or the object.
    * Emits an event from the node itself and from the NamedNode class
-	 * @param property
-	 * @param values
 	 */
 	remove() {
+
+    //collect all the quads that are about to be removed
+    let removedQuads = this.getAllQuads(true);
 
     //remove all quads locally
     this.asSubject.forEach((quads) => quads.removeAll(true));
     if (this.asObject) this.asObject.forEach((quads) => quads.removeAll(true));
 
-    //emit event from this node itself
-    this.emit(NamedNode.NODE_REMOVED, this);
+    //emit event from this node itself, with all the quads that were removed
+    this.emit(NamedNode.NODE_REMOVED, this, removedQuads);
     //clean up anything connected to this node
     this.removeAllListeners();
 
@@ -1531,7 +1533,7 @@ export class NamedNode
 
     //make sure a global event is emitted that nodes are moved (picked up by storage)
     eventBatcher.register(NamedNode);
-		NamedNode.nodesToRemove.add(this);
+		NamedNode.nodesToRemove.add([this,removedQuads]);
 	}
 
 	/**
@@ -1928,7 +1930,7 @@ export class NamedNode
 	static emitBatchedEvents(resolve, reject) {
 		if (this.nodesToRemove.size) {
 			this.emitter.emit(NamedNode.REMOVE_NODES, this.nodesToRemove);
-			this.nodesToRemove = new NodeSet<NamedNode>();
+			this.nodesToRemove = new CoreSet<[NamedNode,QuadArray]>();
 		}
 
 		if (this.nodesToSave.size) {
@@ -2921,9 +2923,9 @@ export class Quad extends EventEmitter {
    * Returns the new quad
    * @param newGraph
    */
-  moveToGraph(newGraph:Graph):Quad {
-    let newQuad = new Quad(this.subject,this.predicate,this.object,newGraph,this.implicit,true);
-    this.remove(true);
+  moveToGraph(newGraph:Graph,alteration:boolean=true):Quad {
+    let newQuad = Quad.getOrCreate(this.subject,this.predicate,this.object,newGraph,this.implicit,alteration);
+    this.remove(alteration);
     return newQuad;
   }
 

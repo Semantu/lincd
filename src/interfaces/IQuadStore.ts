@@ -23,4 +23,6 @@ export interface IQuadStore {
   setURI(...nodes:NamedNode[]):Promise<any>;
 
   getDefaultGraph():Graph;
+
+  removeNodes(nodes:ICoreIterable<NamedNode>): Promise<any>;
 }

@@ -15,8 +15,12 @@ export class QuadSet extends CoreSet<Quad> {
 		this.forEach((quad) => quad.remove(alteration));
 	}
 
-	moveTo(graph: Graph) {
-		this.forEach((quad) => (quad.moveToGraph(graph)));
+	moveTo(graph: Graph,alteration:boolean=true):QuadSet {
+    let newSet = new QuadSet();
+		this.forEach((quad) => {
+      newSet.add(quad.moveToGraph(graph,alteration))
+    });
+    return newSet;
 	}
 
 	makeExplicit() {

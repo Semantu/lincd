@@ -174,6 +174,7 @@ export class Person extends Shape {
 			//some classes prefer a certain term type. E.g. RdfsLiteral will create a Literal node, and NodeShape will create a BlankNode
 			//TODO: also look at inheritance chain, so that a class without preferredNodeKind that extends a class with preferredTermType still gets that inherited termType
 			let termType = this.constructor['nodeKind'] || this.constructor['preferredNodeKind'] || NamedNode;
+
       //create a new temporary node, a Literal, NamedNode or BlankNode
 			this._node = termType.create(true);
       // if(termType === NamedNode || termType === BlankNode)

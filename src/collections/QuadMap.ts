@@ -34,7 +34,16 @@ class CoreMapToSet<K, S extends CoreSet<V>, V> extends Map<K, S>
 		return true;
 	}
 
-	forEach(callbackfn: any, thisArg?: any): void {
+  /**
+   * This object is a Map whos values are sets.
+   * This forEach method calls the callback-function for each items in each of those sets.
+   * The first parameter has the type of the items in the sets
+   * The second parameter is the key
+   * The type information can unfortunately not be defined as they would conflict with the usual forEach method
+   * @param callbackfn
+   * @param thisArg
+   */
+	forEach(callbackfn: (value: any, key: any, map: any)=>void, thisArg?: any): void {
 		for (let [key, set] of this) {
 			for (let value of set) {
 				callbackfn.apply(thisArg, [value, key, this]);

@@ -8,6 +8,8 @@ import {NodeShape} from '../shapes/SHACL';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {eventBatcher} from '../events/EventBatcher';
 import nextTick from 'next-tick';
+import {QuadArray} from '../collections/QuadArray';
+import {CoreSet} from '../collections/CoreSet';
 
 export abstract class Storage
 {
@@ -46,7 +48,7 @@ export abstract class Storage
       // Quad.emitter.on(Quad.QUADS_ALTERED,this.onQuadsAltered.bind(this));
       // NamedNode.emitter.on(NamedNode.STORE_NODES,this.onStoreNodes.bind(this));
 
-      // NamedNode.emitter.on(NamedNode.REMOVE_NODES,this.onStoreNodes.bind(this));
+      NamedNode.emitter.on(NamedNode.REMOVE_NODES,this.onEvent.bind(this,NamedNode.REMOVE_NODES));
 
       this._initialized = true;
     }
@@ -103,6 +105,7 @@ export abstract class Storage
     //the order of this array determines the order.
     //each entry in the array that is looped is an event type + handler
     let processOrder: [string,Function][] = [
+      [NamedNode.REMOVE_NODES,this.onRemoveNodes],
       [NamedNode.STORE_NODES,this.onStoreNodes],
       [Quad.QUADS_ALTERED,this.onQuadsAltered],
     ]
@@ -127,16 +130,19 @@ export abstract class Storage
       //replace stored events with one stored event that has again 2 args, the combined sets
       storedEvents[Quad.QUADS_ALTERED] = [[created,removed]];
     }
-    //combine multiple events that want to store nodes into 1
-    if(storedEvents[NamedNode.STORE_NODES] && storedEvents[NamedNode.STORE_NODES].length > 1)
-    {
-      let toStore = new NodeSet();
-      storedEvents[NamedNode.STORE_NODES].forEach(([nodesCreated]:[NodeSet]) => {
-        nodesCreated.forEach(n => toStore.add(n));
-      });
-      //replace stored events with one stored event that has again 2 args, the combined sets
-      storedEvents[NamedNode.STORE_NODES] = [[toStore]];
-    }
+    //combine the Sets of multiple STORE_NODES/REMOVE_NODES events into one Set
+    // note that since they have slightly different values, this will convert NodeSets of STORE_NODES  to a CoreSet (note a NodeSet)
+    [NamedNode.STORE_NODES,NamedNode.REMOVE_NODES].forEach(eventType => {
+      if(storedEvents[eventType] && storedEvents[eventType].length > 1)
+      {
+        let mergedNodes = new CoreSet();
+        storedEvents[eventType].forEach(([nodesCreated]:[CoreSet<any>]) => {
+          nodesCreated.forEach(n => mergedNodes.add(n));
+        });
+        //replace stored events with one stored event that has again 2 args, the combined sets
+        storedEvents[eventType] = [[mergedNodes]];
+      }
+    })
 
     let success = true;
     for (const [eventType,handler] of processOrder)
@@ -223,6 +229,16 @@ export abstract class Storage
   static setStoreForGraph(store: IQuadStore,graph)
   {
     this.graphToStore.set(graph,store);
+  }
+
+  static getGraphForStore(store:IQuadStore):Graph {
+    for(let [graph,targetStore] of this.graphToStore) {
+      //shapes don't have to be the same instance, but they share the same node
+      if(store['node'] === targetStore['node'])
+      {
+        return graph;
+      }
+    }
   }
 
   /**
@@ -344,7 +360,37 @@ export abstract class Storage
     return defaultGraph;
   }
 
-  private static async onStoreNodes(nodes: NodeSet<NamedNode>):Promise<any>
+  private static async onRemoveNodes(nodesAndQuads: CoreSet<[NamedNode,QuadArray]>):Promise<any>
+  {
+    //turn all the removed quads back on (as if they were still in the graph)
+    //this allows us to read the properties of the node as they were just before the node was removed.
+    let nodes = new NodeSet<NamedNode>();
+    nodesAndQuads.forEach(([node,quads]) => {
+      quads.turnOn();
+      nodes.add(node);
+    })
+
+    //get a map of where each of these nodes are stored
+    let storeMap = this.getTargetStoreMapForNodes(nodes);
+
+    //turn the quads back off (they should be removed after all)
+    nodesAndQuads.forEach(([node,quads]) => {
+      quads.turnOff();
+    })
+
+    //call on each store to remove the appropriate nodes
+    await Promise.all(
+      [...storeMap.entries()].map(([store,nodesToRemove]) => {
+        return store.removeNodes(nodesToRemove);
+      }),
+    ).then(res => {
+      return res;
+    }).catch((err) => {
+      console.warn('Error during removal of nodes from storage: ' + err);
+    });
+  }
+  
+  private static async onStoreNodes(nodes: CoreSet<NamedNode>):Promise<any>
   {
     //TODO: no need to convert to QuadSet once we phase out QuadArray
     let nodesWithTempURIs = nodes.filter(
@@ -359,7 +405,13 @@ export abstract class Storage
     );
     //move all the quads to the right graph.
     //note that IF this is a new graph, this will trigger onQuadsAltered, which will notify the right stores to store these quads
-    this.assignQuadsToGraph(nodes.getAllQuads());
+    let quads = new QuadSet();
+    nodes.forEach(node => {
+      node.getAllQuads().forEach(quad => {
+        quads.add(quad);
+      })
+    })
+    this.assignQuadsToGraph(quads);
   }
 
   private static getTargetStoreForNode(node: NamedNode)
@@ -410,7 +462,7 @@ export abstract class Storage
   }
 
   private static getTargetStoreMapForNodes(
-    nodes: NodeSet<NamedNode>,
+    nodes: CoreSet<NamedNode>,
   ): CoreMap<IQuadStore,NamedNode[]>
   {
     let storeMap: CoreMap<IQuadStore,NamedNode[]> = new CoreMap();

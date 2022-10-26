@@ -8,45 +8,50 @@ import { rdfs } from '../ontologies/rdfs';
 import {rdf} from '../ontologies/rdf';
 
 class TestStore implements IQuadStore {
-  defaultGraph = Graph.create();
-  contents:QuadSet = new QuadSet();
-  init() {
+	defaultGraph = Graph.create();
+	contents: QuadSet = new QuadSet();
+	init() {
+		return null;
+	}
+	reset() {
+		this.contents = new QuadSet();
+	}
+	update(
+		added: ICoreIterable<Quad>,
+		removed: ICoreIterable<Quad>,
+	): Promise<any> {
+		added.forEach((q) => this.contents.add(q));
+		removed.forEach((q) => this.contents.delete(q));
+		return null;
+	}
+
+	add(quad: Quad): Promise<any> {
+		return null;
+	}
+
+	addMultiple(quads: QuadSet): Promise<any> {
+		return null;
+	}
+
+	delete(quad: Quad): Promise<any> {
+		return null;
+	}
+
+	deleteMultiple(quads: QuadSet): Promise<any> {
+		return null;
+	}
+
+	setURI(...nodes: NamedNode[]): Promise<any> {
+		return null;
+	}
+
+	getDefaultGraph(): Graph {
+		return this.defaultGraph;
+	}
+
+	removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any> {
     return null;
   }
-  reset()
-  {
-    this.contents = new QuadSet();
-  }
-  update(added:ICoreIterable<Quad>,removed:ICoreIterable<Quad>):Promise<any> {
-    added.forEach(q => this.contents.add(q));
-    removed.forEach(q => this.contents.delete(q));
-    return null;
-  }
-
-  add(quad: Quad): Promise<any> {
-    return null;
-  }
-
-  addMultiple(quads: QuadSet): Promise<any> {
-    return null;
-  }
-
-  delete(quad: Quad): Promise<any> {
-    return null;
-  }
-
-  deleteMultiple(quads: QuadSet): Promise<any> {
-    return null;
-  }
-
-  setURI(...nodes:NamedNode[]):Promise<any> {
-    return null;
-  }
-
-  getDefaultGraph():Graph {
-    return this.defaultGraph;
-  }
-
 }
 
 let store = new TestStore();
