@@ -40,24 +40,25 @@ export class Prefix {
 			return this.uriToPrefix.get(fullURI);
 		}
 		let match = this.findMatch(fullURI);
-		if (match) return match[1];
+		if (match.length > 0) return match[1];
 	}
 
 	static getFullURI(prefix: string): string {
 		return this.prefixToUri.get(prefix);
 	}
 
-	static findMatch(fullURI: string) {
+	static findMatch(fullURI: string):[string,string,string]|[] {
 		for (let [ontologyURI, prefix] of this.uriToPrefix.entries()) {
-			if (fullURI.substr(0, ontologyURI.length) == ontologyURI) {
-				return [ontologyURI, prefix];
+			if (fullURI.substring(0, ontologyURI.length) == ontologyURI) {
+				return [ontologyURI, prefix, fullURI.substring(ontologyURI.length)];
 			}
 		}
+    return [];
 	}
 
 	static toPrefixed(fullURI: string) {
 		let match = this.findMatch(fullURI);
-		if (match) {
+		if (match.length > 0) {
 			return match[1] + ':' + fullURI.substr(match[0].length);
 		}
 	}

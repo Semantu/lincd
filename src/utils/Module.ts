@@ -381,13 +381,17 @@ export function linkedPackage(
       //only here we have shapeClass as a value (not in LinkedComponentClass)
       //so here we can return a new class that extends the original class,
       //but it adds linked properties like sourceShape
-      return class extends constructor {
+      let wrappedClass = class extends constructor {
 
         constructor(props) {
           let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
           super(linkedProps);
         }
       } as any as T;
+      //copy the name
+      Object.defineProperty (wrappedClass, 'name', {value: constructor.name});
+      Object.defineProperty (wrappedClass, 'original', {value: constructor});
+      return wrappedClass;
 
     };
     return decoratorFunction;
