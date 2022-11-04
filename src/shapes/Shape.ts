@@ -168,6 +168,11 @@ export class Person extends Shape {
 	 */
 	setupNode(node: Node) {
 		if (node) {
+      if(!(node instanceof Node))
+      {
+        console.error("Invalid argument to constructor of shape:",node);
+        throw new Error("Invalid argument provided to constructor of shape. Please provide an instance of a node.");
+      }
 			this._node = node;
 		} else {
 			//this code gets triggered when you call new SomeShapeClass() without providing a node

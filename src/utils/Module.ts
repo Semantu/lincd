@@ -12,12 +12,15 @@ import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
 import {rdfs} from '../ontologies/rdfs';
 import {lincd as lincdOntology} from "../ontologies/lincd";
+import {npm} from '../ontologies/npm';
 
 //global tree
 declare var lincd: any;
 declare var window;
 declare var global;
 declare var require;
+
+export const LINCD_DATA_ROOT:string = 'https://data.lincd.org/';
 
 var packageParsePromises: Map<string, Promise<any>> = new Map();
 var loadedPackages: Set<NamedNode> = new Set();
@@ -272,10 +275,11 @@ export function linkedPackage(
 	});
 
   //TODO: see if we can just use one package node, see packageNode above
-  let localPackageNode = NamedNode.create();
-  localPackageNode.uri = `${NamedNode.TEMP_URI_BASE}${packageName}`;
+  let localPackageNode = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}`);
+  // localPackageNode.uri = `${NamedNode.TEMP_URI_BASE}${packageName}`;
+  // localPackageNode.uri = `${LINCD_DATA_ROOT}module/${packageName}`;
   localPackageNode.set(rdf.type,lincdOntology.Module);
-  localPackageNode.setValue(rdfs.label,packageName);
+  localPackageNode.setValue(npm.packageName,packageName);
 
   let packageTreeObject = registerPackageInTree(packageName,packageExports);
 
@@ -309,6 +313,12 @@ export function linkedPackage(
 
     for(var key in _module.exports)
     {
+      //if the exported object itself (usually FunctionalComponents) is not named or its name is _wrappedComponent (which ends up happening in the linkedComponent method above)
+      //then we give it the same name as it's export name.
+      if(!_module.exports[key].name || _module.exports[key].name === '_wrappedComponent')
+      {
+        Object.defineProperty (_module.exports[key], 'name', {value: key});
+      }
       registerInPackageTree(key,_module.exports[key]);
     }
   }
@@ -329,31 +339,31 @@ export function linkedPackage(
 	): FunctionalComponent<Omit<Omit<P, 'source'>,'sourceShape'> & LinkedComponentProps<ShapeType>,ShapeType> {
 		type FC = FunctionalComponent<P,ShapeType>;
     //create a new functional component which wraps the original
-    let wrappedComponent:FC = (props: P & LinkedComponentProps<ShapeType>) => {
+    let _wrappedComponent:FC = (props: P & LinkedComponentProps<ShapeType>) => {
       //when this function is ran, we add a new property 'sourceShape'
       let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
       //and then run the original with the transformed props
       return functionalComponent(linkedProps);
     };
     //keep a copy of the original for strict checking of equality when compared to
-    wrappedComponent['original'] = functionalComponent;
+    _wrappedComponent['original'] = functionalComponent;
 
     //link the wrapped functional component to its shape
-    (wrappedComponent as FC).shape = shapeClass;
+    (_wrappedComponent as FC).shape = shapeClass;
     //IF this component is a function that has a name
     if(functionalComponent.name)
     {
       //then copy the name (have to do it this way, name is protected)
-      Object.defineProperty(wrappedComponent, "name", { value: functionalComponent.name });
+      Object.defineProperty(_wrappedComponent, "name", { value: functionalComponent.name });
       //and add the component class of this module to the global tree
-      registerPackageExport(wrappedComponent);
+      registerPackageExport(_wrappedComponent);
     }
     //NOTE: if it does NOT have a name, the developer will need to manually use registerPackageExport
 
     //register the component and its shape
-    registerComponent(wrappedComponent as FC, shapeClass);
+    registerComponent(_wrappedComponent as FC, shapeClass);
 
-    return wrappedComponent;
+    return _wrappedComponent;
 
 	}
 
@@ -411,12 +421,14 @@ export function linkedPackage(
 
       //create a new node shape for this shapeClass
 			let shape:NodeShape = new NodeShape();
-      shape.namedNode.uri =`${NamedNode.TEMP_URI_BASE}${packageName}/shape/${constructor.name}`;
+      // shape.namedNode.uri =`${NamedNode.TEMP_URI_BASE}${packageName}/shape/${constructor.name}`;
+      shape.namedNode.uri =`${LINCD_DATA_ROOT}module/${packageName}/shape/${constructor.name}`;
       constructor.shape = shape;
 
       //also create a representation in the graph of the shape class itself
       let shapeClass = NamedNode.create();
-      shapeClass.uri = `${NamedNode.TEMP_URI_BASE}${packageName}/shapeClass/${constructor.name}`
+      // shapeClass.uri = `${NamedNode.TEMP_URI_BASE}${packageName}/shapeClass/${constructor.name}`
+      shapeClass.uri = `${LINCD_DATA_ROOT}module/${packageName}/shapeclass/${constructor.name}`
       shapeClass.set(lincdOntology.definesShape,shape.node);
       shapeClass.set(rdf.type,lincdOntology.ShapeClass);
 
@@ -551,6 +563,10 @@ function getLinkedComponentProps<ShapeType extends Shape,P>(props:LinkedComponen
   //set the source from the sourceShape
   if (props.sourceShape && !props.source) {
     newProps.source = newProps.sourceShape.node;
+  }
+
+  if(!props.sourceShape && !props.source) {
+    throw new Error("Please provide either the source or sourceShape property. 'source' should be a Node or 'sourceShape' should be a Shape.")
   }
   return newProps;
 }
