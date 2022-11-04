@@ -244,9 +244,10 @@ export function linkedPackage(
 	//if no module node was given, we will determine the URI of the module for them
 	//TODO: (assuming that the module data does not include a URI already?)
 	if (!packageNode) {
-		packageNode = NamedNode.getOrCreate(
-			'http://data.lincd.pro/modules/npm/' + packageName,
-		);
+		// packageNode = NamedNode.getOrCreate(
+		// 	'http://data.lincd.pro/modules/npm/' + packageName,
+		// );
+    packageNode = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}`,true);
 	}
 
 	//register the ontologies once they're parsed
@@ -274,12 +275,8 @@ export function linkedPackage(
 		// }
 	});
 
-  //TODO: see if we can just use one package node, see packageNode above
-  let localPackageNode = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}`);
-  // localPackageNode.uri = `${NamedNode.TEMP_URI_BASE}${packageName}`;
-  // localPackageNode.uri = `${LINCD_DATA_ROOT}module/${packageName}`;
-  localPackageNode.set(rdf.type,lincdOntology.Module);
-  localPackageNode.setValue(npm.packageName,packageName);
+  packageNode.set(rdf.type,lincdOntology.Module);
+  packageNode.setValue(npm.packageName,packageName);
 
   let packageTreeObject = registerPackageInTree(packageName,packageExports);
 
@@ -433,7 +430,7 @@ export function linkedPackage(
       shapeClass.set(rdf.type,lincdOntology.ShapeClass);
 
       //and connect it back to the module
-      shapeClass.set(lincdOntology.module,localPackageNode);
+      shapeClass.set(lincdOntology.module,packageNode);
 
       //if linkedProperties have already registered themselves
       if(constructor.propertyShapes)
