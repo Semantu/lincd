@@ -191,20 +191,20 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
 		descriptor: PropertyDescriptor,
 	) {
 
-		let property = new PropertyShape();
-		property.path = config.path;
-		property.label = propertyKey;
+		let propertyShape = new PropertyShape();
+		propertyShape.path = config.path;
+		propertyShape.label = propertyKey;
 		if (config.required) {
-			property.minCount = 1;
+			propertyShape.minCount = 1;
 		} else if (config.minCount) {
-			property.minCount = config.minCount;
+			propertyShape.minCount = config.minCount;
 		}
 
 		if (config.maxCount) {
-			property.maxCount = config.maxCount;
+			propertyShape.maxCount = config.maxCount;
 		}
 				if (config['dataType']) {
-			property.datatype = config['dataType'];
+			propertyShape.datatype = config['dataType'];
 		}
 
     //we accept a shape configuration, which translates to a sh:nodeShape
@@ -213,7 +213,7 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
       let nodeShape = config.shape['shape'];
       if(nodeShape)
       {
-        property.nodeShape = nodeShape;
+        propertyShape.nodeShape = nodeShape;
       }
     }
 
@@ -228,10 +228,10 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
     if(shape)
     {
       //update the URI (by extending the URI of the shape)
-      property.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;
+      propertyShape.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;
 
       //then add it directly
-      shape.addPropertyShape(property);
+      shape.addPropertyShape(propertyShape);
     }
     else
     {
@@ -240,8 +240,21 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
       {
         target.constructor['propertyShapes'] = [];
       }
-      target.constructor['propertyShapes'].push(property);
+      target.constructor['propertyShapes'].push(propertyShape);
     }
+
+    if(descriptor.get)
+    {
+      descriptor.get['propertyShape'] = propertyShape;
+    }
+    // if(descriptor.get)
+    // {
+    //   let original = descriptor.get;
+    //   descriptor.get = () => {
+    //
+    //     return original();
+    //   }
+    // }
 		// console.log(target, propertyKey, descriptor);
 
 		//

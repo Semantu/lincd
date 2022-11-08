@@ -5,7 +5,7 @@
  */
 import {NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
-import {NodeShape} from '../shapes/SHACL';
+import {NodeShape,PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 import {LinkedComponentProps,FunctionalComponent,Component} from '../interfaces/Component';
 import {CoreSet} from '../collections/CoreSet';
@@ -13,6 +13,7 @@ import {rdf} from '../ontologies/rdf';
 import {rdfs} from '../ontologies/rdfs';
 import {lincd as lincdOntology} from "../ontologies/lincd";
 import {npm} from '../ontologies/npm';
+import {ReactDOM} from '../index';
 
 //global tree
 declare var lincd: any;
@@ -339,8 +340,40 @@ export function linkedPackage(
     let _wrappedComponent:FC = (props: P & LinkedComponentProps<ShapeType>) => {
       //when this function is ran, we add a new property 'sourceShape'
       let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
+
+      //determine which data needs to be loaded
+      //TODO: cache the results. Do we need to do this inside the component render or during linkedComponent()? (=more heavy initial work for first render)
+      let shapeTree = getComponentShapeTree(functionalComponent,shapeClass);
+
+      //see if its loaded already for this node
+
+      //if not, load now, and once loaded, set some state to force rerender
+
+
       //and then run the original with the transformed props
-      return functionalComponent(linkedProps);
+      let result;
+      //useLinkedData can go?... if we already do the work above
+      let data = useLinkedData(props.source,shapeClass);
+      if(!data)
+      {
+        result = '...';
+      }
+      else
+      {
+        //TODO: completely remove sourceShape from getLinkedComponentProps?
+        linkedProps['sourceShape'] = data;
+        result = functionalComponent(linkedProps);
+      }
+      // try {
+      //   //try to run the component. But note that if data is not loaded it will cause an error
+      //   result = functionalComponent(linkedProps);
+      // }
+      // catch(e) {
+      //   //TODO: add fallback
+      //   // result = React.createElement('span','...');
+      //   result = '...';
+      // }
+      return result;
     };
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent['original'] = functionalComponent;
@@ -509,6 +542,87 @@ export function linkedPackage(
     registerPackageModule,
     packageExports: packageTreeObject,
   } as LinkedPackageObject;
+}
+function useLinkedData(source,shapeClass) {
+
+}
+function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
+
+  let testData = NamedNode.create();
+  let tree = null;
+
+  //generate test data
+  // let name = shapeClass.name+'DataCrawler';
+  let detectionClass = class extends shapeClass {
+    constructor(n?)
+    {
+      super(n);
+
+
+      //here in the constructor (now that we have a 'this')
+      //we will overwrite all the methods of the class we extend and that classes that that extends
+      let finger = shapeClass;
+      while(finger)
+      {
+        let descriptors = Object.getOwnPropertyDescriptors(finger);
+        for(var key in descriptors)
+        {
+          let descriptor = descriptors[key];
+          if (descriptor.configurable)
+          {
+            //TODO: find if this get/set method is linked with a decorator and ONLY THEN overwrite it.
+            //if this is a get method that used a @linkedProperty decorator
+            if(descriptor.get && descriptor.get['propertyShape'])
+            {
+
+              let propertyShape:PropertyShape = descriptor.get['propertyShape'];
+              let g = descriptor.get != null;
+              // let s = descriptor.set != null;
+
+              //|| s
+              if (g)
+              {
+                let newDescriptor: PropertyDescriptor = {};
+                newDescriptor.enumerable = descriptor.enumerable;
+                newDescriptor.configurable = descriptor.configurable;
+                //not sure if we can or want to?..
+                // newDescriptor.value= descriptor.value;
+                // newDescriptor.writable = descriptor.writable;
+
+                // if (g)
+                newDescriptor.get = () => {
+                  console.log('requested get '+key);
+                  console.log('requested property: ',propertyShape.path);
+
+                  //TODO: generate a value and return that
+                  //return original
+                  return descriptor.get.call(this)
+                }
+                // newDescriptor.get = getTraceAccessor(descriptor.get.bind(self), "Property", "get_" + key)
+                //   descriptor.get.bind(this);
+                // }
+
+                // if (s)
+                //   newDescriptor.set = getLoggableFunction(descriptor.set.bind(self),"Property","set_" + key)
+
+                //overwrite the get method
+                Object.defineProperty(this,key,newDescriptor);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  //create an instance of the tracking class, this will be the fake data source
+  let sourceShape = new detectionClass();
+
+  //do a test render
+  ReactDOM.render(React.createElement(functionalComponent,{sourceShape,source:sourceShape.namedNode}),null);
+
+  //TODO: make sure the child components do the same
+  //TODO: return the tree
 }
 
 function registerComponent(
