@@ -31,7 +31,15 @@ var PropertyShape: NamedNode = NamedNode.getOrCreate(base + 'PropertyShape');
 var targetClass: NamedNode = NamedNode.getOrCreate(base + 'targetClass');
 var targetNode: NamedNode = NamedNode.getOrCreate(base + 'targetNode');
 var node: NamedNode = NamedNode.getOrCreate(base + 'node');
+var nodeKind: NamedNode = NamedNode.getOrCreate(base + 'nodeKind');
 var Shape: NamedNode = NamedNode.getOrCreate(base + 'Shape');
+
+var BlankNode:NamedNode = NamedNode.getOrCreate(base + 'BlankNode');
+var IRI:NamedNode = NamedNode.getOrCreate(base + 'IRI');
+var Literal:NamedNode = NamedNode.getOrCreate(base + 'Literal');
+var BlankNodeOrIRI:NamedNode = NamedNode.getOrCreate(base + 'BlankNodeOrIRI');
+var BlankNodeOrLiteral:NamedNode = NamedNode.getOrCreate(base + 'BlankNodeOrLiteral');
+var IRIOrLiteral:NamedNode = NamedNode.getOrCreate(base + 'IRIOrLiteral');
 
 //make sure every node is also exported here
 export const shacl = {
@@ -54,4 +62,12 @@ export const shacl = {
 	Shape,
 	targetClass,
 	targetNode,
+  BlankNode,
+  IRI,
+  Literal,
+  BlankNodeOrIRI,
+  BlankNodeOrLiteral,
+  IRIOrLiteral,
+  nodeKind
 };
+

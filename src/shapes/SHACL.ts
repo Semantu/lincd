@@ -139,6 +139,14 @@ export class PropertyShape extends SHACL_Shape {
 		this.overwrite(shacl.node, value.node);
 	}
 
+	get nodeKind(): NamedNode {
+		return this.getOne(shacl.nodeKind) as NamedNode;
+	}
+
+	set nodeKind(value: NamedNode) {
+		this.overwrite(shacl.nodeKind, value);
+	}
+
 	get datatype(): NamedNode {
 		return this.getOne(shacl.datatype) as NamedNode;
 	}

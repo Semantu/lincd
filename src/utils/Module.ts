@@ -3,30 +3,35 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models';
+import {NamedNode,Node,Literal,BlankNode} from '../models';
 import {Shape} from '../shapes/Shape';
 import {NodeShape,PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 import {LinkedComponentProps,FunctionalComponent,Component} from '../interfaces/Component';
 import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
-import {rdfs} from '../ontologies/rdfs';
 import {lincd as lincdOntology} from "../ontologies/lincd";
 import {npm} from '../ontologies/npm';
-import {ReactDOM} from '../index';
+import React from "react";
+import ReactDOM from "react-dom";
+import {createRoot} from 'react-dom/client';
+import {rdfs} from '../ontologies/rdfs';
+import {owl} from '../ontologies/owl';
+import {shacl} from '../ontologies/shacl';
 
 //global tree
 declare var lincd: any;
 declare var window;
 declare var global;
 declare var require;
+declare var document;
 
 export const LINCD_DATA_ROOT:string = 'https://data.lincd.org/';
 
 var packageParsePromises: Map<string, Promise<any>> = new Map();
 var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape, CoreSet<Component>> = new Map();
-
+var currentShapeTree = new CoreSet();
 // type LinkedComponentClassDecorator<ShapeType,P> = <T extends typeof LinkedComponentClass<ShapeType,P>>(constructor:T)=>T;
 type ClassDecorator = <T extends { new(...args:any[]):{}}>(constructor:T)=>T;
 
@@ -544,84 +549,185 @@ export function linkedPackage(
   } as LinkedPackageObject;
 }
 function useLinkedData(source,shapeClass) {
-
+  return null;
 }
-function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
+// function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
+function createTraceShape(shapeClass,dummyShape?):Shape
+{
+  let detectionClass = class extends shapeClass {};
+  dummyShape = new detectionClass();
 
-  let testData = NamedNode.create();
-  let tree = null;
 
-  //generate test data
-  // let name = shapeClass.name+'DataCrawler';
-  let detectionClass = class extends shapeClass {
-    constructor(n?)
+  //here in the constructor (now that we have a 'this')
+  //we will overwrite all the methods of the class we extend and that classes that that extends
+  let finger = shapeClass;
+  while(finger)
+  {
+    //check this superclass still extends Shape, otherwise break;
+    if(!(finger.prototype instanceof Shape) || finger === Shape)
     {
-      super(n);
+      break;
+    }
 
+    let descriptors = Object.getOwnPropertyDescriptors(finger.prototype);
 
-      //here in the constructor (now that we have a 'this')
-      //we will overwrite all the methods of the class we extend and that classes that that extends
-      let finger = shapeClass;
-      while(finger)
+    for(var key in descriptors)
+    {
+      let descriptor = descriptors[key];
+      if (descriptor.configurable)
       {
-        let descriptors = Object.getOwnPropertyDescriptors(finger);
-        for(var key in descriptors)
+        //if this is a get method that used a @linkedProperty decorator
+        //then it should match with a propertyShape
+        let propertyShape = shapeClass['shape'].getPropertyShapes().find(propertyShape => propertyShape.label === key);
+        if(propertyShape)
         {
-          let descriptor = descriptors[key];
-          if (descriptor.configurable)
+          // let propertyShape:PropertyShape = descriptor.get['propertyShape'];
+          let g = descriptor.get != null;
+          // let s = descriptor.set != null;
+
+          if (g)
           {
-            //TODO: find if this get/set method is linked with a decorator and ONLY THEN overwrite it.
-            //if this is a get method that used a @linkedProperty decorator
-            if(descriptor.get && descriptor.get['propertyShape'])
-            {
+            let newDescriptor: PropertyDescriptor = {};
+            newDescriptor.enumerable = descriptor.enumerable;
+            newDescriptor.configurable = descriptor.configurable;
 
-              let propertyShape:PropertyShape = descriptor.get['propertyShape'];
-              let g = descriptor.get != null;
-              // let s = descriptor.set != null;
+            //not sure if we can or want to?..
+            // newDescriptor.value= descriptor.value;
+            // newDescriptor.writable = descriptor.writable;
 
-              //|| s
-              if (g)
-              {
-                let newDescriptor: PropertyDescriptor = {};
-                newDescriptor.enumerable = descriptor.enumerable;
-                newDescriptor.configurable = descriptor.configurable;
-                //not sure if we can or want to?..
-                // newDescriptor.value= descriptor.value;
-                // newDescriptor.writable = descriptor.writable;
+            newDescriptor.get = ((key:string,propertyShape:PropertyShape,descriptor:PropertyDescriptor) => {
+              console.log('requested get '+key+' - '+propertyShape.path.value);
 
-                // if (g)
-                newDescriptor.get = () => {
-                  console.log('requested get '+key);
-                  console.log('requested property: ',propertyShape.path);
+              currentShapeTree.add(propertyShape);
 
-                  //TODO: generate a value and return that
-                  //return original
-                  return descriptor.get.call(this)
-                }
-                // newDescriptor.get = getTraceAccessor(descriptor.get.bind(self), "Property", "get_" + key)
-                //   descriptor.get.bind(this);
-                // }
+              //check class or datatype or nodeshape of the propertyShape to determine how to generate test data
 
-                // if (s)
-                //   newDescriptor.set = getLoggableFunction(descriptor.set.bind(self),"Property","set_" + key)
-
-                //overwrite the get method
-                Object.defineProperty(this,key,newDescriptor);
+              let res:Node|Shape;
+              if(propertyShape.class) {
+                res = NamedNode.create();
+                res.set(rdf.type,propertyShape.class)
               }
-            }
+              else if(propertyShape.datatype) {
+                res = new Literal('',propertyShape.datatype);
+              }
+              else if(propertyShape.nodeKind) {
+                //TODO: merge if statements
+                if(propertyShape.nodeKind === shacl.IRI)
+                {
+                  res = NamedNode.create();
+                }
+                if(propertyShape.nodeKind === shacl.Literal)
+                {
+                  res = new Literal('');
+                }
+                if(propertyShape.nodeKind === shacl.BlankNode)
+                {
+                  res = new BlankNode();
+                }
+                if(propertyShape.nodeKind === shacl.BlankNodeOrLiteral)
+                {
+                  res = new BlankNode();
+                }
+                if(propertyShape.nodeKind === shacl.BlankNodeOrIRI)
+                {
+                  res = NamedNode.create();
+                }
+                if(propertyShape.nodeKind === shacl.IRIOrLiteral)
+                {
+                  res = NamedNode.create();
+                }
+              }
+              else if(propertyShape.nodeShape) {
+                // shape inverse lincdOntology.definesShape - shapeClass
+                // shapeClass inverse lincdOntology.module - packageNode
+                // packageNode.setValue(npm.packageName,packageName);
+                let valueNodeShape = new NodeShape(propertyShape.nodeShape);
+                //get the node that represents the Shape class
+                let shapeClass = valueNodeShape.getOneInverse(lincdOntology.definesShape)
+                let packageNode = shapeClass.getOneInverse(lincdOntology.module);
+                let packageName = packageNode.getValue(npm.packageName);
+                //get the actual typescript/javascript class of the shape and use that to generate a value
+                let tsShapeClass = getPackageExport(packageName,shapeClass['name']);
+                //the returned Shape instance will also need to trace what is being requested of that shape
+                res = createTraceShape(tsShapeClass);
+
+              }
+              if(!res) {
+                let requestedProperty = propertyShape.path;
+                if(requestedProperty.has(rdf.type,owl.ObjectProperty)) {
+                  res = NamedNode.create();
+                  if(requestedProperty.has(rdfs.range))
+                  {
+                    res.set(rdf.type,requestedProperty.getOne(rdfs.range));
+                  }
+                }
+                else if(requestedProperty.has(rdf.type,owl.ObjectProperty)) {
+                  res = new Literal('');
+                  //TODO: is rdfs:range ever used to indicate the datatype of literal?
+                }
+                else
+                {
+                  res = NamedNode.create();
+                }
+              }
+
+              //TODO: this may not be needed, if all we need is the property shapes
+              // then we may not need to set example data which polutes local memory (
+              // if we DO need it, then let's clean it up afterwards
+              //set the data that is about to be requested
+              dummyShape.set(propertyShape.path,res instanceof Shape ? res.node : res);
+
+              //use dummyShape as 'this'
+              let returnedValue =  descriptor.get.call(dummyShape);
+              console.log('generated result -> ',res);
+              console.log('actual result -> ',returnedValue);
+              return res;
+
+            }).bind(detectionClass.prototype,key,propertyShape,descriptor)
+            // newDescriptor.get = getTraceAccessor(descriptor.get.bind(self), "Property", "get_" + key)
+            //   descriptor.get.bind(this);
+            // }
+
+            // if (s)
+            //   newDescriptor.set = getLoggableFunction(descriptor.set.bind(self),"Property","set_" + key)
+
+            //overwrite the get method
+            Object.defineProperty(detectionClass.prototype,key,newDescriptor);
           }
         }
       }
     }
+    finger = Object.getPrototypeOf(finger);
   }
+  return dummyShape;
+}
+function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
 
-  //create an instance of the tracking class, this will be the fake data source
-  let sourceShape = new detectionClass();
+  //generate test data with a face shape that provides whatever you ask for
+
+  //create an instance of the shape class which traces which properties are requested,
+  // and generates fake example data on the fly for whatever is requested
+  let sourceShape = createTraceShape(shapeClass);
 
   //do a test render
-  ReactDOM.render(React.createElement(functionalComponent,{sourceShape,source:sourceShape.namedNode}),null);
+  //get document on browser or node.js (see LincdServer, which adds a global['document'] with jsdom)
+  let element = React.createElement(functionalComponent,{sourceShape,source:sourceShape.namedNode})
+  if(typeof window !== 'undefined')
+  {
+    let divElement = window.document.createElement('div');
+    let root = createRoot(divElement);
+    root.render(element);
+  }
+  else
+  {
+    let staticRenderer = global['reactStaticRenderer'];
+    staticRenderer(element)
+  }
 
   //TODO: make sure the child components do the same
+
+  //TODO: collect all the requested properties and shapes and their components,
+  // can we even see which component uses which component?
   //TODO: return the tree
 }
 
@@ -661,6 +767,9 @@ function registerPackageInTree(moduleName,packageExports)
     lincd._modules[moduleTreeKey] = packageExports || {};
   }
   return lincd._modules[moduleTreeKey]
+}
+function getPackageExport(moduleName,exportName) {
+  return lincd._modules[moduleName] ? lincd._modules[moduleName][exportName] : null;
 }
 function getLinkedComponentProps<ShapeType extends Shape,P>(props:LinkedComponentProps<ShapeType> & P,shapeClass):LinkedComponentProps<ShapeType> & P
 {

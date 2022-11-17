@@ -7,6 +7,7 @@ import {BlankNode, Literal, NamedNode, Node} from '../models';
 import {Shape} from '../shapes/Shape';
 import {NodeSet} from '../collections/NodeSet';
 import {NodeShape, PropertyShape} from '../shapes/SHACL';
+import {shacl} from '../ontologies/shacl';
 
 export interface NodeShapeConfig {
 	/**
@@ -108,7 +109,7 @@ import {BlankNode,NamedNode,Literal} from "lincd/lib/models";
 @linkedProperty({nodeKind:NamedNode})
 ```
 	 */
-	nodeKind?: typeof Node;
+	nodeKind?: typeof Node | (typeof Node)[];
 
   /**
    * The shape that values of this property path need to confirm to.
@@ -207,6 +208,37 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
 			propertyShape.datatype = config['dataType'];
 		}
 
+    if(config.nodeKind) {
+      let nodeKind = config.nodeKind;
+      if(nodeKind === Literal)
+      {
+        propertyShape.nodeKind = shacl.Literal;
+      }
+      if(nodeKind === NamedNode)
+      {
+        propertyShape.nodeKind = shacl.Literal;
+      }
+      if(nodeKind === BlankNode)
+      {
+        propertyShape.nodeKind = shacl.Literal;
+      }
+      if(Array.isArray(nodeKind))
+      {
+        if(nodeKind.includes(BlankNode) && nodeKind.includes(NamedNode))
+        {
+          propertyShape.nodeKind = shacl.BlankNodeOrIRI;
+        }
+        if(nodeKind.includes(Literal) && nodeKind.includes(NamedNode))
+        {
+          propertyShape.nodeKind = shacl.IRIOrLiteral;
+        }
+        if(nodeKind.includes(Literal) && nodeKind.includes(BlankNode))
+        {
+          propertyShape.nodeKind = shacl.BlankNodeOrLiteral;
+        }
+      }
+
+    }
     //we accept a shape configuration, which translates to a sh:nodeShape
     if(config.shape)
     {
@@ -243,10 +275,10 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
       target.constructor['propertyShapes'].push(propertyShape);
     }
 
-    if(descriptor.get)
-    {
-      descriptor.get['propertyShape'] = propertyShape;
-    }
+    // if(descriptor.get)
+    // {
+    //   descriptor.get['propertyShape'] = propertyShape;
+    // }
     // if(descriptor.get)
     // {
     //   let original = descriptor.get;
