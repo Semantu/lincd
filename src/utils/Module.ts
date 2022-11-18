@@ -554,8 +554,23 @@ function useLinkedData(source,shapeClass) {
 // function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
 function createTraceShape(shapeClass,dummyShape?):Shape
 {
-  let detectionClass = class extends shapeClass {};
-  dummyShape = new detectionClass();
+  let detectionClass = class extends shapeClass {
+    constructor(p:TestNode) {super(p as NamedNode);}
+  };
+  if(!dummyShape)
+  {
+    //if not provided we create a new detectionClass instance
+    let dummyNode = new TestNode();
+    dummyShape = new detectionClass(dummyNode);
+  }
+  else
+  {
+    //if an instance was provided
+    // (this happens if a testnode generates a testnode value on demand
+    // and the original shape get accessor returns an instance of a shape of that testnode)
+    //then we turn that shape instance into it's test/detection variant
+    dummyShape = new detectionClass(dummyShape.namedNode);
+  }
 
 
   //here in the constructor (now that we have a 'this')
@@ -600,88 +615,15 @@ function createTraceShape(shapeClass,dummyShape?):Shape
 
               currentShapeTree.add(propertyShape);
 
-              //check class or datatype or nodeshape of the propertyShape to determine how to generate test data
-
-              let res:Node|Shape;
-              if(propertyShape.class) {
-                res = NamedNode.create();
-                res.set(rdf.type,propertyShape.class)
-              }
-              else if(propertyShape.datatype) {
-                res = new Literal('',propertyShape.datatype);
-              }
-              else if(propertyShape.nodeKind) {
-                //TODO: merge if statements
-                if(propertyShape.nodeKind === shacl.IRI)
-                {
-                  res = NamedNode.create();
-                }
-                if(propertyShape.nodeKind === shacl.Literal)
-                {
-                  res = new Literal('');
-                }
-                if(propertyShape.nodeKind === shacl.BlankNode)
-                {
-                  res = new BlankNode();
-                }
-                if(propertyShape.nodeKind === shacl.BlankNodeOrLiteral)
-                {
-                  res = new BlankNode();
-                }
-                if(propertyShape.nodeKind === shacl.BlankNodeOrIRI)
-                {
-                  res = NamedNode.create();
-                }
-                if(propertyShape.nodeKind === shacl.IRIOrLiteral)
-                {
-                  res = NamedNode.create();
-                }
-              }
-              else if(propertyShape.nodeShape) {
-                // shape inverse lincdOntology.definesShape - shapeClass
-                // shapeClass inverse lincdOntology.module - packageNode
-                // packageNode.setValue(npm.packageName,packageName);
-                let valueNodeShape = new NodeShape(propertyShape.nodeShape);
-                //get the node that represents the Shape class
-                let shapeClass = valueNodeShape.getOneInverse(lincdOntology.definesShape)
-                let packageNode = shapeClass.getOneInverse(lincdOntology.module);
-                let packageName = packageNode.getValue(npm.packageName);
-                //get the actual typescript/javascript class of the shape and use that to generate a value
-                let tsShapeClass = getPackageExport(packageName,shapeClass['name']);
-                //the returned Shape instance will also need to trace what is being requested of that shape
-                res = createTraceShape(tsShapeClass);
-
-              }
-              if(!res) {
-                let requestedProperty = propertyShape.path;
-                if(requestedProperty.has(rdf.type,owl.ObjectProperty)) {
-                  res = NamedNode.create();
-                  if(requestedProperty.has(rdfs.range))
-                  {
-                    res.set(rdf.type,requestedProperty.getOne(rdfs.range));
-                  }
-                }
-                else if(requestedProperty.has(rdf.type,owl.ObjectProperty)) {
-                  res = new Literal('');
-                  //TODO: is rdfs:range ever used to indicate the datatype of literal?
-                }
-                else
-                {
-                  res = NamedNode.create();
-                }
-              }
-
-              //TODO: this may not be needed, if all we need is the property shapes
-              // then we may not need to set example data which polutes local memory (
-              // if we DO need it, then let's clean it up afterwards
-              //set the data that is about to be requested
-              dummyShape.set(propertyShape.path,res instanceof Shape ? res.node : res);
-
               //use dummyShape as 'this'
               let returnedValue =  descriptor.get.call(dummyShape);
-              console.log('generated result -> ',res);
-              console.log('actual result -> ',returnedValue);
-              return res;
+              // console.log('generated result -> ',res['print'] ? res['print']() : res);
+              console.log('result -> ',returnedValue.print());
+
+              if(returnedValue instanceof Shape) {
+                createTraceShape(Object.getPrototypeOf(returnedValue),returnedValue);
+              }
+              return returnedValue;
 
             }).bind(detectionClass.prototype,key,propertyShape,descriptor)
             // newDescriptor.get = getTraceAccessor(descriptor.get.bind(self), "Property", "get_" + key)
@@ -699,7 +641,119 @@ function createTraceShape(shapeClass,dummyShape?):Shape
     }
     finger = Object.getPrototypeOf(finger);
   }
-  return dummyShape;
+  return dummyShape as Shape;
+}
+class TestNode extends NamedNode {
+  constructor(public property?:NamedNode) {
+    let uri = NamedNode.createNewTempUri();
+    super(uri);
+  }
+  getValue() {
+    let label = '';
+    if(this.property)
+    {
+      if(this.property.hasProperty(rdfs.label))
+      {
+        label = this.property.getValue(rdfs.label)
+      }
+      else
+      {
+        label = this.property.uri.split(/[\/#]/).pop();
+      }
+    }
+    return label;
+  }
+  getOne(property:NamedNode):TestNode {
+
+    //TODO: you are here!
+    // generate a result, reuse the generate method for getAll,
+    // hasProperty returns true
+    // later, we do getDeep, etc
+    return null;
+    //check class or datatype or nodeshape of the propertyShape to determine how to generate test data
+
+    // let res:Node|Shape;
+    // if(propertyShape.nodeShape) {
+    //   // shape inverse lincdOntology.definesShape - shapeClass
+    //   // shapeClass inverse lincdOntology.module - packageNode
+    //   // packageNode.setValue(npm.packageName,packageName);
+    //   let valueNodeShape = new NodeShape(propertyShape.nodeShape);
+    //   //get the node that represents the Shape class
+    //   let shapeClass = valueNodeShape.getOneInverse(lincdOntology.definesShape)
+    //   let packageNode = shapeClass.getOneInverse(lincdOntology.module);
+    //   let packageName = packageNode.getValue(npm.packageName);
+    //   //get the actual typescript/javascript class of the shape and use that to generate a value
+    //   let tsShapeClass = getPackageExport(packageName,shapeClass['name']);
+    //   //the returned Shape instance will also need to trace what is being requested of that shape
+    //   res = createTraceShape(tsShapeClass);
+    //
+    // }
+    // else if(propertyShape.class) {
+    //   res = NamedNode.create();
+    //   res.set(rdf.type,propertyShape.class)
+    // }
+    // else if(propertyShape.datatype) {
+    //   res = new Literal('',propertyShape.datatype);
+    // }
+    // else if(propertyShape.nodeKind) {
+    //   //TODO: merge if statements
+    //   if(propertyShape.nodeKind === shacl.IRI)
+    //   {
+    //     res = NamedNode.create();
+    //   }
+    //   if(propertyShape.nodeKind === shacl.Literal)
+    //   {
+    //     res = new Literal('');
+    //   }
+    //   if(propertyShape.nodeKind === shacl.BlankNode)
+    //   {
+    //     res = new BlankNode();
+    //   }
+    //   if(propertyShape.nodeKind === shacl.BlankNodeOrLiteral)
+    //   {
+    //     res = new BlankNode();
+    //   }
+    //   if(propertyShape.nodeKind === shacl.BlankNodeOrIRI)
+    //   {
+    //     res = NamedNode.create();
+    //   }
+    //   if(propertyShape.nodeKind === shacl.IRIOrLiteral)
+    //   {
+    //     res = NamedNode.create();
+    //   }
+    // }
+    //
+    // if(!res) {
+    //   let requestedProperty = propertyShape.path;
+    //   if(requestedProperty.has(rdf.type,owl.ObjectProperty)) {
+    //     res = NamedNode.create();
+    //     if(requestedProperty.hasProperty(rdfs.range))
+    //     {
+    //       res.set(rdf.type,requestedProperty.getOne(rdfs.range));
+    //     }
+    //   }
+    //   else if(requestedProperty.has(rdf.type,owl.ObjectProperty)) {
+    //     res = new Literal('');
+    //     //TODO: is rdfs:range ever used to indicate the datatype of literal?
+    //   }
+    //   else
+    //   {
+    //     res = new TestNode(requestedProperty);
+    //   }
+    // }
+    // if(!dummyShape.hasProperty(propertyShape.path))
+    // {
+    //
+    // }
+    // let res = new TestNode(propertyShape.path);
+
+    //TODO: this may not be needed, if all we need is the property shapes
+    // then we may not need to set example data which polutes local memory (
+    // if we DO need it, then let's clean it up afterwards
+    //set the data that is about to be requested
+    // dummyShape.set(propertyShape.path,res instanceof Shape ? res.node : res);
+    // dummyShape.set(propertyShape.path,res);
+  }
 }
 function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
 
