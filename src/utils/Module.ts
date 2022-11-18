@@ -203,7 +203,7 @@ export interface LinkedPackageObject
     nameSpace: (term: string) => NamedNode,
     suggestedPrefixAndFileName: string,
     loadDataFunction?:()=>Promise<any>,
-    dataSource?:string,
+    dataSource?:string|string[],
   )=>void;
 
   /**
@@ -472,7 +472,7 @@ export function linkedPackage(
 		nameSpace: (term: string) => NamedNode,
 		prefixAndFileName: string,
 		loadData?,
-    dataSource?:string,
+    dataSource?:string|string[],
 	) {
 		// let linkedOntology = function(
 		// 	fn: () => [Object, (term: string) => NamedNode, string, () => Promise<any>],
