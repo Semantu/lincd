@@ -18,6 +18,7 @@ import {createRoot} from 'react-dom/client';
 import {rdfs} from '../ontologies/rdfs';
 import {owl} from '../ontologies/owl';
 import {shacl} from '../ontologies/shacl';
+import {NodeSet} from '../collections/NodeSet';
 
 //global tree
 declare var lincd: any;
@@ -646,7 +647,7 @@ function createTraceShape(shapeClass,dummyShape?):Shape
 class TestNode extends NamedNode {
   constructor(public property?:NamedNode) {
     let uri = NamedNode.createNewTempUri();
-    super(uri);
+    super(uri,true);
   }
   getValue() {
     let label = '';
@@ -663,13 +664,23 @@ class TestNode extends NamedNode {
     }
     return label;
   }
+  hasProperty(property:NamedNode) {
+    return true;
+  }
+  getAll(property:NamedNode) {
+    return new NodeSet([this.getOne(property)]) as any;
+  }
   getOne(property:NamedNode):TestNode {
 
     //TODO: you are here!
     // generate a result, reuse the generate method for getAll,
     // hasProperty returns true
     // later, we do getDeep, etc
-    return null;
+    if(!super.hasProperty(property))
+    {
+      this.set(property,new TestNode(property))
+    }
+    return super.getOne(property) as any;
     //check class or datatype or nodeshape of the propertyShape to determine how to generate test data
 
     // let res:Node|Shape;

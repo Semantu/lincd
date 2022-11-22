@@ -836,8 +836,8 @@ export class NamedNode
 			this.getQuads(property, value).makeExplicit();
 			//yet return false because nothing was changes in the propreties
 			return false;
-		}
-		//if this pair didn't exist yet, create a new quad (the graph is undefined for now, Storage will pick this up and place it in the right graph)
+    }
+    //if this pair didn't exist yet, create a new quad (the graph is undefined for now, Storage will pick this up and place it in the right graph)
     //note that the sixth parameter is true, this indicates that this is an alteration (as in new data that triggers change events instead of a quad created for already existing data)
 		new Quad(this, property, value, undefined, false, true);
 		return true;
