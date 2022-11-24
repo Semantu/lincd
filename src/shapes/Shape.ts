@@ -27,6 +27,13 @@ interface IClassConstruct {
 	prototype: any;
 }
 
+export type LinkedDataRequest = []|{[key:string]:any};
+export type LinkedDataDeclaration<T> = {
+  shape:typeof Shape,
+  request:((dummyInstance:T) => LinkedDataRequest)
+}
+
+
 /**
  * The base class of all classes that represent a rdfs:Class in the graph.
  *
@@ -203,6 +210,21 @@ export class Person extends Shape {
 			this._node.removeAllListeners();
 		}
 	}
+
+
+  /**
+   * Lets a LinkedComponent request specific data of a shape.
+   *
+   * @param dataRequestFn this function receives a dummy instance of the shape. The function is expected to request all the properties & methods of the shape that the component requires to function. This will inform automatic data loading
+   */
+  static request<T extends Shape>(this: {new (node: Node): T; targetClass: any},dataRequestFn:((dummyInstance:T)=>LinkedDataRequest)):LinkedDataDeclaration<T> {
+    return {
+      shape:this as any as typeof Shape,
+      request:(testInstance) => {
+        return dataRequestFn(testInstance);
+      }
+    }
+  }
 
 	/**
 	 * Returns the node this instance represents.

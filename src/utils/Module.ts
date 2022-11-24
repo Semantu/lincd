@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NamedNode,Node,Literal,BlankNode} from '../models';
-import {Shape} from '../shapes/Shape';
+import {LinkedDataDeclaration,LinkedDataRequest,Shape} from '../shapes/Shape';
 import {NodeShape,PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 import {LinkedComponentProps,FunctionalComponent,Component} from '../interfaces/Component';
@@ -69,7 +69,7 @@ export interface LinkedPackageObject
    * ```
    */
   linkedComponent:<ShapeType extends Shape, P={}>(
-    shapeClass: typeof Shape,
+    shapeClass: typeof Shape|LinkedDataRequest,
     functionalComponent?:
       FunctionalComponent<P,ShapeType>,
   // )=> FunctionalComponent<P,ShapeType>;
@@ -335,41 +335,63 @@ export function linkedPackage(
 		return constructor;
 	};
 
+
 	//creates a declarator function which Components of this module can use register themselves and add themselves to the global tree
 	function linkedComponent<ShapeType extends Shape, P = {}>(
-		shapeClass: typeof Shape,
-		functionalComponent?:
+		linkedDataShape: typeof Shape|LinkedDataRequest,
+    // dataDeclarationOrComponent:FunctionalComponent<P,ShapeType>|LinkedDataDeclaration<ShapeType>,
+		functionalComponent:
       FunctionalComponent<P,ShapeType>,
 	): FunctionalComponent<Omit<Omit<P, 'source'>,'sourceShape'> & LinkedComponentProps<ShapeType>,ShapeType> {
 		type FC = FunctionalComponent<P,ShapeType>;
+
+    //if a class that extends Shape was given
+    let shapeClass:typeof Shape;
+    if(Object.getPrototypeOf(linkedDataShape) instanceof Shape) {
+      //then we just load the whole shape
+      shapeClass = linkedDataShape as typeof Shape;
+    } else {
+      //linkedDataShape is a LinkedDataRequest
+      let dataDeclaration = linkedDataShape as LinkedDataDeclaration<ShapeType>;
+      shapeClass = dataDeclaration.shape;
+
+      //create a test instance of the shape
+      let dummyInstance = createTraceShape(shapeClass);
+
+      //run the function that the component provided to see which properties it needs
+      let dataRequest = dataDeclaration.request(dummyInstance as any as ShapeType);
+      console.log('Requested data:',dataRequest.join(", "),[...dummyInstance.requested].map(r => r.path.toString()).join(", "))
+    }
+
     //create a new functional component which wraps the original
     let _wrappedComponent:FC = (props: P & LinkedComponentProps<ShapeType>) => {
       //when this function is ran, we add a new property 'sourceShape'
       let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
+      return functionalComponent(linkedProps);
 
       //determine which data needs to be loaded
       //TODO: cache the results. Do we need to do this inside the component render or during linkedComponent()? (=more heavy initial work for first render)
-      let shapeTree = getComponentShapeTree(functionalComponent,shapeClass);
+      // let shapeTree = getComponentShapeTree(functionalComponent,shapeClass);
 
       //see if its loaded already for this node
 
       //if not, load now, and once loaded, set some state to force rerender
 
 
-      //and then run the original with the transformed props
-      let result;
-      //useLinkedData can go?... if we already do the work above
-      let data = useLinkedData(props.source,shapeClass);
-      if(!data)
-      {
-        result = '...';
-      }
-      else
-      {
-        //TODO: completely remove sourceShape from getLinkedComponentProps?
-        linkedProps['sourceShape'] = data;
-        result = functionalComponent(linkedProps);
-      }
+      // //and then run the original with the transformed props
+      // let result;
+      // //useLinkedData can go?... if we already do the work above
+      // let data = useLinkedData(props.source,shapeClass);
+      // if(!data)
+      // {
+      //   result = '...';
+      // }
+      // else
+      // {
+      //   //TODO: completely remove sourceShape from getLinkedComponentProps?
+      //   linkedProps['sourceShape'] = data;
+      //   result = functionalComponent(linkedProps);
+      // }
       // try {
       //   //try to run the component. But note that if data is not loaded it will cause an error
       //   result = functionalComponent(linkedProps);
@@ -379,7 +401,7 @@ export function linkedPackage(
       //   // result = React.createElement('span','...');
       //   result = '...';
       // }
-      return result;
+      // return result;
     };
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent['original'] = functionalComponent;
@@ -552,25 +574,35 @@ export function linkedPackage(
 function useLinkedData(source,shapeClass) {
   return null;
 }
+
+interface TraceShape extends Shape {
+  // constructor(p:TestNode):TraceShape;
+  requested:Set<any>
+}
+
 // function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
-function createTraceShape(shapeClass,dummyShape?):Shape
+function createTraceShape(shapeClass:typeof Shape,shapeInstance?:Shape):TraceShape
 {
-  let detectionClass = class extends shapeClass {
-    constructor(p:TestNode) {super(p as NamedNode);}
+  let detectionClass = class extends shapeClass implements TraceShape {
+    requested:Set<any> = new Set();
+    constructor(p:TestNode) {
+      super(p as NamedNode);
+    }
   };
-  if(!dummyShape)
+  let traceShape:TraceShape;
+  if(!shapeInstance)
   {
     //if not provided we create a new detectionClass instance
     let dummyNode = new TestNode();
-    dummyShape = new detectionClass(dummyNode);
+    traceShape = new detectionClass(dummyNode);
   }
   else
   {
     //if an instance was provided
     // (this happens if a testnode generates a testnode value on demand
-    // and the original shape get accessor returns an instance of a shape of that testnode)
+    // and the original shape get-accessor returns an instance of a shape of that testnode)
     //then we turn that shape instance into it's test/detection variant
-    dummyShape = new detectionClass(dummyShape.namedNode);
+    traceShape = new detectionClass(shapeInstance.namedNode as TestNode);
   }
 
 
@@ -614,15 +646,20 @@ function createTraceShape(shapeClass,dummyShape?):Shape
             newDescriptor.get = ((key:string,propertyShape:PropertyShape,descriptor:PropertyDescriptor) => {
               console.log('requested get '+key+' - '+propertyShape.path.value);
 
+              //store which property shapes were requested in the detectionClass defined above
+              traceShape['requested'].add(propertyShape);
+
+              //TODO: either use this or the line above, not both..
               currentShapeTree.add(propertyShape);
 
               //use dummyShape as 'this'
-              let returnedValue =  descriptor.get.call(dummyShape);
+              let returnedValue =  descriptor.get.call(traceShape);
               // console.log('generated result -> ',res['print'] ? res['print']() : res);
-              console.log('result -> ',returnedValue.print());
+              console.log('result -> ',returnedValue.print ? returnedValue.print() : returnedValue);
 
+              //if a shape was returned, make sure we trace that shape too
               if(returnedValue instanceof Shape) {
-                createTraceShape(Object.getPrototypeOf(returnedValue),returnedValue);
+                returnedValue = createTraceShape(Object.getPrototypeOf(returnedValue),returnedValue);
               }
               return returnedValue;
 
@@ -642,7 +679,7 @@ function createTraceShape(shapeClass,dummyShape?):Shape
     }
     finger = Object.getPrototypeOf(finger);
   }
-  return dummyShape as Shape;
+  return traceShape;
 }
 class TestNode extends NamedNode {
   constructor(public property?:NamedNode) {
