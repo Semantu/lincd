@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NamedNode,Node,Literal,BlankNode} from '../models';
-import {LinkedDataDeclaration,LinkedDataRequest,Shape} from '../shapes/Shape';
+import {LinkedDataDeclaration,LinkedDataRequest,LinkedDataResponse,Shape} from '../shapes/Shape';
 import {NodeShape,PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 import {LinkedComponentProps,FunctionalComponent,Component} from '../interfaces/Component';
@@ -20,6 +20,7 @@ import {owl} from '../ontologies/owl';
 import {shacl} from '../ontologies/shacl';
 import {NodeSet} from '../collections/NodeSet';
 import {Storage} from './Storage';
+import {ShapeSet} from '../collections/ShapeSet';
 
 //global tree
 declare var lincd: any;
@@ -70,7 +71,7 @@ export interface LinkedPackageObject
    * ```
    */
   linkedComponent:<ShapeType extends Shape, P={}>(
-    shapeClass: typeof Shape|LinkedDataRequest,
+    shapeClass: typeof Shape|LinkedDataResponse,
     functionalComponent?:
       FunctionalComponent<P,ShapeType>,
   // )=> FunctionalComponent<P,ShapeType>;
@@ -339,7 +340,7 @@ export function linkedPackage(
 
 	//creates a declarator function which Components of this module can use register themselves and add themselves to the global tree
 	function linkedComponent<ShapeType extends Shape, P = {}>(
-		linkedDataShape: typeof Shape|LinkedDataRequest,
+		linkedDataShape: typeof Shape|LinkedDataResponse,
     // dataDeclarationOrComponent:FunctionalComponent<P,ShapeType>|LinkedDataDeclaration<ShapeType>,
 		functionalComponent:
       FunctionalComponent<P,ShapeType>,
@@ -349,9 +350,11 @@ export function linkedPackage(
     //if a class that extends Shape was given
     let shapeClass:typeof Shape;
     let dataRequest:LinkedDataRequest;
+    let dataResponse:LinkedDataResponse;
     if(Object.getPrototypeOf(linkedDataShape) instanceof Shape) {
       //then we just load the whole shape
       shapeClass = linkedDataShape as typeof Shape;
+      dataRequest = shapeClass;
     } else {
       //linkedDataShape is a LinkedDataRequest
       let dataDeclaration = linkedDataShape as LinkedDataDeclaration<ShapeType>;
@@ -361,8 +364,13 @@ export function linkedPackage(
       let dummyInstance = createTraceShape(shapeClass);
 
       //run the function that the component provided to see which properties it needs
-      dataRequest = dataDeclaration.request(dummyInstance as any as ShapeType);
-      console.log('Requested data:',dataRequest.join(", "),[...dummyInstance.requested].map(r => r.path.toString()).join(", "))
+      dataResponse = dataDeclaration.request(dummyInstance as any as ShapeType);
+      dataRequest = {
+        shape:shapeClass,
+        properties:dummyInstance.requested
+      };
+      console.log('Data response:',dataResponse.join(", "))
+      console.log('Requested properties:',dataRequest.properties.map(r => r.path.toString()).join(", "))
     }
 
     //create a new functional component which wraps the original
@@ -378,7 +386,7 @@ export function linkedPackage(
         if(!preLoaded)
         {
           //if not, load now,
-          Storage.loadShape(linkedProps.sourceShape,shapeClass['shape'],dataRequest).then(() => {
+          Storage.loadShape(linkedProps.sourceShape,dataRequest).then(() => {
             //and once loaded, set some state to force rerender
           })
         }
@@ -603,14 +611,14 @@ function useLinkedData(source,shapeClass) {
 
 interface TraceShape extends Shape {
   // constructor(p:TestNode):TraceShape;
-  requested:Set<any>
+  requested:ShapeSet<PropertyShape>
 }
 
 // function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
 function createTraceShape(shapeClass:typeof Shape,shapeInstance?:Shape):TraceShape
 {
   let detectionClass = class extends shapeClass implements TraceShape {
-    requested:Set<any> = new Set();
+    requested:ShapeSet<PropertyShape> = new ShapeSet();
     constructor(p:TestNode) {
       super(p as NamedNode);
     }
@@ -673,7 +681,7 @@ function createTraceShape(shapeClass:typeof Shape,shapeInstance?:Shape):TraceSha
               console.log('requested get '+key+' - '+propertyShape.path.value);
 
               //store which property shapes were requested in the detectionClass defined above
-              traceShape['requested'].add(propertyShape);
+              traceShape.requested.add(propertyShape);
 
               //TODO: either use this or the line above, not both..
               currentShapeTree.add(propertyShape);

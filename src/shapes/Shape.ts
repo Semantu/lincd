@@ -18,6 +18,7 @@ import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
 import { Debug } from "../utils/Debug";
+import {PropertyShape} from './SHACL';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -27,10 +28,15 @@ interface IClassConstruct {
 	prototype: any;
 }
 
-export type LinkedDataRequest = []|{[key:string]:any};
+export type LinkedDataResponse = []|{[key:string]:any};
 export type LinkedDataDeclaration<T> = {
   shape:typeof Shape,
-  request:((dummyInstance:T) => LinkedDataRequest)
+  request:((dummyInstance:T) => LinkedDataResponse)
+}
+export type LinkedDataRequest = typeof Shape | DetailedLinkedDataRequest;
+export type DetailedLinkedDataRequest = {
+  shape:typeof Shape,
+  properties:ShapeSet<PropertyShape>
 }
 
 
@@ -217,7 +223,7 @@ export class Person extends Shape {
    *
    * @param dataRequestFn this function receives a dummy instance of the shape. The function is expected to request all the properties & methods of the shape that the component requires to function. This will inform automatic data loading
    */
-  static request<T extends Shape>(this: {new (node: Node): T; targetClass: any},dataRequestFn:((dummyInstance:T)=>LinkedDataRequest)):LinkedDataDeclaration<T> {
+  static request<T extends Shape>(this: {new (node: Node): T; targetClass: any},dataRequestFn:((dummyInstance:T)=>LinkedDataResponse)):LinkedDataDeclaration<T> {
     return {
       shape:this as any as typeof Shape,
       request:(testInstance) => {

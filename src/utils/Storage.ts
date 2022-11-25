@@ -3,7 +3,7 @@ import {defaultGraph,Graph,NamedNode,Quad} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import {CoreMap} from '../collections/CoreMap';
 import {NodeSet} from '../collections/NodeSet';
-import {LinkedDataRequest,Shape} from '../shapes/Shape';
+import {LinkedDataRequest,LinkedDataResponse,Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {eventBatcher} from '../events/EventBatcher';
@@ -501,9 +501,9 @@ export abstract class Storage
     return storeMap;
   }
 
-  static loadShape(shapeInstance:Shape,shapeClass:typeof Shape,dataRequest:LinkedDataRequest)
+  static loadShape(shapeInstance:Shape,shapeOrRequest:LinkedDataRequest):Promise<QuadArray>
   {
     let store = this.getTargetStoreForNode(shapeInstance.namedNode);
-    return store.loadShape(shapeInstance,shapeClass,dataRequest);
+    return store.loadShape(shapeInstance,shapeOrRequest);
   }
 }

@@ -6,7 +6,8 @@ import {Graph,Literal,NamedNode,Quad} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import { rdfs } from '../ontologies/rdfs';
 import {rdf} from '../ontologies/rdf';
-import {LinkedDataRequest,Shape} from '../shapes/Shape';
+import {LinkedDataRequest,LinkedDataResponse,Shape} from '../shapes/Shape';
+import {QuadArray} from '../collections/QuadArray';
 
 class TestStore implements IQuadStore {
 	defaultGraph = Graph.create();
@@ -54,7 +55,7 @@ class TestStore implements IQuadStore {
     return null;
   }
 
-  loadShape(shapeInstance:Shape,shape:typeof Shape,dataRequest:LinkedDataRequest) {
+  loadShape(shapeInstance:Shape,request:LinkedDataRequest):Promise<QuadArray> {
     return null;
   }
 
