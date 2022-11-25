@@ -12,13 +12,14 @@ import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
 import {lincd as lincdOntology} from "../ontologies/lincd";
 import {npm} from '../ontologies/npm';
-import React from "react";
+import React,{useEffect,useState} from 'react';
 import ReactDOM from "react-dom";
 import {createRoot} from 'react-dom/client';
 import {rdfs} from '../ontologies/rdfs';
 import {owl} from '../ontologies/owl';
 import {shacl} from '../ontologies/shacl';
 import {NodeSet} from '../collections/NodeSet';
+import {Storage} from './Storage';
 
 //global tree
 declare var lincd: any;
@@ -347,6 +348,7 @@ export function linkedPackage(
 
     //if a class that extends Shape was given
     let shapeClass:typeof Shape;
+    let dataRequest:LinkedDataRequest;
     if(Object.getPrototypeOf(linkedDataShape) instanceof Shape) {
       //then we just load the whole shape
       shapeClass = linkedDataShape as typeof Shape;
@@ -359,15 +361,39 @@ export function linkedPackage(
       let dummyInstance = createTraceShape(shapeClass);
 
       //run the function that the component provided to see which properties it needs
-      let dataRequest = dataDeclaration.request(dummyInstance as any as ShapeType);
+      dataRequest = dataDeclaration.request(dummyInstance as any as ShapeType);
       console.log('Requested data:',dataRequest.join(", "),[...dummyInstance.requested].map(r => r.path.toString()).join(", "))
     }
 
     //create a new functional component which wraps the original
     let _wrappedComponent:FC = (props: P & LinkedComponentProps<ShapeType>) => {
-      //when this function is ran, we add a new property 'sourceShape'
+      //take the given props and add make sure both 'source' and 'sourceShape' are defined
       let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
-      return functionalComponent(linkedProps);
+
+      //@TODO: see if the required data is already loaded for this node
+      let preLoaded:boolean = false;
+
+      let [dataLoaded,setDataLoaded] = useState();
+      useEffect(() => {
+        if(!preLoaded)
+        {
+          //if not, load now,
+          Storage.loadShape(linkedProps.sourceShape,shapeClass['shape'],dataRequest).then(() => {
+            //and once loaded, set some state to force rerender
+          })
+        }
+      },[]);
+
+      if(preLoaded || dataLoaded)
+      {
+        //render the original components with the original + generated properties
+        return functionalComponent(linkedProps);
+      }
+      else
+      {
+        //render loading
+        return React.createElement('div',null,'...');
+      }
 
       //determine which data needs to be loaded
       //TODO: cache the results. Do we need to do this inside the component render or during linkedComponent()? (=more heavy initial work for first render)

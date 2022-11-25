@@ -2,6 +2,7 @@ import {QuadSet} from '../collections/QuadSet';
 import {Graph,NamedNode,Quad} from '../models';
 import {NodeSet} from '../collections/NodeSet';
 import {ICoreIterable} from './ICoreIterable';
+import {LinkedDataRequest,Shape} from '../shapes/Shape';
 
 export interface IQuadStore {
 
@@ -25,4 +26,6 @@ export interface IQuadStore {
   getDefaultGraph():Graph;
 
   removeNodes(nodes:ICoreIterable<NamedNode>): Promise<any>;
+
+  loadShape(shapeInstance:Shape,shape:typeof Shape,dataRequest:LinkedDataRequest);
 }
