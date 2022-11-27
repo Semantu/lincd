@@ -12,15 +12,12 @@ import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
 import {lincd as lincdOntology} from "../ontologies/lincd";
 import {npm} from '../ontologies/npm';
-import React,{useEffect,useState} from 'react';
-import ReactDOM from "react-dom";
-import {createRoot} from 'react-dom/client';
+import {useEffect,useState,createElement} from 'react';
 import {rdfs} from '../ontologies/rdfs';
-import {owl} from '../ontologies/owl';
-import {shacl} from '../ontologies/shacl';
 import {NodeSet} from '../collections/NodeSet';
 import {Storage} from './Storage';
 import {ShapeSet} from '../collections/ShapeSet';
+// import {createRoot} from 'react-dom/client';
 
 //global tree
 declare var lincd: any;
@@ -381,13 +378,14 @@ export function linkedPackage(
       //@TODO: see if the required data is already loaded for this node
       let preLoaded:boolean = false;
 
-      let [dataLoaded,setDataLoaded] = useState();
+      let [dataLoaded,setDataLoaded] = useState<boolean>(false);
       useEffect(() => {
         if(!preLoaded)
         {
           //if not, load now,
           Storage.loadShape(linkedProps.sourceShape,dataRequest).then(() => {
             //and once loaded, set some state to force rerender
+            setDataLoaded(true);
           })
         }
       },[]);
@@ -400,7 +398,7 @@ export function linkedPackage(
       else
       {
         //render loading
-        return React.createElement('div',null,'...');
+        return createElement('div',null,'...');
       }
 
       //determine which data needs to be loaded
@@ -837,7 +835,7 @@ class TestNode extends NamedNode {
     // dummyShape.set(propertyShape.path,res);
   }
 }
-function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
+/*function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
 
   //generate test data with a face shape that provides whatever you ask for
 
@@ -847,7 +845,7 @@ function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
 
   //do a test render
   //get document on browser or node.js (see LincdServer, which adds a global['document'] with jsdom)
-  let element = React.createElement(functionalComponent,{sourceShape,source:sourceShape.namedNode})
+  let element = createElement(functionalComponent,{sourceShape,source:sourceShape.namedNode})
   if(typeof window !== 'undefined')
   {
     let divElement = window.document.createElement('div');
@@ -866,6 +864,7 @@ function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
   // can we even see which component uses which component?
   //TODO: return the tree
 }
+*/
 
 function registerComponent(
   exportedComponent: Component,
