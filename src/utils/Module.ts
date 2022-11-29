@@ -12,11 +12,13 @@ import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
 import {lincd as lincdOntology} from "../ontologies/lincd";
 import {npm} from '../ontologies/npm';
-import {useEffect,useState,createElement} from 'react';
+import {default as React, useEffect,useState,createElement} from 'react';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {Storage} from './Storage';
 import {ShapeSet} from '../collections/ShapeSet';
+import {CoreMap} from '../collections/CoreMap';
+import {QuadArray} from '../collections/QuadArray';
 // import {createRoot} from 'react-dom/client';
 
 //global tree
@@ -32,6 +34,7 @@ var packageParsePromises: Map<string, Promise<any>> = new Map();
 var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape, CoreSet<Component>> = new Map();
 var currentShapeTree = new CoreSet();
+var nodeToDataRequest:CoreMap<Node,CoreMap<LinkedDataRequest,Promise<void>|QuadArray>> = new CoreMap();
 // type LinkedComponentClassDecorator<ShapeType,P> = <T extends typeof LinkedComponentClass<ShapeType,P>>(constructor:T)=>T;
 type ClassDecorator = <T extends { new(...args:any[]):{}}>(constructor:T)=>T;
 
@@ -358,7 +361,7 @@ export function linkedPackage(
       shapeClass = dataDeclaration.shape;
 
       //create a test instance of the shape
-      let dummyInstance = createTraceShape(shapeClass);
+      let dummyInstance = createTraceShape(shapeClass,null,functionalComponent.name || functionalComponent.toString().substring(0,80)+' ...');
 
       //run the function that the component provided to see which properties it needs
       dataResponse = dataDeclaration.request(dummyInstance as any as ShapeType);
@@ -375,18 +378,35 @@ export function linkedPackage(
       //take the given props and add make sure both 'source' and 'sourceShape' are defined
       let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
 
-      //@TODO: see if the required data is already loaded for this node
-      let preLoaded:boolean = false;
+      //get the map of requests made for this node (and make sure a map exists)
+      if(!nodeToDataRequest.has(linkedProps.source))
+      {
+        nodeToDataRequest.set(linkedProps.source, new CoreMap());
+      }
+      let requestCache = nodeToDataRequest.get(linkedProps.source);
+
+      //if the data request has already been made and the request has already resolved
+      //then we can safely continue to render straight away
+      let preLoaded:boolean = requestCache.has(dataRequest) && (!(requestCache.get(dataRequest) instanceof Promise));
 
       let [dataLoaded,setDataLoaded] = useState<boolean>(false);
       useEffect(() => {
-        if(!preLoaded)
+        //if the request has been made before we don't have to do it again, even if it's still loading
+        if(!requestCache.has(dataRequest))
         {
           //if not, load now,
-          Storage.loadShape(linkedProps.sourceShape,dataRequest).then(() => {
+          let loadPromise = Storage.loadShape(linkedProps.sourceShape,dataRequest).then((quads) => {
+            console.log('Received '+quads.toString());
+
+            //update the cached result to the actual quads instead of the promise
+            requestCache.set(dataRequest,quads);
+
             //and once loaded, set some state to force rerender
             setDataLoaded(true);
-          })
+          });
+          
+          //save the promise result (so we don't request it again)
+          requestCache.set(dataRequest,loadPromise);
         }
       },[]);
 
@@ -613,7 +633,7 @@ interface TraceShape extends Shape {
 }
 
 // function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
-function createTraceShape(shapeClass:typeof Shape,shapeInstance?:Shape):TraceShape
+function createTraceShape(shapeClass:typeof Shape,shapeInstance?:Shape,debugName?:string):TraceShape
 {
   let detectionClass = class extends shapeClass implements TraceShape {
     requested:ShapeSet<PropertyShape> = new ShapeSet();
@@ -676,7 +696,7 @@ function createTraceShape(shapeClass:typeof Shape,shapeInstance?:Shape):TraceSha
             // newDescriptor.writable = descriptor.writable;
 
             newDescriptor.get = ((key:string,propertyShape:PropertyShape,descriptor:PropertyDescriptor) => {
-              console.log('requested get '+key+' - '+propertyShape.path.value);
+              console.log(debugName+ ' requested get '+key+' - '+propertyShape.path.value);
 
               //store which property shapes were requested in the detectionClass defined above
               traceShape.requested.add(propertyShape);
@@ -687,7 +707,7 @@ function createTraceShape(shapeClass:typeof Shape,shapeInstance?:Shape):TraceSha
               //use dummyShape as 'this'
               let returnedValue =  descriptor.get.call(traceShape);
               // console.log('generated result -> ',res['print'] ? res['print']() : res);
-              console.log('result -> ',returnedValue.print ? returnedValue.print() : returnedValue);
+              console.log("\tresult -> ",returnedValue && returnedValue.print ? returnedValue.print() : returnedValue);
 
               //if a shape was returned, make sure we trace that shape too
               if(returnedValue instanceof Shape) {

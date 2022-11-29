@@ -511,8 +511,10 @@ export class Person extends Shape {
 	}
 
 	print(includeIncomingProperties: boolean = true) {
-    return Debug.print(this.node,includeIncomingProperties);
-		// typeof (typeof window !== 'undefined' ? window['dprint'] : global.dprint)(this, includeIncomingProperties);
+    // return Debug.print(this.node,includeIncomingProperties);
+    return `${Object.getPrototypeOf(this).name} of ${this.node.print()}`
+
+    // typeof (typeof window !== 'undefined' ? window['dprint'] : global.dprint)(this, includeIncomingProperties);
 	}
 
 	/**

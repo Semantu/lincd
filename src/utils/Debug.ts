@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {Prefix} from './Prefix';
-import {BlankNode, Literal, NamedNode} from '../models';
+import {BlankNode, Literal, NamedNode, Node} from '../models';
 
 export class Debug {
 	//TODO: move stuff back into actual models, keep a general method here that handles numbers etc, so that imports of this file are minimal
@@ -18,52 +18,18 @@ export class Debug {
 			if (!namedNode) return node;
 			node = namedNode;
 		}
-		// if (node instanceof Shape) {
-		// 	node = node.node;
-		// }
 		if (node instanceof Set || Array.isArray(node)) {
 			let r: string[] = [];
 			node.forEach((item) => r.push(this.print(item)));
 			return `Set [\n${r.join('\n')}\n]`;
-			// return 'Set [\n' + node.map((r) => this.print(r)).join(',') + '\n]';
 		}
 		if (node instanceof Literal) {
 			return node.toString();
 		}
-		var print = '';
-		var printQuad = (quad) => {
-			return (
-        Prefix.toPrefixedIfPossible(quad.subject.uri) +
-        ' ' +
-				Prefix.toPrefixedIfPossible(quad.predicate.uri) +
-				' ' +
-				(quad.object instanceof NamedNode
-					? Prefix.toPrefixedIfPossible(quad.object.uri)
-					: quad.object.toString())
-			);
-		};
-		// var printInverseQuad = (quad) => {
-		// 	return (
-		// 		Prefix.toPrefixedIfPossible(quad.subject.uri) +
-		// 		' ' +
-		// 		Prefix.toPrefixedIfPossible(quad.predicate.uri)
-		// 	);
-		// };
-
-		node.getAsSubjectQuads().forEach((quadMap) => {
-			BlankNode.includeBlankNodes(quadMap.getQuadSet()).forEach(
-				(quad) => (print += '\t' + printQuad(quad) + '.\n'),
-			);
-		});
-		if (node.asObject && includeInverseProperties) {
-			print += '<----\n';
-			node.asObject.forEach((quadMap, index) => {
-				BlankNode.includeBlankNodes(quadMap.getQuadSet(),false,true).forEach(
-					(quad) => (print += '\t' + printQuad(quad) + '.\n'),
-				);
-			});
-		}
-		return print;
+		if(node instanceof Node)
+    {
+      return node.print();
+    }
 	}
 }
 

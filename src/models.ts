@@ -29,6 +29,7 @@ import {NodeMap} from './collections/NodeMap';
 import {NodeURIMappings} from './collections/NodeURIMappings';
 import { Debug } from "./utils/Debug";
 import {CoreSet} from './collections/CoreSet';
+import {Prefix} from './utils/Prefix';
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
 export abstract class Node extends EventEmitter {
@@ -285,6 +286,9 @@ export abstract class Node extends EventEmitter {
 	clone(): Node {
 		return null;
 	}
+  print() {
+    return ''
+  }
 }
 
 /**
@@ -1700,7 +1704,21 @@ export class NamedNode
 	}
 
 	print(includeIncomingProperties: boolean = true) {
-		return Debug.print(this, includeIncomingProperties);
+    var print = '';
+    this.getAsSubjectQuads().forEach((quadMap) => {
+      BlankNode.includeBlankNodes(quadMap.getQuadSet()).forEach(
+        (quad) => (print += '\t' + quad.print() + '.\n'),
+      );
+    });
+    if (this.asObject && includeIncomingProperties) {
+      print += '<----\n';
+      this.asObject.forEach((quadMap) => {
+        BlankNode.includeBlankNodes(quadMap.getQuadSet(),false,true).forEach(
+          (quad) => (print += '\t' + quad.print() + '.\n'),
+        );
+      });
+    }
+		return print;
 	}
 
 	/**
@@ -2567,7 +2585,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 	}
 
 	print(includeIncomingProperties: boolean = true) {
-		return Debug.print(this, includeIncomingProperties);
+    return this.toString();
 	}
 
 	static isLiteralString(literalString: string): boolean {
@@ -3130,7 +3148,19 @@ export class Quad extends EventEmitter {
 		return this._removed;
 	}
 
-	/**
+  print() {
+    return (
+      Prefix.toPrefixedIfPossible(this.subject.uri) +
+      ' ' +
+      Prefix.toPrefixedIfPossible(this.predicate.uri) +
+      ' ' +
+      (this.object instanceof NamedNode
+        ? Prefix.toPrefixedIfPossible(this.object.uri)
+        : this.object.toString())
+    );
+  };
+
+  /**
 	 * Print this quad as a string
 	 */
 	toString() {

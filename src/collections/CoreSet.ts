@@ -130,5 +130,5 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
 
 	print(includeIncomingProperties: boolean = true) {
 		return Debug.print(this, includeIncomingProperties);
-	}
+  }
 }
