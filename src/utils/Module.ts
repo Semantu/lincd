@@ -12,7 +12,7 @@ import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
 import {lincd as lincdOntology} from '../ontologies/lincd';
 import {npm} from '../ontologies/npm';
-import {createElement, useEffect, useState} from 'react';
+import {createElement, default as React, useEffect, useState} from 'react';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {Storage} from './Storage';
@@ -33,7 +33,6 @@ export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 var packageParsePromises: Map<string, Promise<any>> = new Map();
 var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape, CoreSet<Component>> = new Map();
-var currentShapeTree = new CoreSet();
 var nodeToDataRequest: CoreMap<Node, CoreMap<LinkedDataRequest, Promise<void> | QuadArray>> = new CoreMap();
 // type LinkedComponentClassDecorator<ShapeType,P> = <T extends typeof LinkedComponentClass<ShapeType,P>>(constructor:T)=>T;
 type ClassDecorator = <T extends {new (...args: any[]): {}}>(constructor: T) => T;
@@ -339,13 +338,15 @@ export function linkedPackage(
     let shapeClass: typeof Shape;
     let dataRequest: LinkedDataRequest;
     let dataResponse: LinkedDataResponse;
+    let dataDeclaration: LinkedDataDeclaration<ShapeType>;
+    let propertyShapeClone: any;
     if (Object.getPrototypeOf(linkedDataShape) instanceof Shape) {
       //then we just load the whole shape
       shapeClass = linkedDataShape as typeof Shape;
       dataRequest = shapeClass;
     } else {
       //linkedDataShape is a LinkedDataRequest
-      let dataDeclaration = linkedDataShape as LinkedDataDeclaration<ShapeType>;
+      dataDeclaration = linkedDataShape as LinkedDataDeclaration<ShapeType>;
       shapeClass = dataDeclaration.shape;
 
       //create a test instance of the shape
@@ -361,7 +362,36 @@ export function linkedPackage(
         shape: shapeClass,
         properties: dummyInstance.requested,
       };
-      console.log('Data response:', dataResponse.join(', '));
+
+      //TODO: this is a vulnerable bit, can we test it or make sure it never breaks?
+      // we're basically depending on the order of requested properties to match the order of keys or values in the dataResponse
+      //now that we can find the accessor back (based on the order in which they were added! eek)
+      let propertyShapes = [...dummyInstance.requested];
+
+      //we can call the '_create' function which generates the boundComponent
+      //which we then store as the value (so we can use it when this component is used with real data)
+
+      //here we create an identical object to the one that was returned (either an array or object)
+      //and we replace those values that used Component.of(...) with the accessor they will require to run
+      let checkPropertyShape = (value, target, key) => {
+        let propertyShape = propertyShapes.shift();
+        if (value && value['_create']) {
+          target[key] = propertyShape;
+        }
+      };
+      if (Array.isArray(dataResponse)) {
+        propertyShapeClone = [];
+        (dataResponse as any[]).forEach((value, index) => {
+          checkPropertyShape(value, propertyShapeClone, index);
+        });
+      } else {
+        propertyShapeClone = {};
+        Object.getOwnPropertyNames(dataResponse).forEach((key) => {
+          checkPropertyShape(dataResponse[key], propertyShapeClone, key);
+        });
+      }
+
+      console.log('Data response:', dataResponse);
       console.log('Requested properties:', dataRequest.properties.map((r) => r.path.toString()).join(', '));
     }
 
@@ -400,52 +430,47 @@ export function linkedPackage(
         }
       }, []);
 
+      //if the data is loaded
       if (preLoaded || dataLoaded) {
+        //if the component used a Shape.request() data declaration function
+        if (dataDeclaration) {
+          //then use that now to get the requested for this instance
+          let dataResponse = dataDeclaration.request(linkedProps.sourceShape);
+
+          //finally we replace any temporary placeholders returned by 'Component.of(..)'
+          //with real components
+          let replaceBoundComponent = (value, propertyShape, target, key) => {
+            if (value && value['_create']) {
+              target[key] = value['_create'](propertyShape);
+            }
+          };
+          if (Array.isArray(dataResponse)) {
+            (dataResponse as any[]).forEach((value, index) => {
+              replaceBoundComponent(value, propertyShapeClone[index], dataResponse, index);
+            });
+          } else {
+            Object.getOwnPropertyNames(dataResponse).forEach((key) => {
+              replaceBoundComponent(dataResponse[key], propertyShapeClone[key], dataResponse, key);
+            });
+          }
+          linkedProps['linkedData'] = dataResponse;
+        }
+
         //render the original components with the original + generated properties
         return functionalComponent(linkedProps);
       } else {
         //render loading
         return createElement('div', null, '...');
       }
-
-      //determine which data needs to be loaded
-      //TODO: cache the results. Do we need to do this inside the component render or during linkedComponent()? (=more heavy initial work for first render)
-      // let shapeTree = getComponentShapeTree(functionalComponent,shapeClass);
-
-      //see if its loaded already for this node
-
-      //if not, load now, and once loaded, set some state to force rerender
-
-      // //and then run the original with the transformed props
-      // let result;
-      // //useLinkedData can go?... if we already do the work above
-      // let data = useLinkedData(props.source,shapeClass);
-      // if(!data)
-      // {
-      //   result = '...';
-      // }
-      // else
-      // {
-      //   //TODO: completely remove sourceShape from getLinkedComponentProps?
-      //   linkedProps['sourceShape'] = data;
-      //   result = functionalComponent(linkedProps);
-      // }
-      // try {
-      //   //try to run the component. But note that if data is not loaded it will cause an error
-      //   result = functionalComponent(linkedProps);
-      // }
-      // catch(e) {
-      //   //TODO: add fallback
-      //   // result = React.createElement('span','...');
-      //   result = '...';
-      // }
-      // return result;
     };
+
+    //bind
+    _wrappedComponent.of = bindComponentToData;
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent['original'] = functionalComponent;
 
     //link the wrapped functional component to its shape
-    (_wrappedComponent as FC).shape = shapeClass;
+    _wrappedComponent.shape = shapeClass;
     //IF this component is a function that has a name
     if (functionalComponent.name) {
       //then copy the name (have to do it this way, name is protected)
@@ -458,7 +483,7 @@ export function linkedPackage(
     //NOTE: if it does NOT have a name, the developer will need to manually use registerPackageExport
 
     //register the component and its shape
-    registerComponent(_wrappedComponent as FC, shapeClass);
+    registerComponent(_wrappedComponent, shapeClass);
 
     return _wrappedComponent;
   }
@@ -606,12 +631,16 @@ function useLinkedData(source, shapeClass) {
 interface TraceShape extends Shape {
   // constructor(p:TestNode):TraceShape;
   requested: ShapeSet<PropertyShape>;
+  // resultOrigins:CoreMap<any,any>;
+  usedAccessors: any[];
 }
 
 // function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
 function createTraceShape(shapeClass: typeof Shape, shapeInstance?: Shape, debugName?: string): TraceShape {
   let detectionClass = class extends shapeClass implements TraceShape {
     requested: ShapeSet<PropertyShape> = new ShapeSet();
+    // resultOrigins:CoreMap<any,any> = new CoreMap();
+    usedAccessors: any[] = [];
 
     constructor(p: TestNode) {
       super(p as NamedNode);
@@ -666,12 +695,6 @@ function createTraceShape(shapeClass: typeof Shape, shapeInstance?: Shape, debug
             newDescriptor.get = ((key: string, propertyShape: PropertyShape, descriptor: PropertyDescriptor) => {
               console.log(debugName + ' requested get ' + key + ' - ' + propertyShape.path.value);
 
-              //store which property shapes were requested in the detectionClass defined above
-              traceShape.requested.add(propertyShape);
-
-              //TODO: either use this or the line above, not both..
-              currentShapeTree.add(propertyShape);
-
               //use dummyShape as 'this'
               let returnedValue = descriptor.get.call(traceShape);
               // console.log('generated result -> ',res['print'] ? res['print']() : res);
@@ -681,14 +704,20 @@ function createTraceShape(shapeClass: typeof Shape, shapeInstance?: Shape, debug
               if (returnedValue instanceof Shape) {
                 returnedValue = createTraceShape(Object.getPrototypeOf(returnedValue), returnedValue);
               }
+
+              //store which property shapes were requested in the detectionClass defined above
+              traceShape.requested.add(propertyShape);
+              traceShape.usedAccessors.push(descriptor.get);
+
+              //also store which result was returned for which property shape (we need this in Component.to().. / bindComponentToData())
+              // traceShape.resultOrigins.set(returnedValue,descriptor.get);
+              // returnedValue['_reqPropShape'] = propertyShape;
+              // returnedValue['_accessor'] = descriptor.get;
+
               return returnedValue;
             }).bind(detectionClass.prototype, key, propertyShape, descriptor);
-            // newDescriptor.get = getTraceAccessor(descriptor.get.bind(self), "Property", "get_" + key)
-            //   descriptor.get.bind(this);
-            // }
-
-            // if (s)
-            //   newDescriptor.set = getLoggableFunction(descriptor.set.bind(self),"Property","set_" + key)
+            //bind this descriptor to the class that defines it
+            //and bind the required arguments (which we know only now, but we need to know them when the descriptor runs, hence we bind them)
 
             //overwrite the get method
             Object.defineProperty(detectionClass.prototype, key, newDescriptor);
@@ -728,130 +757,14 @@ class TestNode extends NamedNode {
   }
 
   getOne(property: NamedNode): TestNode {
-    //TODO: you are here!
-    // generate a result, reuse the generate method for getAll,
-    // hasProperty returns true
-    // later, we do getDeep, etc
     if (!super.hasProperty(property)) {
       this.set(property, new TestNode(property));
     }
     return super.getOne(property) as any;
-    //check class or datatype or nodeshape of the propertyShape to determine how to generate test data
-
-    // let res:Node|Shape;
-    // if(propertyShape.nodeShape) {
-    //   // shape inverse lincdOntology.definesShape - shapeClass
-    //   // shapeClass inverse lincdOntology.module - packageNode
-    //   // packageNode.setValue(npm.packageName,packageName);
-    //   let valueNodeShape = new NodeShape(propertyShape.nodeShape);
-    //   //get the node that represents the Shape class
-    //   let shapeClass = valueNodeShape.getOneInverse(lincdOntology.definesShape)
-    //   let packageNode = shapeClass.getOneInverse(lincdOntology.module);
-    //   let packageName = packageNode.getValue(npm.packageName);
-    //   //get the actual typescript/javascript class of the shape and use that to generate a value
-    //   let tsShapeClass = getPackageExport(packageName,shapeClass['name']);
-    //   //the returned Shape instance will also need to trace what is being requested of that shape
-    //   res = createTraceShape(tsShapeClass);
-    //
-    // }
-    // else if(propertyShape.class) {
-    //   res = NamedNode.create();
-    //   res.set(rdf.type,propertyShape.class)
-    // }
-    // else if(propertyShape.datatype) {
-    //   res = new Literal('',propertyShape.datatype);
-    // }
-    // else if(propertyShape.nodeKind) {
-    //   //TODO: merge if statements
-    //   if(propertyShape.nodeKind === shacl.IRI)
-    //   {
-    //     res = NamedNode.create();
-    //   }
-    //   if(propertyShape.nodeKind === shacl.Literal)
-    //   {
-    //     res = new Literal('');
-    //   }
-    //   if(propertyShape.nodeKind === shacl.BlankNode)
-    //   {
-    //     res = new BlankNode();
-    //   }
-    //   if(propertyShape.nodeKind === shacl.BlankNodeOrLiteral)
-    //   {
-    //     res = new BlankNode();
-    //   }
-    //   if(propertyShape.nodeKind === shacl.BlankNodeOrIRI)
-    //   {
-    //     res = NamedNode.create();
-    //   }
-    //   if(propertyShape.nodeKind === shacl.IRIOrLiteral)
-    //   {
-    //     res = NamedNode.create();
-    //   }
-    // }
-    //
-    // if(!res) {
-    //   let requestedProperty = propertyShape.path;
-    //   if(requestedProperty.has(rdf.type,owl.ObjectProperty)) {
-    //     res = NamedNode.create();
-    //     if(requestedProperty.hasProperty(rdfs.range))
-    //     {
-    //       res.set(rdf.type,requestedProperty.getOne(rdfs.range));
-    //     }
-    //   }
-    //   else if(requestedProperty.has(rdf.type,owl.ObjectProperty)) {
-    //     res = new Literal('');
-    //     //TODO: is rdfs:range ever used to indicate the datatype of literal?
-    //   }
-    //   else
-    //   {
-    //     res = new TestNode(requestedProperty);
-    //   }
-    // }
-    // if(!dummyShape.hasProperty(propertyShape.path))
-    // {
-    //
-    // }
-    // let res = new TestNode(propertyShape.path);
-
-    //TODO: this may not be needed, if all we need is the property shapes
-    // then we may not need to set example data which polutes local memory (
-    // if we DO need it, then let's clean it up afterwards
-    //set the data that is about to be requested
-    // dummyShape.set(propertyShape.path,res instanceof Shape ? res.node : res);
-    // dummyShape.set(propertyShape.path,res);
   }
+
+  //@TODO: other methods like getDeep, etc
 }
-
-/*function getComponentShapeTree(functionalComponent,shapeClass:typeof Shape) {
-
-  //generate test data with a face shape that provides whatever you ask for
-
-  //create an instance of the shape class which traces which properties are requested,
-  // and generates fake example data on the fly for whatever is requested
-  let sourceShape = createTraceShape(shapeClass);
-
-  //do a test render
-  //get document on browser or node.js (see LincdServer, which adds a global['document'] with jsdom)
-  let element = createElement(functionalComponent,{sourceShape,source:sourceShape.namedNode})
-  if(typeof window !== 'undefined')
-  {
-    let divElement = window.document.createElement('div');
-    let root = createRoot(divElement);
-    root.render(element);
-  }
-  else
-  {
-    let staticRenderer = global['reactStaticRenderer'];
-    staticRenderer(element)
-  }
-
-  //TODO: make sure the child components do the same
-
-  //TODO: collect all the requested properties and shapes and their components,
-  // can we even see which component uses which component?
-  //TODO: return the tree
-}
-*/
 
 function registerComponent(exportedComponent: Component, shape?: typeof Shape) {
   if (!shape) {
@@ -928,6 +841,44 @@ export function initTree() {
   //   }
   //   global['lincd'] = {_modules: {}};
   // }
+}
+
+function bindComponentToData(source) {
+  console.log(this, source);
+
+  //find the property shape that requested the data we receive here (we stored it earlier)
+  // let propertyShape: PropertyShape = data['_reqPropShape'];
+  // let accessor: any = data['_accessor'].get;
+
+  // return boundComponent as FunctionalComponent<any,any>;
+  return {
+    _create: (propertyShape: PropertyShape) => {
+      // boundComponent({...props,accessor})
+      let boundComponent = (props) => {
+        //this bound component will receive the PARENT sourceShape as source
+        // let parentSource = props.parentSource;
+        // let parentSource = data;
+
+        //and from that it can recall the right accessor (this calls for example Person.get name() { ... }
+        // let accessorResult = accessor.apply(parentSource);
+
+        //TODO: use propertyShape for RDFa
+
+        //add this result as the source of the bound child component
+        let newProps = {...props};
+        if (source instanceof Shape) {
+          newProps['sourceShape'] = source;
+        } else if (source instanceof Node) {
+          newProps['source'] = source;
+        } else {
+          console.warn('Invalid accessor result. Should return a Node or a Shape instance');
+        }
+        //render the child component (which is 'this')
+        return React.createElement(this, newProps);
+      };
+      return boundComponent;
+    },
+  };
 }
 
 //when this file is used, make sure the tree is initialized
