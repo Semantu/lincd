@@ -18,7 +18,7 @@ import {NamedNode} from '../models';
  * ```tsx
  * import {React} from "react";
  * import {linkedComponentClass} from "../package";
- * impoprt {LinkedComponentClass} from "lincd/lib/utils/LinkedComponentClass";
+ * impoprt {LinkedComponentClass} from "lincd/lib/utils/ComponentClass";
  * @linkedComponentClass(Person)
  * export class PersonView extends LinkedComponentClass<Person> {
  *   render() {

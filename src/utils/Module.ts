@@ -4,10 +4,22 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NamedNode, Node} from '../models';
-import {LinkedDataDeclaration, LinkedDataRequest, LinkedDataResponse, Shape} from '../shapes/Shape';
+import {
+  DetailedLinkedDataRequest,
+  LinkedDataDeclaration,
+  LinkedDataRequest,
+  LinkedDataResponse,
+  Shape,
+} from '../shapes/Shape';
 import {NodeShape, PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
-import {Component, FunctionalComponent, LinkedComponentProps} from '../interfaces/Component';
+import {
+  Component,
+  FunctionalComponent,
+  LinkedComponentProps,
+  LinkedFunctionalComponent,
+  BoundComponentFactory,
+} from '../interfaces/Component';
 import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
 import {lincd as lincdOntology} from '../ontologies/lincd';
@@ -87,7 +99,7 @@ export interface LinkedPackageObject {
    * ```tsx
    * import {React} from "react";
    * import {linkedComponentClass} from "../package";
-   * import {LinkedComponentClass} from "lincd/lib/utils/LinkedComponentClass";
+   * import {LinkedComponentClass} from "lincd/lib/utils/ComponentClass";
    * @linkedComponentClass(Person)
    * export class PersonView extends LinkedComponentClass<Person> {
    *   render() {
@@ -328,11 +340,11 @@ export function linkedPackage(
 
   //creates a declarator function which Components of this module can use register themselves and add themselves to the global tree
   function linkedComponent<ShapeType extends Shape, P = {}>(
-    linkedDataShape: typeof Shape | LinkedDataResponse,
+    requiredData: typeof Shape | LinkedDataDeclaration<ShapeType>,
     // dataDeclarationOrComponent:FunctionalComponent<P,ShapeType>|LinkedDataDeclaration<ShapeType>,
     functionalComponent: FunctionalComponent<P, ShapeType>,
-  ): FunctionalComponent<Omit<Omit<P, 'source'>, 'sourceShape'> & LinkedComponentProps<ShapeType>, ShapeType> {
-    type FC = FunctionalComponent<P, ShapeType>;
+  ): LinkedFunctionalComponent<P,ShapeType>{
+    type FC = LinkedFunctionalComponent<P, ShapeType>;
 
     //if a class that extends Shape was given
     let shapeClass: typeof Shape;
@@ -340,13 +352,13 @@ export function linkedPackage(
     let dataResponse: LinkedDataResponse;
     let dataDeclaration: LinkedDataDeclaration<ShapeType>;
     let propertyShapeClone: any;
-    if (Object.getPrototypeOf(linkedDataShape) instanceof Shape) {
+    if (Object.getPrototypeOf(requiredData) instanceof Shape) {
       //then we just load the whole shape
-      shapeClass = linkedDataShape as typeof Shape;
+      shapeClass = requiredData as typeof Shape;
       dataRequest = shapeClass;
     } else {
       //linkedDataShape is a LinkedDataRequest
-      dataDeclaration = linkedDataShape as LinkedDataDeclaration<ShapeType>;
+      dataDeclaration = requiredData as LinkedDataDeclaration<ShapeType>;
       shapeClass = dataDeclaration.shape;
 
       //create a test instance of the shape
@@ -365,7 +377,10 @@ export function linkedPackage(
 
       //TODO: this is a vulnerable bit, can we test it or make sure it never breaks?
       // we're basically depending on the order of requested properties to match the order of keys or values in the dataResponse
+      // we can possibly SOLVE this by relying on a numAccessors/numProperties/numRequests property, so the component can state how many requests it makes and provide that to '.of()'
+
       //now that we can find the accessor back (based on the order in which they were added! eek)
+      //make a copy of the requested property shapes array (as we want to manipulate it)
       let propertyShapes = [...dummyInstance.requested];
 
       //we can call the '_create' function which generates the boundComponent
@@ -374,9 +389,24 @@ export function linkedPackage(
       //here we create an identical object to the one that was returned (either an array or object)
       //and we replace those values that used Component.of(...) with the accessor they will require to run
       let checkPropertyShape = (value, target, key) => {
+        //always take the first next property shape in line
         let propertyShape = propertyShapes.shift();
-        if (value && value['_create']) {
+        //save it in the propertyShapeClone if this value is a bound component
+        if (value && value._create) {
           target[key] = propertyShape;
+          //first, find the index of the shifted propertyShape in the original request.properties array
+          //we can calculate that manually
+          //TODO: test if indexOf would be faster
+          let numLeft = propertyShapes.length;
+          let total = (dataRequest as DetailedLinkedDataRequest).properties.length;
+          let targetIndex = total-numLeft-1;
+          //then replace the propertyShape in the dataRequest with a new entry,
+          //that adds the nested data dependencies of this bound child component
+          (dataRequest as DetailedLinkedDataRequest).properties[targetIndex] = [
+            propertyShape,
+            (value as BoundComponentFactory<P,ShapeType>)._comp.dataRequest
+          ]
+
         }
       };
       if (Array.isArray(dataResponse)) {
@@ -392,7 +422,7 @@ export function linkedPackage(
       }
 
       console.log('Data response:', dataResponse);
-      console.log('Requested properties:', dataRequest.properties.map((r) => r.path.toString()).join(', '));
+      console.log('Requested properties:', dataRequest.properties.map((r) => r instanceof PropertyShape ? r.path.toString() : '(ComplexRequest)').join(', '));
     }
 
     //create a new functional component which wraps the original
@@ -420,6 +450,9 @@ export function linkedPackage(
 
             //update the cached result to the actual quads instead of the promise
             requestCache.set(dataRequest, quads);
+
+            //TODO: somehow update cache for complex requests with nested property shapes
+            // we will
 
             //and once loaded, set some state to force rerender
             setDataLoaded(true);
@@ -465,9 +498,11 @@ export function linkedPackage(
     };
 
     //bind
-    _wrappedComponent.of = bindComponentToData;
+    _wrappedComponent.of = bindComponentToData<P,ShapeType>;
     //keep a copy of the original for strict checking of equality when compared to
-    _wrappedComponent['original'] = functionalComponent;
+    _wrappedComponent.original = functionalComponent;
+
+    _wrappedComponent.dataRequest = dataRequest;
 
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
@@ -630,7 +665,7 @@ function useLinkedData(source, shapeClass) {
 
 interface TraceShape extends Shape {
   // constructor(p:TestNode):TraceShape;
-  requested: ShapeSet<PropertyShape>;
+  requested: PropertyShape[];
   // resultOrigins:CoreMap<any,any>;
   usedAccessors: any[];
 }
@@ -638,7 +673,7 @@ interface TraceShape extends Shape {
 // function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
 function createTraceShape(shapeClass: typeof Shape, shapeInstance?: Shape, debugName?: string): TraceShape {
   let detectionClass = class extends shapeClass implements TraceShape {
-    requested: ShapeSet<PropertyShape> = new ShapeSet();
+    requested: PropertyShape[] = []
     // resultOrigins:CoreMap<any,any> = new CoreMap();
     usedAccessors: any[] = [];
 
@@ -706,7 +741,7 @@ function createTraceShape(shapeClass: typeof Shape, shapeInstance?: Shape, debug
               }
 
               //store which property shapes were requested in the detectionClass defined above
-              traceShape.requested.add(propertyShape);
+              traceShape.requested.push(propertyShape);
               traceShape.usedAccessors.push(descriptor.get);
 
               //also store which result was returned for which property shape (we need this in Component.to().. / bindComponentToData())
@@ -766,7 +801,7 @@ class TestNode extends NamedNode {
   //@TODO: other methods like getDeep, etc
 }
 
-function registerComponent(exportedComponent: Component, shape?: typeof Shape) {
+function registerComponent(exportedComponent: Component,shape?: typeof Shape) {
   if (!shape) {
     //warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
     if (!exportedComponent.hasOwnProperty('shape')) {
@@ -843,7 +878,7 @@ export function initTree() {
   // }
 }
 
-function bindComponentToData(source) {
+function bindComponentToData<P,ShapeType extends Shape>(source):BoundComponentFactory<P,ShapeType> {
   console.log(this, source);
 
   //find the property shape that requested the data we receive here (we stored it earlier)
@@ -852,9 +887,10 @@ function bindComponentToData(source) {
 
   // return boundComponent as FunctionalComponent<any,any>;
   return {
+    _comp:this,
     _create: (propertyShape: PropertyShape) => {
       // boundComponent({...props,accessor})
-      let boundComponent = (props) => {
+      let boundComponent:LinkedFunctionalComponent<P,ShapeType> = (props) => {
         //this bound component will receive the PARENT sourceShape as source
         // let parentSource = props.parentSource;
         // let parentSource = data;

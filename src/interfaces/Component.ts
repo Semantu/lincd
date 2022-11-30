@@ -1,22 +1,29 @@
 import {Node} from '../models';
-import {Shape} from '../shapes/Shape';
+import {LinkedDataRequest,Shape} from '../shapes/Shape';
+import {PropertyShape} from '../shapes/SHACL';
 
 export type Component<P = any, ShapeType extends Shape = Shape> =
   | ClassComponent<P, ShapeType>
-  | FunctionalComponent<P, ShapeType>;
+  | LinkedFunctionalComponent<P, ShapeType>;
 
 export interface ClassComponent<P, ShapeType extends Shape = Shape>
   extends React.ComponentClass<P & LinkedComponentProps<ShapeType>> {
   props: P & LinkedComponentProps<ShapeType>;
   shape?: typeof Shape;
 }
-
+export interface BoundComponentFactory<P,ShapeType extends Shape = Shape> {
+  _create:(propertyShape:PropertyShape) => LinkedFunctionalComponent<P, ShapeType>;
+  _comp:LinkedFunctionalComponent<P,ShapeType>
+}
+export interface LinkedFunctionalComponent<P,ShapeType extends Shape = Shape> extends FunctionalComponent<Omit<Omit<P, 'source'>, 'sourceShape'> & LinkedComponentProps<ShapeType>, ShapeType> {
+  of?: (source?: any) => BoundComponentFactory<P,ShapeType>;
+  original?: FunctionalComponent<P, ShapeType>;
+  dataRequest?: LinkedDataRequest;
+  shape?: typeof Shape;
+}
 export interface FunctionalComponent<P, ShapeType extends Shape = Shape>
   extends React.FC<P & LinkedComponentProps<ShapeType>> {
   (props: P & LinkedComponentProps<ShapeType>): any;
-
-  shape?: typeof Shape;
-  of?: (source?: any) => FunctionalComponent<P, ShapeType>;
 }
 
 export interface FunctionalComponentDeclaration<
