@@ -4,20 +4,20 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 export class URI {
-	/**
-	 * Function: sanitize
-	 * Returns a sanitized string, typically for URLs.
-	 *
-	 * Parameters:
-	 *     $string - The string to sanitize.
-	 *     $force_lowercase - Force the string to lowercase?
-	 */
-	static sanitize(string, force_lowercase = true) {
-		if (!string) return string;
-		//\u200B is the ZERO WIDTH SPACE, often introduced by WYSIWYG editors. This causes a hyphen (-) at the end of a string sometimes, so we filter it out first
-		return string
-			.replace(/\u200B/g, '')
-			.replace(/[^\w]+/g, '-')
-			.toLowerCase();
-	}
+  /**
+   * Function: sanitize
+   * Returns a sanitized string, typically for URLs.
+   *
+   * Parameters:
+   *     $string - The string to sanitize.
+   *     $force_lowercase - Force the string to lowercase?
+   */
+  static sanitize(string, force_lowercase = true) {
+    if (!string) return string;
+    //\u200B is the ZERO WIDTH SPACE, often introduced by WYSIWYG editors. This causes a hyphen (-) at the end of a string sometimes, so we filter it out first
+    return string
+      .replace(/\u200B/g, '')
+      .replace(/[^\w]+/g, '-')
+      .toLowerCase();
+  }
 }

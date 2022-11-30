@@ -10,50 +10,43 @@ import {QuadArray} from '../collections/QuadArray';
 import {ICoreIterable} from './ICoreIterable';
 
 export interface IGraphObject {
-	getProperties(
-		includeFromIncomingArcs?: boolean,
-		includeImplicitFacts?: boolean,
-	): NodeSet<NamedNode>;
+  getProperties(includeFromIncomingArcs?: boolean, includeImplicitFacts?: boolean): NodeSet<NamedNode>;
 
-	getInverseProperties(): NodeSet<NamedNode>;
+  getInverseProperties(): NodeSet<NamedNode>;
 
-	/**
-	 * Returns the first property value, if any
-	 * For sets, returns the first property value for the first node that has values for this property
-	 * @param property
-	 */
-	getOne(property: NamedNode): Node | undefined;
+  /**
+   * Returns the first property value, if any
+   * For sets, returns the first property value for the first node that has values for this property
+   * @param property
+   */
+  getOne(property: NamedNode): Node | undefined;
 
-	getOneInverse(property: NamedNode): NamedNode | undefined;
+  getOneInverse(property: NamedNode): NamedNode | undefined;
 
-	getAll(property: NamedNode): NodeSet;
+  getAll(property: NamedNode): NodeSet;
 
-	getAllInverse(property: NamedNode): NodeSet<NamedNode>;
+  getAllInverse(property: NamedNode): NodeSet<NamedNode>;
 
-	getMultiple(properties: ICoreIterable<NamedNode>): NodeSet;
+  getMultiple(properties: ICoreIterable<NamedNode>): NodeSet;
 
-	getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet;
+  getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet;
 
-	getDeep(
-		property: NamedNode,
-		maxDepth?: number,
-		partialResult?: NodeSet,
-	): NodeSet;
+  getDeep(property: NamedNode, maxDepth?: number, partialResult?: NodeSet): NodeSet;
 
-	//TODO: since the implementation of these methods is pretty much the same across all classes that implement IGraphObjects maybe it should be moved to Find or another UTIL to avoid repeating ourselves
-	getOneFromPath(...properties: NamedNode[]): Node | undefined;
+  //TODO: since the implementation of these methods is pretty much the same across all classes that implement IGraphObjects maybe it should be moved to Find or another UTIL to avoid repeating ourselves
+  getOneFromPath(...properties: NamedNode[]): Node | undefined;
 
-	getAllFromPath(...properties: NamedNode[]): NodeSet;
+  getAllFromPath(...properties: NamedNode[]): NodeSet;
 
-	getQuads(property: NamedNode, value?: Node): QuadSet;
+  getQuads(property: NamedNode, value?: Node): QuadSet;
 
-	getInverseQuads(property: NamedNode): QuadSet;
+  getInverseQuads(property: NamedNode): QuadSet;
 
-	getAllQuads(includeAsObject?: boolean, includeImplicit?: boolean): QuadArray;
+  getAllQuads(includeAsObject?: boolean, includeImplicit?: boolean): QuadArray;
 
-	getAllInverseQuads(includeImplicit?: boolean): QuadArray;
+  getAllInverseQuads(includeImplicit?: boolean): QuadArray;
 
-	isLoaded(includingIncomingProperties?: boolean): boolean;
+  isLoaded(includingIncomingProperties?: boolean): boolean;
 
-	promiseLoaded(loadInverseProperties?: boolean): Promise<boolean>;
+  promiseLoaded(loadInverseProperties?: boolean): Promise<boolean>;
 }

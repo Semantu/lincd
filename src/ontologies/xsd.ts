@@ -25,15 +25,15 @@ var long: NamedNode = NamedNode.getOrCreate(base + 'long');
 //export var boolean:NamedNode = nodes.getOrCreate(base+"boolean");
 
 export const xsd = {
-	_ontologyResource,
-	string,
-	boolean,
-	date,
-	integer,
-	time,
-	duration,
-	decimal,
-	gYear,
-	Bytes,
-	long,
+  _ontologyResource,
+  string,
+  boolean,
+  date,
+  integer,
+  time,
+  duration,
+  decimal,
+  gYear,
+  Bytes,
+  long,
 };

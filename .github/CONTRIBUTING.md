@@ -1,17 +1,17 @@
 # LINCD Contributing Guide
 
-Thanks for spending your time to contribute! The following is a set of guidelines for contributing to LINCD. 
+Thanks for spending your time to contribute! The following is a set of guidelines for contributing to LINCD.
 
 ## Table of Contents
 
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Development Setup](#development-setup)
-  * [Committing Changes](#committing-changes)
-  * [Applying License](#applying-license)
-    + [Modifying existing file](#modifying-existing-file)
-    + [Creating new file](#creating-new-file)
-    + [Sign your existing work](#sign-your-existing-work)
-    + [Sign your previous work](#sign-your-previous-work)
+  - [Committing Changes](#committing-changes)
+  - [Applying License](#applying-license)
+    - [Modifying existing file](#modifying-existing-file)
+    - [Creating new file](#creating-new-file)
+    - [Sign your existing work](#sign-your-existing-work)
+    - [Sign your previous work](#sign-your-previous-work)
 - [Project Structure](#project-structure)
 - [Financial Contribution](#financial-contribution)
 - [Credits](#credits)
@@ -20,12 +20,12 @@ Thanks for spending your time to contribute! The following is a set of guideline
 
 - When you create a PR, you should fill in all the info defined in this [template](https://github.com/Semantu/lincd/.github/pull_request_template).
 
-- We adopt [Gitflow Design](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow). However, we do not have release branches. 
+- We adopt [Gitflow Design](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow). However, we do not have release branches.
 
-    ![git flow design](https://wac-cdn.atlassian.com/dam/jcr:cc0b526e-adb7-4d45-874e-9bcea9898b4a/04%20Hotfix%20branches.svg?cdnVersion=176)
+  ![git flow design](https://wac-cdn.atlassian.com/dam/jcr:cc0b526e-adb7-4d45-874e-9bcea9898b4a/04%20Hotfix%20branches.svg?cdnVersion=176)
 
-- The `master` branch is just a snapshot of the latest stable release. All development should be done in dedicated branches. 
-**Do not submit PRs against the `master` branch.**
+- The `master` branch is just a snapshot of the latest stable release. All development should be done in dedicated branches.
+  **Do not submit PRs against the `master` branch.**
 
 - Checkout a topic branch from the relevant branch, e.g. `develop`, and merge back against that branch.
 
@@ -43,23 +43,24 @@ We encourage all contributors to commit messages following [Commit Message Conve
 
 ### Applying License
 
-Semantu doesn't require a CLA (Contributor License Agreement). 
+Semantu doesn't require a CLA (Contributor License Agreement).
 We require [Developer Certificate of Origin (DCO)](https://github.com/Semantu/lincd/.github/developer-certificate-of-origin) as an additional safeguard
 for the LINCD project. This is a well established and widely used
 mechanism to assure contributors have confirmed their right to license
 their contribution under the project's license.
 
 #### Modifying existing file
+
 If you modify an existing file, please keep the existing license header as
 it is and just add your copyright notice and author:
 
-````
+```
 @author <your name> <your email address>
-````
+```
 
 #### Creating new file
 
-````
+```
 /**
  *
  * ***** BEGIN LICENSE BLOCK *****
@@ -80,7 +81,7 @@ it is and just add your copyright notice and author:
  *
  * The Initial Developer of the Original Code is
  * @author <your name> (<your email address>)
- * Portions created by the Initial Developer are 
+ * Portions created by the Initial Developer are
  * @copyright Copyright (c) <year>,
  * the Initial Developer. All Rights Reserved.
  *
@@ -97,7 +98,7 @@ it is and just add your copyright notice and author:
  * file under either the MPL or the GPL.
  *
  * ***** END LICENSE BLOCK ***** */
-````
+```
 
 #### Sign your existing work
 
@@ -107,6 +108,7 @@ Usually email will be already configured with your Github.
 git config --global user.name "FirstName LastName"
 git config --global user.email "email@provider.com"
 ```
+
 Refer [here](https://support.atlassian.com/bitbucket-cloud/docs/configure-your-dvcs-username-for-commits/) for additional details.
 
 ```bash
@@ -117,9 +119,10 @@ git commit -s -m "commit message"
 Please note : Use your real name (sorry, no pseudonyms or anonymous contributions).
 
 Once pushed - you should see the commit have the following template in github
-````
+
+```
 Signed-off-by: FirstName Initials/Lastname <email@provider.com>
-````
+```
 
 #### Sign your previous work
 
@@ -143,7 +146,7 @@ Isn't this product cool? We are working on this full time. Your donations will d
 
 ## Credits
 
-Once again. Thank you to all the people who have already contributed to LINCD! We encourage you to say "Hi" in our community channels and share what you have done! 
+Once again. Thank you to all the people who have already contributed to LINCD! We encourage you to say "Hi" in our community channels and share what you have done!
 
 Follow us on Twitter (https://twitter.com/Semantu_com)
 Find the Slack channel here: (https://join.slack.com/t/semantu/shared_invite/zt-oastx0cn-Aaqmn0mMumI4dBqT8St_lg)

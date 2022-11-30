@@ -19,12 +19,12 @@ var first: NamedNode = NamedNode.getOrCreate(base + 'first');
 var nil: NamedNode = NamedNode.getOrCreate(base + 'nil');
 
 export const rdf = {
-	_ontologyResource,
-	langString,
-	type,
-	Property,
-	List,
-	rest,
-	first,
-	nil,
+  _ontologyResource,
+  langString,
+  type,
+  Property,
+  List,
+  rest,
+  first,
+  nil,
 };

@@ -10,99 +10,93 @@ import {CoreSet} from '../collections/CoreSet';
 //import {CoreMap} from "../collections/CoreMap";
 
 export interface BatchedEventEmitter {
-	emitBatchedEvents(resolve?: any, reject?: any): void;
+  emitBatchedEvents(resolve?: any, reject?: any): void;
 }
 
 export class EventBatcher extends EventEmitter {
-	private batching: boolean = false;
-	emitters: CoreSet<BatchedEventEmitter> = new CoreSet<BatchedEventEmitter>();
-	static ALL_EVENTS_DISPATCHED: string = 'ALL_EVENTS_DISPATCHED';
-	private emitting: boolean;
+  private batching: boolean = false;
+  emitters: CoreSet<BatchedEventEmitter> = new CoreSet<BatchedEventEmitter>();
+  static ALL_EVENTS_DISPATCHED: string = 'ALL_EVENTS_DISPATCHED';
+  private emitting: boolean;
 
-	hasBatchedEvents(
-		filterFn?: (emitter: BatchedEventEmitter) => boolean,
-	): boolean {
-		if (filterFn && this.batching) {
-			return this.emitters.filter(filterFn).size > 0;
-		}
-		return this.batching;
-	}
+  hasBatchedEvents(filterFn?: (emitter: BatchedEventEmitter) => boolean): boolean {
+    if (filterFn && this.batching) {
+      return this.emitters.filter(filterFn).size > 0;
+    }
+    return this.batching;
+  }
 
-	getPendingEmitters(
-		filterFn?: (emitter: BatchedEventEmitter) => boolean,
-	): CoreSet<BatchedEventEmitter> {
-		if (filterFn && this.batching) {
-			return this.emitters.filter(filterFn);
-		}
-		return this.emitters;
-	}
+  getPendingEmitters(filterFn?: (emitter: BatchedEventEmitter) => boolean): CoreSet<BatchedEventEmitter> {
+    if (filterFn && this.batching) {
+      return this.emitters.filter(filterFn);
+    }
+    return this.emitters;
+  }
 
-	promiseDone() {
-		if (this.emitters.size == 0) {
-			return Promise.resolve(true);
-		} else {
-			return new Promise((resolve, reject) => {
-				this.once(EventBatcher.ALL_EVENTS_DISPATCHED, () => {
-					resolve(true);
-				});
-			});
-		}
-	}
+  promiseDone() {
+    if (this.emitters.size == 0) {
+      return Promise.resolve(true);
+    } else {
+      return new Promise((resolve, reject) => {
+        this.once(EventBatcher.ALL_EVENTS_DISPATCHED, () => {
+          resolve(true);
+        });
+      });
+    }
+  }
 
-	dispatchBatchedEventsOnceReady() {
-		//if we're currently emitting events, then we dont want to do nextTick yet, because those who consume events may want to set nextTick first
-		if (this.emitting) {
-			//so once all is dispatched, then we dispatch again
-			this.once(EventBatcher.ALL_EVENTS_DISPATCHED, () => {
-				nextTick(this.dispatchBatchedEvents.bind(this));
-			});
-		} else {
-			//we're already not emitting, so on the next tick we can dispatch events
-			nextTick(this.dispatchBatchedEvents.bind(this));
-		}
-	}
+  dispatchBatchedEventsOnceReady() {
+    //if we're currently emitting events, then we dont want to do nextTick yet, because those who consume events may want to set nextTick first
+    if (this.emitting) {
+      //so once all is dispatched, then we dispatch again
+      this.once(EventBatcher.ALL_EVENTS_DISPATCHED, () => {
+        nextTick(this.dispatchBatchedEvents.bind(this));
+      });
+    } else {
+      //we're already not emitting, so on the next tick we can dispatch events
+      nextTick(this.dispatchBatchedEvents.bind(this));
+    }
+  }
 
-	dispatchBatchedEvents() {
-		//reset things before emitting so that new events will be added to new stacks
-		var toEmit = this.emitters;
-		this.emitters = new CoreSet();
-		this.batching = false;
-		this.emitting = true;
+  dispatchBatchedEvents() {
+    //reset things before emitting so that new events will be added to new stacks
+    var toEmit = this.emitters;
+    this.emitters = new CoreSet();
+    this.batching = false;
+    this.emitting = true;
 
-		//tell all emitters to dispatch
-		toEmit.forEach((emitter) => {
-			emitter.emitBatchedEvents();
-		});
-		this.emitting = false;
-		this.emit(EventBatcher.ALL_EVENTS_DISPATCHED);
-	}
+    //tell all emitters to dispatch
+    toEmit.forEach((emitter) => {
+      emitter.emitBatchedEvents();
+    });
+    this.emitting = false;
+    this.emit(EventBatcher.ALL_EVENTS_DISPATCHED);
+  }
 
-	dispatchSomeEvents(
-		filterEmitters: (emitter: BatchedEventEmitter) => boolean,
-	) {
-		//tell all emitters to dispatch
-		this.emitters.forEach((emitter) => {
-			if (filterEmitters(emitter)) {
-				emitter.emitBatchedEvents();
-				this.emitters.delete(emitter);
-			}
-		});
-		this.batching = this.emitters.size > 0;
-		return this.batching;
-	}
+  dispatchSomeEvents(filterEmitters: (emitter: BatchedEventEmitter) => boolean) {
+    //tell all emitters to dispatch
+    this.emitters.forEach((emitter) => {
+      if (filterEmitters(emitter)) {
+        emitter.emitBatchedEvents();
+        this.emitters.delete(emitter);
+      }
+    });
+    this.batching = this.emitters.size > 0;
+    return this.batching;
+  }
 
-	get isBatching() {
-		return this.batching;
-	}
+  get isBatching() {
+    return this.batching;
+  }
 
-	register(emitter: BatchedEventEmitter) {
-		//first time someone registers an event we will make sure to emit all batched events at the next tick
-		if (!this.batching) {
-			this.batching = true;
-			this.dispatchBatchedEventsOnceReady();
-		}
-		this.emitters.add(emitter);
-	}
+  register(emitter: BatchedEventEmitter) {
+    //first time someone registers an event we will make sure to emit all batched events at the next tick
+    if (!this.batching) {
+      this.batching = true;
+      this.dispatchBatchedEventsOnceReady();
+    }
+    this.emitters.add(emitter);
+  }
 }
 
 export const eventBatcher = new EventBatcher();

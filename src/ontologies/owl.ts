@@ -18,7 +18,7 @@ var ObjectProperty: NamedNode = NamedNode.getOrCreate(base + 'ObjectProperty');
 var DataProperty: NamedNode = NamedNode.getOrCreate(base + 'DataProperty');
 
 export const owl = {
-	_ontologyResource,
+  _ontologyResource,
   ObjectProperty,
-  DataProperty
+  DataProperty,
 };

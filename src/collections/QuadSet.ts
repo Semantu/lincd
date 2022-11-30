@@ -11,121 +11,116 @@ import {CoreSet} from './CoreSet';
 import {NodeSet} from './NodeSet';
 
 export class QuadSet extends CoreSet<Quad> {
-	removeAll(alteration: boolean = false) {
-		this.forEach((quad) => quad.remove(alteration));
-	}
+  removeAll(alteration: boolean = false) {
+    this.forEach((quad) => quad.remove(alteration));
+  }
 
-	moveTo(graph: Graph,alteration:boolean=true):QuadSet {
+  moveTo(graph: Graph, alteration: boolean = true): QuadSet {
     let newSet = new QuadSet();
-		this.forEach((quad) => {
-      newSet.add(quad.moveToGraph(graph,alteration))
+    this.forEach((quad) => {
+      newSet.add(quad.moveToGraph(graph, alteration));
     });
     return newSet;
-	}
+  }
 
-	makeExplicit() {
-		this.forEach((quad) => quad.makeExplicit());
-	}
+  makeExplicit() {
+    this.forEach((quad) => quad.makeExplicit());
+  }
 
-	getSubjects(): NodeSet<NamedNode> {
-		//return new NamedNodeSet(this.map(quad => quad.subject).values());
-		//that's short, but probably this is faster:
-		var res = new NodeSet<NamedNode>();
-		for (var quad of this) {
-			res.add(quad.subject);
-		}
-		return res;
-	}
+  getSubjects(): NodeSet<NamedNode> {
+    //return new NamedNodeSet(this.map(quad => quad.subject).values());
+    //that's short, but probably this is faster:
+    var res = new NodeSet<NamedNode>();
+    for (var quad of this) {
+      res.add(quad.subject);
+    }
+    return res;
+  }
 
-	getPredicates(): NodeSet<NamedNode> {
-		var res = new NodeSet<NamedNode>();
-		for (var quad of this) {
-			res.add(quad.predicate);
-		}
-		return res;
-	}
+  getPredicates(): NodeSet<NamedNode> {
+    var res = new NodeSet<NamedNode>();
+    for (var quad of this) {
+      res.add(quad.predicate);
+    }
+    return res;
+  }
 
-	getObjects(): NodeSet {
-		var res = new NodeSet();
-		for (var quad of this) {
-			res.add(quad.object);
-		}
-		return res;
-	}
+  getObjects(): NodeSet {
+    var res = new NodeSet();
+    for (var quad of this) {
+      res.add(quad.object);
+    }
+    return res;
+  }
 
-	getNamedNodeObjects(): NodeSet<NamedNode> {
-		var res = new NodeSet<NamedNode>();
-		for (var quad of this) {
-			//using instanceof NamedNode here will cause circular references
-			if ('uri' in quad.object) {
-				res.add(quad.object as NamedNode);
-			}
-		}
-		return res;
-	}
+  getNamedNodeObjects(): NodeSet<NamedNode> {
+    var res = new NodeSet<NamedNode>();
+    for (var quad of this) {
+      //using instanceof NamedNode here will cause circular references
+      if ('uri' in quad.object) {
+        res.add(quad.object as NamedNode);
+      }
+    }
+    return res;
+  }
 
-	getLiteralObjects(): NodeSet {
-		var res = new NodeSet();
-		for (var quad of this) {
-			//using instanceof Literal here will cause circular references
-			if (!('uri' in quad.object)) {
-				res.add(quad.object);
-			}
-		}
-		return res;
-	}
+  getLiteralObjects(): NodeSet {
+    var res = new NodeSet();
+    for (var quad of this) {
+      //using instanceof Literal here will cause circular references
+      if (!('uri' in quad.object)) {
+        res.add(quad.object);
+      }
+    }
+    return res;
+  }
 
-	getLike(subject?: NamedNode, predicate?: NamedNode, object?: Node): this {
-		return this.filter((quad) => {
-			return (
-				(!subject || quad.subject === subject) &&
-				(!predicate || quad.predicate === predicate) &&
-				(!object || quad.object === object)
-			);
-		});
-	}
+  getLike(subject?: NamedNode, predicate?: NamedNode, object?: Node): this {
+    return this.filter((quad) => {
+      return (
+        (!subject || quad.subject === subject) &&
+        (!predicate || quad.predicate === predicate) &&
+        (!object || quad.object === object)
+      );
+    });
+  }
 
-	getNamedNodes(): NodeSet<NamedNode> {
-		return new NodeSet<NamedNode>()
-			.concat(this.getSubjects())
-			.concat(this.getPredicates())
-			.concat(this.getNamedNodeObjects());
-	}
+  getNamedNodes(): NodeSet<NamedNode> {
+    return new NodeSet<NamedNode>()
+      .concat(this.getSubjects())
+      .concat(this.getPredicates())
+      .concat(this.getNamedNodeObjects());
+  }
 
-	getNodes(): NodeSet {
-		return new NodeSet()
-			.concat(this.getSubjects())
-			.concat(this.getPredicates())
-			.concat(this.getObjects());
-	}
+  getNodes(): NodeSet {
+    return new NodeSet().concat(this.getSubjects()).concat(this.getPredicates()).concat(this.getObjects());
+  }
 
-	hasNode(node: Node) {
-		return this.some((quad) => {
-			return (
-				quad.subject === node || quad.predicate === node || quad.object === node
-			);
-		});
-	}
+  hasNode(node: Node) {
+    return this.some((quad) => {
+      return quad.subject === node || quad.predicate === node || quad.object === node;
+    });
+  }
 
-	getExplicit() {
-		return this.filter((quad) => !quad.implicit);
-	}
+  getExplicit() {
+    return this.filter((quad) => !quad.implicit);
+  }
 
-	getImplicit() {
-		return this.filter((quad) => quad.implicit);
-	}
+  getImplicit() {
+    return this.filter((quad) => quad.implicit);
+  }
 
-	turnOn() {
-		return this.forEach((t) => t.turnOn());
-	}
+  turnOn() {
+    return this.forEach((t) => t.turnOn());
+  }
 
-	turnOff() {
-		return this.forEach((t) => t.turnOff());
-	}
+  turnOff() {
+    return this.forEach((t) => t.turnOff());
+  }
 
-	toString() {
-		var str = '';
-		this.forEach((item) => (str += '\t' + item.toString() + '\n'));
-		return 'QuadSet(' + this.size + ') [\n' + str + ']';
-	}
+  toString() {
+    var str = '';
+    this.forEach((item) => (str += '\t' + item.toString() + '\n'));
+    return 'QuadSet(' + this.size + ') [\n' + str + ']';
+  }
 }

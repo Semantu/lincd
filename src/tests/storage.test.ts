@@ -2,63 +2,62 @@ import {describe, expect, test} from '@jest/globals';
 import {IQuadStore} from '../interfaces/IQuadStore';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {Storage} from '../utils/Storage';
-import {Graph,Literal,NamedNode,Quad} from '../models';
+import {Graph, Literal, NamedNode, Quad} from '../models';
 import {QuadSet} from '../collections/QuadSet';
-import { rdfs } from '../ontologies/rdfs';
+import {rdfs} from '../ontologies/rdfs';
 import {rdf} from '../ontologies/rdf';
-import {LinkedDataRequest,LinkedDataResponse,Shape} from '../shapes/Shape';
+import {LinkedDataRequest, Shape} from '../shapes/Shape';
 import {QuadArray} from '../collections/QuadArray';
 
 class TestStore implements IQuadStore {
-	defaultGraph = Graph.create();
-	contents: QuadSet = new QuadSet();
-	init() {
-		return null;
-	}
-	reset() {
-		this.contents = new QuadSet();
-	}
-	update(
-		added: ICoreIterable<Quad>,
-		removed: ICoreIterable<Quad>,
-	): Promise<any> {
-		added.forEach((q) => this.contents.add(q));
-		removed.forEach((q) => this.contents.delete(q));
-		return null;
-	}
+  defaultGraph = Graph.create();
+  contents: QuadSet = new QuadSet();
 
-	add(quad: Quad): Promise<any> {
-		return null;
-	}
-
-	addMultiple(quads: QuadSet): Promise<any> {
-		return null;
-	}
-
-	delete(quad: Quad): Promise<any> {
-		return null;
-	}
-
-	deleteMultiple(quads: QuadSet): Promise<any> {
-		return null;
-	}
-
-	setURI(...nodes: NamedNode[]): Promise<any> {
-		return null;
-	}
-
-	getDefaultGraph(): Graph {
-		return this.defaultGraph;
-	}
-
-	removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any> {
+  init() {
     return null;
   }
 
-  loadShape(shapeInstance:Shape,request:LinkedDataRequest):Promise<QuadArray> {
+  reset() {
+    this.contents = new QuadSet();
+  }
+
+  update(added: ICoreIterable<Quad>, removed: ICoreIterable<Quad>): Promise<any> {
+    added.forEach((q) => this.contents.add(q));
+    removed.forEach((q) => this.contents.delete(q));
     return null;
   }
 
+  add(quad: Quad): Promise<any> {
+    return null;
+  }
+
+  addMultiple(quads: QuadSet): Promise<any> {
+    return null;
+  }
+
+  delete(quad: Quad): Promise<any> {
+    return null;
+  }
+
+  deleteMultiple(quads: QuadSet): Promise<any> {
+    return null;
+  }
+
+  setURI(...nodes: NamedNode[]): Promise<any> {
+    return null;
+  }
+
+  getDefaultGraph(): Graph {
+    return this.defaultGraph;
+  }
+
+  removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any> {
+    return null;
+  }
+
+  loadShape(shapeInstance: Shape, request: LinkedDataRequest): Promise<QuadArray> {
+    return null;
+  }
 }
 
 let store = new TestStore();
@@ -67,27 +66,26 @@ Storage.setDefaultStore(store);
 describe('default store', () => {
   test('does not store temporary node', () => {
     let node = NamedNode.create();
-    node.setValue(rdfs.label,"test")
+    node.setValue(rdfs.label, 'test');
     expect(store.contents.size).toBe(0);
   });
-  test('stores quads of saved node',async () => {
+  test('stores quads of saved node', async () => {
     store.reset();
     let node = NamedNode.create();
-    node.setValue(rdfs.label,"test2");
+    node.setValue(rdfs.label, 'test2');
     node.save();
     try {
       await Storage.promiseUpdated();
       expect(store.contents.size).toBe(1);
-    }
-    catch(e) {
-      console.warn("Why err?",e);
+    } catch (e) {
+      console.warn('Why err?', e);
     }
   });
   test('stores new properties of existing node', async () => {
     store.reset();
     let node = NamedNode.create();
     node.isTemporaryNode = false;
-    node.setValue(rdfs.label,"test3");
+    node.setValue(rdfs.label, 'test3');
     await Storage.promiseUpdated();
     expect(store.contents.size).toBe(1);
   });
@@ -95,7 +93,7 @@ describe('default store', () => {
     store.reset();
     let node = NamedNode.create();
     node.isTemporaryNode = false;
-    node.setValue(rdfs.label,"test4");
+    node.setValue(rdfs.label, 'test4');
     await Storage.promiseUpdated();
     node.unsetAll(rdfs.label);
     await Storage.promiseUpdated();
@@ -105,9 +103,9 @@ describe('default store', () => {
     store.reset();
     let node = NamedNode.create();
     node.isTemporaryNode = false;
-    node.setValue(rdfs.label,"test4");
+    node.setValue(rdfs.label, 'test4');
     await Storage.promiseUpdated();
-    node.unset(rdfs.label,new Literal("test4"));
+    node.unset(rdfs.label, new Literal('test4'));
     await Storage.promiseUpdated();
     expect(store.contents.size).toBe(0);
   });
@@ -115,7 +113,7 @@ describe('default store', () => {
     store.reset();
     let node = NamedNode.create();
     node.isTemporaryNode = false;
-    node.setValue(rdfs.label,"test5");
+    node.setValue(rdfs.label, 'test5');
     await Storage.promiseUpdated();
     node.remove();
     await Storage.promiseUpdated();
@@ -124,9 +122,9 @@ describe('default store', () => {
   test('promiseUpdated waits for both storing nodes and altering nodes to complete', async () => {
     store.reset();
     let node = NamedNode.create();
-    node.setValue(rdfs.label,"test5");
+    node.setValue(rdfs.label, 'test5');
     node.save();
-    node.set(rdf.type,node);
+    node.set(rdf.type, node);
     await Storage.promiseUpdated();
     expect(store.contents.size).toBe(2);
   });

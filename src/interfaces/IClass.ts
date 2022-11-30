@@ -8,9 +8,9 @@ import {Shape} from '../shapes/Shape';
 import {PropertySet} from '../collections/PropertySet';
 
 export interface IClass {
-	getSuperClassNodes(includeImplicit?: boolean): PropertySet;
+  getSuperClassNodes(includeImplicit?: boolean): PropertySet;
 
-	createInstance(node?: Node, appendix?: string): Promise<Shape>;
+  createInstance(node?: Node, appendix?: string): Promise<Shape>;
 
-	getInstances();
+  getInstances();
 }
