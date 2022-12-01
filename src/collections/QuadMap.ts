@@ -158,7 +158,7 @@ export class QuadMap extends CoreMapToSet<Node, QuadSet, Quad> {
   }
 
   getQuadSet(): QuadSet {
-    return this.map((q) => q);
+    return this.map((q) => q,QuadSet);
   }
 
   delete(v): boolean {

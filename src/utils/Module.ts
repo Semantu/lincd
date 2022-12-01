@@ -84,7 +84,7 @@ export interface LinkedPackageObject {
     shapeClass: typeof Shape | LinkedDataResponse,
     functionalComponent?: FunctionalComponent<P, ShapeType>,
     // )=> FunctionalComponent<P,ShapeType>;
-  ) => FunctionalComponent<Omit<Omit<P, 'source'>, 'sourceShape'> & LinkedComponentProps<ShapeType>, ShapeType>;
+  ) => LinkedFunctionalComponent<Omit<Omit<P, 'source'>, 'sourceShape'> & LinkedComponentProps<ShapeType>, ShapeType>;
 
   /**
    * Class decorator that links a class-based component to its shape.
