@@ -12,11 +12,16 @@ export interface ClassComponent<P, ShapeType extends Shape = Shape>
   shape?: typeof Shape;
 }
 export interface BoundComponentFactory<P,ShapeType extends Shape = Shape> {
-  _create:(propertyShape:PropertyShape) => LinkedFunctionalComponent<P, ShapeType>;
+  _create:(props:PropertyShape[]) => LinkedFunctionalComponent<P, ShapeType>;
+  _props?:PropertyShape[];
   _comp:LinkedFunctionalComponent<P,ShapeType>
 }
 export interface LinkedFunctionalComponent<P,ShapeType extends Shape = Shape> extends FunctionalComponent<Omit<Omit<P, 'source'>, 'sourceShape'> & LinkedComponentProps<ShapeType>, ShapeType> {
-  of?: (source?: any) => BoundComponentFactory<P,ShapeType>;
+  /**
+   * Binds a component to a source. Usually used in Shape.request() for automatic data loading.
+   * @param source the node or shape that this component should visualise
+   */
+  of?: (source?: Node|Shape) => BoundComponentFactory<P,ShapeType>;
   original?: FunctionalComponent<P, ShapeType>;
   dataRequest?: LinkedDataRequest;
   shape?: typeof Shape;

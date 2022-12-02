@@ -88,7 +88,7 @@ export interface LinkedPackageObject {
    * ```
    */
   linkedComponent: <ShapeType extends Shape, P = {}>(
-    shapeClass: typeof Shape | LinkedDataResponse,
+    shapeClass: typeof Shape | LinkedDataDeclaration<ShapeType>,
     functionalComponent?: FunctionalComponent<P, ShapeType>,
     // )=> FunctionalComponent<P,ShapeType>;
   ) => LinkedFunctionalComponent<Omit<Omit<P, 'source'>, 'sourceShape'> & LinkedComponentProps<ShapeType>, ShapeType>;
@@ -350,7 +350,7 @@ export function linkedPackage(
     requiredData: typeof Shape | LinkedDataDeclaration<ShapeType>,
     // dataDeclarationOrComponent:FunctionalComponent<P,ShapeType>|LinkedDataDeclaration<ShapeType>,
     functionalComponent: FunctionalComponent<P, ShapeType>,
-  ): LinkedFunctionalComponent<P,ShapeType>{
+  ): LinkedFunctionalComponent<P, ShapeType> {
     type FC = LinkedFunctionalComponent<P, ShapeType>;
 
     //if a class that extends Shape was given
@@ -377,29 +377,30 @@ export function linkedPackage(
 
       //run the function that the component provided to see which properties it needs
       dataResponse = dataDeclaration.request(dummyInstance as any as ShapeType);
-      dataRequest = {
-        shape: shapeClass,
-        properties: dummyInstance.requested,
-      };
 
-      //TODO: this is a vulnerable bit, can we test it or make sure it never breaks?
-      // we're basically depending on the order of requested properties to match the order of keys or values in the dataResponse
-      // we can possibly SOLVE this by relying on a numAccessors/numProperties/numRequests property, so the component can state how many requests it makes and provide that to '.of()'
+      //for objects
+      dataRequest = createDataRequestObject(shapeClass, dataResponse, dummyInstance);
 
       //now that we can find the accessor back (based on the order in which they were added! eek)
       //make a copy of the requested property shapes array (as we want to manipulate it)
-      let propertyShapes = [...dummyInstance.requested];
+      // let propertyShapes = [...dummyInstance.requested];
 
       //we can call the '_create' function which generates the boundComponent
       //which we then store as the value (so we can use it when this component is used with real data)
 
       //here we create an identical object to the one that was returned (either an array or object)
       //and we replace those values that used Component.of(...) with the accessor they will require to run
-      propertyShapeClone = getResponsePropertyShapeClone(propertyShapes,dataRequest,dataResponse);
-
+      // propertyShapeClone = getResponsePropertyShapeClone(propertyShapes,dataRequest,dataResponse);
 
       console.log('Data response:', dataResponse);
-      console.log('Requested properties:', dataRequest.properties.map((r) => r instanceof PropertyShape ? r.path.toString() : '(ComplexRequest)').join(', '));
+      console.log(
+        'Requested properties:',
+        dataRequest['properties']
+          ? dataRequest['properties']
+              .map((r) => (r instanceof PropertyShape ? r.path.toString() : '(ComplexRequest)'))
+              .join(', ')
+          : null,
+      );
     }
 
     //create a new functional component which wraps the original
@@ -415,9 +416,10 @@ export function linkedPackage(
 
       //if the data request has already been made and the request has already resolved
       //then we can safely continue to render straight away
-      let preLoaded: boolean = requestCache && requestCache.has(dataRequest) && !(requestCache.get(dataRequest) instanceof Promise);
+      let preLoaded: boolean =
+        requestCache && requestCache.has(dataRequest) && !(requestCache.get(dataRequest) instanceof Promise);
 
-      let [dataLoaded, setDataLoaded] = useState<boolean>(false);
+      let [linkedData, setLinkedData] = useState<any>();
       useEffect(() => {
         //if the request has been made before we don't have to do it again, even if it's still loading
         if (!requestCache.has(dataRequest)) {
@@ -427,10 +429,28 @@ export function linkedPackage(
 
             //update the cached result to the actual quads instead of the promise
             //also mark any subRequests as loaded for the right nodes
-            updateCache(linkedProps.sourceShape.node,dataRequest,quads);
+            updateCache(linkedProps.sourceShape.node, dataRequest, quads);
 
-            //and once loaded, set some state to force rerender
-            setDataLoaded(true);
+            let dataResponse;
+            //if the component used a Shape.request() data declaration function
+            if (dataDeclaration) {
+              //then use that now to get the requested for this instance
+              let dataResponse = dataDeclaration.request(linkedProps.sourceShape);
+
+              //YOU ARE HERE, UPDATE THIS METHOD FOR REPLACING () =>
+              //see
+              //finally we replace any temporary placeholders returned by 'Component.of(..)'
+              //with real components
+              replaceBoundComponents(propertyShapeClone, dataResponse);
+
+              //use the response as the linkedData for this component
+              setLinkedData(dataResponse);
+            }
+            else
+            {
+              //set to true to indicate the shaoe instance is loaded
+              setLinkedData(true);
+            }
           });
 
           //save the promise result (so we don't request it again)
@@ -439,17 +459,20 @@ export function linkedPackage(
       }, []);
 
       //if the data is loaded
-      if (preLoaded || dataLoaded) {
+      if (preLoaded || linkedData) {
         //if the component used a Shape.request() data declaration function
-        if (dataDeclaration) {
-          //then use that now to get the requested for this instance
-          let dataResponse = dataDeclaration.request(linkedProps.sourceShape);
-
-          //finally we replace any temporary placeholders returned by 'Component.of(..)'
-          //with real components
-          replaceBoundComponents(propertyShapeClone,dataResponse);
-
-          linkedProps['linkedData'] = dataResponse;
+        // if (dataDeclaration) {
+        //   //then use that now to get the requested for this instance
+        //   let dataResponse = dataDeclaration.request(linkedProps.sourceShape);
+        //
+        //   //finally we replace any temporary placeholders returned by 'Component.of(..)'
+        //   //with real components
+        //   replaceBoundComponents(propertyShapeClone, dataResponse);
+        //
+        // }
+        if(linkedData !== true)
+        {
+          linkedProps['linkedData'] = linkedData;
         }
 
         //render the original components with the original + generated properties
@@ -461,7 +484,7 @@ export function linkedPackage(
     };
 
     //bind
-    _wrappedComponent.of = bindComponentToData<P,ShapeType>;
+    _wrappedComponent.of = bindComponentToData<P, ShapeType>;
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
@@ -621,32 +644,60 @@ export function linkedPackage(
     packageExports: packageTreeObject,
   } as LinkedPackageObject;
 }
-function replaceBoundComponents(propertyShapeClone:any,dataResponse:LinkedDataResponse) {
-  let replaceBoundComponent = (value, propertyShape, target, key) => {
-    if (value && value['_create']) {
-      target[key] = value['_create'](propertyShape);
+
+function replaceBoundComponents(propertyShapeClone: any, dataResponse: LinkedDataResponse) {
+  let replaceBoundComponent = (value, target, key) => {
+    if (value && value._create) {
+      target[key] = (value as BoundComponentFactory<any, any>)._create(value._props);
     }
   };
   if (Array.isArray(dataResponse)) {
     (dataResponse as any[]).forEach((value, index) => {
-      replaceBoundComponent(value, propertyShapeClone[index], dataResponse, index);
+      replaceBoundComponent(value, dataResponse, index);
     });
   } else {
     Object.getOwnPropertyNames(dataResponse).forEach((key) => {
-      replaceBoundComponent(dataResponse[key], propertyShapeClone[key], dataResponse, key);
+      replaceBoundComponent(dataResponse[key], dataResponse, key);
     });
   }
+  // if (!Array.isArray(dataResponse) && typeof dataResponse === 'object') {
+  //   Object.getOwnPropertyNames(dataResponse).forEach((key) => {
+  //     //if a function was returned for this key
+  //     if (typeof dataResponse[key] === 'function') {
+  //       //count the current amount of property shapes requested so far
+  //       let previousNumPropShapes = instance.requested.length;
+  //
+  //       //then call the function to get the actual intended value
+  //       //this will also trigger new accessors to be called & propertyshapes to be added
+  //       let value = (dataResponse[key] as Function)();
+  //       //if a bound component was returned
+  //       if (value && value._create) {
+  //         //retrieve and remove any propertyShape that were requested
+  //         let appliedPropertyShapes = instance.requested.splice(previousNumPropShapes);
+  //         (value as BoundComponentFactory<any, any>)._props = appliedPropertyShapes;
+  //
+  //         //then place back an object stating which property shapes were requested
+  //         //and which subRequest need to be made for those as defined by the bound child component
+  //         (dataRequest as DetailedLinkedDataRequest).properties.push({
+  //           propertyShapes: appliedPropertyShapes,
+  //           request: (value as BoundComponentFactory<any, any>)._comp.dataRequest,
+  //         });
+  //       }
+  //       //overwrite the value of this key with the returned value
+  //       dataResponse[key] = value;
+  //     }
+  //   });
+  // }
 }
 
-function updateCache(source:Node,request:LinkedDataRequest,requestResult?:QuadArray|true) {
-  let requestCache = nodeToDataRequest.get(source)
+function updateCache(source: Node, request: LinkedDataRequest, requestResult?: QuadArray | true) {
+  let requestCache = nodeToDataRequest.get(source);
   requestCache.set(request, requestResult);
 
   //TODO: somehow update cache for complex requests with nested property shapes
 
   //if specific properties were requested (rather than simply a shape)
   if ((request as DetailedLinkedDataRequest).shape) {
-
     //check each requested proeprty shape
     let {shape, properties} = request as DetailedLinkedDataRequest;
     properties.map((propertyRequest: PropertyShape) => {
@@ -660,21 +711,21 @@ function updateCache(source:Node,request:LinkedDataRequest,requestResult?:QuadAr
         [propertyShape, subRequest] = propertyRequest;
 
         //for each returned value for this property path
-        source.getAll(propertyShape.path).forEach(propertyValue => {
+        source.getAll(propertyShape.path).forEach((propertyValue) => {
           //update the cache to state that we have loaded the sub request for this specific node
           //an also check the subrequest recursively for any more deeply nested requests
           //but first: for subrequests we need to first make sure an entry exists in the cache for this node
           if (!nodeToDataRequest.has(propertyValue)) {
             nodeToDataRequest.set(propertyValue, new CoreMap());
           }
-          updateCache(propertyValue,subRequest,true);
-        })
+          updateCache(propertyValue, subRequest, true);
+        });
       }
     });
   }
 }
 
-function getResponsePropertyShapeClone(propertyShapes:PropertyShape[],dataRequest:LinkedDataRequest,dataResponse:LinkedDataResponse) {
+/*function getResponsePropertyShapeClone(propertyShapes:PropertyShape[],dataRequest:LinkedDataRequest,dataResponse:LinkedDataResponse) {
 
   let propertyShapeClone;
   let checkPropertyShape = (value, target, key) => {
@@ -710,7 +761,48 @@ function getResponsePropertyShapeClone(propertyShapes:PropertyShape[],dataReques
     });
   }
   return propertyShapeClone
+}*/
+function createDataRequestObject(
+  shapeClass,
+  dataResponse: LinkedDataResponse,
+  instance: TraceShape,
+): LinkedDataRequest {
+  let dataRequest: LinkedDataRequest = {
+    shape: shapeClass,
+    properties: instance.requested,
+  };
+
+  if (!Array.isArray(dataResponse) && typeof dataResponse === 'object') {
+    Object.getOwnPropertyNames(dataResponse).forEach((key) => {
+      //if a function was returned for this key
+      if (typeof dataResponse[key] === 'function') {
+        //count the current amount of property shapes requested so far
+        let previousNumPropShapes = instance.requested.length;
+
+        //then call the function to get the actual intended value
+        //this will also trigger new accessors to be called & propertyshapes to be added
+        let value = (dataResponse[key] as Function)();
+        //if a bound component was returned
+        if (value && value._create) {
+          //retrieve and remove any propertyShape that were requested
+          let appliedPropertyShapes = instance.requested.splice(previousNumPropShapes);
+          (value as BoundComponentFactory<any, any>)._props = appliedPropertyShapes;
+
+          //then place back an object stating which property shapes were requested
+          //and which subRequest need to be made for those as defined by the bound child component
+          (dataRequest as DetailedLinkedDataRequest).properties.push({
+            propertyShapes: appliedPropertyShapes,
+            request: (value as BoundComponentFactory<any, any>)._comp.dataRequest,
+          });
+        }
+        //overwrite the value of this key with the returned value
+        dataResponse[key] = value;
+      }
+    });
+  }
+  return dataRequest;
 }
+
 function useLinkedData(source, shapeClass) {
   return null;
 }
@@ -725,7 +817,7 @@ interface TraceShape extends Shape {
 // function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
 function createTraceShape(shapeClass: typeof Shape, shapeInstance?: Shape, debugName?: string): TraceShape {
   let detectionClass = class extends shapeClass implements TraceShape {
-    requested: PropertyShape[] = []
+    requested: PropertyShape[] = [];
     // resultOrigins:CoreMap<any,any> = new CoreMap();
     usedAccessors: any[] = [];
 
@@ -853,7 +945,7 @@ class TestNode extends NamedNode {
   //@TODO: other methods like getDeep, etc
 }
 
-function registerComponent(exportedComponent: Component,shape?: typeof Shape) {
+function registerComponent(exportedComponent: Component, shape?: typeof Shape) {
   if (!shape) {
     //warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
     if (!exportedComponent.hasOwnProperty('shape')) {
@@ -930,27 +1022,12 @@ export function initTree() {
   // }
 }
 
-function bindComponentToData<P,ShapeType extends Shape>(source):BoundComponentFactory<P,ShapeType> {
-  console.log(this, source);
-
-  //find the property shape that requested the data we receive here (we stored it earlier)
-  // let propertyShape: PropertyShape = data['_reqPropShape'];
-  // let accessor: any = data['_accessor'].get;
-
-  // return boundComponent as FunctionalComponent<any,any>;
+function bindComponentToData<P, ShapeType extends Shape>(source: Node | Shape): BoundComponentFactory<P, ShapeType> {
   return {
-    _comp:this,
-    _create: (propertyShape: PropertyShape) => {
-      // boundComponent({...props,accessor})
-      let boundComponent:LinkedFunctionalComponent<P,ShapeType> = (props) => {
-        //this bound component will receive the PARENT sourceShape as source
-        // let parentSource = props.parentSource;
-        // let parentSource = data;
-
-        //and from that it can recall the right accessor (this calls for example Person.get name() { ... }
-        // let accessorResult = accessor.apply(parentSource);
-
-        //TODO: use propertyShape for RDFa
+    _comp: this,
+    _create: (propertyShapes) => {
+      let boundComponent: LinkedFunctionalComponent<P, ShapeType> = (props) => {
+        //TODO: use propertyShapes for RDFa
 
         //add this result as the source of the bound child component
         let newProps = {...props};

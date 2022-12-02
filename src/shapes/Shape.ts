@@ -18,6 +18,7 @@ import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
 import {PropertyShape} from './SHACL';
+import {BoundComponentFactory} from '../interfaces/Component';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -26,17 +27,21 @@ interface IClassConstruct {
 
   prototype: any;
 }
-
-export type LinkedDataResponse = [] | {[key: string]: any};
+export type ResponseUnit = Node|Shape|BoundComponentFactory<any>|string|number|ICoreIterable<Node|Shape|string|number>;
+export type LinkedDataResponse = ResponseUnit[] | {[key: string]: ResponseUnit|(() => ResponseUnit)};
 export type LinkedDataDeclaration<T> = {
   shape: typeof Shape;
-  request: (dummyInstance: T) => LinkedDataResponse;
+  request: (shapeInstance: T) => LinkedDataResponse;
 };
 export type LinkedDataRequest = typeof Shape | DetailedLinkedDataRequest;
 export type DetailedLinkedDataRequest = {
   shape: typeof Shape;
-  properties:(PropertyShape|[PropertyShape,LinkedDataRequest])[];
+  properties:(PropertyShape|BoundPropertyShapes)[];
 };
+export type BoundPropertyShapes = {
+  propertyShapes:PropertyShape[],
+  request:LinkedDataRequest;
+}
 
 /**
  * The base class of all classes that represent a rdfs:Class in the graph.
@@ -215,10 +220,12 @@ export abstract class Shape extends EventEmitter implements IShape {
     this: {new (node: Node): T; targetClass: any},
     dataRequestFn: (dummyInstance: T) => LinkedDataResponse,
   ): LinkedDataDeclaration<T> {
+    //return an object with the shape and a request key. The value of request is a function
+    //that can be executed for a specific instance of the shape
     return {
       shape: this as any as typeof Shape,
-      request: (testInstance) => {
-        return dataRequestFn(testInstance);
+      request: (shapeInstance) => {
+        return dataRequestFn(shapeInstance);
       },
     };
   }
