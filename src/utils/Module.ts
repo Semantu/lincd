@@ -31,6 +31,7 @@ import {Storage} from './Storage';
 import {ShapeSet} from '../collections/ShapeSet';
 import {CoreMap} from '../collections/CoreMap';
 import {QuadArray} from '../collections/QuadArray';
+import {QuadSet} from '../collections/QuadSet';
 // import {createRoot} from 'react-dom/client';
 
 //global tree
@@ -45,7 +46,13 @@ export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 var packageParsePromises: Map<string, Promise<any>> = new Map();
 var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape, CoreSet<Component>> = new Map();
-var nodeToDataRequest: CoreMap<Node, CoreMap<LinkedDataRequest, Promise<void> | QuadArray>> = new CoreMap();
+/**
+ * a map of data requests for specific nodes
+ * The value is a promise if its still loading
+ * QuadArray if its completed
+ * Or 'true' if it was already loaded as a subRequest of another request
+ */
+var nodeToDataRequest: CoreMap<Node, CoreMap<LinkedDataRequest, Promise<void> | QuadArray | true>> = new CoreMap();
 // type LinkedComponentClassDecorator<ShapeType,P> = <T extends typeof LinkedComponentClass<ShapeType,P>>(constructor:T)=>T;
 type ClassDecorator = <T extends {new (...args: any[]): {}}>(constructor: T) => T;
 
@@ -388,38 +395,8 @@ export function linkedPackage(
 
       //here we create an identical object to the one that was returned (either an array or object)
       //and we replace those values that used Component.of(...) with the accessor they will require to run
-      let checkPropertyShape = (value, target, key) => {
-        //always take the first next property shape in line
-        let propertyShape = propertyShapes.shift();
-        //save it in the propertyShapeClone if this value is a bound component
-        if (value && value._create) {
-          target[key] = propertyShape;
-          //first, find the index of the shifted propertyShape in the original request.properties array
-          //we can calculate that manually
-          //TODO: test if indexOf would be faster
-          let numLeft = propertyShapes.length;
-          let total = (dataRequest as DetailedLinkedDataRequest).properties.length;
-          let targetIndex = total-numLeft-1;
-          //then replace the propertyShape in the dataRequest with a new entry,
-          //that adds the nested data dependencies of this bound child component
-          (dataRequest as DetailedLinkedDataRequest).properties[targetIndex] = [
-            propertyShape,
-            (value as BoundComponentFactory<P,ShapeType>)._comp.dataRequest
-          ]
+      propertyShapeClone = getResponsePropertyShapeClone(propertyShapes,dataRequest,dataResponse);
 
-        }
-      };
-      if (Array.isArray(dataResponse)) {
-        propertyShapeClone = [];
-        (dataResponse as any[]).forEach((value, index) => {
-          checkPropertyShape(value, propertyShapeClone, index);
-        });
-      } else {
-        propertyShapeClone = {};
-        Object.getOwnPropertyNames(dataResponse).forEach((key) => {
-          checkPropertyShape(dataResponse[key], propertyShapeClone, key);
-        });
-      }
 
       console.log('Data response:', dataResponse);
       console.log('Requested properties:', dataRequest.properties.map((r) => r instanceof PropertyShape ? r.path.toString() : '(ComplexRequest)').join(', '));
@@ -438,7 +415,7 @@ export function linkedPackage(
 
       //if the data request has already been made and the request has already resolved
       //then we can safely continue to render straight away
-      let preLoaded: boolean = requestCache.has(dataRequest) && !(requestCache.get(dataRequest) instanceof Promise);
+      let preLoaded: boolean = requestCache && requestCache.has(dataRequest) && !(requestCache.get(dataRequest) instanceof Promise);
 
       let [dataLoaded, setDataLoaded] = useState<boolean>(false);
       useEffect(() => {
@@ -449,10 +426,8 @@ export function linkedPackage(
             console.log('Received ' + quads.toString());
 
             //update the cached result to the actual quads instead of the promise
-            requestCache.set(dataRequest, quads);
-
-            //TODO: somehow update cache for complex requests with nested property shapes
-            // we will
+            //also mark any subRequests as loaded for the right nodes
+            updateCache(linkedProps.sourceShape.node,dataRequest,quads);
 
             //and once loaded, set some state to force rerender
             setDataLoaded(true);
@@ -472,20 +447,8 @@ export function linkedPackage(
 
           //finally we replace any temporary placeholders returned by 'Component.of(..)'
           //with real components
-          let replaceBoundComponent = (value, propertyShape, target, key) => {
-            if (value && value['_create']) {
-              target[key] = value['_create'](propertyShape);
-            }
-          };
-          if (Array.isArray(dataResponse)) {
-            (dataResponse as any[]).forEach((value, index) => {
-              replaceBoundComponent(value, propertyShapeClone[index], dataResponse, index);
-            });
-          } else {
-            Object.getOwnPropertyNames(dataResponse).forEach((key) => {
-              replaceBoundComponent(dataResponse[key], propertyShapeClone[key], dataResponse, key);
-            });
-          }
+          replaceBoundComponents(propertyShapeClone,dataResponse);
+
           linkedProps['linkedData'] = dataResponse;
         }
 
@@ -658,7 +621,96 @@ export function linkedPackage(
     packageExports: packageTreeObject,
   } as LinkedPackageObject;
 }
+function replaceBoundComponents(propertyShapeClone:any,dataResponse:LinkedDataResponse) {
+  let replaceBoundComponent = (value, propertyShape, target, key) => {
+    if (value && value['_create']) {
+      target[key] = value['_create'](propertyShape);
+    }
+  };
+  if (Array.isArray(dataResponse)) {
+    (dataResponse as any[]).forEach((value, index) => {
+      replaceBoundComponent(value, propertyShapeClone[index], dataResponse, index);
+    });
+  } else {
+    Object.getOwnPropertyNames(dataResponse).forEach((key) => {
+      replaceBoundComponent(dataResponse[key], propertyShapeClone[key], dataResponse, key);
+    });
+  }
+}
 
+function updateCache(source:Node,request:LinkedDataRequest,requestResult?:QuadArray|true) {
+  let requestCache = nodeToDataRequest.get(source)
+  requestCache.set(request, requestResult);
+
+  //TODO: somehow update cache for complex requests with nested property shapes
+
+  //if specific properties were requested (rather than simply a shape)
+  if ((request as DetailedLinkedDataRequest).shape) {
+
+    //check each requested proeprty shape
+    let {shape, properties} = request as DetailedLinkedDataRequest;
+    properties.map((propertyRequest: PropertyShape) => {
+      let subRequest: LinkedDataRequest;
+      let propertyShape: PropertyShape;
+
+      //if this property request is given as an array
+      //then it comes from a bound child component request, aka a sub request
+      if (Array.isArray(propertyRequest)) {
+        //we can decompose it like this, see LinkedDataRequest
+        [propertyShape, subRequest] = propertyRequest;
+
+        //for each returned value for this property path
+        source.getAll(propertyShape.path).forEach(propertyValue => {
+          //update the cache to state that we have loaded the sub request for this specific node
+          //an also check the subrequest recursively for any more deeply nested requests
+          //but first: for subrequests we need to first make sure an entry exists in the cache for this node
+          if (!nodeToDataRequest.has(propertyValue)) {
+            nodeToDataRequest.set(propertyValue, new CoreMap());
+          }
+          updateCache(propertyValue,subRequest,true);
+        })
+      }
+    });
+  }
+}
+
+function getResponsePropertyShapeClone(propertyShapes:PropertyShape[],dataRequest:LinkedDataRequest,dataResponse:LinkedDataResponse) {
+
+  let propertyShapeClone;
+  let checkPropertyShape = (value, target, key) => {
+    //always take the first next property shape in line
+    let propertyShape = propertyShapes.shift();
+    //save it in the propertyShapeClone if this value is a bound component
+    if (value && value._create) {
+      target[key] = propertyShape;
+      //first, find the index of the shifted propertyShape in the original request.properties array
+      //we can calculate that manually
+      //TODO: test if indexOf would be faster
+      let numLeft = propertyShapes.length;
+      let total = (dataRequest as DetailedLinkedDataRequest).properties.length;
+      let targetIndex = total-numLeft-1;
+      //then replace the propertyShape in the dataRequest with a new entry,
+      //that adds the nested data dependencies of this bound child component
+      (dataRequest as DetailedLinkedDataRequest).properties[targetIndex] = [
+        propertyShape,
+        (value as BoundComponentFactory<any,any>)._comp.dataRequest
+      ]
+
+    }
+  };
+  if (Array.isArray(dataResponse)) {
+    propertyShapeClone = [];
+    (dataResponse as any[]).forEach((value, index) => {
+      checkPropertyShape(value, propertyShapeClone, index);
+    });
+  } else {
+    propertyShapeClone = {};
+    Object.getOwnPropertyNames(dataResponse).forEach((key) => {
+      checkPropertyShape(dataResponse[key], propertyShapeClone, key);
+    });
+  }
+  return propertyShapeClone
+}
 function useLinkedData(source, shapeClass) {
   return null;
 }
