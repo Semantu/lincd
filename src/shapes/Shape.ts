@@ -27,8 +27,9 @@ interface IClassConstruct {
 
   prototype: any;
 }
-export type ResponseUnit = Node|Shape|BoundComponentFactory<any>|string|number|ICoreIterable<Node|Shape|string|number>;
-export type LinkedDataResponse = ResponseUnit[] | {[key: string]: ResponseUnit|(() => ResponseUnit)};
+export type WrappedResponseUnit = BoundComponentFactory<any>|ResponseUnit;
+export type ResponseUnit = Node|Shape|string|number|ICoreIterable<Node|Shape|string|number>;
+export type LinkedDataResponse = (ResponseUnit|(() => WrappedResponseUnit))[] | {[key: string]: ResponseUnit|(() => WrappedResponseUnit)};
 export type LinkedDataDeclaration<T> = {
   shape: typeof Shape;
   request: (shapeInstance: T) => LinkedDataResponse;
