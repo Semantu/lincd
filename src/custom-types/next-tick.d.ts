@@ -4,8 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 declare module 'next-tick' {
-	//export default function(fn:Function)
-	function nextTick(fn: Function);
+  //export default function(fn:Function)
+  function nextTick(fn: Function);
 
-	export = nextTick;
+  export = nextTick;
 }

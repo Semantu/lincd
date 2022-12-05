@@ -8,39 +8,36 @@ import {NamedNode, Node} from '../models';
 import {ICoreIterable} from './ICoreIterable';
 
 export interface IShape extends IGraphObject {
-	set(property: NamedNode, value: Node): boolean;
+  set(property: NamedNode, value: Node): boolean;
 
-	mset(property: NamedNode, values: ICoreIterable<Node>): boolean;
+  mset(property: NamedNode, values: ICoreIterable<Node>): boolean;
 
-	overwrite(property: NamedNode, value: Node): boolean;
+  overwrite(property: NamedNode, value: Node): boolean;
 
-	moverwrite(property: NamedNode, values: ICoreIterable<Node>): boolean;
+  moverwrite(property: NamedNode, values: ICoreIterable<Node>): boolean;
 
-	unset(property: NamedNode, value: Node): boolean;
+  unset(property: NamedNode, value: Node): boolean;
 
-	unsetAll(property: NamedNode): boolean;
+  unsetAll(property: NamedNode): boolean;
 
-	hasExact(property: NamedNode, value: Node): boolean;
+  hasExact(property: NamedNode, value: Node): boolean;
 
-	has(property: NamedNode, value: Node): boolean;
+  has(property: NamedNode, value: Node): boolean;
 
-	hasProperty(property: NamedNode): boolean;
+  hasProperty(property: NamedNode): boolean;
 
-	hasInverseProperty(property: NamedNode): boolean;
+  hasInverseProperty(property: NamedNode): boolean;
 
-	hasInverse(property: NamedNode, value: Node): boolean;
+  hasInverse(property: NamedNode, value: Node): boolean;
 
-	hasPath(properties: NamedNode[]): boolean;
+  hasPath(properties: NamedNode[]): boolean;
 
-	hasPathTo(properties: NamedNode[], value?: Node): boolean;
+  hasPathTo(properties: NamedNode[], value?: Node): boolean;
 
-	hasPathToSomeInSet(
-		properties: NamedNode[],
-		endPoints?: ICoreIterable<Node>,
-	): boolean;
+  hasPathToSomeInSet(properties: NamedNode[], endPoints?: ICoreIterable<Node>): boolean;
 
-	hasExplicit(property: NamedNode, value: Node): boolean;
+  hasExplicit(property: NamedNode, value: Node): boolean;
 
-	namedNode: NamedNode;
-	node: Node;
+  namedNode: NamedNode;
+  node: Node;
 }

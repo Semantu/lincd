@@ -31,7 +31,6 @@ import * as NQuads from './utils/NQuads';
 import * as LinkedComponentClass from './utils/LinkedComponentClass';
 import * as ForwardReasoning from './utils/ForwardReasoning';
 import * as NameSpace from './utils/NameSpace';
-import * as ReactComponent from './shapes/ReactComponent';
 import * as ShapeDecorators from './utils/ShapeDecorators';
 import * as List from './shapes/List';
 import * as IGraphObject from './interfaces/IGraphObject';
@@ -58,57 +57,56 @@ export const {linkedComponent, linkedShape} = linkedPackage('lincd');
 //therefor we do not export all the classes here from the index directly
 //instead we export all classes here as _moduleExports for internal exposure (and in-browser cross module availability)
 let publicFiles = {
-	Node,
-	EventEmitter,
-	NodeURIMappings,
-	CoreSet,
-	CoreMap,
-	SearchMap,
-	PropertySet,
-	NodeMap,
-	NodeSet,
-	QuadArray,
-	QuadMap,
-	QuadSet,
-	models,
+  Node,
+  EventEmitter,
+  NodeURIMappings,
+  CoreSet,
+  CoreMap,
+  SearchMap,
+  PropertySet,
+  NodeMap,
+  NodeSet,
+  QuadArray,
+  QuadMap,
+  QuadSet,
+  models,
   Storage,
-	Shape,
-	ShapeSet,
-	Debug,
-	NameSpace,
-	List,
-	URI,
+  Shape,
+  ShapeSet,
+  Debug,
+  NameSpace,
+  List,
+  URI,
   ForwardReasoning,
-	Find,
-	Order,
-	Prefix,
-	NQuads,
-	Boolean,
-	ShapeDecorators,
-	ReactComponent,
-	Module,
-	IGraphObject,
-	IGraphObjectSet,
-	ICoreIterable,
-	IQuadStore,
-	Component,
+  Find,
+  Order,
+  Prefix,
+  NQuads,
+  Boolean,
+  ShapeDecorators,
+  Module,
+  IGraphObject,
+  IGraphObjectSet,
+  ICoreIterable,
+  IQuadStore,
+  Component,
   LinkedComponentClass,
-	SHACLShapes,
-	rdf,
-	rdfs,
-	xsd,
-	shacl,
+  SHACLShapes,
+  rdf,
+  rdfs,
+  xsd,
+  shacl,
 };
 //register the library globally and make all classes available directly from it
 var lincdExport = {};
 for (let fileKey in publicFiles) {
-	let exportedClasses = publicFiles[fileKey];
-	for (let className in exportedClasses) {
-		lincdExport[className] = exportedClasses[className];
-	}
+  let exportedClasses = publicFiles[fileKey];
+  for (let className in exportedClasses) {
+    lincdExport[className] = exportedClasses[className];
+  }
 }
 if (typeof window !== 'undefined') {
-	Object.assign(window['lincd'], lincdExport);
+  Object.assign(window['lincd'], lincdExport);
 } else if (typeof global !== 'undefined') {
-	Object.assign(global['lincd'], lincdExport);
+  Object.assign(global['lincd'], lincdExport);
 }

@@ -13,92 +13,82 @@ import {NodeSet} from '../collections/NodeSet';
 import {rdf} from '../ontologies/rdf';
 
 export class SHACL_Shape extends Shape {
-	static targetClass: NamedNode = shacl.Shape;
+  static targetClass: NamedNode = shacl.Shape;
 }
 
 export class NodeShape extends SHACL_Shape {
-	static targetClass: NamedNode = shacl.NodeShape;
+  static targetClass: NamedNode = shacl.NodeShape;
 
-	addPropertyShape(property: PropertyShape) {
-		this.set(shacl.property, property.namedNode);
-	}
-	getPropertyShapes(): ShapeSet<PropertyShape> {
-		return PropertyShape.getSetOf(this.getAll(shacl.property));
-	}
+  addPropertyShape(property: PropertyShape) {
+    this.set(shacl.property, property.namedNode);
+  }
+  getPropertyShapes(): ShapeSet<PropertyShape> {
+    return PropertyShape.getSetOf(this.getAll(shacl.property));
+  }
 
-	get targetNode(): NamedNode {
-		return this.getOne(shacl.targetNode) as NamedNode;
-	}
+  get targetNode(): NamedNode {
+    return this.getOne(shacl.targetNode) as NamedNode;
+  }
 
-	set targetNode(value) {
-		this.overwrite(shacl.targetNode, value);
-	}
+  set targetNode(value) {
+    this.overwrite(shacl.targetNode, value);
+  }
 
-	get targetClass(): NamedNode {
-		return this.getOne(shacl.targetClass) as NamedNode;
-	}
+  get targetClass(): NamedNode {
+    return this.getOne(shacl.targetClass) as NamedNode;
+  }
 
-	set targetClass(value) {
-		this.overwrite(shacl.targetClass, value);
-	}
+  set targetClass(value) {
+    this.overwrite(shacl.targetClass, value);
+  }
 
-	get in(): NamedNode {
-		return this.getOne(shacl.in) as NamedNode;
-	}
+  get in(): NamedNode {
+    return this.getOne(shacl.in) as NamedNode;
+  }
 
-	set in(value: NamedNode) {
-		this.overwrite(shacl.in, value);
-	}
+  set in(value: NamedNode) {
+    this.overwrite(shacl.in, value);
+  }
 
-	get inList(): List {
-		return this.hasProperty(shacl.in)
-			? List.getOf(this.getOne(shacl.in))
-			: null;
-	}
+  get inList(): List {
+    return this.hasProperty(shacl.in) ? List.getOf(this.getOne(shacl.in)) : null;
+  }
 
-	set inList(value: List) {
-		this.overwrite(shacl.in, value.node);
-	}
+  set inList(value: List) {
+    this.overwrite(shacl.in, value.node);
+  }
 
   /**
    * Returns all the classes and properties that are references by this shape
    */
-  getOntologyEntities():NodeSet<NamedNode>
-  {
+  getOntologyEntities(): NodeSet<NamedNode> {
     let entities = new NodeSet<NamedNode>();
-    if(this.targetClass)
-    {
-      entities.add(this.targetClass)
+    if (this.targetClass) {
+      entities.add(this.targetClass);
     }
     //add ontology entities of all property shapes
-    this.getPropertyShapes().forEach(propertyShape => {
+    this.getPropertyShapes().forEach((propertyShape) => {
       entities = entities.concat(propertyShape.getOntologyEntities());
-    })
+    });
     return entities;
   }
 
-  validate(node:Node):boolean
-  {
-    if(this.targetClass)
-    {
-      if(!(node instanceof NamedNode && node.has(rdf.type,this.targetClass)))
-      {
-        return false
+  validate(node: Node): boolean {
+    if (this.targetClass) {
+      if (!(node instanceof NamedNode && node.has(rdf.type, this.targetClass))) {
+        return false;
       }
     }
     let propertyShapes = this.getPropertyShapes();
-    if(propertyShapes.size > 0)
-    {
-      if(node instanceof Literal)
-      {
+    if (propertyShapes.size > 0) {
+      if (node instanceof Literal) {
         return false;
-      }
-      else if(node instanceof NamedNode)
-      {
-        if(!this.getPropertyShapes().every(propertyShape => {
-          return propertyShape.validate(node);
-        }))
-        {
+      } else if (node instanceof NamedNode) {
+        if (
+          !this.getPropertyShapes().every((propertyShape) => {
+            return propertyShape.validate(node);
+          })
+        ) {
           return false;
         }
       }
@@ -106,143 +96,133 @@ export class NodeShape extends SHACL_Shape {
     return true;
   }
 
-  static getShapesOf(node:Node)
-  {
-    return this.getLocalInstances().filter(shape => {
+  static getShapesOf(node: Node) {
+    return this.getLocalInstances().filter((shape) => {
       return shape.validate(node);
     });
   }
 }
 
-export class ValidationResult {
-
-}
+export class ValidationResult {}
 
 export class PropertyShape extends SHACL_Shape {
-	static targetClass: NamedNode = shacl.PropertyShape;
+  static targetClass: NamedNode = shacl.PropertyShape;
 
-	get class(): NamedNode {
-		return this.getOne(shacl.class) as NamedNode;
-	}
+  get class(): NamedNode {
+    return this.getOne(shacl.class) as NamedNode;
+  }
 
-	set class(value: NamedNode) {
-		this.overwrite(shacl.class, value);
-	}
+  set class(value: NamedNode) {
+    this.overwrite(shacl.class, value);
+  }
 
-	get nodeShape(): NodeShape {
-		return this.hasProperty(shacl.node)
-			? NodeShape.getOf(this.getOne(shacl.node))
-			: null;
-	}
+  get nodeShape(): NodeShape {
+    return this.hasProperty(shacl.node) ? NodeShape.getOf(this.getOne(shacl.node)) : null;
+  }
 
-	set nodeShape(value: NodeShape) {
-		this.overwrite(shacl.node, value.node);
-	}
+  set nodeShape(value: NodeShape) {
+    this.overwrite(shacl.node, value.node);
+  }
 
-	get datatype(): NamedNode {
-		return this.getOne(shacl.datatype) as NamedNode;
-	}
+  get nodeKind(): NamedNode {
+    return this.getOne(shacl.nodeKind) as NamedNode;
+  }
 
-	set datatype(value: NamedNode) {
-		this.overwrite(shacl.datatype, value);
-	}
+  set nodeKind(value: NamedNode) {
+    this.overwrite(shacl.nodeKind, value);
+  }
 
-	get maxCount(): number {
-		return parseInt(this.getValue(shacl.maxCount));
-	}
+  get datatype(): NamedNode {
+    return this.getOne(shacl.datatype) as NamedNode;
+  }
 
-	set maxCount(value: number) {
-		this.overwrite(shacl.maxCount, new Literal(value.toString(), xsd.integer));
-	}
+  set datatype(value: NamedNode) {
+    this.overwrite(shacl.datatype, value);
+  }
 
-	get minCount(): number {
-		return parseInt(this.getValue(shacl.minCount));
-	}
+  get maxCount(): number {
+    return parseInt(this.getValue(shacl.maxCount));
+  }
 
-	set minCount(value: number) {
-		this.overwrite(shacl.minCount, new Literal(value.toString(), xsd.integer));
-	}
+  set maxCount(value: number) {
+    this.overwrite(shacl.maxCount, new Literal(value.toString(), xsd.integer));
+  }
 
-	get name(): string {
-		return this.getValue(shacl.name);
-	}
+  get minCount(): number {
+    return parseInt(this.getValue(shacl.minCount));
+  }
 
-	// Setter overloading - would be nice to have one for String and another for Literal:
-	// https://github.com/microsoft/TypeScript/issues/2521
-	set name(value: string) {
-		this.overwrite(shacl.name, new Literal(value));
-	}
+  set minCount(value: number) {
+    this.overwrite(shacl.minCount, new Literal(value.toString(), xsd.integer));
+  }
 
-	get optional(): string {
-		return this.getValue(shacl.optional);
-	}
+  get name(): string {
+    return this.getValue(shacl.name);
+  }
 
-	set optional(value: string) {
-		this.overwrite(shacl.optional, new Literal(value, xsd.boolean));
-	}
+  // Setter overloading - would be nice to have one for String and another for Literal:
+  // https://github.com/microsoft/TypeScript/issues/2521
+  set name(value: string) {
+    this.overwrite(shacl.name, new Literal(value));
+  }
 
-	get path(): NamedNode {
-		return this.getOne(shacl.path) as NamedNode;
-	}
+  get optional(): string {
+    return this.getValue(shacl.optional);
+  }
 
-	set path(value: NamedNode) {
-		this.overwrite(shacl.path, value);
-	}
+  set optional(value: string) {
+    this.overwrite(shacl.optional, new Literal(value, xsd.boolean));
+  }
+
+  get path(): NamedNode {
+    return this.getOne(shacl.path) as NamedNode;
+  }
+
+  set path(value: NamedNode) {
+    this.overwrite(shacl.path, value);
+  }
 
   /**
    * Returns all the classes and properties that are references by this shape
    */
-  getOntologyEntities():NodeSet<NamedNode>
-  {
+  getOntologyEntities(): NodeSet<NamedNode> {
     //start with values of those properties that have a NamedNode as value
-    let entities = new NodeSet<NamedNode>([this.class,this.path,this.datatype].filter(value => value && true));
-    if(this.nodeShape)
-    {
+    let entities = new NodeSet<NamedNode>([this.class, this.path, this.datatype].filter((value) => value && true));
+    if (this.nodeShape) {
       //if a node shape is defined, also add all the entities of that node shape
       entities = entities.concat(this.nodeShape.getOntologyEntities());
     }
     return entities;
   }
 
-  validate(node:NamedNode):boolean
-  {
+  validate(node: NamedNode): boolean {
     //TODO: make property nodes support property paths beyond a single property
     let property = this.path;
     let values = node instanceof NamedNode ? node.getAll(property) : null;
-    if(this.class)
-    {
-      if(!values.every(value => value instanceof NamedNode && value.has(rdf.type,this.class)))
-      {
+    if (this.class) {
+      if (!values.every((value) => value instanceof NamedNode && value.has(rdf.type, this.class))) {
         return false;
       }
     }
-    if(this.datatype)
-    {
-      if(!values.every(value => value instanceof Literal && value.datatype === this.datatype))
-      {
+    if (this.datatype) {
+      if (!values.every((value) => value instanceof Literal && value.datatype === this.datatype)) {
         return false;
       }
     }
-    if(this.nodeShape)
-    {
+    if (this.nodeShape) {
       //every value should be a valid instance of this nodeShape
       let nodeShape = this.nodeShape;
-      if(!values.every(value => nodeShape.validate(value)))
-      {
+      if (!values.every((value) => nodeShape.validate(value))) {
         return false;
       }
     }
-    if(this.minCount)
-    {
-      if(values.size < this.minCount)
-      {
+    if (this.minCount) {
+      if (values.size < this.minCount) {
         return false;
       }
     }
-    if(this.maxCount)
-    {
-      if(values.size > this.maxCount)
-      {
+    if (this.maxCount) {
+      if (values.size > this.maxCount) {
         return false;
       }
     }
