@@ -436,6 +436,13 @@ export abstract class Storage {
 
   static loadShape(shapeInstance: Shape, shapeOrRequest: LinkedDataRequest): Promise<QuadArray> {
     let store = this.getTargetStoreForNode(shapeInstance.namedNode);
-    return store.loadShape(shapeInstance, shapeOrRequest);
+    if(store)
+    {
+      return store.loadShape(shapeInstance, shapeOrRequest);
+    }
+    else
+    {
+      return Promise.resolve(null);
+    }
   }
 }

@@ -360,7 +360,9 @@ export function linkedPackage(
     let tracedDataResponse: LinkedDataResponse;
     let dataDeclaration: LinkedDataDeclaration<ShapeType>;
     let propertyShapeClone: any;
-    if (Object.getPrototypeOf(requiredData) instanceof Shape) {
+
+    //if a Shape class was given (the actual class that extends Shape)
+    if (requiredData['prototype'] instanceof Shape) {
       //then we just load the whole shape
       shapeClass = requiredData as typeof Shape;
       dataRequest = shapeClass;
