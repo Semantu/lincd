@@ -686,7 +686,7 @@ function updateCache(source: Node, request: LinkedDataRequest, requestResult?: Q
 
 
   //if specific properties were requested (rather than simply a shape)
-  if ((request as DetailedLinkedDataRequest).shape) {
+  if ((request as DetailedLinkedDataRequest).properties) {
     //check each requested proeprty shape
     let {shape, properties} = request as DetailedLinkedDataRequest;
     properties.map((propertyRequest: PropertyShape|BoundPropertyShapes) => {
