@@ -557,15 +557,14 @@ export function linkedPackage(
     //if no shape object has been attached to the constructor
     if (!Object.getOwnPropertyNames(constructor).includes('shape')) {
       //create a new node shape for this shapeClass
-      let shape: NodeShape = new NodeShape();
+      let shape: NodeShape = new NodeShape(NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}/shape/${constructor.name}`));
       // shape.namedNode.uri =`${NamedNode.TEMP_URI_BASE}${packageName}/shape/${constructor.name}`;
-      shape.namedNode.uri = `${LINCD_DATA_ROOT}module/${packageName}/shape/${constructor.name}`;
+      // shape.namedNode.uri = `${LINCD_DATA_ROOT}module/${packageName}/shape/${constructor.name}`;
       constructor.shape = shape;
 
       //also create a representation in the graph of the shape class itself
-      let shapeClass = NamedNode.create();
+      let shapeClass = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}/shapeclass/${constructor.name}`);
       // shapeClass.uri = `${NamedNode.TEMP_URI_BASE}${packageName}/shapeClass/${constructor.name}`
-      shapeClass.uri = `${LINCD_DATA_ROOT}module/${packageName}/shapeclass/${constructor.name}`;
       shapeClass.set(lincdOntology.definesShape, shape.node);
       shapeClass.set(rdf.type, lincdOntology.ShapeClass);
 
