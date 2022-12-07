@@ -45,6 +45,14 @@ export abstract class Storage {
     }
   }
 
+  /**
+   * Returns true if Storage is set up to use any specific store
+   * returns false if storage is managed manually, and no call like Storage.setDefaultStore has been made
+   */
+  static isInitialised() {
+    return this.defaultStore && true;
+  }
+
   static onEvent(eventType, ...args) {
     //so either a TRIPLES_ALTERED, CLEARED_PROPERTIES, STORE_RESOURCES or REMOVE_RESOURCES event comes in
 

@@ -411,6 +411,10 @@ export function linkedPackage(
       //take the given props and add make sure both 'source' and 'sourceShape' are defined
       let linkedProps = getLinkedComponentProps<ShapeType, P>(props, shapeClass);
 
+      if(!Storage.isInitialised())
+      {
+        return functionalComponent(linkedProps);
+      }
       //get the map of requests made for this node (and make sure a map exists)
       if (!nodeToDataRequest.has(linkedProps.source)) {
         nodeToDataRequest.set(linkedProps.source, new CoreMap());
