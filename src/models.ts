@@ -22,7 +22,6 @@ import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
 import {NodeURIMappings} from './collections/NodeURIMappings';
-import {Debug} from './utils/Debug';
 import {CoreSet} from './collections/CoreSet';
 import {Prefix} from './utils/Prefix';
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
@@ -2923,6 +2922,7 @@ export class Quad extends EventEmitter {
     );
   }
 }
+
 
 let getNode = function (uri: string) {
   return NamedNode.getOrCreate(uri);

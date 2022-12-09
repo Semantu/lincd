@@ -577,8 +577,18 @@ export function linkedPackage(
       if (constructor.propertyShapes) {
         //then add them to this node shape now
         constructor.propertyShapes.forEach((propertyShape) => {
-          //update the URI (by extending the URI of the shape)
-          propertyShape.namedNode.uri = shape.namedNode.uri + `/property/${propertyShape.label}`;
+          //check if this has already been registered before (happens for modular-apps that load a certain package bundle through a script tag but also have this package already bundled)
+          let existingPropertyShapeNode = NamedNode.getNamedNode(shape.namedNode.uri + `/property/${propertyShape.label}`);
+          if(existingPropertyShapeNode)
+          {
+            //then make sure to register the same property shape for this manually loaded shape as well
+            shape.addPropertyShape(new PropertyShape(existingPropertyShapeNode));
+          }
+          else
+          {
+            //update the URI (by extending the URI of the shape)
+            propertyShape.namedNode.uri = shape.namedNode.uri + `/property/${propertyShape.label}`;
+          }
 
           shape.addPropertyShape(propertyShape);
         });
@@ -924,7 +934,7 @@ function createTraceShape(shapeClass: typeof Shape, shapeInstance?: Shape, debug
   return traceShape;
 }
 
-class TestNode extends NamedNode {
+export class TestNode extends NamedNode {
   constructor(public property?: NamedNode) {
     let uri = NamedNode.createNewTempUri();
     super(uri, true);
