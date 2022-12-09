@@ -3,9 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-//import everything from each file we want to make available to other libraries
+//import everything from each file that we want to be bundled in the stand-alone dist/lincd.js file
 import * as Module from './utils/Module';
-import {linkedPackage} from './utils/Module';
 import * as models from './models';
 import * as Storage from './utils/Storage';
 import * as EventEmitter from './events/EventEmitter';
@@ -42,71 +41,72 @@ import * as rdf from './ontologies/rdf';
 import * as rdfs from './ontologies/rdfs';
 import * as xsd from './ontologies/xsd';
 import * as shacl from './ontologies/shacl';
-
-import * as ReactDOM from 'react-dom';
-import * as React from 'react';
-
-export {React, ReactDOM};
-
+import React from "react";
 export const nextTick = require('next-tick');
 
-export const {linkedComponent, linkedShape} = linkedPackage('lincd');
-
-//we don't want people to import {NamedNode} from '@dacore/core' for example
-//because this does not work well with tree shaking
-//therefor we do not export all the classes here from the index directly
-//instead we export all classes here as _moduleExports for internal exposure (and in-browser cross module availability)
-let publicFiles = {
-  Node,
-  EventEmitter,
-  NodeURIMappings,
-  CoreSet,
-  CoreMap,
-  SearchMap,
-  PropertySet,
-  NodeMap,
-  NodeSet,
-  QuadArray,
-  QuadMap,
-  QuadSet,
-  models,
-  Storage,
-  Shape,
-  ShapeSet,
-  Debug,
-  NameSpace,
-  List,
-  URI,
-  ForwardReasoning,
-  Find,
-  Order,
-  Prefix,
-  NQuads,
-  Boolean,
-  ShapeDecorators,
-  Module,
-  IGraphObject,
-  IGraphObjectSet,
-  ICoreIterable,
-  IQuadStore,
-  Component,
-  LinkedComponentClass,
-  SHACLShapes,
-  rdf,
-  rdfs,
-  xsd,
-  shacl,
-};
-//register the library globally and make all classes available directly from it
-var lincdExport = {};
-for (let fileKey in publicFiles) {
-  let exportedClasses = publicFiles[fileKey];
-  for (let className in exportedClasses) {
-    lincdExport[className] = exportedClasses[className];
+export function initModularApp()
+{
+  //we don't want people to import {NamedNode} from 'lincd' for example
+  //because this does not work well with tree shaking
+  //therefor we do not export all the classes here from the index directly
+  //instead we make all components of LINCD available through the global tree for modular apps
+  let publicFiles = {
+    Node,
+    EventEmitter,
+    NodeURIMappings,
+    CoreSet,
+    CoreMap,
+    SearchMap,
+    PropertySet,
+    NodeMap,
+    NodeSet,
+    QuadArray,
+    QuadMap,
+    QuadSet,
+    models,
+    Storage,
+    Shape,
+    ShapeSet,
+    Debug,
+    NameSpace,
+    List,
+    URI,
+    ForwardReasoning,
+    Find,
+    Order,
+    Prefix,
+    NQuads,
+    Boolean,
+    ShapeDecorators,
+    Module,
+    IGraphObject,
+    IGraphObjectSet,
+    ICoreIterable,
+    IQuadStore,
+    Component,
+    LinkedComponentClass,
+    SHACLShapes,
+    rdf,
+    rdfs,
+    xsd,
+    shacl,
+  };
+  //register the library in the global tree and make all classes available directly from it
+  var lincdExport = {};
+  for (let fileKey in publicFiles) {
+    let exportedClasses = publicFiles[fileKey];
+    for (let className in exportedClasses) {
+      lincdExport[className] = exportedClasses[className];
+    }
   }
-}
-if (typeof window !== 'undefined') {
-  Object.assign(window['lincd'], lincdExport);
-} else if (typeof global !== 'undefined') {
-  Object.assign(global['lincd'], lincdExport);
+  //add all the exports to the global LINCD object
+  if (typeof window !== 'undefined') {
+    Object.assign(window['lincd'], lincdExport);
+  } else if (typeof global !== 'undefined') {
+    Object.assign(global['lincd'], lincdExport);
+  }
+
+  //modular apps will expect React to be available as a global variable
+  //therefor when enabling modular apps, lincd makes its own React version available through window
+  window['React'] = React;
 }

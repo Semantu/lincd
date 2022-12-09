@@ -29,10 +29,8 @@ import {createElement, default as React, useEffect, useState} from 'react';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {Storage} from './Storage';
-import {ShapeSet} from '../collections/ShapeSet';
 import {CoreMap} from '../collections/CoreMap';
 import {QuadArray} from '../collections/QuadArray';
-import {QuadSet} from '../collections/QuadSet';
 // import {createRoot} from 'react-dom/client';
 
 //global tree
@@ -979,17 +977,18 @@ function registerComponent(exportedComponent: Component, shape?: typeof Shape) {
   shapeToComponents.get(shape).add(exportedComponent);
 }
 
-function registerPackageInTree(moduleName, packageExports) {
+function registerPackageInTree(packageName, packageExports) {
   //prepare name for global tree reference
-  let moduleTreeKey = moduleName.replace(/-/g, '_');
+  // let moduleTreeKey = moduleName.replace(/-/g, '_');
   //if something with this name already registered in the global tree
-  if (moduleTreeKey in lincd._modules) {
-    console.warn('A module with the name ' + moduleName + ' has already been registered.');
+  if (packageName in lincd._modules) {
+    console.warn('A module with the name ' + packageName + ' has already been registered. Adding to existing object');
+    Object.assign(lincd._modules[packageName],packageExports);
   } else {
     //initiate an empty object for this module in the global tree
-    lincd._modules[moduleTreeKey] = packageExports || {};
+    lincd._modules[packageName] = packageExports || {};
   }
-  return lincd._modules[moduleTreeKey];
+  return lincd._modules[packageName];
 }
 
 function getPackageExport(moduleName, exportName) {
