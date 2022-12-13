@@ -38,8 +38,7 @@ export class PropertyValueSet extends NodeSet {
    * @param value the node to remove
    */
 	delete(value:Node): boolean {
-    this.subject.unset(this.property,value);
-		return false;
+    return this.subject.unset(this.property,value);
 	}
 
   /**

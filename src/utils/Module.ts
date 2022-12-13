@@ -33,6 +33,8 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {CoreMap} from '../collections/CoreMap';
 import {QuadArray} from '../collections/QuadArray';
 import {QuadSet} from '../collections/QuadSet';
+import {URI} from './URI';
+import {shacl} from '../ontologies/shacl';
 // import {createRoot} from 'react-dom/client';
 
 //global tree
@@ -258,7 +260,6 @@ export function linkedPackage(
 
   //module is parsed when all of those are parsed
   var packageParsedPromise = Promise.all([packageDataPromise || true, ...ontologyDataPromises]);
-
   packageParsePromises.set(packageName, packageParsedPromise);
 
   //if no module node was given, we will determine the URI of the module for them
@@ -560,15 +561,15 @@ export function linkedPackage(
 
     //if no shape object has been attached to the constructor
     if (!Object.getOwnPropertyNames(constructor).includes('shape')) {
+      let packageNameURI = URI.sanitize(packageName);
+
       //create a new node shape for this shapeClass
-      let shape: NodeShape = new NodeShape(NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}/shape/${constructor.name}`));
-      // shape.namedNode.uri =`${NamedNode.TEMP_URI_BASE}${packageName}/shape/${constructor.name}`;
-      // shape.namedNode.uri = `${LINCD_DATA_ROOT}module/${packageName}/shape/${constructor.name}`;
+      let shape: NodeShape = new NodeShape(NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(constructor.name)}`));
+      shape.set(rdf.type, shacl.NodeShape);
       constructor.shape = shape;
 
       //also create a representation in the graph of the shape class itself
-      let shapeClass = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}/shapeclass/${constructor.name}`);
-      // shapeClass.uri = `${NamedNode.TEMP_URI_BASE}${packageName}/shapeClass/${constructor.name}`
+      let shapeClass = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shapeclass/${URI.sanitize(constructor.name)}`);
       shapeClass.set(lincdOntology.definesShape, shape.node);
       shapeClass.set(rdf.type, lincdOntology.ShapeClass);
 
@@ -580,12 +581,22 @@ export function linkedPackage(
         //then add them to this node shape now
         constructor.propertyShapes.forEach((propertyShape) => {
           //update the URI (by extending the URI of the shape)
-          propertyShape.namedNode.uri = shape.namedNode.uri + `/property/${propertyShape.label}`;
+          propertyShape.namedNode.uri = shape.namedNode.uri + `/${URI.sanitize(propertyShape.label)}`;
 
           shape.addPropertyShape(propertyShape);
         });
         //and remove the temporary key
         delete constructor.propertyShapes;
+      }
+
+      //if property shapes referred to this node shape as the required shape for their values
+      // (note that accessor decorators always evaluate before class decorators, hence we sometimes need to process this here, AFTER the property decorators have run)
+      if(constructor.nodeShapeOf)
+      {
+        constructor.nodeShapeOf.forEach((propertyShape:PropertyShape) => {
+          //now that we have a NodeShape for this shape class, we can set the nodeShape of the property shape
+          propertyShape.nodeShape = shape;
+        })
       }
     } else {
       // (constructor.shape.node as NamedNode).uri = URI;
