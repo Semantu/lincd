@@ -1,22 +1,22 @@
 {
-    "compilerOptions": {
-		"module": "commonjs",
-		"sourceMap": false,
-		"target": "es6",
-		"outDir": "lib",
-		"declaration": true,
-		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true,
-		"downlevelIteration": true,
-		"resolveJsonModule": true,
-		"esModuleInterop": true,
-		"pretty": true,
-		"jsx": "react",
-		"types": ["node", "react", "eventemitter3"],
-		"baseUrl": "./",
-		"paths": {
-			"*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
-		}
-	},
-	"include": ["./src/index.ts", "./src/custom-types/next-tick.d.ts"]
+  "compilerOptions": {
+    "module": "commonjs",
+    "sourceMap": true,
+    "target": "es6",
+    "outDir": "lib",
+    "declaration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "downlevelIteration": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "pretty": true,
+    "jsx": "react",
+    "types": ["node", "react", "eventemitter3"],
+    "baseUrl": "./",
+    "paths": {
+      "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
+    }
+  },
+  "include": ["./src/index.ts", "./src/custom-types/next-tick.d.ts", "./src/tests/*"]
 }

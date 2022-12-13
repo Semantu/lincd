@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {Shape} from '../shapes/Shape';
 import {LinkedComponentProps} from '../interfaces/Component';
 import {NamedNode} from '../models';
@@ -8,7 +8,7 @@ import {NamedNode} from '../models';
  * This class extends React.Component.
  * Besides the usual react functionality, it provides extra properties like 'sourceShape' and also automatically rerenders when properties of the source node are changed in the graph.
  *
- * Note that this class needs to be used together with the decorator [@linkedComponentClass](/docs/lincd.js/interfaces/utils_Module.LinkedModuleObject#linkedcomponentclass)
+ * Note that this class needs to be used together with the decorator [@linkedComponentClass](/docs/lincd.js/interfaces/utils_Module.LinkedPackageObject#linkedcomponentclass)
  *
  * It receives 3 type parameters, first the ShapeClass (required) and then the usual props and state types of react.
  * As ShapeClass you will need to provide the same class as you used in the `@linkedComponentClass`.
@@ -17,8 +17,8 @@ import {NamedNode} from '../models';
  * Linked component class example:
  * ```tsx
  * import {React} from "react";
- * import {linkedComponentClass} from "../module";
- * impoprt {LinkedComponentClass} from "lincd/lib/utils/LinkedComponentClass";
+ * import {linkedComponentClass} from "../package";
+ * impoprt {LinkedComponentClass} from "lincd/lib/utils/ComponentClass";
  * @linkedComponentClass(Person)
  * export class PersonView extends LinkedComponentClass<Person> {
  *   render() {
@@ -31,44 +31,38 @@ import {NamedNode} from '../models';
  * }
  * ```
  */
-export class LinkedComponentClass<
-	ShapeClass extends Shape,
-	P = {},
-	S = any,
-> extends React.Component<P & LinkedComponentProps<ShapeClass>, S> {
-	private _shape: ShapeClass;
+export class LinkedComponentClass<ShapeClass extends Shape, P = {}, S = any> extends React.Component<
+  P & LinkedComponentProps<ShapeClass>,
+  S
+> {
+  private _shape: ShapeClass;
 
-	componentDidUpdate(
-		prevProps: Readonly<P & LinkedComponentProps<ShapeClass>>,
-		prevState: Readonly<S>,
-		snapshot?: any,
-	) {
-    if(prevProps.source !== this.props.source && this.props.source instanceof NamedNode)
-    {
+  componentDidUpdate(
+    prevProps: Readonly<P & LinkedComponentProps<ShapeClass>>,
+    prevState: Readonly<S>,
+    snapshot?: any,
+  ) {
+    if (prevProps.source !== this.props.source && this.props.source instanceof NamedNode) {
       (this.props.source as NamedNode).onChangeAny((changes, property) => {
-        console.log(
-          'Properties of source ' +
-          this._shape.toString() +
-          ' changed. Updating.',
-        );
+        console.log('Properties of source ' + this._shape.toString() + ' changed. Updating.');
         this.forceUpdate();
       });
     }
   }
 
-	get sourceShape(): ShapeClass {
-		if (typeof this._shape === 'undefined') {
-			//not providing a source is allowed
-			if (!this.props.source) {
-				this._shape = null;
-			} else {
-				let shapeClass = this.constructor['shape'];
-				if (!shapeClass) {
-					throw new Error(`${this.constructor.name} is not linked to a shape`);
-				}
-				this._shape = new shapeClass(this.props.source) as ShapeClass;
-			}
-		}
-		return this._shape;
-	}
+  get sourceShape(): ShapeClass {
+    if (typeof this._shape === 'undefined') {
+      //not providing a source is allowed
+      if (!this.props.source) {
+        this._shape = null;
+      } else {
+        let shapeClass = this.constructor['shape'];
+        if (!shapeClass) {
+          throw new Error(`${this.constructor.name} is not linked to a shape`);
+        }
+        this._shape = new shapeClass(this.props.source) as ShapeClass;
+      }
+    }
+    return this._shape;
+  }
 }

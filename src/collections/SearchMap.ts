@@ -7,7 +7,4 @@ import {CoreMap} from './CoreMap';
 import {NamedNode} from '../models';
 import {NodeSet} from './NodeSet';
 
-export class SearchMap extends CoreMap<
-	NamedNode | NodeSet<NamedNode> | '*',
-	string | NamedNode
-> {}
+export class SearchMap extends CoreMap<NamedNode | NodeSet<NamedNode> | '*', string | NamedNode> {}

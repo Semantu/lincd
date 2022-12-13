@@ -10,7 +10,7 @@ import {PropertyValueSet} from '../collections/PropertyValueSet';
 export interface IClass {
 	getSuperClassNodes(includeImplicit?: boolean): PropertyValueSet;
 
-	createInstance(node?: Node, appendix?: string): Promise<Shape>;
+  createInstance(node?: Node, appendix?: string): Promise<Shape>;
 
-	getInstances();
+  getInstances();
 }

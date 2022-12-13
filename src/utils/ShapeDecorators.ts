@@ -7,156 +7,164 @@ import {BlankNode, Literal, NamedNode, Node} from '../models';
 import {Shape} from '../shapes/Shape';
 import {NodeSet} from '../collections/NodeSet';
 import {NodeShape, PropertyShape} from '../shapes/SHACL';
+import {shacl} from '../ontologies/shacl';
 
 export interface NodeShapeConfig {
-	/**
-	 * Set to true to close the shape. This means any target node of this shape that has properties outside the defined properties of this shape is invalid.
-	 */
-	closed?: boolean;
-	/**
-	 * Optional list of properties that are also permitted in addition to those explicitly listed by this shape.
-	 */
-	ignoredProperties: NodeSet<NamedNode>;
+  /**
+   * Set to true to close the shape. This means any target node of this shape that has properties outside the defined properties of this shape is invalid.
+   */
+  closed?: boolean;
+  /**
+   * Optional list of properties that are also permitted in addition to those explicitly listed by this shape.
+   */
+  ignoredProperties: NodeSet<NamedNode>;
 }
 
 export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
-	nodeKind?: typeof Literal;
-	/**
-	 * Values of the configured property must be less than the values of this 'lessThan' property
-	 * Provide a NamedNode with rdf:type rdf:Property
-	 */
-	lessThan?: NamedNode;
-	/**
-	 * Values of the configured property must be less than or equal the values of this 'lessThan' property
-	 * Provide a NamedNode with rdf:type rdf:Property
-	 */
-	lessThanOrEquals?: NamedNode;
-	/**
-	 * All values of this property must be higher than this number
-	 */
-	minExclusive?: number | string | Literal;
-	/**
-	 * All values of this property must be higher than or equal this number
-	 */
-	minInclusive?: number;
-	/**
-	 * All values of this property must be lower than this number
-	 */
-	maxExclusive?: number;
-	/**
-	 * All values of this property must be lower than or equal this number
-	 */
-	maxInclusive?: number;
-	/**
-	 * All literal values of this property must at least be this long
-	 */
-	minLength?: number;
-	/**
-	 * All literal values of this property must at most be this long
-	 */
-	maxLength?: number;
-	/**
-	 * All literal values of this property must match this regular expression
-	 */
-	pattern?: RegExp;
-	/**
-	 * All literal values of this property must have one of these languages as their language tag
-	 */
-	languageIn?: string[];
-	/**
-	 * No pair of values may use the same language tag.
-	 */
-	uniqueLang?: boolean;
-	/**
-	 * Each literal value of this property must use this datatype
-	 */
-	dataType?: NamedNode;
+  nodeKind?: typeof Literal;
+  /**
+   * Values of the configured property must be less than the values of this 'lessThan' property
+   * Provide a NamedNode with rdf:type rdf:Property
+   */
+  lessThan?: NamedNode;
+  /**
+   * Values of the configured property must be less than or equal the values of this 'lessThan' property
+   * Provide a NamedNode with rdf:type rdf:Property
+   */
+  lessThanOrEquals?: NamedNode;
+  /**
+   * All values of this property must be higher than this number
+   */
+  minExclusive?: number | string | Literal;
+  /**
+   * All values of this property must be higher than or equal this number
+   */
+  minInclusive?: number;
+  /**
+   * All values of this property must be lower than this number
+   */
+  maxExclusive?: number;
+  /**
+   * All values of this property must be lower than or equal this number
+   */
+  maxInclusive?: number;
+  /**
+   * All literal values of this property must at least be this long
+   */
+  minLength?: number;
+  /**
+   * All literal values of this property must at most be this long
+   */
+  maxLength?: number;
+  /**
+   * All literal values of this property must match this regular expression
+   */
+  pattern?: RegExp;
+  /**
+   * All literal values of this property must have one of these languages as their language tag
+   */
+  languageIn?: string[];
+  /**
+   * No pair of values may use the same language tag.
+   */
+  uniqueLang?: boolean;
+  /**
+   * Each literal value of this property must use this datatype
+   */
+  dataType?: NamedNode;
 }
 
 export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
-	nodeKind?: typeof NamedNode | typeof BlankNode;
-	/**
-	 * Each value of this property must have this class as its rdf:type
-	 */
-	class?: NamedNode;
+  nodeKind?: typeof NamedNode | typeof BlankNode;
+  /**
+   * Each value of this property must have this class as its rdf:type
+   */
+  class?: NamedNode;
 }
 
 export interface PropertyShapeConfig {
-	/**
-	 * The property path of this property shape.
+  /**
+   * The property path of this property shape.
    *
-	 * Currently, only 1 property is supported.
-	 *
+   * Currently, only 1 property is supported.
+   *
    * Provide a NamedNode that has is a `rdf:Property`
-	 */
-	path: NamedNode;
+   */
+  path: NamedNode;
 
-	/**
-	 * Indicates that this property must exist.
-	 * Shorthand for minCount=1
-	 */
-	required?: boolean;
+  /**
+   * Indicates that this property must exist.
+   * Shorthand for minCount=1
+   */
+  required?: boolean;
 
-	/**
+  /**
    Each value must be of this node type.
 
-	 Choose from NamedNode or BlankNode or Literal and provide the actual class as value
+   Choose from NamedNode or BlankNode or Literal and provide the actual class as value
 
    @example
-```tsx
-import {BlankNode,NamedNode,Literal} from "lincd/lib/models";
-@linkedProperty({nodeKind:NamedNode})
-```
-	 */
-	nodeKind?: typeof Node;
+   ```tsx
+   import {BlankNode,NamedNode,Literal} from "lincd/lib/models";
+   @linkedProperty({nodeKind:NamedNode})
+   ```
+   */
+  nodeKind?: typeof Node | typeof Node[];
 
-	/**
-	 * Minimum number of values required
-	 */
-	minCount?: number;
-	/**
-	 * Maximum number of values allowed
-	 */
-	maxCount?: number;
-	/**
-	 * Values of the configured property must equal the values of this 'equals' property.
-	 * Provide a NamedNode with rdf:type rdf:Property
-	 */
-	equals?: NamedNode;
-	/**
-	 * Values of the configured property must differ from the values of this 'disjoint' property
-	 * Provide a NamedNode with rdf:type rdf:Property
-	 */
-	disjoint?: NamedNode;
-	/**
-	 * At least one value of this property must equal the given Node
-	 */
-	hasValue?: Node;
+  /**
+   * The shape that values of this property path need to confirm to.
+   * You need to provide a class that extends Shape.
+   * This is LINCDs equivalent of shacl:node
+   */
+  shape?: typeof Shape;
 
-	name?: string;
-	description?: string;
-	order?: number;
-	group?: string;
-	/**
-	 * should correlate to the given dataType or class
-	 * i.e. if class = foaf.Person you should provide a NamedNode with rdf.type foaf.Person or a Shape instance that has targetClass foaf.Person
-	 */
-	defaultValue?: string | number | Node | Shape;
-	/**
-	 * Each value of the property must occur in this set
-	 */
-	in?: NodeSet;
+  /**
+   * Minimum number of values required
+   */
+  minCount?: number;
+  /**
+   * Maximum number of values allowed
+   */
+  maxCount?: number;
+  /**
+   * Values of the configured property must equal the values of this 'equals' property.
+   * Provide a NamedNode with rdf:type rdf:Property
+   */
+  equals?: NamedNode;
+  /**
+   * Values of the configured property must differ from the values of this 'disjoint' property
+   * Provide a NamedNode with rdf:type rdf:Property
+   */
+  disjoint?: NamedNode;
+  /**
+   * At least one value of this property must equal the given Node
+   */
+  hasValue?: Node;
+
+  name?: string;
+  description?: string;
+  order?: number;
+  group?: string;
+  /**
+   * should correlate to the given dataType or class
+   * i.e. if class = foaf.Person you should provide a NamedNode with rdf.type foaf.Person or a Shape instance that has targetClass foaf.Person
+   */
+  defaultValue?: string | number | Node | Shape;
+  /**
+   * Each value of the property must occur in this set
+   */
+  in?: NodeSet;
 }
 
 export interface ParameterConfig {
-	optional?: number;
+  optional?: number;
 }
 
 export const literalProperty = (config: LiteralPropertyShapeConfig) => {
-	return linkedProperty(config);
+  return linkedProperty(config);
 };
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
-	return linkedProperty(config);
+  return linkedProperty(config);
 };
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
@@ -165,7 +173,7 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
  *
  * @example
  * ```
- * @linkedProperty({
+ * \@linkedProperty({
  *   path:foaf.name,
  *   required:true,
  *   nodeKind:Literal,
@@ -178,64 +186,121 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
  * ```
  */
 export const linkedProperty = (config: PropertyShapeConfig) => {
-	return function(
-		target: any,
-		propertyKey: string,
-		descriptor: PropertyDescriptor,
-	) {
-		// console.log('Property method ' + config.path.toString() + ' initialised.');
-		if (!target.constructor.shape) {
-			// console.log('Creating shape from method decorators.');
-			target.constructor.shape = new NodeShape();
-		}
-		let shape: NodeShape = target.constructor.shape;
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    let propertyShape = new PropertyShape();
+    propertyShape.path = config.path;
+    propertyShape.label = propertyKey;
+    if (config.required) {
+      propertyShape.minCount = 1;
+    } else if (config.minCount) {
+      propertyShape.minCount = config.minCount;
+    }
 
-		let property = new PropertyShape();
-		property.path = config.path;
-		if (config.required) {
-			property.minCount = 1;
-		} else if (config.minCount) {
-			property.minCount = config.minCount;
-		}
+    if (config.maxCount) {
+      propertyShape.maxCount = config.maxCount;
+    }
+    if (config['dataType']) {
+      propertyShape.datatype = config['dataType'];
+    }
 
-		if (config.maxCount) {
-			property.maxCount = config.maxCount;
-		}
+    if (config.nodeKind) {
+      let nodeKind = config.nodeKind;
+      if (nodeKind === Literal) {
+        propertyShape.nodeKind = shacl.Literal;
+      }
+      if (nodeKind === NamedNode) {
+        propertyShape.nodeKind = shacl.Literal;
+      }
+      if (nodeKind === BlankNode) {
+        propertyShape.nodeKind = shacl.Literal;
+      }
+      if (Array.isArray(nodeKind)) {
+        if (nodeKind.includes(BlankNode) && nodeKind.includes(NamedNode)) {
+          propertyShape.nodeKind = shacl.BlankNodeOrIRI;
+        }
+        if (nodeKind.includes(Literal) && nodeKind.includes(NamedNode)) {
+          propertyShape.nodeKind = shacl.IRIOrLiteral;
+        }
+        if (nodeKind.includes(Literal) && nodeKind.includes(BlankNode)) {
+          propertyShape.nodeKind = shacl.BlankNodeOrLiteral;
+        }
+      }
+    }
+    //we accept a shape configuration, which translates to a sh:nodeShape
+    if (config.shape) {
+      let nodeShape = config.shape['shape'];
+      if (nodeShape) {
+        propertyShape.nodeShape = nodeShape;
+      }
+    }
 
-		shape.addPropertyShape(property);
-		// console.log(target, propertyKey, descriptor);
+    // console.log('Property method ' + config.path.toString() + ' initialised.');
+    // if (!target.constructor.shape) {
+    // 	console.log('Creating shape from method decorators.');
+    // 	target.constructor.shape = new NodeShape();
+    // }
 
-		//
-		//sh.property
-		//  (NamedNode value must have this type, like range but restrictive)
-		//sh.class
-		// (Literal value must have this datatype, like range)
-		//sh.dataType
-		//
-		//sh.optional
-		//
-		//sh.path
-		// (values must have this node type. Choose from:  sh:NodeKind: sh:BlankNode,sh:IRI, sh:Literal, sh:BlankNodeOrIRI, sh:BlankNodeOrLiteral or sh:IRIOrLiteral)
-		//sh.nodeKind
-		// (cardinality, number, required properties would have minCount 1)
-		//sh.minCount
-		// (if only 1 value possible maxCount =1. Probably common)
-		//sh.maxCount
-		// (numbers)
-		//sh.minExclusive
-		//
-		//sh.minInclusive
-		//
-		//sh.maxExclusive
-		//
-		//sh.maxInclusive
-		// (must have exactly this value)
-		//sh.hasValue
-		// (specify possible values)
-		//sh.in
-		// (2 props must have different value)
-		//sh.disjoin
-		// (2 props must have same value)
-		//sh.equals
-	};
+    //if the shape has already been initiated (with linkedShape)
+    let shape: NodeShape = target.constructor.shape;
+    if (shape) {
+      //update the URI (by extending the URI of the shape)
+      propertyShape.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;
+
+      //then add it directly
+      shape.addPropertyShape(propertyShape);
+    } else {
+      //if not, then store property shapes in a temporary array in the constructor
+      if (!target.constructor['propertyShapes']) {
+        target.constructor['propertyShapes'] = [];
+      }
+      target.constructor['propertyShapes'].push(propertyShape);
+    }
+
+    // if(descriptor.get)
+    // {
+    //   descriptor.get['propertyShape'] = propertyShape;
+    // }
+    // if(descriptor.get)
+    // {
+    //   let original = descriptor.get;
+    //   descriptor.get = () => {
+    //
+    //     return original();
+    //   }
+    // }
+    // console.log(target, propertyKey, descriptor);
+
+    //
+    //sh.property
+    //  (NamedNode value must have this type, like range but restrictive)
+    //sh.class
+    // (Literal value must have this datatype, like range)
+    //sh.dataType
+    //
+    //sh.optional
+    //
+    //sh.path
+    // (values must have this node type. Choose from:  sh:NodeKind: sh:BlankNode,sh:IRI, sh:Literal, sh:BlankNodeOrIRI, sh:BlankNodeOrLiteral or sh:IRIOrLiteral)
+    //sh.nodeKind
+    // (cardinality, number, required properties would have minCount 1)
+    //sh.minCount
+    // (if only 1 value possible maxCount =1. Probably common)
+    //sh.maxCount
+    // (numbers)
+    //sh.minExclusive
+    //
+    //sh.minInclusive
+    //
+    //sh.maxExclusive
+    //
+    //sh.maxInclusive
+    // (must have exactly this value)
+    //sh.hasValue
+    // (specify possible values)
+    //sh.in
+    // (2 props must have different value)
+    //sh.disjoin
+    // (2 props must have same value)
+    //sh.equals
+  };
 };

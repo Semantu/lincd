@@ -11,9 +11,9 @@ export class PropertyValueSet extends NodeSet {
 		super(iterable);
 	}
 
-	createNew(...args): any {
-		return new NodeSet(...args);
-	}
+  createNew(...args): any {
+    return new NodeSet(...args);
+  }
 
 	add(v): this {
     this.subject.set(this.property,v);
@@ -31,25 +31,25 @@ export class PropertyValueSet extends NodeSet {
 		return false;
 	}
 
-	__delete(v) {
-		return super.delete(v);
-	}
+  __delete(v) {
+    return super.delete(v);
+  }
 
-	__add(v) {
-		return super.add(v);
-	}
+  __add(v) {
+    return super.add(v);
+  }
 
-	//here we overload the type definitions to indicate its a NodeSet that will be returned
-	//HOWEVER, without '|any' this will not be expected by Typescript unless we find a really intricate way of rewriting all methods of CoreSet / CoreIterable that return this into methods that return ...?
-	sort(compareFn?, thisArg?): NodeSet | any {
-		return super.sort(compareFn, thisArg) as NodeSet;
-	}
+  //here we overload the type definitions to indicate its a NodeSet that will be returned
+  //HOWEVER, without '|any' this will not be expected by Typescript unless we find a really intricate way of rewriting all methods of CoreSet / CoreIterable that return this into methods that return ...?
+  sort(compareFn?, thisArg?): NodeSet | any {
+    return super.sort(compareFn, thisArg) as NodeSet;
+  }
 
-	concat(...sets): NodeSet | any {
-		return super.concat(...sets) as NodeSet;
-	}
+  concat(...sets): NodeSet | any {
+    return super.concat(...sets) as NodeSet;
+  }
 
-	filter(fn): this {
-		return super.filter(fn) as NodeSet | any;
-	}
+  filter(fn): this {
+    return super.filter(fn) as NodeSet | any;
+  }
 }
