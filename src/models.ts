@@ -303,7 +303,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
   private static nodesToRemove: CoreSet<[NamedNode, QuadArray]> = new CoreSet();
   private static nodesURIUpdated: CoreMap<NamedNode, [string, string]> = new CoreMap();
-  private static clearedProperties: CoreMap<NamedNode,[NamedNode,QuadArray][]>;
+  private static clearedProperties: CoreMap<NamedNode,[NamedNode,QuadArray][]> = new CoreMap();
 
   //### event types ###
 
@@ -1463,7 +1463,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 	unsetAll(property: NamedNode): boolean {
 		//if not a local node we will emit events for storage controllers to be picked up
 		if (!this.isTemporaryNode) {
-			//regardless of how many tripples are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
+			//regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
 			if (!NamedNode.clearedProperties.has(this)) {
 				NamedNode.clearedProperties.set(this, []);
 				eventBatcher.register(NamedNode);
@@ -1480,7 +1480,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 		}
 
 		if (this.hasProperty(property)) {
-			//false as parameter because we don't need alteration events for each single quad, but rather manage this with clearedProperty events
+			//false as parameter because we don't need alteration events for each single quad, but rather manage this with clearedProperties events
 			this.asSubject.get(property).removeAll(false);
 			return true;
 		}
@@ -1769,7 +1769,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       [this.changedProperties, NamedNode.PROPERTY_CHANGED],
       [this.changedInverseProperties, NamedNode.INVERSE_PROPERTY_CHANGED],
       [this.alteredProperties, NamedNode.PROPERTY_ALTERED],
-      [this.alteredInverseProperties, NamedNode.INVERSE_PROPERTY_ALTERED],
+      [this.alteredInverseProperties, NamedNode.INVERSE_PROPERTY_ALTERED]
     ].forEach(([map, event]: [CoreMap<NamedNode, QuadSet>, string]) => {
       if (!map) return;
       //for each individual change that was made
@@ -1838,6 +1838,11 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       this.emitter.emit(NamedNode.URI_UPDATED, this.nodesURIUpdated);
       this.nodesURIUpdated = new CoreMap();
     }
+
+    if (this.clearedProperties.size) {
+      this.emitter.emit(NamedNode.CLEARED_PROPERTIES, this.clearedProperties);
+      this.clearedProperties = new CoreMap();
+    }
   }
 
   /**
@@ -1851,7 +1856,8 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       this.nodesToSave.size > 0 ||
       this.nodesToLoad.size ||
       this.nodesToLoadFully.size > 0 ||
-      this.nodesURIUpdated.size > 0
+      this.nodesURIUpdated.size > 0 ||
+      this.clearedProperties.size > 0
     );
   }
 

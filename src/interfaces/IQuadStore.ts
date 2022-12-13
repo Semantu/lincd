@@ -4,6 +4,7 @@ import {NodeSet} from '../collections/NodeSet';
 import {ICoreIterable} from './ICoreIterable';
 import {LinkedDataRequest, LinkedDataResponse, Shape} from '../shapes/Shape';
 import {QuadArray} from '../collections/QuadArray';
+import {CoreMap} from '../collections/CoreMap';
 
 export interface IQuadStore {
   /**
@@ -28,4 +29,11 @@ export interface IQuadStore {
   removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
 
   loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
+
+  /**
+   * Clears all values of specific predicates for specific subjects
+   * @param subjectToPredicates a map of subjects as keys and sets of properties (predicates) to clear as the values
+   * @return A promise that resolves to true if properties were cleared, or false if no properties were cleared
+   */
+  clearProperties(subjectToPredicates:CoreMap<NamedNode,NodeSet<NamedNode>>): Promise<boolean>;
 }

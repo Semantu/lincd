@@ -40,6 +40,7 @@ export abstract class Storage {
       // NamedNode.emitter.on(NamedNode.STORE_NODES,this.onStoreNodes.bind(this));
 
       NamedNode.emitter.on(NamedNode.REMOVE_NODES, this.onEvent.bind(this, NamedNode.REMOVE_NODES));
+      NamedNode.emitter.on(NamedNode.CLEARED_PROPERTIES, this.onEvent.bind(this, NamedNode.CLEARED_PROPERTIES));
 
       this._initialized = true;
     }
@@ -99,6 +100,7 @@ export abstract class Storage {
     //each entry in the array that is looped is an event type + handler
     let processOrder: [string, Function][] = [
       [NamedNode.REMOVE_NODES, this.onRemoveNodes],
+      [NamedNode.CLEARED_PROPERTIES, this.onClearedProperties],
       [NamedNode.STORE_NODES, this.onStoreNodes],
       [Quad.QUADS_ALTERED, this.onQuadsAltered],
     ];
@@ -121,7 +123,7 @@ export abstract class Storage {
       //replace stored events with one stored event that has again 2 args, the combined sets
       storedEvents[Quad.QUADS_ALTERED] = [[created, removed]];
     }
-    //combine the Sets of multiple STORE_NODES/REMOVE_NODES events into one Set
+    //combine the Sets of multiple STORE_NODES/REMOVE_NODES/CLEARED_PROPERTIES events into one Set each
     // note that since they have slightly different values, this will convert NodeSets of STORE_NODES  to a CoreSet (note a NodeSet)
     [NamedNode.STORE_NODES, NamedNode.REMOVE_NODES].forEach((eventType) => {
       if (storedEvents[eventType] && storedEvents[eventType].length > 1) {
@@ -323,6 +325,36 @@ export abstract class Storage {
     return defaultGraph;
   }
 
+  private static async onClearedProperties(clearProperties: CoreMap<NamedNode,[NamedNode,QuadArray][]>): Promise<any> {
+
+    let subjects = new NodeSet<NamedNode>(clearProperties.keys());
+
+    //get a map of where each of these nodes are stored
+    let storeMap = this.getTargetStoreMapForNodes(subjects);
+
+    //call on each store to remove the appropriate nodes
+    await Promise.all(
+      [...storeMap.entries()].map(([store, subjects]) => {
+        let storeClearMap:CoreMap<NamedNode,NodeSet<NamedNode>> = new CoreMap()
+        subjects.forEach(subject => {
+          let subjectClearMap = new NodeSet<NamedNode>();
+          clearProperties.get(subject).forEach(([clearedProperty,quads]) => {
+            //TODO: if we ever need access to the LOCALLY cleared quads in the remote stores, grab & send them from here
+            // However, if we don't, we can reshape the NamedNode model so that quads don't get sent in these events anymore
+            subjectClearMap.add(clearedProperty);
+          })
+          storeClearMap.set(subject,subjectClearMap)
+        })
+        return store.clearProperties(storeClearMap);
+      }),
+    )
+      .then((res) => {
+        return res;
+      })
+      .catch((err) => {
+        console.warn('Error during removal of nodes from storage: ' + err);
+      });
+  }
   private static async onRemoveNodes(nodesAndQuads: CoreSet<[NamedNode, QuadArray]>): Promise<any> {
     //turn all the removed quads back on (as if they were still in the graph)
     //this allows us to read the properties of the node as they were just before the node was removed.

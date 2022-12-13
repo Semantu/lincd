@@ -8,6 +8,8 @@ import {rdfs} from '../ontologies/rdfs';
 import {rdf} from '../ontologies/rdf';
 import {LinkedDataRequest, Shape} from '../shapes/Shape';
 import {QuadArray} from '../collections/QuadArray';
+import {NodeSet} from '../collections/NodeSet';
+import {CoreMap} from '../collections/CoreMap';
 
 class TestStore implements IQuadStore {
   defaultGraph = Graph.create();
@@ -58,6 +60,18 @@ class TestStore implements IQuadStore {
   loadShape(shapeInstance: Shape, request: LinkedDataRequest): Promise<QuadArray> {
     return null;
   }
+  clearProperties(subjectToPredicates:CoreMap<NamedNode,NodeSet<NamedNode>>): Promise<boolean> {
+    let deleted = false;
+    this.contents.forEach(q => {
+      if(subjectToPredicates.has(q.subject) && subjectToPredicates.get(q.subject).has(q.predicate))
+      {
+        this.contents.delete(q);
+        deleted = true;
+      }
+    });
+    return Promise.resolve(deleted);
+  }
+
 }
 
 let store = new TestStore();
