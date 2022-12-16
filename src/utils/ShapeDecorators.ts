@@ -263,6 +263,7 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
       shape.addPropertyShape(propertyShape);
     } else {
       //if not, then store property shapes in a temporary array in the constructor
+      //this is picked up in Module.ts
       if (!target.constructor['propertyShapes']) {
         target.constructor['propertyShapes'] = [];
       }

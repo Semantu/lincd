@@ -582,10 +582,19 @@ export function linkedPackage(
       if (constructor.propertyShapes) {
         //then add them to this node shape now
         constructor.propertyShapes.forEach((propertyShape) => {
-          //update the URI (by extending the URI of the shape)
-          propertyShape.namedNode.uri = shape.namedNode.uri + `/${URI.sanitize(propertyShape.label)}`;
 
-          shape.addPropertyShape(propertyShape);
+          let uri = shape.namedNode.uri + `/${URI.sanitize(propertyShape.label)}`;
+
+          //with react hot reload, sometimes the same code gets loaded twice
+          //and a node with this URI will already exist,
+          //in that case we can ignore it, since the nodeShape will already have the propertyShape
+          if(!NamedNode.getNamedNode(uri))
+          {
+            //update the URI (by extending the URI of the shape)
+            propertyShape.namedNode.uri = shape.namedNode.uri + `/${URI.sanitize(propertyShape.label)}`;
+
+            shape.addPropertyShape(propertyShape);
+          }
         });
         //and remove the temporary key
         delete constructor.propertyShapes;

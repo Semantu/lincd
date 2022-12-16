@@ -31,6 +31,7 @@ import * as NQuads from './utils/NQuads';
 import * as LinkedComponentClass from './utils/LinkedComponentClass';
 import * as ForwardReasoning from './utils/ForwardReasoning';
 import * as NameSpace from './utils/NameSpace';
+import * as Hooks from './utils/Hooks';
 import * as ShapeDecorators from './utils/ShapeDecorators';
 import * as List from './shapes/List';
 import * as IGraphObject from './interfaces/IGraphObject';
@@ -77,6 +78,7 @@ let publicFiles = {
   NameSpace,
   List,
   URI,
+  Hooks,
   ForwardReasoning,
   Find,
   Order,

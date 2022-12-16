@@ -69,4 +69,16 @@ export interface LinkedComponentInputProps<ShapeType extends Shape = Shape> {
    * Can be a Node in the graph or an instance of the Shape that this component uses
    */
   of: Node|ShapeType;
+
+  /**
+   * Add class name(s) to the top level DOM element of this component
+   * A single class name or an array of classnames. Empty entries are allowed and will be filtered
+   * e.g. className={[style.defaultClass,activeState && style.activeClass]}
+   */
+  className?:string|string[];
+
+  /**
+   * Add styles to the top level DOM element of this component
+   */
+  style?:React.CSSProperties;
 }
