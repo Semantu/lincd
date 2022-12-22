@@ -6,7 +6,6 @@
 import {NamedNode, Node} from '../models';
 import {
   BoundPropertyShapes,
-  DetailedLinkedDataRequest,
   LinkedDataDeclaration,
   LinkedDataRequest,
   LinkedDataResponse,
@@ -351,24 +350,21 @@ export function linkedPackage(
   //creates a declarator function which Components of this module can use register themselves and add themselves to the global tree
   function linkedComponent<ShapeType extends Shape, DeclaredProps = {}>(
     requiredData: typeof Shape | LinkedDataDeclaration<ShapeType>,
-    // dataDeclarationOrComponent:FunctionalComponent<P,ShapeType>|LinkedDataDeclaration<ShapeType>,
     functionalComponent: LinkableFunctionalComponent<DeclaredProps,ShapeType>,
   ): LinkedFunctionalComponent<DeclaredProps, ShapeType> {
-    // type InputProps = DeclaredProps & LinkedComponentInputProps<ShapeType>;
-    type ProvidedProps = DeclaredProps & LinkedComponentProps<ShapeType>;
-
     //if a class that extends Shape was given
     let shapeClass: typeof Shape;
     let dataRequest: LinkedDataRequest;
     let tracedDataResponse: LinkedDataResponse;
     let dataDeclaration: LinkedDataDeclaration<ShapeType>;
-    let propertyShapeClone: any;
 
     //if a Shape class was given (the actual class that extends Shape)
     if (requiredData['prototype'] instanceof Shape) {
       //then we just load the whole shape
       shapeClass = requiredData as typeof Shape;
-      dataRequest = shapeClass;
+      dataRequest = {
+        shape:shapeClass
+      };
     } else {
       //linkedDataShape is a LinkedDataRequest
       dataDeclaration = requiredData as LinkedDataDeclaration<ShapeType>;
@@ -711,9 +707,9 @@ function updateCache(source: Node, request: LinkedDataRequest, requestResult?: Q
 
 
   //if specific properties were requested (rather than simply a shape)
-  if ((request as DetailedLinkedDataRequest).properties) {
+  if (request.properties) {
     //check each requested proeprty shape
-    let {shape, properties} = request as DetailedLinkedDataRequest;
+    let {shape, properties} = request;
     properties.map((propertyRequest: PropertyShape|BoundPropertyShapes) => {
       let subRequest: LinkedDataRequest;
       let propertyShape: PropertyShape;
@@ -820,7 +816,7 @@ function createDataRequestObject(
 
         //then place back an object stating which property shapes were requested
         //and which subRequest need to be made for those as defined by the bound child component
-        (dataRequest as DetailedLinkedDataRequest).properties.push({
+        dataRequest.properties.push({
           propertyShapes: appliedPropertyShapes,
           request: (evaluated as BoundComponentFactory<any, any>)._comp.dataRequest,
         });

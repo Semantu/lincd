@@ -17,7 +17,7 @@ import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
-import {PropertyShape} from './SHACL';
+import {NodeShape,PropertyShape} from './SHACL';
 import {BoundComponentFactory} from '../interfaces/Component';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
@@ -34,10 +34,9 @@ export type LinkedDataDeclaration<T> = {
   shape: typeof Shape;
   request: (shapeInstance: T) => LinkedDataResponse;
 };
-export type LinkedDataRequest = typeof Shape | DetailedLinkedDataRequest;
-export type DetailedLinkedDataRequest = {
+export type LinkedDataRequest = {
   shape: typeof Shape;
-  properties:(PropertyShape|BoundPropertyShapes)[];
+  properties?:(PropertyShape|BoundPropertyShapes)[];
 };
 export type BoundPropertyShapes = {
   propertyShapes:PropertyShape[],
@@ -96,6 +95,8 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @internal
    */
   static typesToShapes: Map<NamedNode, CoreSet<IClassConstruct>> = new Map();
+  //TODO: rename to nodeShape to avoid confusing things like shape.shape
+  static shape: NodeShape;
 
   protected _node: Node;
   protected static instancesLoaded: Map<NamedNode, {promise: Promise<NodeSet<NamedNode>>; done: boolean}> = new Map();
