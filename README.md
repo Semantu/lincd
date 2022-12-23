@@ -542,6 +542,5 @@ Alternatively run `npm run build` to build the project just once.
 
 We welcome pull requests.
 
-[//]: # '## LICENSE'
-
-[//]: # '[MPL v2](https://www.mozilla.org/en-US/MPL/2.0/)'
+## License
+[MPL v2](https://www.mozilla.org/en-US/MPL/2.0/)
