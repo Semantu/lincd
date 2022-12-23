@@ -19,7 +19,7 @@ To our knowledge, LINCD.js is the _only_ linked data library that supports you a
 - [An in-memory RDF Graph database with intuitive API](#in-memory-rdf-graph-database)
 - [A registry of plug & play UI components, shapes & ontologies](https://www.lincd.org)
 
-LINCD.js is compatible with [RDFJS task force spec](https://github.com/rdfjs/data-model-spec)
+LINCD.js is compatible with the [RDFJS data model](https://github.com/rdfjs/data-model-spec)
 
 See also
 - [documentation](https://docs.lincd.org)
