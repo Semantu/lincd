@@ -49,7 +49,7 @@ export type LinkableFunctionalComponent<P,ShapeType extends Shape = Shape> = Rea
 export interface LinkedComponentProps<ShapeType extends Shape = Shape> {
   /**
    * An instance of the Shape that this component is linked to.
-   * Users of this component can provide this shape with <YourComponent of={nodeOrShapeInstance} />
+   * Users of this component can provide this shape with the property of: of={nodeOrShapeInstance}
    * if a node was given for 'of', linkedComponent() converts that node into an instance of the shape and provides it as 'source'
    */
   source: ShapeType;
