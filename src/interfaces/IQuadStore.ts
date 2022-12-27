@@ -5,6 +5,7 @@ import {ICoreIterable} from './ICoreIterable';
 import {LinkedDataRequest, LinkedDataResponse, Shape} from '../shapes/Shape';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreMap} from '../collections/CoreMap';
+import {ShapeSet} from '../collections/ShapeSet';
 
 export interface IQuadStore {
   /**
@@ -29,6 +30,8 @@ export interface IQuadStore {
   removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
 
   loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
+
+  loadShapes(shapeSet: ShapeSet, shape: LinkedDataRequest): Promise<QuadArray>;
 
   /**
    * Clears all values of specific predicates for specific subjects

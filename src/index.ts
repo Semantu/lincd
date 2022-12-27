@@ -51,8 +51,6 @@ export {React, ReactDOM};
 
 export const nextTick = require('next-tick');
 
-export const {linkedComponent, linkedShape} = linkedPackage('lincd');
-
 //we don't want people to import {NamedNode} from '@dacore/core' for example
 //because this does not work well with tree shaking
 //therefor we do not export all the classes here from the index directly

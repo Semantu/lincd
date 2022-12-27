@@ -10,6 +10,7 @@ import {LinkedDataRequest, Shape} from '../shapes/Shape';
 import {QuadArray} from '../collections/QuadArray';
 import {NodeSet} from '../collections/NodeSet';
 import {CoreMap} from '../collections/CoreMap';
+import {ShapeSet} from '../collections/ShapeSet';
 
 class TestStore implements IQuadStore {
   defaultGraph = Graph.create();
@@ -58,6 +59,9 @@ class TestStore implements IQuadStore {
   }
 
   loadShape(shapeInstance: Shape, request: LinkedDataRequest): Promise<QuadArray> {
+    return null;
+  }
+  loadShapes(shapeSet: ShapeSet, request: LinkedDataRequest): Promise<QuadArray> {
     return null;
   }
   clearProperties(subjectToPredicates:CoreMap<NamedNode,NodeSet<NamedNode>>): Promise<boolean> {

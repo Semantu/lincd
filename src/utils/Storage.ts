@@ -10,6 +10,7 @@ import {eventBatcher} from '../events/EventBatcher';
 import nextTick from 'next-tick';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreSet} from '../collections/CoreSet';
+import {ShapeSet} from '../collections/ShapeSet';
 
 export abstract class Storage {
   private static defaultStore: IQuadStore;
@@ -445,15 +446,23 @@ export abstract class Storage {
   }
 
   private static getTargetStoreMapForNodes(nodes: CoreSet<NamedNode>): CoreMap<IQuadStore, NamedNode[]> {
-    let storeMap: CoreMap<IQuadStore, NamedNode[]> = new CoreMap();
-    nodes.forEach((node) => {
-      let store = this.getTargetStoreForNode(node);
+    return this.getStoreMapForIGraphObjects(nodes) as CoreMap<IQuadStore, NamedNode[]>;
+  }
+  private static getTargetStoreMapForShapes(shapes: ShapeSet): CoreMap<IQuadStore, Shape[]>
+  {
+    return this.getStoreMapForIGraphObjects(shapes) as CoreMap<IQuadStore, Shape[]>;
+  }
+  private static getStoreMapForIGraphObjects(objects:ShapeSet|CoreSet<NamedNode>)
+  {
+    let storeMap: CoreMap<IQuadStore, (NamedNode|Shape)[]> = new CoreMap();
+    objects.forEach((object) => {
+      let store = this.getTargetStoreForNode(object.node || object);
       //if store is null, this means no store is observing this node. This will usually happen for the default graph which contains temporary nodes
       if (store) {
         if (!storeMap.has(store)) {
           storeMap.set(store, []);
         }
-        storeMap.get(store).push(node);
+        storeMap.get(store).push(object);
       }
     });
     return storeMap;
@@ -474,6 +483,19 @@ export abstract class Storage {
     return storeMap;
   }
 
+  static loadShapes(shapeSet: ShapeSet, shapeOrRequest: LinkedDataRequest): Promise<QuadArray> {
+    let storeMap = this.getTargetStoreMapForShapes(shapeSet);
+    return Promise.all(storeMap.map((shapes,store) => {
+      return store.loadShapes(new ShapeSet(shapes),shapeOrRequest);
+    })).then((results) => {
+      // return new QuadArray();
+      let quads = new QuadArray();
+      results.forEach(result => {
+        quads.push(...result as any);
+      });
+      return quads;
+    })
+  }
   static loadShape(shapeInstance: Shape, shapeOrRequest: LinkedDataRequest): Promise<QuadArray> {
     let store = this.getTargetStoreForNode(shapeInstance.namedNode);
     if(store)

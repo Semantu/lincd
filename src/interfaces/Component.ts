@@ -1,20 +1,28 @@
 import {Node} from '../models';
-import {LinkedDataRequest,Shape} from '../shapes/Shape';
+import {BoundComponentFactory,LinkedDataRequest,LinkedDataResponse,Shape} from '../shapes/Shape';
 import {PropertyShape} from '../shapes/SHACL';
+import {ShapeSet} from '../collections/ShapeSet';
+import {NodeSet} from '../collections/NodeSet';
 
 export type Component<P = any, ShapeType extends Shape = Shape> =
   | ClassComponent<P, ShapeType>
-  | LinkedFunctionalComponent<P, ShapeType>;
+  | LinkedFunctionalComponent<P, ShapeType>
+  | LinkedFunctionalSetComponent<P, ShapeType>;
 
 export interface ClassComponent<P, ShapeType extends Shape = Shape>
   extends React.ComponentClass<P & LinkedComponentProps<ShapeType>> {
   props: P & LinkedComponentProps<ShapeType>;
   shape?: typeof Shape;
 }
-export interface BoundComponentFactory<P,ShapeType extends Shape = Shape> {
+export interface BoundFunctionalComponentFactory<P,ShapeType extends Shape = Shape> {
   _create:(props:PropertyShape[]) => LinkedFunctionalComponent<P, ShapeType>;
   _props?:PropertyShape[];
   _comp:LinkedFunctionalComponent<P,ShapeType>
+}
+export interface BoundSetComponentFactory<P,ShapeType extends Shape = Shape> {
+  _create:(props:PropertyShape[]) => LinkedFunctionalSetComponent<P, ShapeType>;
+  _props?:PropertyShape[];
+  _comp:LinkedFunctionalSetComponent<P,ShapeType>
 }
 export interface LinkedFunctionalComponent<P,ShapeType extends Shape = Shape> extends React.FC<P & LinkedComponentInputProps<ShapeType>> {
   /**
@@ -26,7 +34,20 @@ export interface LinkedFunctionalComponent<P,ShapeType extends Shape = Shape> ex
   dataRequest?: LinkedDataRequest;
   shape?: typeof Shape;
 }
+export interface LinkedFunctionalSetComponent<P,ShapeType extends Shape = Shape> extends React.FC<P & LinkedSetComponentInputProps<ShapeType>> {
+  /**
+   * Binds a component to a source. Usually used in Shape.request() for automatic data loading.
+   * @param source the node or shape that this component should visualise
+   */
+  of?: (sources: NodeSet|ShapeSet<ShapeType>,itemRequestFn?:(shape:ShapeType)=>LinkedDataResponse) => BoundSetComponentFactory<P,ShapeType>;
+  original?: LinkableFunctionalSetComponent<P,ShapeType>;
+  dataRequest?: LinkedDataRequest;
+  shape?: typeof Shape;
+}
 export type LinkableFunctionalComponent<P,ShapeType extends Shape = Shape> = React.FC<P & LinkedComponentProps<ShapeType>>;
+export type LinkableFunctionalSetComponent<P,ShapeType extends Shape = Shape> = React.FC<P & LinkedSetComponentProps<ShapeType>>;
+
+
 // export interface FunctionalComponent<P, ShapeType extends Shape = Shape>
 //   extends React.FC<P & LinkedComponentProps<ShapeType>> {
 //   (props: P & LinkedComponentProps<ShapeType>): any;
@@ -46,14 +67,24 @@ export type LinkableFunctionalComponent<P,ShapeType extends Shape = Shape> = Rea
   sourceShape: ShapeType;
 }*/
 
-export interface LinkedComponentProps<ShapeType extends Shape = Shape> {
+export interface LinkedSetComponentProps<ShapeType extends Shape> extends LinkedComponentBaseProps
+{
+  /**
+   * An instance of the Shape that this component is linked to.
+   * Users of this component can provide this shape with the property of: of={nodeOrShapeInstance}
+   * if a node was given for 'of', linkedComponent() converts that node into an instance of the shape and provides it as 'source'
+   */
+  sources: ShapeSet<ShapeType>;
+}
+export interface LinkedComponentProps<ShapeType extends Shape> extends LinkedComponentBaseProps {
   /**
    * An instance of the Shape that this component is linked to.
    * Users of this component can provide this shape with the property of: of={nodeOrShapeInstance}
    * if a node was given for 'of', linkedComponent() converts that node into an instance of the shape and provides it as 'source'
    */
   source: ShapeType;
-
+}
+interface LinkedComponentBaseProps {
   /**
    * Then linkedData will be the result of the data request, if defined.
    * linkedData will either be an array or an object, matching the function defined in this very component
@@ -62,13 +93,24 @@ export interface LinkedComponentProps<ShapeType extends Shape = Shape> {
    * If simply a Shape class was given as first parameter, only source will be defined, and linkedData will be undefined.
    */
   linkedData?:any;
+
 }
-export interface LinkedComponentInputProps<ShapeType extends Shape = Shape> {
+
+export interface LinkedSetComponentInputProps<ShapeType extends Shape = Shape> extends LinkedComponentInputBaseProps {
+  /**
+   * The primary set of data sources that this component will represent.
+   * Can be a set of Nodes in the graph or a set of instances of the Shape that this component uses
+   */
+  of: NodeSet|ShapeSet<ShapeType>;
+}
+export interface LinkedComponentInputProps<ShapeType extends Shape = Shape> extends LinkedComponentInputBaseProps {
   /**
    * The primary data source that this component will represent.
    * Can be a Node in the graph or an instance of the Shape that this component uses
    */
   of: Node|ShapeType;
+}
+interface LinkedComponentInputBaseProps {
 
   /**
    * Add class name(s) to the top level DOM element of this component

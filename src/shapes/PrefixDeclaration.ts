@@ -1,7 +1,7 @@
-import {Literal, NamedNode} from 'lincd/src';
+import {Literal, NamedNode} from '../models';
 import {SHACL_Shape} from './SHACL';
 import {shacl} from '../ontologies/shacl';
-import {linkedShape} from '../index';
+import {linkedShape} from '../package';
 
 @linkedShape
 export class PrefixDeclaration extends SHACL_Shape {

@@ -18,7 +18,7 @@ import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
 import {NodeShape,PropertyShape} from './SHACL';
-import {BoundComponentFactory} from '../interfaces/Component';
+import {BoundFunctionalComponentFactory,BoundSetComponentFactory} from '../interfaces/Component';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -27,12 +27,17 @@ interface IClassConstruct {
 
   prototype: any;
 }
-export type WrappedResponseUnit = BoundComponentFactory<any>|ResponseUnit;
+export type BoundComponentFactory<P,ShapeType extends Shape> = BoundFunctionalComponentFactory<P,ShapeType> | BoundSetComponentFactory<P,ShapeType>;
 export type ResponseUnit = Node|Shape|string|number|ICoreIterable<Node|Shape|string|number>;
-export type LinkedDataResponse = (ResponseUnit|(() => WrappedResponseUnit))[] | {[key: string]: ResponseUnit|(() => WrappedResponseUnit)};
+export type LinkedDataResponse = (ResponseUnit|(() => BoundComponentFactory<any,any>|ResponseUnit))[] | {[key: string]: ResponseUnit|(() => BoundComponentFactory<any,any>|ResponseUnit)};
+
 export type LinkedDataDeclaration<T> = {
   shape: typeof Shape;
   request: (shapeInstance: T) => LinkedDataResponse;
+};
+export type LinkedDataSetDeclaration<T extends Shape> = {
+  shape: typeof Shape;
+  request: (shapeInstance: ShapeSet<T>) => LinkedDataResponse;
 };
 export type LinkedDataRequest = {
   shape: typeof Shape;
@@ -220,7 +225,7 @@ export abstract class Shape extends EventEmitter implements IShape {
    */
   static request<T extends Shape>(
     this: {new (node: Node): T; targetClass: any},
-    dataRequestFn: (dummyInstance: T) => LinkedDataResponse,
+    dataRequestFn: (shapeInstance: T) => LinkedDataResponse,
   ): LinkedDataDeclaration<T> {
     //return an object with the shape and a request key. The value of request is a function
     //that can be executed for a specific instance of the shape
@@ -231,6 +236,26 @@ export abstract class Shape extends EventEmitter implements IShape {
       },
     };
   }
+
+  /**
+   * Lets a LinkedComponent request specific data of a shape.
+   *
+   * @param dataRequestFn this function receives a dummy instance of the shape. The function is expected to request all the properties & methods of the shape that the component requires to function. This will inform automatic data loading
+   */
+  static requestSet<T extends Shape>(
+    this: {new (node: Node): T; targetClass: any},
+    dataRequestFn: (shapeSet: ShapeSet<T>) => LinkedDataResponse,
+  ): LinkedDataSetDeclaration<T> {
+    //return an object with the shape and a request key. The value of request is a function
+    //that can be executed for a specific instance of the shape
+    return {
+      shape: this as any as typeof Shape,
+      request: (shapeSet) => {
+        return dataRequestFn(shapeSet);
+      },
+    };
+  }
+
 
   /**
    * Returns the node this instance represents.
