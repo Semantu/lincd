@@ -1,5 +1,5 @@
 import {Node} from '../models';
-import {BoundComponentFactory,LinkedDataRequest,LinkedDataResponse,Shape} from '../shapes/Shape';
+import {BoundComponentFactory,LinkedDataDeclaration,LinkedDataRequest,LinkedDataResponse,Shape} from '../shapes/Shape';
 import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
 import {NodeSet} from '../collections/NodeSet';
@@ -39,10 +39,11 @@ export interface LinkedFunctionalSetComponent<P,ShapeType extends Shape = Shape>
    * Binds a component to a source. Usually used in Shape.request() for automatic data loading.
    * @param source the node or shape that this component should visualise
    */
-  of?: (sources: NodeSet|ShapeSet<ShapeType>,itemRequestFn?:(shape:ShapeType)=>LinkedDataResponse) => BoundSetComponentFactory<P,ShapeType>;
+  of?: (sources: NodeSet|ShapeSet,itemRequestFn?:(shape:ShapeType)=>LinkedDataResponse) => BoundSetComponentFactory<P,ShapeType>;
   original?: LinkableFunctionalSetComponent<P,ShapeType>;
   dataRequest?: LinkedDataRequest;
   shape?: typeof Shape;
+  getChildLinkedData?: (shapeInstance: ShapeType) => LinkedDataResponse
 }
 export type LinkableFunctionalComponent<P,ShapeType extends Shape = Shape> = React.FC<P & LinkedComponentProps<ShapeType>>;
 export type LinkableFunctionalSetComponent<P,ShapeType extends Shape = Shape> = React.FC<P & LinkedSetComponentProps<ShapeType>>;
@@ -75,6 +76,52 @@ export interface LinkedSetComponentProps<ShapeType extends Shape> extends Linked
    * if a node was given for 'of', linkedComponent() converts that node into an instance of the shape and provides it as 'source'
    */
   sources: ShapeSet<ShapeType>;
+
+  /**
+   * Retrieves the linked data for a specific child, as defined in the data request of the component that uses this SetComponent.
+   * Example, take this component that uses Grid:
+   * ```tsx
+   * const PersonFriends = linkedComponent(Person.request(person => ({
+   *   Grid.of(person.friends, (friend) => ({
+   *     Avatar: PersonAvatar.of(friend)
+   *   }))
+   * })),({linkedData:{Friends}}) => {
+   *   return <div>Friend list:
+   *     <Friends>{({linkedData: {Avatar}}) => {
+   *       return <Avatar />;
+   *     }}</Friends>
+   *   </div>
+   * })
+   * ```
+   *
+   * The method above that starts with (friends) => ({Avatar:...}) is the function that retrieves and links the data for each item in `person.friends`
+   * IN Grid, that function is available as the prop `getChildLinkedData` for Grid. So that it can obtain the linked data of each item it displays like this:
+   *
+   * ```tsx
+   * sources.map(source =>
+   *  <ChildComponent of={source} linkedData={getChildLinkedData(source)} />
+   * );
+   * ```
+   *
+   * Here's an example implementation of a Grid component, which assumes it receives a child-render-function as its only child :
+   * ```tsx
+   * export const Grid = linkedSetComponent(Shape,({sources,children,getChildLinkedData}) => {
+   *   return (
+   *     <div className={style.Grid}>
+   *       {sources.map((source) => {
+   *         return children({
+   *           source,
+   *           linkedData:getChildLinkedData(source)
+   *         });
+   *       })
+   *     </div>
+   *   );
+   * });
+   * ```
+   * @param shapeInstance
+   */
+  getChildLinkedData?: (shapeInstance: ShapeType) => LinkedDataResponse
+
 }
 export interface LinkedComponentProps<ShapeType extends Shape> extends LinkedComponentBaseProps {
   /**
@@ -84,7 +131,7 @@ export interface LinkedComponentProps<ShapeType extends Shape> extends LinkedCom
    */
   source: ShapeType;
 }
-interface LinkedComponentBaseProps {
+interface LinkedComponentBaseProps extends React.PropsWithChildren {
   /**
    * Then linkedData will be the result of the data request, if defined.
    * linkedData will either be an array or an object, matching the function defined in this very component

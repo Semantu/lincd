@@ -470,8 +470,6 @@ export function linkedPackage(
               //then use that now to get the requested for this instance
               dataResponse = dataDeclaration.request(linkedProps.source);
 
-              //YOU ARE HERE, UPDATE THIS METHOD FOR REPLACING () =>
-              //see
               //finally we replace any temporary placeholders returned by 'Component.of(..)'
               //with real components
               appendDataResponse(dataResponse,tracedDataResponse);
@@ -716,7 +714,7 @@ export function linkedPackage(
     };
 
     //bind
-    _wrappedComponent.of = bindSetComponentToData<DeclaredProps & LinkedSetComponentInputProps<ShapeType>, ShapeType>;
+    _wrappedComponent.of = bindSetComponentToData<DeclaredProps & LinkedSetComponentInputProps<ShapeType>, ShapeType>.bind(_wrappedComponent,shapeClass);
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
@@ -788,12 +786,12 @@ export function linkedPackage(
       let packageNameURI = URI.sanitize(packageName);
 
       //create a new node shape for this shapeClass
-      let shape: NodeShape = new NodeShape(NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(constructor.name)}`));
+      let shape: NodeShape = new NodeShape(NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(constructor.name)}`,true));
       shape.set(rdf.type, shacl.NodeShape);
       constructor.shape = shape;
 
       //also create a representation in the graph of the shape class itself
-      let shapeClass = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shapeclass/${URI.sanitize(constructor.name)}`);
+      let shapeClass = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shapeclass/${URI.sanitize(constructor.name)}`,true);
       shapeClass.set(lincdOntology.definesShape, shape.node);
       shapeClass.set(rdf.type, lincdOntology.ShapeClass);
 
@@ -1312,23 +1310,62 @@ function bindComponentToData<P, ShapeType extends Shape>(source: Node | Shape): 
     },
   };
 }
-function bindSetComponentToData<P, ShapeType extends Shape>(sources: NodeSet | ShapeSet<ShapeType>): BoundSetComponentFactory<P, ShapeType> {
+
+function bindSetComponentToData<P, ShapeType extends Shape>(shapeClass:typeof Shape,sources: NodeSet | ShapeSet<ShapeType>,childrenDataRequestFn?:(shapeInstance: T) => LinkedDataResponse): BoundSetComponentFactory<P, ShapeType> {
+
+  let tracedDataResponse;
+  if(childrenDataRequestFn)
+  {
+    //create a test instance of the shape
+    let dummyInstance = createTraceShape(
+      shapeClass,
+      null,
+      this.name || this.toString().substring(0, 80) + ' ...',
+    );
+
+    //run the function that the component provided to see which properties it needs
+    tracedDataResponse = childrenDataRequestFn(dummyInstance as any as ShapeType);
+    // dataRequest = createDataRequestObject(shapeClass, tracedDataResponse, dummyInstance);
+
+  }
+
   return {
     _comp: this,
     _create: (propertyShapes) => {
       let boundComponent: LinkedFunctionalSetComponent<P, ShapeType> = (props) => {
         //TODO: use propertyShapes for RDFa
 
-        //add this result as the source of the bound child component
+        //manually transfer the value of the first parameter of Component.of() to an of prop in JSX
         let newProps = {...props};
         newProps['of'] = sources;
+
+        //add childDataRequestFn as a prop called getChildLinkedData
+        //so that SetComponents can retrieve linked data for their children
+        //see also definition of getChildLinkedData
+        if(childrenDataRequestFn)
+        {
+          //TODO: perhaps we replace this with a renderChildComponent fn? which automatically adds linkedData
+          // and also sets keys, and takes some extra props. Although that gives devs less control
+          newProps['getChildLinkedData'] = (childItem:ShapeType) => {
+            //call the function defined in the component that consumes/uses the SetComponent
+            //this returns the inial linked data for this child item
+            let dataResponse = childrenDataRequestFn(childItem);
+            //replace bound component factories with real components
+            appendDataResponse(dataResponse,tracedDataResponse);
+            //return the linked data
+            return dataResponse;
+          }
+        }
 
         //render the child component (which is 'this')
         return React.createElement(this, newProps);
       };
+      //set an identifiable name for this bound component
+      Object.defineProperty(boundComponent, 'name', {value: 'bound_'+this.name});
       return boundComponent;
     },
   };
+
 }
 
 //when this file is used, make sure the tree is initialized
