@@ -19,8 +19,9 @@ export interface BoundFunctionalComponentFactory<P,ShapeType extends Shape = Sha
   _props?:PropertyShape[];
   _comp:LinkedFunctionalComponent<P,ShapeType>
 }
-export interface BoundSetComponentFactory<P,ShapeType extends Shape = Shape> {
+export interface BoundSetComponentFactory<P={},ShapeType extends Shape = Shape> {
   _create:(props:PropertyShape[]) => LinkedFunctionalSetComponent<P, ShapeType>;
+  _childDataRequest:LinkedDataRequest;
   _props?:PropertyShape[];
   _comp:LinkedFunctionalSetComponent<P,ShapeType>
 }

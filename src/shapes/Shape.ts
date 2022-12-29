@@ -27,7 +27,7 @@ interface IClassConstruct {
 
   prototype: any;
 }
-export type BoundComponentFactory<P,ShapeType extends Shape> = BoundFunctionalComponentFactory<P,ShapeType> | BoundSetComponentFactory<P,ShapeType>;
+export type BoundComponentFactory<P={},ShapeType extends Shape=Shape> = BoundFunctionalComponentFactory<P,ShapeType> | BoundSetComponentFactory<P,ShapeType>;
 export type ResponseUnit = Node|Shape|string|number|ICoreIterable<Node|Shape|string|number>;
 export type LinkedDataResponse = (ResponseUnit|(() => BoundComponentFactory<any,any>|ResponseUnit))[] | {[key: string]: ResponseUnit|(() => BoundComponentFactory<any,any>|ResponseUnit)};
 
@@ -44,8 +44,19 @@ export type LinkedDataRequest = {
   properties?:(PropertyShape|BoundPropertyShapes)[];
 };
 export type BoundPropertyShapes = {
+  /**
+   * The PropertyShapes that were used as the source of this bound component
+   */
   propertyShapes:PropertyShape[],
-  request:LinkedDataRequest;
+  /**
+   * The sub request made by this component
+   */
+  subRequest:LinkedDataRequest;
+
+  /**
+   * The data request made for each item in the source set
+   */
+  childRequest?:LinkedDataRequest
 }
 
 /**
