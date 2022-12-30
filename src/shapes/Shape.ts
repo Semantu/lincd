@@ -39,10 +39,24 @@ export type LinkedDataSetDeclaration<T extends Shape> = {
   shape: typeof Shape;
   request: (shapeInstance: ShapeSet<T>) => LinkedDataResponse;
 };
-export type LinkedDataRequest = {
-  shape: typeof Shape;
-  properties?:(PropertyShape|BoundPropertyShapes)[];
-};
+
+export type SubRequest = LinkedDataRequest;
+export type LinkedDataRequest = (PropertyShape|[PropertyShape,SubRequest])[];
+
+// export type LinkedDataRequest = {
+//   shape: typeof Shape;
+//   /**
+//    * An array of property shapes that this component requires to function.
+//    * Values can also be BoundPropertyShapes, these get made by dataRequest that use
+//    * bound components (with Component.of()).
+//    */
+//   properties?:(PropertyShape|BoundPropertyShapes)[];
+//   /**
+//    * The component. Handy for debugging purposes. Only defined in development
+//    */
+//   component?:any;
+// };
+
 export type BoundPropertyShapes = {
   /**
    * The PropertyShapes that were used as the source of this bound component

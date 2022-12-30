@@ -10,7 +10,7 @@ import {
   LinkedDataDeclaration,
   LinkedDataRequest,
   LinkedDataResponse,LinkedDataSetDeclaration,
-  Shape,
+  Shape,SubRequest,
 } from '../shapes/Shape';
 import {NodeShape, PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
@@ -397,11 +397,10 @@ export function linkedPackage(
     if (requiredData['prototype'] instanceof Shape) {
       //then we just load the whole shape
       shapeClass = requiredData as typeof Shape;
-      dataRequest = {
-        shape:shapeClass
-      };
+      //the dataRequest array consists of a single entry: the node shape that needs to be loaded entirely
+      dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : []
     } else {
-      //linkedDataShape is a LinkedDataRequest
+      //else: requiredData is a LinkedDataDeclaration
       dataDeclaration = requiredData as LinkedDataDeclaration<ShapeType>;
       shapeClass = dataDeclaration.shape;
 
@@ -562,10 +561,10 @@ export function linkedPackage(
     //NOTE: if it does NOT have a name, the developer will need to manually use registerPackageExport
 
 
-    if(process.env.NODE_ENV === 'development')
-    {
-      dataRequest.component = _wrappedComponent;
-    }
+    // if(process.env.NODE_ENV === 'development')
+    // {
+    //   dataRequest.component = _wrappedComponent;
+    // }
 
     //register the component and its shape
     registerComponent(_wrappedComponent, shapeClass);
@@ -586,9 +585,8 @@ export function linkedPackage(
     if (requiredData['prototype'] instanceof Shape || requiredData === Shape) {
       //then we will load instances of this shape
       shapeClass = requiredData as typeof Shape;
-      dataRequest = {
-        shape:shapeClass
-      };
+      //and we simply request all property shapes of this shape to be loaded
+      dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : [];
     } else {
       //linkedDataShape is a LinkedDataSetDeclaration
       dataDeclaration = requiredData as LinkedDataSetDeclaration<ShapeType>;
@@ -744,10 +742,10 @@ export function linkedPackage(
     }
     //NOTE: if it does NOT have a name, the developer will need to manually use registerPackageExport
 
-    if(process.env.NODE_ENV === 'development')
-    {
-      dataRequest.component = _wrappedComponent;
-    }
+    // if(process.env.NODE_ENV === 'development')
+    // {
+    //   dataRequest.component = _wrappedComponent;
+    // }
 
     //register the component and its shape
     registerComponent(_wrappedComponent, shapeClass);
@@ -948,26 +946,25 @@ function updateCache(source: Node, request: LinkedDataRequest, requestResult?: Q
 
 
   //if specific properties were requested (rather than simply a shape)
-  if (request.properties) {
+  // if (request.properties) {
     //check each requested property shape
-    let {shape, properties} = request;
-    properties.map((propertyRequest: PropertyShape|BoundPropertyShapes) => {
+    // let {shape, properties} = request;
+    request.map((propertyRequest:NodeShape|PropertyShape|[PropertyShape,SubRequest]) => {
       let subRequest: LinkedDataRequest;
       let propertyShape: PropertyShape;
-      let propertyShapes: PropertyShape[];
+      // let propertyShapes: PropertyShape[];
 
       //if this property request is given as an object with the following key
       //then it comes from a bound child component request, aka a sub request
-      if((propertyRequest as BoundPropertyShapes).propertyShapes)
+      if(Array.isArray(propertyRequest))
       {
-        propertyShapes = (propertyRequest as BoundPropertyShapes).propertyShapes;
-        subRequest = (propertyRequest as BoundPropertyShapes).subRequest;
+        [propertyShape,subRequest] = propertyRequest;
 
         //if there were more than 1 (if there is more left right now)
-        if (propertyShapes.length > 1) {
-          console.warn('Multiple property shapes not supported yet. Taking first only');
-        }
-        propertyShape = propertyShapes[0];
+        // if (propertyShapes.length > 1) {
+        //   console.warn('Multiple property shapes not supported yet. Taking first only');
+        // }
+        // propertyShape = propertyShapes[0];
 
         //if no property shapes were used, then the source of the child component equals the source of the component
         //so, we now update the cache for the same source for this subrequest
@@ -988,8 +985,8 @@ function updateCache(source: Node, request: LinkedDataRequest, requestResult?: Q
           });
         }
       }
-    });
-  }
+    // });
+  });
 }
 
 /*function getResponsePropertyShapeClone(propertyShapes:PropertyShape[],dataRequest:LinkedDataRequest,dataResponse:LinkedDataResponse) {
@@ -1034,10 +1031,13 @@ function createDataRequestObject(
   dataResponse: LinkedDataResponse,
   instance: TraceShape,
 ): LinkedDataRequest {
-  let dataRequest: LinkedDataRequest = {
-    shape: shapeClass,
-    properties: instance.requested,
-  };
+  // let dataRequest: LinkedDataRequest = {
+  //   shape: shapeClass,
+  //   properties: instance.requested,
+  // };
+
+  //start with the requested properties, which an array of PropertyShapes
+  let dataRequest:LinkedDataRequest = instance.requested;
 
   let replaceBoundFactory = (value,target,key) => {
     //if a function was returned for this key
@@ -1053,21 +1053,43 @@ function createDataRequestObject(
 
         //retrieve and remove any propertyShape that were requested
         let appliedPropertyShapes = instance.requested.splice(previousNumPropShapes);
-        //store them in the value, we need that when we actually use the nested component
+        //store them in the value, we will need that when we actually use the nested component
         evaluated._props = appliedPropertyShapes;
 
         //then place back an object stating which property shapes were requested
         //and which subRequest need to be made for those as defined by the bound child component
-        let boundProperties:BoundPropertyShapes = {
-          propertyShapes: appliedPropertyShapes,
-          subRequest: (evaluated as BoundComponentFactory)._comp.dataRequest,
-        };
+        // let boundProperties:BoundPropertyShapes = {
+        //   propertyShapes: appliedPropertyShapes,
+        //   subRequest: (evaluated as BoundComponentFactory)._comp.dataRequest,
+        // };
+        let subRequest:LinkedDataRequest = (evaluated as BoundComponentFactory)._comp.dataRequest;
 
         if((evaluated as BoundSetComponentFactory)._childDataRequest)
         {
-          boundProperties.childRequest = (evaluated as BoundSetComponentFactory<any, any>)._childDataRequest
+          // boundProperties.childRequest = (evaluated as BoundSetComponentFactory<any, any>)._childDataRequest
+          subRequest = subRequest.concat((evaluated as BoundSetComponentFactory<any, any>)._childDataRequest) as LinkedDataRequest
         }
-        dataRequest.properties.push(boundProperties);
+        if(appliedPropertyShapes.length > 1)
+        {
+          console.warn("Using multiple property shapes for subRequests are not yet supported");
+        }
+        let propertyShape = appliedPropertyShapes[0];
+
+        //add an entry for the bound property with its subRequest (the data request of the component it was bound to)
+        //if a specific property shape was requested for this component (like CompA(Shape.request(shape => CompB.of(shape.subProperty))
+        if(propertyShape)
+        {
+          //then add it as a propertyShape + subRequest
+          dataRequest.push([propertyShape,subRequest]);
+        }
+        else
+        {
+          //but if not, then the component uses the SAME source (like CompA(Shape.request(s => CompB.of(s)))
+          //in this case the dataRequest of CompB can be directly added to that of CompA
+          //because its requesting properties of the same subject
+          //this keeps the request plain and simple for the stores that need to resolve it
+          dataRequest = dataRequest.concat(subRequest);
+        }
       }
       //overwrite the value of this key with the returned value
       target[key] = value;
