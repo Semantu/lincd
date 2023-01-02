@@ -16,11 +16,13 @@ export interface ClassComponent<P, ShapeType extends Shape = Shape>
 }
 export interface BoundFunctionalComponentFactory<P,ShapeType extends Shape = Shape> {
   _create:(props:PropertyShape[]) => LinkedFunctionalComponent<P, ShapeType>;
+  _setLoaded?:(quads)=>void;
   _props?:PropertyShape[];
   _comp:LinkedFunctionalComponent<P,ShapeType>
 }
 export interface BoundSetComponentFactory<P={},ShapeType extends Shape = Shape> {
   _create:(props:PropertyShape[]) => LinkedFunctionalSetComponent<P, ShapeType>;
+  _setLoaded?:(quads)=>void;
   _childDataRequest:LinkedDataRequest;
   _props?:PropertyShape[];
   _comp:LinkedFunctionalSetComponent<P,ShapeType>
@@ -33,6 +35,7 @@ export interface LinkedFunctionalComponent<P,ShapeType extends Shape = Shape> ex
   of?: (source?: Node|Shape) => BoundComponentFactory<P,ShapeType>;
   original?: LinkableFunctionalComponent<P,ShapeType>;
   dataRequest?: LinkedDataRequest;
+  setLoaded?: (source?:Shape)=>void;
   shape?: typeof Shape;
 }
 export interface LinkedFunctionalSetComponent<P,ShapeType extends Shape = Shape> extends React.FC<P & LinkedSetComponentInputProps<ShapeType>> {
@@ -44,6 +47,7 @@ export interface LinkedFunctionalSetComponent<P,ShapeType extends Shape = Shape>
   original?: LinkableFunctionalSetComponent<P,ShapeType>;
   dataRequest?: LinkedDataRequest;
   shape?: typeof Shape;
+  setLoaded?: (source?:ShapeSet<ShapeType>)=>void;
   getChildLinkedData?: (shapeInstance: ShapeType) => LinkedDataResponse
 }
 export type LinkableFunctionalComponent<P,ShapeType extends Shape = Shape> = React.FC<P & LinkedComponentProps<ShapeType>>;
@@ -157,6 +161,14 @@ export interface LinkedComponentInputProps<ShapeType extends Shape = Shape> exte
    * Can be a Node in the graph or an instance of the Shape that this component uses
    */
   of: Node|ShapeType;
+}
+export interface BoundComponentProps
+{
+  /**
+   * If isBound is true, then this component was bound to a specific source by the parent component that uses it.
+   * Amongst other things, this means the component can expect its data was already loaded by the parent.
+   */
+  isBound?:boolean;
 }
 interface LinkedComponentInputBaseProps {
 

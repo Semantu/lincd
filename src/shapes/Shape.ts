@@ -30,14 +30,17 @@ interface IClassConstruct {
 export type BoundComponentFactory<P={},ShapeType extends Shape=Shape> = BoundFunctionalComponentFactory<P,ShapeType> | BoundSetComponentFactory<P,ShapeType>;
 export type ResponseUnit = Node|Shape|string|number|ICoreIterable<Node|Shape|string|number>;
 export type LinkedDataResponse = (ResponseUnit|(() => BoundComponentFactory<any,any>|ResponseUnit))[] | {[key: string]: ResponseUnit|(() => BoundComponentFactory<any,any>|ResponseUnit)};
+export type TransformedLinkedDataResponse = (ResponseUnit|(BoundComponentFactory<any,any>|ResponseUnit))[] | {[key: string]: ResponseUnit|(BoundComponentFactory<any,any>|ResponseUnit)};
 
 export type LinkedDataDeclaration<T> = {
   shape: typeof Shape;
-  request: (shapeInstance: T) => LinkedDataResponse;
+  request: LinkedDataRequestFn<T>;
 };
+export type LinkedDataRequestFn<T> = (shapeOrShapeSet: T) => LinkedDataResponse;
+
 export type LinkedDataSetDeclaration<T extends Shape> = {
   shape: typeof Shape;
-  request: (shapeInstance: ShapeSet<T>) => LinkedDataResponse;
+  request: LinkedDataRequestFn<ShapeSet<T>>;
 };
 
 export type SubRequest = LinkedDataRequest;
