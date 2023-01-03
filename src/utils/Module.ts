@@ -445,7 +445,7 @@ export function linkedPackage(
         return functionalComponent(linkedProps);
       }
 
-      let [isLoaded,setIsLoaded] = useState<any>(false);
+      let [isLoaded,setIsLoaded] = useState<any>(undefined);
       useEffect(() => {
 
         let cachedRequest = getCached(linkedProps.source.node,dataRequest);
@@ -499,7 +499,7 @@ export function linkedPackage(
             updateCache(linkedProps.source.node,dataRequest,loadPromise);
           }
         }
-      },[linkedProps.source,props.isBound]);
+      },[linkedProps.source.node,props.isBound]);
 
       //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
       let dataIsLoaded = props.isBound || isLoaded;
@@ -648,28 +648,7 @@ export function linkedPackage(
         return functionalComponent(linkedProps);
       }
 
-      let [isLoaded,setIsLoaded] = useState<any>(false);
-
-      let sourceNodes = linkedProps.sources.getNodes();
-
-      //get the map that represents for which nodes this request has been made in the past (and make sure a map exists)
-      // if (!dataRequestToSets.has(dataRequest))
-      // {
-      //   dataRequestToSets.set(dataRequest,new CoreMap());
-      // }
-      // let requestCache = dataRequestToSets.get(dataRequest);
-      //see if this request was made for a set of nodes that covered all the current nodes
-
-      //TODO: add support for queries
-      // let requestCacheMatch = requestCache.find((result,nodes) => {
-      //   return sourceNodes.every(node => nodes.has(node));
-      // });
-
-      //if the data request has already been made and the request has already resolved
-      //then we can safely continue to render straight away
-      // let preLoaded: boolean = requestCacheMatch && !(requestCacheMatch instanceof Promise);
-
-      // let [linkedData,setLinkedData] = useState<any>();
+      let [isLoaded,setIsLoaded] = useState<any>(undefined);
 
       useEffect(() => {
         //only if this request was not made before do we continue with making a request)
@@ -725,47 +704,14 @@ export function linkedPackage(
             updateCacheForSet(linkedProps.sources.getNodes(),dataRequest,loadPromise);
           }
         }
-      },[linkedProps.sources,props.isBound]);
-      /*
-        if (!requestCacheMatch)
-        {
-          let loadPromise = Storage.loadShapes(linkedProps.sources,dataRequest).then((quads) => {
-            // console.log('Received ' + quads.toString());
-
-            //if the component used a Shape.request() data declaration function
-            if (dataDeclaration)
-            {
-              //then use that now to get the requested for this instance
-              // let dataResponse:LinkedDataResponse = dataDeclaration.request(linkedProps.sources);
-
-              //finally we replace any temporary placeholders returned by 'Component.of(..)'
-              //with real components
-              let dataResponse: LinkedDataResponse = getLinkedDataResponse(dataDeclaration.request,linkedProps.sources,tracedDataResponse);
-
-              //use the response as the linkedData for this component
-              setLinkedData(dataResponse);
-
-            }
-            else
-            {
-              //set to true to indicate the shaoe instance is loaded
-              setLinkedData(true);
-            }
-            //update the cached result to the actual quads instead of the promise
-            //also mark any subRequests as loaded for the right nodes
-            //TODO: cache for set components
-            // updateCache(linkedProps.sources.node, dataRequest, quads);
-
-          });
-
-          //save the promise result (so we don't request it again)
-          //TODO: cache for set components
-          // requestCache.set(dataRequest, loadPromise);
-        }
-      },[]);*/
+        //note: this useEffect function should be re-triggered if a different set of source nodes is given
+        //however the actual set could be a new one every time. For now we check the 'of' prop, but if this triggers
+        //on every parent update whilst it shouldnt, we could try linkedProps.sources.map(s => s.node.value).join("")
+      },[props.of,props.isBound]);
 
       //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
       let dataIsLoaded = props.isBound || isLoaded;
+
       //But for the first render, when the useEffect has not run yet,
       //and no this is not a bound component (so it's a top level linkedComponent),
       //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
@@ -795,32 +741,6 @@ export function linkedPackage(
         return createElement('div',null,'...');
       }
 
-      /*//if the data is loaded
-      if (preLoaded || linkedData)
-      {
-        //if the component used a Shape.request() data declaration function
-        // if (dataDeclaration) {
-        //   //then use that now to get the requested for this instance
-        //   let dataResponse = dataDeclaration.request(linkedProps.sourceShape);
-        //
-        //   //finally we replace any temporary placeholders returned by 'Component.of(..)'
-        //   //with real components
-        //   replaceBoundComponents(propertyShapeClone, dataResponse);
-        //
-        // }
-        if (linkedData !== true)
-        {
-          linkedProps.linkedData = linkedData;
-        }
-
-        //render the original components with the original + generated properties
-        return functionalComponent(linkedProps);
-      }
-      else
-      {
-        //render loading
-        return createElement('div',null,'...');
-      }*/
     };
 
     //attach the 'of(source)' function. Here named bindSetComponentToData()
@@ -1037,11 +957,6 @@ function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDat
       //if a bound component was returned
       if (evaluated && evaluated._create)
       {
-
-        if (setLoaded)
-        {
-          evaluated._setLoaded();
-        }
         //here we get the propertyShapes that were required to obtain the source
         // when we evaluated the function when the component was first initialised
         let props = tracedDataResponse[key]._props;
@@ -1130,7 +1045,7 @@ function getCached(source:Node,dataRequest):boolean|Promise<any> {
 function updateCacheForSet(sources: NodeSet,request: LinkedDataRequest,requestState: true | Promise<any>=true)
 {
   sources.forEach(source => {
-    this.updateCache(source,request,requestState);
+    updateCache(source,request,requestState);
   })
 }
 function updateCache(source: Node,request: LinkedDataRequest,requestState: true | Promise<any>=true,tracedDataResponse?: TransformedLinkedDataResponse)
@@ -1642,9 +1557,6 @@ function bindComponentToData<P,ShapeType extends Shape>(tracedDataResponse: Tran
 {
   return {
     _comp: this,
-    _setLoaded: () => {
-      updateCache(source instanceof Shape ? source.node : source,this.dataRequest,true,tracedDataResponse);
-    },
     _create: (propertyShapes) => {
       let boundComponent: LinkedFunctionalComponent<P,ShapeType> = (props) => {
         //TODO: use propertyShapes for RDFa
@@ -1687,15 +1599,6 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
   return {
     _comp: this,
     _childDataRequest: childDataRequest,
-    _setLoaded: () => {
-      //Here we make sure that we remember (cache) that all the child items (given as sources)
-      //have their requested sources (childDataRequest) loaded
-      let sourceNodes = (sources instanceof ShapeSet ? sources.getNodes() : sources);
-      //@TODO: this is an early draft, remove tracedDataResponse from fn declaration (and bind where its used) if we really dont need it here
-      sourceNodes.forEach(sourceNode => {
-        updateCache(sourceNode,childDataRequest,true,tracedChildDataResponse);
-      });
-    },
     _create: (propertyShapes) => {
       let boundComponent: LinkedFunctionalSetComponent<P,ShapeType> = (props) => {
         //TODO: use propertyShapes for RDFa
@@ -1703,6 +1606,8 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
         //manually transfer the value of the first parameter of Component.of() to an of prop in JSX
         let newProps = {...props};
         newProps['of'] = sources;
+
+        newProps['isBound'] = true;
 
         //add childDataRequestFn as a prop called getChildLinkedData
         //so that SetComponents can retrieve linked data for their children
