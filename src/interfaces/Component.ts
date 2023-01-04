@@ -63,50 +63,28 @@ export interface LinkedSetComponentProps<ShapeType extends Shape> extends Linked
   sources: ShapeSet<ShapeType>;
 
   /**
-   * Retrieves the linked data for a specific child, as defined in the data request of the component that uses this SetComponent.
-   * Example, take this component that uses Grid:
-   * ```tsx
-   * const PersonFriends = linkedComponent(Person.request(person => ({
-   *   Grid.of(person.friends, (friend) => ({
-   *     Avatar: PersonAvatar.of(friend)
-   *   }))
-   * })),({linkedData:{Friends}}) => {
-   *   return <div>Friend list:
-   *     <Friends>{({linkedData: {Avatar}}) => {
-   *       return <Avatar />;
-   *     }}</Friends>
-   *   </div>
-   * })
-   * ```
+   * A ChildComponent will be given, unless your component was used with explicit children, in that case you should render props.children as is.
+   * This component can be used to render all the items in the set.
+   * It will automatically account for the different ways in which your setComponent
+   * can be used. That is, with a single child as render function, a single component as dataRequest or a full dataRequest for linkedData for the child components.
    *
-   * The method above that starts with (friends) => ({Avatar:...}) is the function that retrieves and links the data for each item in `person.friends`
-   * IN Grid, that function is available as the prop `getChildLinkedData` for Grid. So that it can obtain the linked data of each item it displays like this:
+   * You are free to wrap this child component in other JSX elements of your own.
    *
+   * Here's an example setComponent that takes a set of sources and renders them with the ChildComponent property if it's given:
    * ```tsx
-   * sources.map(source =>
-   *  <ChildComponent of={source} linkedData={getChildLinkedData(source)} />
-   * );
-   * ```
-   *
-   * Here's an example implementation of a Grid component, which assumes it receives a child-render-function as its only child :
-   * ```tsx
-   * export const Grid = linkedSetComponent(Shape,({sources,children,getChildLinkedData}) => {
+   * export const Grid = linkedSetComponent(Shape, ({sources, children, ChildComponent}) => {
    *   return (
    *     <div className={style.Grid}>
-   *       {sources.map((source) => {
-   *         return children({
-   *           source,
-   *           linkedData:getChildLinkedData(source)
-   *         });
-   *       })
+   *       {ChildComponent
+   *         ? sources.map((source) => {
+   *             return <ChildComponent of={source} key={source.node.toString()} />;
+   *           })
+   *         : children}
    *     </div>
    *   );
    * });
    * ```
-   * @param shapeInstance
    */
-  // getChildLinkedData?: (shapeInstance: ShapeType) => LinkedDataResponse
-
   ChildComponent?:LinkedFunctionalComponent<any,ShapeType>;
 
 }
@@ -191,19 +169,3 @@ export type SubRequest = LinkedDataRequest;
  * e.g.: [shape1,[shape2,[shape3,shape4]]] will request shape 3 & 4 of shape 2
  */
 export type LinkedDataRequest = (PropertyShape|[PropertyShape,SubRequest])[];
-
-export type BoundPropertyShapes = {
-  /**
-   * The PropertyShapes that were used as the source of this bound component
-   */
-  propertyShapes:PropertyShape[],
-  /**
-   * The sub request made by this component
-   */
-  subRequest:LinkedDataRequest;
-
-  /**
-   * The data request made for each item in the source set
-   */
-  childRequest?:LinkedDataRequest
-}

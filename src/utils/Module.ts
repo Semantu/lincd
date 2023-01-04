@@ -36,18 +36,13 @@ import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {Storage} from './Storage';
 import {ShapeSet} from '../collections/ShapeSet';
-import {CoreMap} from '../collections/CoreMap';
-import {QuadArray} from '../collections/QuadArray';
 import {URI} from './URI';
 import {shacl} from '../ontologies/shacl';
-// import {createRoot} from 'react-dom/client';
 
 //global tree
 declare var lincd: any;
 declare var window;
 declare var global;
-declare var require;
-declare var document;
 
 export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 
@@ -268,8 +263,6 @@ export interface LinkedPackageObject
   packageExports: any;
 }
 
-// var moduleLoadPromises: Map<NamedNode, DeferredPromise> = new Map();
-
 export function linkedPackage(
   packageName: string,
   packageExports?: any,
@@ -286,7 +279,6 @@ export function linkedPackage(
   packageParsePromises.set(packageName,packageParsedPromise);
 
   //if no module node was given, we will determine the URI of the module for them
-  //TODO: (assuming that the module data does not include a URI already?)
   if (!packageNode)
   {
     // packageNode = NamedNode.getOrCreate(
@@ -307,17 +299,6 @@ export function linkedPackage(
   //AFTER all the data has been loaded
   packageParsedPromise.then(() => {
     loadedPackages.add(packageNode);
-    // we can officially resolve the module load promise
-    // if (!moduleLoadPromises.has(moduleResource)) {
-    // 	moduleLoadPromises.set(moduleResource as NamedNode, {
-    // 		done: true,
-    // 		promise: Promise.resolve(true),
-    // 	});
-    // } else {
-    // 	let promiseObject = moduleLoadPromises.get(moduleResource as NamedNode);
-    // 	promiseObject.done = true;
-    // 	promiseObject.resolve(true);
-    // }
   });
 
   packageNode.set(rdf.type,lincdOntology.Module);
@@ -916,7 +897,6 @@ function createDataRequestObject<ShapeType extends Shape>(
 
         if ((evaluated as BoundSetComponentFactory)._childDataRequest)
         {
-          // boundProperties.childRequest = (evaluated as BoundSetComponentFactory<any, any>)._childDataRequest
           subRequest = subRequest.concat((evaluated as BoundSetComponentFactory<any,any>)._childDataRequest) as LinkedDataRequest;
         }
         if (appliedPropertyShapes.length > 1)
@@ -1169,11 +1149,6 @@ function registerPackageInTree(moduleName,packageExports)
   return lincd._modules[moduleTreeKey];
 }
 
-function getPackageExport(moduleName,exportName)
-{
-  return lincd._modules[moduleName] ? lincd._modules[moduleName][exportName] : null;
-}
-
 function getSourceFromInputProps(props,shapeClass)
 {
   return props.of instanceof Node ? new shapeClass(props.of) : props.of;
@@ -1221,16 +1196,6 @@ export function initTree()
   {
     globalObject['lincd'] = {_modules: {}};
   }
-  // if (typeof window !== 'undefined') {
-  //   if (typeof window['lincd'] === 'undefined') {
-  //     window['lincd'] = {_modules: {}};
-  //   }
-  // } else if (typeof global !== 'undefined') {
-  //   if (typeof global['lincd'] === 'undefined') {
-  //     global['lincd'] = {_modules: {}};
-  //   }
-  //   global['lincd'] = {_modules: {}};
-  // }
 }
 
 function bindComponentToData<P,ShapeType extends Shape>(tracedDataResponse: TransformedLinkedDataResponse,source: Node | Shape): BoundComponentFactory<P,ShapeType>
