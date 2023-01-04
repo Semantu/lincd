@@ -43,12 +43,12 @@ export interface LinkedFunctionalSetComponent<P,ShapeType extends Shape = Shape>
    * Binds a component to a source. Usually used in Shape.request() for automatic data loading.
    * @param source the node or shape that this component should visualise
    */
-  of?: (sources: NodeSet|ShapeSet,itemRequestFn?:(shape:ShapeType)=>LinkedDataResponse) => BoundSetComponentFactory<P,ShapeType>;
+  of?: (sources: NodeSet|ShapeSet,itemRequestFn?:(LinkedFunctionalComponent<any,ShapeType>)|((shape:ShapeType)=>LinkedDataResponse)) => BoundSetComponentFactory<P,ShapeType>;
   original?: LinkableFunctionalSetComponent<P,ShapeType>;
   dataRequest?: LinkedDataRequest;
   shape?: typeof Shape;
   setLoaded?: (source?:ShapeSet<ShapeType>)=>void;
-  getChildLinkedData?: (shapeInstance: ShapeType) => LinkedDataResponse
+  // getChildLinkedData?: (shapeInstance: ShapeType) => LinkedDataResponse
 }
 export type LinkableFunctionalComponent<P,ShapeType extends Shape = Shape> = React.FC<P & LinkedComponentProps<ShapeType>>;
 export type LinkableFunctionalSetComponent<P,ShapeType extends Shape = Shape> = React.FC<P & LinkedSetComponentProps<ShapeType>>;
@@ -125,7 +125,9 @@ export interface LinkedSetComponentProps<ShapeType extends Shape> extends Linked
    * ```
    * @param shapeInstance
    */
-  getChildLinkedData?: (shapeInstance: ShapeType) => LinkedDataResponse
+  // getChildLinkedData?: (shapeInstance: ShapeType) => LinkedDataResponse
+
+  ChildComponent?:LinkedFunctionalComponent<any,ShapeType>;
 
 }
 export interface LinkedComponentProps<ShapeType extends Shape> extends LinkedComponentBaseProps {
@@ -170,7 +172,7 @@ export interface BoundComponentProps
    */
   isBound?:boolean;
 }
-interface LinkedComponentInputBaseProps {
+interface LinkedComponentInputBaseProps extends React.PropsWithChildren{
 
   /**
    * Add class name(s) to the top level DOM element of this component

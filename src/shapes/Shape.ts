@@ -18,7 +18,11 @@ import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
 import {NodeShape,PropertyShape} from './SHACL';
-import {BoundFunctionalComponentFactory,BoundSetComponentFactory} from '../interfaces/Component';
+import {
+  BoundFunctionalComponentFactory,
+  BoundSetComponentFactory,
+  LinkedFunctionalComponent,
+} from '../interfaces/Component';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -29,13 +33,14 @@ interface IClassConstruct {
 }
 export type BoundComponentFactory<P={},ShapeType extends Shape=Shape> = BoundFunctionalComponentFactory<P,ShapeType> | BoundSetComponentFactory<P,ShapeType>;
 export type ResponseUnit = Node|Shape|string|number|ICoreIterable<Node|Shape|string|number>;
-export type LinkedDataResponse = (ResponseUnit|(() => BoundComponentFactory<any,any>|ResponseUnit))[] | {[key: string]: ResponseUnit|(() => BoundComponentFactory<any,any>|ResponseUnit)};
-export type TransformedLinkedDataResponse = (ResponseUnit|(BoundComponentFactory<any,any>|ResponseUnit))[] | {[key: string]: ResponseUnit|(BoundComponentFactory<any,any>|ResponseUnit)};
+export type LinkedDataResponse = (() => BoundComponentFactory<any,any>) | (ResponseUnit|((() => BoundComponentFactory<any,any>)|ResponseUnit))[] | {[key: string]: ResponseUnit|((() => BoundComponentFactory<any,any>)|ResponseUnit)};
+export type TransformedLinkedDataResponse = BoundComponentFactory<any,any> | (ResponseUnit|(BoundComponentFactory<any,any>|ResponseUnit))[] | {[key: string]: ResponseUnit|(BoundComponentFactory<any,any>|ResponseUnit)};
 
 export type LinkedDataDeclaration<T> = {
   shape: typeof Shape;
   request: LinkedDataRequestFn<T>;
 };
+export type LinkedDataChildRequestFn<T> = LinkedFunctionalComponent<T> | LinkedDataRequestFn<T>;
 export type LinkedDataRequestFn<T> = (shapeOrShapeSet: T) => LinkedDataResponse;
 
 export type LinkedDataSetDeclaration<T extends Shape> = {
