@@ -1,17 +1,17 @@
 import {IQuadStore} from '../interfaces/IQuadStore';
-import {defaultGraph, Graph, NamedNode, Quad} from '../models';
+import {defaultGraph, Graph, NamedNode, Quad, Node} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import {CoreMap} from '../collections/CoreMap';
 import {NodeSet} from '../collections/NodeSet';
 import {Shape} from '../shapes/Shape';
-import {NodeShape} from '../shapes/SHACL';
+import {NodeShape,PropertyShape} from '../shapes/SHACL';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {eventBatcher} from '../events/EventBatcher';
 import nextTick from 'next-tick';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreSet} from '../collections/CoreSet';
 import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest} from '../interfaces/Component';
+import {LinkedDataRequest,TransformedLinkedDataResponse} from '../interfaces/Component';
 
 export abstract class Storage {
   private static defaultStore: IQuadStore;
@@ -26,6 +26,7 @@ export abstract class Storage {
     reject?: any;
   };
   private static storedEvents: any;
+  private static nodeToPropertyRequests: CoreMap<Node,CoreMap<PropertyShape,true | Promise<any>>> = new CoreMap();
 
   static init() {
     if (!this._initialized) {
@@ -484,9 +485,21 @@ export abstract class Storage {
     return storeMap;
   }
 
-  static loadShapes(shapeSet: ShapeSet, shapeOrRequest: LinkedDataRequest): Promise<QuadArray> {
+  static loadShapes(shapeSet: ShapeSet, shapeOrRequest: LinkedDataRequest,byPassCache:boolean=false): Promise<QuadArray> {
+    let nodes = shapeSet.getNodes();
+    if(!byPassCache)
+    {
+      let cachedResult = this.setIsLoaded(nodes,shapeOrRequest);
+      if(cachedResult)
+      {
+        //return the load promise that's already in progress,
+        // or a promise that resolves to true straight away if it's already been loaded
+        return cachedResult === true ? Promise.resolve(true) : cachedResult;
+      }
+    }
+
     let storeMap = this.getTargetStoreMapForShapes(shapeSet);
-    return Promise.all(storeMap.map((shapes,store) => {
+    let loadPromise = Promise.all(storeMap.map((shapes,store) => {
       return store.loadShapes(new ShapeSet(shapes),shapeOrRequest);
     })).then((results) => {
       // return new QuadArray();
@@ -495,17 +508,149 @@ export abstract class Storage {
         quads.push(...result as any);
       });
       return quads;
-    })
+    }).then(quads => {
+      //update the cache to indicate these property shapes have finished loading for these nodes
+      this.setNodesLoaded(nodes,shapeOrRequest,true);
+      return quads;
+    });
+    //update the cache to indicate these property shapes are being loaded for these nodes
+    Storage.setNodesLoaded(nodes,shapeOrRequest,loadPromise);
+    return loadPromise
   }
-  static loadShape(shapeInstance: Shape, shapeOrRequest: LinkedDataRequest): Promise<QuadArray> {
+
+  /**
+   * Loads the requested Shape(s) from storage for a specific node.
+   * To form a request see the LinkedDataRequest interface
+   * Returns a promise that resolves when the loading has completed.
+   * Requests are cached so the second time you request the same data you will get the same answer. Use byPassCache if you want to ensure the data is loaded again.
+   * The returned promise resolves to null if no target store was found for this node (the app may not have a defaultStore set up then)
+   * @param shapeInstance
+   * @param shapeOrRequest
+   * @param byPassCache
+   */
+  static loadShape(shapeInstance: Shape, shapeOrRequest: LinkedDataRequest,byPassCache:boolean=false): Promise<QuadArray> {
+    let node = shapeInstance.node;
+    if(!byPassCache)
+    {
+      let cachedResult = this.isLoaded(node,shapeOrRequest);
+      if(cachedResult)
+      {
+        //return the load promise that's already in progress,
+        // or a promise that resolves to true straight away if it's already been loaded
+        return cachedResult === true ? Promise.resolve(true) : cachedResult;
+      }
+    }
     let store = this.getTargetStoreForNode(shapeInstance.namedNode);
     if(store)
     {
-      return store.loadShape(shapeInstance, shapeOrRequest);
+      let promise = store.loadShape(shapeInstance, shapeOrRequest).then(res => {
+        //indicate that these property shapes have finished loading for this node
+        this.setNodeLoaded(node,shapeOrRequest);
+        return res;
+      })
+      //indicate that these property shapes are being loaded for this node
+      this.setNodeLoaded(node,shapeOrRequest,promise);
+      return promise;
     }
     else
     {
+      //NOTE: if we ever need to know that we could not find a store to load this node from
+      //then we could setNodeLoaded to false, and we need to account for the possibility of a false value in other places
+      //any place using cached results would need to differentiate between null and false
+      this.setNodeLoaded(node,shapeOrRequest);
       return Promise.resolve(null);
     }
+  }
+
+  static setIsLoaded(nodes: NodeSet,dataRequest): boolean | Promise<any> {
+    let stillLoading = [];
+    if (!nodes.every(node => {
+      let cached = this.isLoaded(node,dataRequest);
+      if (!cached)
+      {
+        return false;
+      }
+      if (cached !== true)
+      {
+        //then it's a promise, this node is still loading
+        stillLoading.push(node);
+      }
+      return true;
+    }))
+    {
+      return false;
+    }
+    return stillLoading ? Promise.all(stillLoading) : true;
+  }
+  static isLoaded(node: Node,dataRequest: LinkedDataRequest):boolean | Promise<any>
+  {
+    if (!this.nodeToPropertyRequests.has(node))
+    {
+      return false;
+    }
+    let propertiesRequested = this.nodeToPropertyRequests.get(node);
+    //return true if every top level property request has been loaded for this source
+    let stillLoading = [];
+    if (!dataRequest.every(propertyRequest => {
+      let propertyReqResult;
+      if (Array.isArray(propertyRequest))
+      {
+        //the property will be the first entry, the subRequest the second, but we don't do anything with that here
+        //we only check the top level, which regards this source
+        propertyReqResult = propertiesRequested.get(propertyRequest[0]);
+      }
+      else
+      {
+        propertyReqResult = propertiesRequested.get(propertyRequest);
+      }
+      if (!propertyReqResult)
+      {
+        //not every propertyRequest is loaded, return false, which stops the every() loop and resolves it to false
+        return false;
+      }
+      if (propertyReqResult !== true)
+      {
+        stillLoading.push(propertyReqResult);
+      }
+      //else if it's true, everything is loaded so far, no need to do anything
+      return true;
+    }))
+    {
+      return false;
+    }
+    //all propertyRequests had an entry, if some are still loading, return the promise that resolves when they're all loaded
+    //else return true (everything is loaded)
+    return stillLoading.length > 0 ? Promise.all(stillLoading) : true;
+  }
+
+  static setNodesLoaded(nodes: NodeSet,dataRequest: LinkedDataRequest,requestState: true | Promise<any> = true)
+  {
+    nodes.forEach(source => {
+      this.setNodeLoaded(source,dataRequest,requestState);
+    });
+  }
+
+  static setNodeLoaded(node: Node,request: LinkedDataRequest,requestState: true | Promise<any> = true)
+  {
+    if (!this.nodeToPropertyRequests.get(node))
+    {
+      this.nodeToPropertyRequests.set(node,new CoreMap());
+    }
+    let requestedProperties = this.nodeToPropertyRequests.get(node);
+
+    request.map(propertyRequest => {
+      if (Array.isArray(propertyRequest))
+      {
+        //propertyRequest is of the shape [propertyShape,subRequest]
+        //we're only updating cache for the property-shapes that regard this source, so we ignore the subRequest
+        //(cache for the subRequest will be set in the subComponent itself the first time useEffect is triggered and isBound=true but isLoaded=undefined, see linkedComponent)
+        requestedProperties.set(propertyRequest[0],requestState);
+      }
+      else
+      {
+        //propertyRequest is a PropertyShape
+        requestedProperties.set(propertyRequest,requestState);
+      }
+    });
   }
 }

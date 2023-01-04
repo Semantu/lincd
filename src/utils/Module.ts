@@ -58,7 +58,6 @@ let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
  * a map of requested property shapes for specific nodes
  * The value is a promise if it's still loading, or true if it is fully loaded
  */
-var nodeToPropertyRequests: CoreMap<Node,CoreMap<PropertyShape,true | Promise<any>>> = new CoreMap();
 type ClassDecorator = <T extends {new(...args: any[]): {}}>(constructor: T) => T;
 
 /**
@@ -432,7 +431,7 @@ export function linkedPackage(
       let [isLoaded,setIsLoaded] = useState<any>(undefined);
       useEffect(() => {
 
-        let cachedRequest = getCached(linkedProps.source.node,dataRequest);
+        let cachedRequest = Storage.isLoaded(linkedProps.source.node,dataRequest);
         //if this component was bound and the cache does not state all the data was loaded
         if (props.isBound && !cachedRequest)
         {
@@ -441,7 +440,7 @@ export function linkedPackage(
           //the parent component will only update the cache to state that its top level request is loaded for its source
           //so here we make sure that the bound child components also updates cache for its source
           //this reduces the need for the parent component to discover the right sources of each child component when updating cache)
-          updateCache(linkedProps.source.node,dataRequest,true);
+          Storage.setNodeLoaded(linkedProps.source.node,dataRequest);
         }
 
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
@@ -467,20 +466,13 @@ export function linkedPackage(
           }
           else //cachedRequest is false
           {
-            //if we did not request all these properties before then we continue to load them all
-            //load the required PropertyShapes from storage for this specific source
-            let loadPromise = Storage.loadShape(linkedProps.source,dataRequest).then((quads) => {
-
-              //update the cached result to the actual quads instead of the promise
-              //also mark any subRequests as loaded for the right nodes
-              updateCache(linkedProps.source.node,dataRequest,true,tracedDataResponse);
+            //if we did not request all these properties before then we continue to
+            // load the required PropertyShapes from storage for this specific source
+            Storage.loadShape(linkedProps.source,dataRequest).then((quads) => {
 
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
             });
-
-            //save the promise result (so we don't request it again)
-            updateCache(linkedProps.source.node,dataRequest,loadPromise);
           }
         }
       },[linkedProps.source.node,props.isBound]);
@@ -494,7 +486,7 @@ export function linkedPackage(
       {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded = getCached(linkedProps.source.node,dataRequest) === true;
+        dataIsLoaded = Storage.isLoaded(linkedProps.source.node,dataRequest) === true;
       }
 
       //if the data is loaded
@@ -633,7 +625,7 @@ export function linkedPackage(
       useEffect(() => {
         //only if this request was not made before do we continue with making a request)
         //(if it was made, but it is still loading ,we don't have to make the request again)
-        let cachedRequest = getCachedForSet(linkedProps.sources.getNodes(),dataRequest);
+        let cachedRequest = Storage.setIsLoaded(linkedProps.sources.getNodes(),dataRequest);
         //if this component was bound and the cache does not state all the data was loaded
         if (props.isBound && !cachedRequest)
         {
@@ -642,7 +634,7 @@ export function linkedPackage(
           //the parent component will only update the cache to state that its top level request is loaded for its source
           //so here we make sure that the bound child components also updates cache for its source
           //this reduces the need for the parent component to discover the right sources of each child component when updating cache)
-          updateCacheForSet(linkedProps.sources.getNodes(),dataRequest,true);
+          Storage.setNodesLoaded(linkedProps.sources.getNodes(),dataRequest)
         }
 
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
@@ -670,18 +662,11 @@ export function linkedPackage(
           {
             //if we did not request all these properties before then we continue to load them all
             //load the required PropertyShapes from storage for this specific source
-            let loadPromise = Storage.loadShapes(linkedProps.sources,dataRequest).then((quads) => {
-
-              //update the cached result to the actual quads instead of the promise
-              //also mark any subRequests as loaded for the right nodes
-              updateCacheForSet(linkedProps.sources.getNodes(),dataRequest,true);
-
+            //we bypass cache because already checked cache ourselves above
+            Storage.loadShapes(linkedProps.sources,dataRequest,true).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
             });
-
-            //save the promise result (so we don't request it again)
-            updateCacheForSet(linkedProps.sources.getNodes(),dataRequest,loadPromise);
           }
         }
         //note: this useEffect function should be re-triggered if a different set of source nodes is given
@@ -699,7 +684,7 @@ export function linkedPackage(
       {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded = getCachedForSet(linkedProps.sources.getNodes(),dataRequest) === true;
+        dataIsLoaded = Storage.setIsLoaded(linkedProps.sources.getNodes(),dataRequest) === true;
       }
       //if the data is loaded
       if (dataIsLoaded)
@@ -965,100 +950,6 @@ function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDat
   }
 
   return dataResponse;
-}
-
-function getCachedForSet(sources: NodeSet,dataRequest): boolean | Promise<any>
-{
-  let stillLoading = [];
-  if (!sources.every(source => {
-    let cached = getCached(source,dataRequest);
-    if (!cached)
-    {
-      return false;
-    }
-    if (cached !== true)
-    {
-      //then it's a promise, this node is still loading
-      stillLoading.push(source);
-    }
-    return true;
-  }))
-  {
-    return false;
-  }
-  return stillLoading ? Promise.all(stillLoading) : true;
-}
-
-function getCached(source: Node,dataRequest): boolean | Promise<any>
-{
-  if (!nodeToPropertyRequests.has(source))
-  {
-    return false;
-  }
-  let propertiesRequested = nodeToPropertyRequests.get(source);
-  //return true if every top level property request has been loaded for this source
-  let stillLoading = [];
-  if (!dataRequest.every(propertyRequest => {
-    let propertyReqResult;
-    if (Array.isArray(propertyRequest))
-    {
-      //the property will be the first entry, the subRequest the second, but we don't do anything with that here
-      //we only check the top level, which regards this source
-      propertyReqResult = propertiesRequested.get(propertyRequest[0]);
-    }
-    else
-    {
-      propertyReqResult = propertiesRequested.get(propertyRequest);
-    }
-    if (!propertyReqResult)
-    {
-      //not every propertyRequest is loaded, return false, which stops the every() loop and resolves it to false
-      return false;
-    }
-    if (propertyReqResult !== true)
-    {
-      stillLoading.push(propertyReqResult);
-    }
-    //else if it's true, everything is loaded so far, no need to do anything
-    return true;
-  }))
-  {
-    return false;
-  }
-  //all propertyRequests had an entry, if some are still loading, return the promise that resolves when they're all loaded
-  //else return true (everything is loaded)
-  return stillLoading.length > 0 ? Promise.all(stillLoading) : true;
-}
-
-function updateCacheForSet(sources: NodeSet,request: LinkedDataRequest,requestState: true | Promise<any> = true)
-{
-  sources.forEach(source => {
-    updateCache(source,request,requestState);
-  });
-}
-
-function updateCache(source: Node,request: LinkedDataRequest,requestState: true | Promise<any> = true,tracedDataResponse?: TransformedLinkedDataResponse)
-{
-  if (!nodeToPropertyRequests.get(source))
-  {
-    nodeToPropertyRequests.set(source,new CoreMap());
-  }
-  let requestedProperties = nodeToPropertyRequests.get(source);
-
-  request.map(propertyRequest => {
-    if (Array.isArray(propertyRequest))
-    {
-      //propertyRequest is of the shape [propertyShape,subRequest]
-      //we're only updating cache for the property-shapes that regard this source, so we ignore the subRequest
-      //(cache for the subRequest will be set in the subComponent itself the first time useEffect is triggered and isBound=true but isLoaded=undefined, see linkedComponent)
-      requestedProperties.set(propertyRequest[0],requestState);
-    }
-    else
-    {
-      //propertyRequest is a PropertyShape
-      requestedProperties.set(propertyRequest,requestState);
-    }
-  });
 }
 
 
