@@ -2,10 +2,11 @@ import {QuadSet} from '../collections/QuadSet';
 import {Graph, NamedNode, Quad} from '../models';
 import {NodeSet} from '../collections/NodeSet';
 import {ICoreIterable} from './ICoreIterable';
-import {LinkedDataRequest, LinkedDataResponse, Shape} from '../shapes/Shape';
+import {Shape} from '../shapes/Shape';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreMap} from '../collections/CoreMap';
 import {ShapeSet} from '../collections/ShapeSet';
+import {LinkedDataRequest} from './Component';
 
 export interface IQuadStore {
   /**

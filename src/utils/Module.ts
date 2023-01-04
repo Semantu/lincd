@@ -4,31 +4,28 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NamedNode,Node} from '../models';
-import {
-  BoundComponentFactory,LinkedDataChildRequestFn,
-  LinkedDataDeclaration,
-  LinkedDataRequest,
-  LinkedDataRequestFn,
-  LinkedDataResponse,
-  LinkedDataSetDeclaration,
-  Shape,
-  SubRequest,
-  TransformedLinkedDataResponse,
-} from '../shapes/Shape';
+import {Shape} from '../shapes/Shape';
 import {NodeShape,PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 import {
+  BoundComponentFactory,
+  BoundComponentProps,
   BoundSetComponentFactory,
   Component,
   LinkableFunctionalComponent,
   LinkableFunctionalSetComponent,
   LinkedComponentInputProps,
-  LinkedComponentProps,
+  LinkedComponentProps,LinkedDataChildRequestFn,
+  LinkedDataDeclaration,
+  LinkedDataRequest,
+  LinkedDataRequestFn,
+  LinkedDataResponse,
+  LinkedDataSetDeclaration,
   LinkedFunctionalComponent,
   LinkedFunctionalSetComponent,
   LinkedSetComponentInputProps,
   LinkedSetComponentProps,
-  BoundComponentProps,
+  TransformedLinkedDataResponse,
 } from '../interfaces/Component';
 import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
@@ -58,24 +55,11 @@ var packageParsePromises: Map<string,Promise<any>> = new Map();
 var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
 /**
- * a map of data requests for specific nodes
- * The value is a promise if its still loading
- * QuadArray if its completed
- * Or 'true' if it was already loaded as a subRequest of another request
+ * a map of requested property shapes for specific nodes
+ * The value is a promise if it's still loading, or true if it is fully loaded
  */
-type RequestResult = Promise<void> | QuadArray | true;
-// var nodeToDataRequest: CoreMap<Node,CoreMap<LinkedDataRequest,RequestResult>> = new CoreMap();
-var nodeToPropertyRequests: CoreMap<Node,CoreMap<PropertyShape,true|Promise<any>>> = new CoreMap();
-var dataRequestToSets: CoreMap<LinkedDataRequest,CoreMap<NodeSet,RequestResult>> = new CoreMap();
-// type LinkedComponentClassDecorator<ShapeType,P> = <T extends typeof LinkedComponentClass<ShapeType,P>>(constructor:T)=>T;
+var nodeToPropertyRequests: CoreMap<Node,CoreMap<PropertyShape,true | Promise<any>>> = new CoreMap();
 type ClassDecorator = <T extends {new(...args: any[]): {}}>(constructor: T) => T;
-
-const UPDATE_CACHE = Symbol();
-// type EventConfig<Events extends { kind: string }> = {
-//   // [E in Events as E["kind"]]: (event: E) => void;
-//   [E in Events as String<E>]: (event: E) => void;
-// }
-//<Person,{bla}> => {bla:string} & {person:Person}
 
 /**
  * This object, returned by [linkedPackage()](/docs/lincd.js/modules/utils_Module#linkedPackage),
@@ -450,7 +434,7 @@ export function linkedPackage(
 
         let cachedRequest = getCached(linkedProps.source.node,dataRequest);
         //if this component was bound and the cache does not state all the data was loaded
-        if(props.isBound && !cachedRequest)
+        if (props.isBound && !cachedRequest)
         {
           //then we need to update that
           //(explanation: for bound components we can expect the data to be loaded.
@@ -461,19 +445,19 @@ export function linkedPackage(
         }
 
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-        if(!props.isBound)
+        if (!props.isBound)
         {
           //if these properties were requested before
-          if(cachedRequest)
+          if (cachedRequest)
           {
             //if some requiredProperties are still being loaded
             //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
-            if(cachedRequest instanceof Promise)
+            if (cachedRequest instanceof Promise)
             {
               //wait for that loading to be completed and then update the state
               cachedRequest.then(() => {
                 setIsLoaded(true);
-              })
+              });
             }
             else
             {
@@ -506,7 +490,7 @@ export function linkedPackage(
       //But for the first render, when the useEffect has not run yet,
       //and no this is not a bound component (so it's a top level linkedComponent),
       //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-      if(!props.isBound && typeof isLoaded ==='undefined')
+      if (!props.isBound && typeof isLoaded === 'undefined')
       {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
@@ -655,7 +639,7 @@ export function linkedPackage(
         //(if it was made, but it is still loading ,we don't have to make the request again)
         let cachedRequest = getCachedForSet(linkedProps.sources.getNodes(),dataRequest);
         //if this component was bound and the cache does not state all the data was loaded
-        if(props.isBound && !cachedRequest)
+        if (props.isBound && !cachedRequest)
         {
           //then we need to update that
           //(explanation: for bound components we can expect the data to be loaded.
@@ -666,19 +650,19 @@ export function linkedPackage(
         }
 
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-        if(!props.isBound)
+        if (!props.isBound)
         {
           //if these properties were requested before
-          if(cachedRequest)
+          if (cachedRequest)
           {
             //if some requiredProperties are still being loaded
             //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
-            if(cachedRequest instanceof Promise)
+            if (cachedRequest instanceof Promise)
             {
               //wait for that loading to be completed and then update the state
               cachedRequest.then(() => {
                 setIsLoaded(true);
-              })
+              });
             }
             else
             {
@@ -715,14 +699,15 @@ export function linkedPackage(
       //But for the first render, when the useEffect has not run yet,
       //and no this is not a bound component (so it's a top level linkedComponent),
       //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-      if(!props.isBound && typeof isLoaded ==='undefined')
+      if (!props.isBound && typeof isLoaded === 'undefined')
       {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
         dataIsLoaded = getCachedForSet(linkedProps.sources.getNodes(),dataRequest) === true;
       }
       //if the data is loaded
-      if(dataIsLoaded) {
+      if (dataIsLoaded)
+      {
 
         //if the component used a Shape.requestSet() data declaration function
         if (dataDeclaration)
@@ -972,7 +957,7 @@ function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDat
       dataResponse[index] = replaceBoundComponent(value,index);
     });
   }
-  else if(typeof dataResponse === 'function')
+  else if (typeof dataResponse === 'function')
   {
     dataResponse = replaceBoundComponent(dataResponse);
   }
@@ -986,36 +971,40 @@ function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDat
   return dataResponse;
 }
 
-function getCachedForSet(sources:NodeSet,dataRequest):boolean|Promise<any> {
+function getCachedForSet(sources: NodeSet,dataRequest): boolean | Promise<any>
+{
   let stillLoading = [];
-  if(!sources.every(source => {
+  if (!sources.every(source => {
     let cached = getCached(source,dataRequest);
-    if(!cached)
+    if (!cached)
     {
       return false;
     }
-    if(cached !== true)
+    if (cached !== true)
     {
       //then it's a promise, this node is still loading
       stillLoading.push(source);
     }
     return true;
-  })) {
+  }))
+  {
     return false;
   }
   return stillLoading ? Promise.all(stillLoading) : true;
 }
-function getCached(source:Node,dataRequest):boolean|Promise<any> {
-  if(!nodeToPropertyRequests.has(source))
+
+function getCached(source: Node,dataRequest): boolean | Promise<any>
+{
+  if (!nodeToPropertyRequests.has(source))
   {
     return false;
   }
   let propertiesRequested = nodeToPropertyRequests.get(source);
   //return true if every top level property request has been loaded for this source
   let stillLoading = [];
-  if(!dataRequest.every(propertyRequest => {
+  if (!dataRequest.every(propertyRequest => {
     let propertyReqResult;
-    if(Array.isArray(propertyRequest))
+    if (Array.isArray(propertyRequest))
     {
       //the property will be the first entry, the subRequest the second, but we don't do anything with that here
       //we only check the top level, which regards this source
@@ -1025,12 +1014,12 @@ function getCached(source:Node,dataRequest):boolean|Promise<any> {
     {
       propertyReqResult = propertiesRequested.get(propertyRequest);
     }
-    if(!propertyReqResult)
+    if (!propertyReqResult)
     {
       //not every propertyRequest is loaded, return false, which stops the every() loop and resolves it to false
       return false;
     }
-    if(propertyReqResult !== true)
+    if (propertyReqResult !== true)
     {
       stillLoading.push(propertyReqResult);
     }
@@ -1045,23 +1034,23 @@ function getCached(source:Node,dataRequest):boolean|Promise<any> {
   return stillLoading.length > 0 ? Promise.all(stillLoading) : true;
 }
 
-
-function updateCacheForSet(sources: NodeSet,request: LinkedDataRequest,requestState: true | Promise<any>=true)
+function updateCacheForSet(sources: NodeSet,request: LinkedDataRequest,requestState: true | Promise<any> = true)
 {
   sources.forEach(source => {
     updateCache(source,request,requestState);
-  })
+  });
 }
-function updateCache(source: Node,request: LinkedDataRequest,requestState: true | Promise<any>=true,tracedDataResponse?: TransformedLinkedDataResponse)
+
+function updateCache(source: Node,request: LinkedDataRequest,requestState: true | Promise<any> = true,tracedDataResponse?: TransformedLinkedDataResponse)
 {
-  if(!nodeToPropertyRequests.get(source))
+  if (!nodeToPropertyRequests.get(source))
   {
     nodeToPropertyRequests.set(source,new CoreMap());
   }
   let requestedProperties = nodeToPropertyRequests.get(source);
 
   request.map(propertyRequest => {
-    if(Array.isArray(propertyRequest))
+    if (Array.isArray(propertyRequest))
     {
       //propertyRequest is of the shape [propertyShape,subRequest]
       //we're only updating cache for the property-shapes that regard this source, so we ignore the subRequest
@@ -1109,51 +1098,51 @@ function updateCache(source: Node,request: LinkedDataRequest,requestState: true 
     });
   }*/
 
- /*
-  //if specific properties were requested (rather than simply a shape)
-  // if (request.properties) {
-  //check each requested property shape
-  // let {shape, properties} = request;
-  request.map((propertyRequest: NodeShape | PropertyShape | [PropertyShape,SubRequest]) => {
-    let subRequest: LinkedDataRequest;
-    let propertyShape: PropertyShape;
-    // let propertyShapes: PropertyShape[];
+  /*
+   //if specific properties were requested (rather than simply a shape)
+   // if (request.properties) {
+   //check each requested property shape
+   // let {shape, properties} = request;
+   request.map((propertyRequest: NodeShape | PropertyShape | [PropertyShape,SubRequest]) => {
+     let subRequest: LinkedDataRequest;
+     let propertyShape: PropertyShape;
+     // let propertyShapes: PropertyShape[];
 
-    //if this property request is given as an object with the following key
-    //then it comes from a bound child component request, aka a sub request
-    if (Array.isArray(propertyRequest))
-    {
-      [propertyShape,subRequest] = propertyRequest;
+     //if this property request is given as an object with the following key
+     //then it comes from a bound child component request, aka a sub request
+     if (Array.isArray(propertyRequest))
+     {
+       [propertyShape,subRequest] = propertyRequest;
 
-      //if there were more than 1 (if there is more left right now)
-      // if (propertyShapes.length > 1) {
-      //   console.warn('Multiple property shapes not supported yet. Taking first only');
-      // }
-      // propertyShape = propertyShapes[0];
+       //if there were more than 1 (if there is more left right now)
+       // if (propertyShapes.length > 1) {
+       //   console.warn('Multiple property shapes not supported yet. Taking first only');
+       // }
+       // propertyShape = propertyShapes[0];
 
-      //if no property shapes were used, then the source of the child component equals the source of the component
-      //so, we now update the cache for the same source for this subrequest
-      if (!propertyShape)
-      {
-        updateCache(source,subRequest,true);
-      }
-      else
-      {
-        //for each returned value for this property path
-        source.getAll(propertyShape.path).forEach((propertyValue) => {
-          //update the cache to state that we have loaded the sub request for this specific node
-          //and also check the subrequest recursively for any more deeply nested requests
-          //but first: for subrequests we need to first make sure an entry exists in the cache for this node
-          if (!nodeToDataRequest.has(propertyValue))
-          {
-            nodeToDataRequest.set(propertyValue,new CoreMap());
-          }
-          updateCache(propertyValue,subRequest,true);
-        });
-      }
-    }
-    // });
-  });*/
+       //if no property shapes were used, then the source of the child component equals the source of the component
+       //so, we now update the cache for the same source for this subrequest
+       if (!propertyShape)
+       {
+         updateCache(source,subRequest,true);
+       }
+       else
+       {
+         //for each returned value for this property path
+         source.getAll(propertyShape.path).forEach((propertyValue) => {
+           //update the cache to state that we have loaded the sub request for this specific node
+           //and also check the subrequest recursively for any more deeply nested requests
+           //but first: for subrequests we need to first make sure an entry exists in the cache for this node
+           if (!nodeToDataRequest.has(propertyValue))
+           {
+             nodeToDataRequest.set(propertyValue,new CoreMap());
+           }
+           updateCache(propertyValue,subRequest,true);
+         });
+       }
+     }
+     // });
+   });*/
 }
 
 /*function getResponsePropertyShapeClone(propertyShapes:PropertyShape[],dataRequest:LinkedDataRequest,dataResponse:LinkedDataResponse) {
@@ -1210,7 +1199,7 @@ function createDataRequestObject<ShapeType extends Shape>(
 ): [LinkedDataRequest,TransformedLinkedDataResponse]
 {
 
-  if((dataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
+  if ((dataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
   {
     return [null,null];
   }
@@ -1283,9 +1272,9 @@ function createDataRequestObject<ShapeType extends Shape>(
   {
     (dataResponse as any[]).forEach((value,index) => {
       dataResponse[index] = replaceBoundFactory(value);
-    })
+    });
   }
-  else if(typeof dataRequest === 'function')
+  else if (typeof dataRequest === 'function')
   {
     dataRequest = replaceBoundFactory(dataRequest);
   }
@@ -1505,9 +1494,12 @@ function getPackageExport(moduleName,exportName)
 {
   return lincd._modules[moduleName] ? lincd._modules[moduleName][exportName] : null;
 }
-function getSourceFromInputProps(props,shapeClass) {
- return props.of instanceof Node ? new shapeClass(props.of) : props.of
+
+function getSourceFromInputProps(props,shapeClass)
+{
+  return props.of instanceof Node ? new shapeClass(props.of) : props.of;
 }
+
 function getLinkedComponentProps<ShapeType extends Shape,P>(
   props: LinkedComponentInputProps<ShapeType> & P,
   shapeClass,
@@ -1601,7 +1593,7 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
     );
 
     //run the function that the component provided to see which properties it needs
-    if(!(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
+    if (!(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
     {
       [childDataRequest,tracedChildDataResponse] = createDataRequestObject(childDataRequestFn as LinkedDataRequestFn<ShapeType>,dummyInstance);
     }
@@ -1627,7 +1619,8 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
         {
           let childRenderFn;
           //if a single component was given, instead of a request
-          if((childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of) {
+          if ((childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
+          {
             //then use that component as to render the child items
             childRenderFn = childDataRequestFn;
           }
@@ -1635,9 +1628,12 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
           {
             //else, a request function was given,
             //for this, props.children must be single item that is a function that we can use to render the children
-            if (typeof props.children === 'function') {
+            if (typeof props.children === 'function')
+            {
               childRenderFn = (props.children as Function);
-            } else if(React.Children.count(props.children) == 0) {
+            }
+            else if (React.Children.count(props.children) == 0)
+            {
               throw new Error('Invalid use of Grid. Provide fixed child components or a render function as a single child. Alternatively, return a single bound component in the child data request.');
             }
           }
@@ -1648,13 +1644,14 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
             newChildProps['isBound'] = true;
 
             //automatically set a key for each child component if a source is set
-            if(newChildProps.of)
+            if (newChildProps.of)
             {
               newChildProps['key'] = newChildProps.of instanceof Shape ? newChildProps.of.node.toString() : newChildProps.of.toString();
             }
 
             //if a dataRequest was given (not a component
-            if(!(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of) {
+            if (!(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
+            {
               //NOTE: unlike other places where we call getLinkedDataResponse, the child component is a linkedComponent, which will convert the input props ('of') to source. so, we don't want to already do that here.
               // Hence, we manually get the source from props to get the linkedDataResponse
               let source = getSourceFromInputProps(childProps,shapeClass);

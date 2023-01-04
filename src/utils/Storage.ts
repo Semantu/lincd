@@ -3,7 +3,7 @@ import {defaultGraph, Graph, NamedNode, Quad} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import {CoreMap} from '../collections/CoreMap';
 import {NodeSet} from '../collections/NodeSet';
-import {LinkedDataRequest, Shape} from '../shapes/Shape';
+import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {eventBatcher} from '../events/EventBatcher';
@@ -11,6 +11,7 @@ import nextTick from 'next-tick';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreSet} from '../collections/CoreSet';
 import {ShapeSet} from '../collections/ShapeSet';
+import {LinkedDataRequest} from '../interfaces/Component';
 
 export abstract class Storage {
   private static defaultStore: IQuadStore;
