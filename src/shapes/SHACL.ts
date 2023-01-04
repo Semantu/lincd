@@ -228,4 +228,10 @@ export class PropertyShape extends SHACL_Shape {
     }
     return true;
   }
+
+  resolveFor(node: NamedNode)
+  {
+    //TODO: support more complex property paths
+    return node.getAll(this.path);
+  }
 }

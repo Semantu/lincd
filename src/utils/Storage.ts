@@ -642,9 +642,17 @@ export abstract class Storage {
       if (Array.isArray(propertyRequest))
       {
         //propertyRequest is of the shape [propertyShape,subRequest]
-        //we're only updating cache for the property-shapes that regard this source, so we ignore the subRequest
-        //(cache for the subRequest will be set in the subComponent itself the first time useEffect is triggered and isBound=true but isLoaded=undefined, see linkedComponent)
+        //update the cache for the property-shapes that regard this source
         requestedProperties.set(propertyRequest[0],requestState);
+
+        //if loading has finished
+        if(requestState === true)
+        {
+          //then resolve the property shape for this node (so follow the property shape from this node)
+          //then update the cache to indicate that the subRequest has been loaded
+          // for each of the nodes you get to from that property shape
+          this.setNodesLoaded(propertyRequest[0].resolveFor(node as NamedNode),propertyRequest[1],requestState);
+        }
       }
       else
       {
