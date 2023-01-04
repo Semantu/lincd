@@ -554,10 +554,6 @@ export function linkedPackage(
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
-    // _wrappedComponent.setLoaded = function(source) {
-    //   updateCache(source.node,dataRequest,true);
-    // }
-
     _wrappedComponent.dataRequest = dataRequest;
 
     //link the wrapped functional component to its shape
@@ -690,7 +686,7 @@ export function linkedPackage(
         }
         //note: this useEffect function should be re-triggered if a different set of source nodes is given
         //however the actual set could be a new one every time. For now we check the 'of' prop, but if this triggers
-        //on every parent update whilst it shouldnt, we could try linkedProps.sources.map(s => s.node.value).join("")
+        //on every parent update whilst it shouldn't, we could try linkedProps.sources.map(s => s.node.value).join("")
       },[props.of,props.isBound]);
 
       //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
@@ -925,9 +921,9 @@ export function linkedPackage(
   } as LinkedPackageObject;
 }
 
-function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<ShapeSet<ShapeType>>,source: ShapeSet<ShapeType>,tracedDataResponse: TransformedLinkedDataResponse,setLoaded?: boolean): LinkedDataResponse;
-function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<ShapeType>,source: ShapeType,tracedDataResponse: TransformedLinkedDataResponse,setLoaded?: boolean): LinkedDataResponse;
-function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<any>,source: ShapeType | ShapeSet<ShapeType>,tracedDataResponse: TransformedLinkedDataResponse,setLoaded: boolean = true): LinkedDataResponse
+function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<ShapeSet<ShapeType>>,source: ShapeSet<ShapeType>,tracedDataResponse: TransformedLinkedDataResponse): LinkedDataResponse;
+function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<ShapeType>,source: ShapeType,tracedDataResponse: TransformedLinkedDataResponse): LinkedDataResponse;
+function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<any>,source: ShapeType | ShapeSet<ShapeType>,tracedDataResponse: TransformedLinkedDataResponse): LinkedDataResponse
 {
 
   let dataResponse: LinkedDataResponse = dataRequestFn(source);
@@ -1063,125 +1059,8 @@ function updateCache(source: Node,request: LinkedDataRequest,requestState: true 
       requestedProperties.set(propertyRequest,requestState);
     }
   });
-  /*
-
-  let requestCache = nodeToDataRequest.get(source);
-  requestCache.set(request,requestResult);
-
-  let updateChildCache = (value,target,key) => {
-    //if a function was returned for this key
-    if (typeof value === 'function')
-    {
-
-      //then call the function to get the actual intended value
-      let evaluated = (value as Function)();
-      //if a bound component was returned
-      if (evaluated && evaluated._create)
-      {
-        //YOU ARE HERE: you have access to component,
-        //but not to the sources!
-        evaluated._setLoaded();
-
-      }
-    }
-  };
-  if (Array.isArray(tracedDataResponse))
-  {
-    (tracedDataResponse as any[]).forEach((value,index) => {
-      updateChildCache(value,tracedDataResponse,index);
-    });
-  }
-  else
-  {
-    Object.getOwnPropertyNames(tracedDataResponse).forEach((key) => {
-      updateChildCache(tracedDataResponse[key],tracedDataResponse,key);
-    });
-  }*/
-
-  /*
-   //if specific properties were requested (rather than simply a shape)
-   // if (request.properties) {
-   //check each requested property shape
-   // let {shape, properties} = request;
-   request.map((propertyRequest: NodeShape | PropertyShape | [PropertyShape,SubRequest]) => {
-     let subRequest: LinkedDataRequest;
-     let propertyShape: PropertyShape;
-     // let propertyShapes: PropertyShape[];
-
-     //if this property request is given as an object with the following key
-     //then it comes from a bound child component request, aka a sub request
-     if (Array.isArray(propertyRequest))
-     {
-       [propertyShape,subRequest] = propertyRequest;
-
-       //if there were more than 1 (if there is more left right now)
-       // if (propertyShapes.length > 1) {
-       //   console.warn('Multiple property shapes not supported yet. Taking first only');
-       // }
-       // propertyShape = propertyShapes[0];
-
-       //if no property shapes were used, then the source of the child component equals the source of the component
-       //so, we now update the cache for the same source for this subrequest
-       if (!propertyShape)
-       {
-         updateCache(source,subRequest,true);
-       }
-       else
-       {
-         //for each returned value for this property path
-         source.getAll(propertyShape.path).forEach((propertyValue) => {
-           //update the cache to state that we have loaded the sub request for this specific node
-           //and also check the subrequest recursively for any more deeply nested requests
-           //but first: for subrequests we need to first make sure an entry exists in the cache for this node
-           if (!nodeToDataRequest.has(propertyValue))
-           {
-             nodeToDataRequest.set(propertyValue,new CoreMap());
-           }
-           updateCache(propertyValue,subRequest,true);
-         });
-       }
-     }
-     // });
-   });*/
 }
 
-/*function getResponsePropertyShapeClone(propertyShapes:PropertyShape[],dataRequest:LinkedDataRequest,dataResponse:LinkedDataResponse) {
-
-  let propertyShapeClone;
-  let checkPropertyShape = (value, target, key) => {
-    //always take the first next property shape in line
-    let propertyShape = propertyShapes.shift();
-    //save it in the propertyShapeClone if this value is a bound component
-    if (value && value._create) {
-      target[key] = propertyShape;
-      //first, find the index of the shifted propertyShape in the original request.properties array
-      //we can calculate that manually
-      //TODO: test if indexOf would be faster
-      let numLeft = propertyShapes.length;
-      let total = (dataRequest as DetailedLinkedDataRequest).properties.length;
-      let targetIndex = total-numLeft-1;
-      //then replace the propertyShape in the dataRequest with a new entry,
-      //that adds the nested data dependencies of this bound child component
-      (dataRequest as DetailedLinkedDataRequest).properties[targetIndex] = [
-        propertyShape,
-        (value as BoundComponentFactory<any,any>)._comp.dataRequest
-      ]
-
-    }
-  };
-  if (Array.isArray(dataResponse)) {
-    propertyShapeClone = [];
-    (dataResponse as any[]).forEach((value, index) => {
-      checkPropertyShape(value, propertyShapeClone, index);
-    });
-  } else {
-    propertyShapeClone = {};
-    Object.getOwnPropertyNames(dataResponse).forEach((key) => {
-      checkPropertyShape(dataResponse[key], propertyShapeClone, key);
-    });
-  }
-  return propertyShapeClone
-}*/
 
 //This method can be used in two ways, the first parameter must match with the type of the second,
 //hence the multiple function declarations (overloads)
