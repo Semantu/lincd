@@ -489,6 +489,17 @@ export function linkedPackage(
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
       let linkedProps = getLinkedSetComponentProps<ShapeType,DeclaredProps>(props,shapeClass);
 
+      //if this component was created with an 'as' attribute (so <SetComponent of={sources} as={ChildComponent} />
+      if(props.as)
+      {
+        //then we should make that available as the ChildComponent (in other cases ChildComponent is already defined by children or dataRequest, but here we need to do it based on props)
+        linkedProps.ChildComponent = props.as;
+      }
+
+      //if this component was created with an 'as' attribute,
+      //then we combine the dataRequest with the childComponent that this specific instance comes with
+      let instanceDataRequest = props.as && (props.as as LinkedFunctionalComponent<ShapeType>).dataRequest ? [...dataRequest,...(props.as as LinkedFunctionalComponent<ShapeType>).dataRequest] : dataRequest;
+
       //if we're not using any storage in this LINCD app, just render as usual
       if (!Storage.isInitialised())
       {
@@ -501,7 +512,7 @@ export function linkedPackage(
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
         if (!props.isBound)
         {
-          let cachedRequest = Storage.setIsLoaded(linkedProps.sources.getNodes(),dataRequest);
+          let cachedRequest = Storage.setIsLoaded(linkedProps.sources.getNodes(),instanceDataRequest);
           //if these properties were requested before and have finished loading
           if (cachedRequest === true)
           {
@@ -513,7 +524,7 @@ export function linkedPackage(
             //if we did not request all these properties before then we continue to load them all
             //load the required PropertyShapes from storage for this specific source
             //we bypass cache because already checked cache ourselves above
-            Storage.loadShapes(linkedProps.sources,dataRequest,true).then((quads) => {
+            Storage.loadShapes(linkedProps.sources,instanceDataRequest,true).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
             });
@@ -544,7 +555,7 @@ export function linkedPackage(
       {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded = Storage.setIsLoaded(linkedProps.sources.getNodes(),dataRequest) === true;
+        dataIsLoaded = Storage.setIsLoaded(linkedProps.sources.getNodes(),instanceDataRequest) === true;
       }
       //if the data is loaded
       if (dataIsLoaded)
@@ -772,9 +783,11 @@ function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requ
   if (requiredData['prototype'] instanceof Shape || requiredData === Shape)
   {
     //then we will load instances of this shape
+    // and require instances of this shape to be used for this component
     shapeClass = requiredData as typeof Shape;
-    //and we simply request all property shapes of this shape to be loaded
-    dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : [];
+    //but we don't specifically request any data
+    dataRequest = [];
+    // dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : [];
   }
   else
   {
@@ -1234,31 +1247,28 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
   let tracedChildDataResponse: TransformedLinkedDataResponse;
   let childDataRequest: LinkedDataRequest;
   //if a childDataRequestFn was given (as second argument of SetComponent.of())
-  //and it was NOT defined as a single bound component
-  if (childDataRequestFn && !(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
+  if (childDataRequestFn)
   {
-    //then create a test instance of the shape
-    let dummyInstance = createTraceShape(
-      shapeClass,
-      null,
-      this.name || this.toString().substring(0,80) + ' ...',
-    );
+    //if a single bound component was given
+    if((childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
+    {
+      //we can access its required properties directly
+      childDataRequest = (childDataRequestFn as LinkedFunctionalComponent<ShapeType>).dataRequest;
+    }
+    else
+    {
+      //else, a child data request function was given as second argument of .of()
+      //then create a test instance of the shape
+      let dummyInstance = createTraceShape(
+        shapeClass,
+        null,
+        this.name || this.toString().substring(0,80) + ' ...',
+      );
 
-    //and run the function that the component provided to see which properties it needs
-    [childDataRequest,tracedChildDataResponse] = createDataRequestObject(childDataRequestFn as LinkedDataRequestFn<ShapeType>,dummyInstance);
-
+      //and run the function that the component provided to see which properties it needs
+      [childDataRequest,tracedChildDataResponse] = createDataRequestObject(childDataRequestFn as LinkedDataRequestFn<ShapeType>,dummyInstance);
+    }
   }
-  //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
-  // else if(dataDeclaration.request)
-  // {
-  //   // TODO: childDataRequest needed? can we not detect dataRequest where we need it?
-  //   // and dataRequest.request should already be processed, so we can access that object right
-  //   // childDataRequest = dataRequest
-  //   //
-  //   // use that request function as the childDataRequestFn
-  //   // childDataRequestFn = dataDeclaration.request;
-  //   [childDataRequest,tracedChildDataResponse] = createDataRequestObject(dataDeclaration.request,dummyInstance);
-  // }
 
   return {
     _comp: this,
@@ -1290,7 +1300,7 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
           }
           else
           {
-            //else, a request function was given,
+            //else, a child data request function was given as second argument
             //for this, props.children must be single item that is a function that we can use to render the children
             if (typeof props.children === 'function')
             {
@@ -1332,8 +1342,8 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
         //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
         else if(dataDeclaration.request)
         {
-          //then we provide that request as the getChildLinkedData prop
-          newProps.getChildLinkedData = function(source) {
+          //then we provide that request as the getLinkedData prop
+          newProps.getLinkedData = function(source) {
             //Note that tracedDataResponse is the results of processing dataDeclaration.request
             //this already happened in a previous step, and just like we regard dataDeclaration.request as the childDataRequestFn
             //we can also regard tracedDataResponse (its processed traced response) as childTracedDataResponse

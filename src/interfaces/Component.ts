@@ -95,11 +95,11 @@ export interface LinkedSetComponentProps<ShapeType extends Shape> extends Linked
    * ```tsx
    * export const PersonOverview = linkedSetComponent(
    *   Person.requestForEachInSet(person => () => PersonProfileCard.of(person)),
-   *   ({sources,getChildLinkedData}) => {
+   *   ({sources,getLinkedData}) => {
    *     return (
    *       <div>
    *         {sources.map(source => {
-   *           let Profile = getChildLinkedData(source) as any;
+   *           let Profile = getLinkedData(source) as any;
    *           //You can pass the same props to Profile as you would to PersonProfileCard
    *           return <div><Profile /></div>
    *         })}
@@ -109,7 +109,7 @@ export interface LinkedSetComponentProps<ShapeType extends Shape> extends Linked
    * );
    * ```
    */
-  getChildLinkedData?:LinkedDataRequestFn<ShapeType>;
+  getLinkedData?:LinkedDataRequestFn<ShapeType>;
 }
 export interface LinkedComponentProps<ShapeType extends Shape> extends LinkedComponentBaseProps {
   /**
@@ -137,6 +137,7 @@ export interface LinkedSetComponentInputProps<ShapeType extends Shape = Shape> e
    * Can be a set of Nodes in the graph or a set of instances of the Shape that this component uses
    */
   of: NodeSet|ShapeSet<ShapeType>;
+  as?:React.FC|LinkedFunctionalComponent<any,ShapeType>;
 }
 export interface LinkedComponentInputProps<ShapeType extends Shape = Shape> extends LinkedComponentInputBaseProps {
   /**

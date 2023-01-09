@@ -499,9 +499,11 @@ export abstract class Storage {
     }
 
     let storeMap = this.getTargetStoreMapForShapes(shapeSet);
-    let loadPromise = Promise.all(storeMap.map((shapes,store) => {
-      return store.loadShapes(new ShapeSet(shapes),shapeOrRequest);
-    })).then((results) => {
+    let storePromises = [];
+    storeMap.map((shapes,store) => {
+      storePromises.push(store.loadShapes(new ShapeSet(shapes),shapeOrRequest));
+    })
+    let loadPromise = Promise.all(storePromises).then((results) => {
       // return new QuadArray();
       let quads = new QuadArray();
       results.forEach(result => {
