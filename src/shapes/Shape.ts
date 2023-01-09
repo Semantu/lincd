@@ -249,11 +249,26 @@ export abstract class Shape extends EventEmitter implements IShape
   ): LinkedDataSetDeclaration<T>
   {
     //return an object with the shape and a request key. The value of request is a function
+    //that can be executed for a set of instances of the shape
+    return {
+      shape: this as any as typeof Shape,
+      setRequest: (shapeSet) => {
+        return dataRequestFn(shapeSet);
+      },
+    };
+  }
+
+  static requestForEachInSet<T extends Shape>(
+    this: {new(node: Node): T;targetClass: any},
+    dataRequestFn: (shape: T) => LinkedDataResponse,
+  ): LinkedDataSetDeclaration<T>
+  {
+    //return an object with the shape and a request key. The value of request is a function
     //that can be executed for a specific instance of the shape
     return {
       shape: this as any as typeof Shape,
-      request: (shapeSet) => {
-        return dataRequestFn(shapeSet);
+      request: (shape) => {
+        return dataRequestFn(shape);
       },
     };
   }

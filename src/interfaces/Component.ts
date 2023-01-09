@@ -87,6 +87,29 @@ export interface LinkedSetComponentProps<ShapeType extends Shape> extends Linked
    */
   ChildComponent?:LinkedFunctionalComponent<any,ShapeType>;
 
+  /**
+   * Retrieve the linked data for a specific item in the set of sources.
+   * This prop will be provided if your component uses Shape.requestForEachInSet()
+   * The result of calling the function will be of the same shape as what you returned in requestForEachInSet(() => ...)
+   * Example:
+   * ```tsx
+   * export const PersonOverview = linkedSetComponent(
+   *   Person.requestForEachInSet(person => () => PersonProfileCard.of(person)),
+   *   ({sources,getChildLinkedData}) => {
+   *     return (
+   *       <div>
+   *         {sources.map(source => {
+   *           let Profile = getChildLinkedData(source) as any;
+   *           //You can pass the same props to Profile as you would to PersonProfileCard
+   *           return <div><Profile /></div>
+   *         })}
+   *       </div>
+   *     );
+   *   },
+   * );
+   * ```
+   */
+  getChildLinkedData?:LinkedDataRequestFn<ShapeType>;
 }
 export interface LinkedComponentProps<ShapeType extends Shape> extends LinkedComponentBaseProps {
   /**
@@ -158,7 +181,8 @@ export type LinkedDataRequestFn<T> = (shapeOrShapeSet: T) => LinkedDataResponse;
 
 export type LinkedDataSetDeclaration<T extends Shape> = {
   shape: typeof Shape;
-  request: LinkedDataRequestFn<ShapeSet<T>>;
+  setRequest?: LinkedDataRequestFn<ShapeSet<T>>;
+  request?: LinkedDataRequestFn<T>;
 };
 
 export type SubRequest = LinkedDataRequest;

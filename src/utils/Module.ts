@@ -554,7 +554,7 @@ export function linkedPackage(
         if (dataDeclaration)
         {
           //then use that now to get the requested linkedData for this instance
-          linkedProps.linkedData = getLinkedDataResponse(dataDeclaration.request,linkedProps.sources,tracedDataResponse);
+          linkedProps.linkedData = getLinkedDataResponse(dataDeclaration.request || dataDeclaration.setRequest,linkedProps.sources,tracedDataResponse);
         }
 
         //render the original components with the original + generated properties
@@ -569,7 +569,7 @@ export function linkedPackage(
 
 
     //attach the 'of(source)' function. Here named bindSetComponentToData()
-    _wrappedComponent.of = bindSetComponentToData.bind(_wrappedComponent,shapeClass,tracedDataResponse);
+    _wrappedComponent.of = bindSetComponentToData.bind(_wrappedComponent,shapeClass,tracedDataResponse,dataDeclaration);
 
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
@@ -778,8 +778,8 @@ function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requ
   }
   else
   {
-    //requiredData is a LinkedDataSetDeclaration
-    dataDeclaration = requiredData as LinkedDataSetDeclaration<ShapeType>;
+    //requiredData is a LinkedDataDeclaration or a LinkedDataSetDeclaration
+    dataDeclaration = requiredData as LinkedDataSetDeclaration<ShapeType>|LinkedDataDeclaration<ShapeType>;
     shapeClass = dataDeclaration.shape;
 
     //create a test instance of the shape
@@ -789,10 +789,15 @@ function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requ
       functionalComponent.name || functionalComponent.toString().substring(0,80) + ' ...',
     );
 
-    let dummySet = setComponent ? new ShapeSet([dummyInstance]) : dummyInstance;
+    //if setComponent is true then linkedSetComponent() was used
+    //if then also dataDeclaration.setRequest is defined, then the SetComponent used Shape.requestSet()
+    //and its LinkedDataRequestFn expects a set of shape instances
+    //otherwise (also for Shape.requestForEachInSet) it expects a single shape instance
+    let provideSetToDataRequestFn = setComponent && (dataDeclaration as LinkedDataSetDeclaration<ShapeType>).setRequest;
+    let dummySet = provideSetToDataRequestFn ? new ShapeSet([dummyInstance]) : dummyInstance;
 
     //create a dataRequest object, we will use this for requesting data from stores
-    [dataRequest,tracedDataResponse] = createDataRequestObject(dataDeclaration.request,dummySet as any);
+    [dataRequest,tracedDataResponse] = createDataRequestObject(dataDeclaration.request || (dataDeclaration as any).setRequest,dummySet as any);
   }
   return [shapeClass,dataRequest,dataDeclaration,tracedDataResponse];
 }
@@ -869,7 +874,7 @@ function createDataRequestObject<ShapeType extends Shape>(
   //for sets, we should get a set with a single item, so we can retrieve traced properties from that single item
   let traceInstance = (instance instanceof ShapeSet ? instance.first() : instance);
 
-  //start with the requested properties, which an array of PropertyShapes
+  //start with the requested properties, which is an array of PropertyShapes
   let dataRequest: LinkedDataRequest = traceInstance.requested;
 
   let replaceBoundFactory = (value,target?,key?) => {
@@ -888,7 +893,8 @@ function createDataRequestObject<ShapeType extends Shape>(
 
         //retrieve and remove any propertyShape that were requested
         let appliedPropertyShapes = traceInstance.requested.splice(previousNumPropShapes);
-        //store them in the value, we will need that when we actually use the nested component
+        //store them in the bound component factory object,
+        //we will need that when we actually use the nested component
         evaluated._props = appliedPropertyShapes;
 
         //then place back an object stating which property shapes were requested
@@ -933,9 +939,9 @@ function createDataRequestObject<ShapeType extends Shape>(
       dataResponse[index] = replaceBoundFactory(value);
     });
   }
-  else if (typeof dataRequest === 'function')
+  else if (typeof dataResponse === 'function')
   {
-    dataRequest = replaceBoundFactory(dataRequest);
+    dataResponse = replaceBoundFactory(dataResponse);
   }
   else
   {
@@ -1222,43 +1228,57 @@ function bindComponentToData<P,ShapeType extends Shape>(tracedDataResponse: Tran
   };
 }
 
-function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Shape,tracedDataResponse: TransformedLinkedDataResponse,sources: NodeSet | ShapeSet<ShapeType>,childDataRequestFn?: LinkedDataChildRequestFn<ShapeType>): BoundSetComponentFactory<P,ShapeType>
+function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Shape,tracedDataResponse: TransformedLinkedDataResponse,dataDeclaration:LinkedDataSetDeclaration<ShapeType>,sources: NodeSet | ShapeSet<ShapeType>,childDataRequestFn?: LinkedDataChildRequestFn<ShapeType>): BoundSetComponentFactory<P,ShapeType>
 {
 
   let tracedChildDataResponse: TransformedLinkedDataResponse;
   let childDataRequest: LinkedDataRequest;
-  if (childDataRequestFn)
+  //if a childDataRequestFn was given (as second argument of SetComponent.of())
+  //and it was NOT defined as a single bound component
+  if (childDataRequestFn && !(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
   {
-    //create a test instance of the shape
+    //then create a test instance of the shape
     let dummyInstance = createTraceShape(
       shapeClass,
       null,
       this.name || this.toString().substring(0,80) + ' ...',
     );
 
-    //run the function that the component provided to see which properties it needs
-    if (!(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
-    {
-      [childDataRequest,tracedChildDataResponse] = createDataRequestObject(childDataRequestFn as LinkedDataRequestFn<ShapeType>,dummyInstance);
-    }
+    //and run the function that the component provided to see which properties it needs
+    [childDataRequest,tracedChildDataResponse] = createDataRequestObject(childDataRequestFn as LinkedDataRequestFn<ShapeType>,dummyInstance);
 
   }
+  //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
+  // else if(dataDeclaration.request)
+  // {
+  //   // TODO: childDataRequest needed? can we not detect dataRequest where we need it?
+  //   // and dataRequest.request should already be processed, so we can access that object right
+  //   // childDataRequest = dataRequest
+  //   //
+  //   // use that request function as the childDataRequestFn
+  //   // childDataRequestFn = dataDeclaration.request;
+  //   [childDataRequest,tracedChildDataResponse] = createDataRequestObject(dataDeclaration.request,dummyInstance);
+  // }
 
   return {
     _comp: this,
+    //we store the childDataRequest (an array of property shapes) so that it can be accessed when stringing together a full data request
     _childDataRequest: childDataRequest,
     _create: (propertyShapes) => {
       let boundComponent: LinkedFunctionalSetComponent<P,ShapeType> = (props) => {
         //TODO: use propertyShapes for RDFa
 
         //manually transfer the value of the first parameter of Component.of() to an of prop in JSX
-        let newProps = {...props};
+        let newProps:LinkedSetComponentProps<any> = {...props} as any;
+        //Note: we use bracket notation here because technically this method is working with InputProps and adding to those input props
+        //But we are setting props to be used in the final LinkedSetComponentProps, so we're using that definition to define other properties below
+        //But here we need to define 'of' which is an input prop
         newProps['of'] = sources;
+        //and isBound which is a temporary internal prop that is currently not defined in any interface
         newProps['isBound'] = true;
 
-        //add childDataRequestFn as a prop called getChildLinkedData
-        //so that SetComponents can retrieve linked data for their children
-        //see also definition of getChildLinkedData
+        //if SetComponent.of received a child data request as second argument
+        // i.e. Grid.of(persons,PersonProfileCard) which means shows a grid of persons as profile cards
         if (childDataRequestFn)
         {
           let childRenderFn;
@@ -1282,8 +1302,10 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
             }
           }
 
-          newProps['ChildComponent'] = (childProps) => {
-            let newChildProps = {...childProps};//getLinkedComponentProps(childProps as any,shapeClass);
+          //then we provide a ChildComponent prop, which is a render function that uses the childRenderFn defined above
+          newProps.ChildComponent = (childProps) => {
+            let newChildProps = {...childProps};
+
             //children are 'bound', meaning their data will always be loaded
             newChildProps['isBound'] = true;
 
@@ -1293,7 +1315,7 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
               newChildProps['key'] = newChildProps.of instanceof Shape ? newChildProps.of.node.toString() : newChildProps.of.toString();
             }
 
-            //if a dataRequest was given (not a component
+            //if a dataRequest was given (not a component)
             if (!(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
             {
               //NOTE: unlike other places where we call getLinkedDataResponse, the child component is a linkedComponent, which will convert the input props ('of') to source. so, we don't want to already do that here.
@@ -1307,16 +1329,16 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
             return childRenderFn(newChildProps);
           };
         }
-        else
+        //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
+        else if(dataDeclaration.request)
         {
-          //TODO: do we want to allow for setcomponents that have a child data request, but fixed children? (so not a render fn, nor no children at all + a component as request (which then truly is a child render component))
-          // newProps['getChildLinkedData'] = (childItem: ShapeType) => {
-          //   //call the function defined in the component that consumes/uses the SetComponent
-          //   //this returns the initial linked data for this child item
-          //   //replace bound component factories with real components
-          //   return getLinkedDataResponse(childDataRequestFn,childItem,tracedChildDataResponse as TransformedLinkedDataResponse);
-          // };
-
+          //then we provide that request as the getChildLinkedData prop
+          newProps.getChildLinkedData = function(source) {
+            //Note that tracedDataResponse is the results of processing dataDeclaration.request
+            //this already happened in a previous step, and just like we regard dataDeclaration.request as the childDataRequestFn
+            //we can also regard tracedDataResponse (its processed traced response) as childTracedDataResponse
+            return getLinkedDataResponse(dataDeclaration.request,source,tracedDataResponse);
+          }
         }
 
         //render the child component (which is 'this')
