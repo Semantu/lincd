@@ -188,10 +188,11 @@ export class PropertyShape extends SHACL_Shape {
   getOntologyEntities(): NodeSet<NamedNode> {
     //start with values of those properties that have a NamedNode as value
     let entities = new NodeSet<NamedNode>([this.class, this.path, this.datatype].filter((value) => value && true));
-    if (this.nodeShape) {
+    //this caused loops!
+    // if (this.nodeShape) {
       //if a node shape is defined, also add all the entities of that node shape
-      entities = entities.concat(this.nodeShape.getOntologyEntities());
-    }
+      // entities = entities.concat(this.nodeShape.getOntologyEntities());
+    // }
     return entities;
   }
 
