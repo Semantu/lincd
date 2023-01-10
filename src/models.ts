@@ -22,10 +22,8 @@ import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
 import {NodeURIMappings} from './collections/NodeURIMappings';
-import {Debug} from './utils/Debug';
 import {CoreSet} from './collections/CoreSet';
 import {Prefix} from './utils/Prefix';
-declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
 export abstract class Node extends EventEmitter {
   /** The type of node */
@@ -430,18 +428,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     done?: boolean;
   };
   private removePromise: {promise: Promise<any>; resolve: any; reject: any};
-  private allPropertiesLoaded: {
-    promise: Promise<any>;
-    resolve?: any;
-    reject?: any;
-    done?: boolean;
-  };
-  private outgoingPropertiesLoaded: {
-    promise: Promise<any>;
-    resolve?: any;
-    reject?: any;
-    done?: boolean;
-  };
+
   // private static termType: string = 'NamedNode';
   termType: any = 'NamedNode';
 
@@ -455,7 +442,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     super(uri);
     if (this._isTemporaryNode) {
       //created locally, so we know everything about it there is to know
-      this.allPropertiesLoaded = {promise: Promise.resolve(this), done: true};
+      // this.allPropertiesLoaded = {promise: Promise.resolve(this), done: true};
     }
   }
 
@@ -1516,46 +1503,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return other === this;
   }
 
-  /**
-   * returns true if all the properties of this node have been loaded into memory
-   * @param includingInverseProperties if true, returns true if both normal properties AND properties (quads) where this node is used as the VALUE of another node are loaded
-   */
-  isLoaded(includingInverseProperties: boolean = false): boolean {
-    return (
-      this.isTemporaryNode ||
-      (includingInverseProperties
-        ? this.allPropertiesLoaded && this.allPropertiesLoaded.done
-        : this.outgoingPropertiesLoaded && this.outgoingPropertiesLoaded.done)
-    );
-  }
-
-  /**
-   * requests all the properties of this node to be loaded.
-   * Returns a promise that resolves when all the properties are loaded into local memory.
-   * @param loadInverseProperties if true, also loads properties where this node is used as the value
-   */
-  promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
-    if (loadInverseProperties) {
-      if (!this.allPropertiesLoaded) {
-        //create the promise to be fulfilled by the class that will handle the load event
-        this.allPropertiesLoaded = this.createPromise();
-        NamedNode.nodesToLoadFully.add(this);
-        eventBatcher.register(NamedNode);
-      }
-      return this.allPropertiesLoaded.promise;
-    } else {
-      //no need to load only outgoing if everything is already loaded
-      if (this.allPropertiesLoaded) return this.allPropertiesLoaded.promise;
-
-      if (!this.outgoingPropertiesLoaded) {
-        //create the promise to be fulfilled by the class that will handle the load event
-        this.outgoingPropertiesLoaded = this.createPromise();
-        NamedNode.nodesToLoad.add(this);
-        eventBatcher.register(NamedNode);
-      }
-      return this.outgoingPropertiesLoaded.promise;
-    }
-  }
 
   private createPromise() {
     var resolve, reject;
@@ -1564,27 +1511,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       reject = rej;
     });
     return {promise, resolve, reject};
-  }
-
-  /**
-   * Used by the framework to indicate the loading of a node has completed.
-   * @internal
-   * @param inversePropertiesLoaded
-   */
-  setLoaded(inversePropertiesLoaded: boolean = false) {
-    if (inversePropertiesLoaded) {
-      if (!this.allPropertiesLoaded) {
-        this.allPropertiesLoaded = this.createPromise();
-      }
-      this.allPropertiesLoaded.done = true;
-      this.allPropertiesLoaded.resolve(this);
-    } else {
-      if (!this.outgoingPropertiesLoaded) {
-        this.outgoingPropertiesLoaded = this.createPromise();
-      }
-      this.outgoingPropertiesLoaded.done = true;
-      this.outgoingPropertiesLoaded.resolve(this);
-    }
   }
 
   /**
@@ -2968,6 +2894,7 @@ export class Quad extends EventEmitter {
   }
 }
 
+//for debugging purposes
 let getNode = function (uri: string) {
   return NamedNode.getOrCreate(uri);
 };
