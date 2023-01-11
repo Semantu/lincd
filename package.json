@@ -4,7 +4,6 @@
   "version": "0.5.0",
   "description": "Linked Interoperable Code & Data - A javascript library for interoperability & collaboration based on W3C's Linked Data standards",
   "main": "lib/index.js",
-  "types": "dist/lincd.d.ts",
   "lincd": true,
   "scripts": {
     "build": "npm exec lincd build",
