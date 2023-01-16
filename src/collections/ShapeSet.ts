@@ -17,6 +17,18 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGr
     super(iterable);
   }
 
+  /**
+   * Returns true if this set contains the exact same shape OR a shape that has same node and is an instance of the same class as the given shape
+   * Why? you can create two identical shapes of the same node, but they are not the same instance
+   * To avoid having to account for that, by default, ShapeSets return true if the node matches and the shapes are instances of the same class
+   * @param value the shape you want to check for
+   * @param matchOnNodes set to false if you only want to check for true matches of identical instances
+   */
+  has(value:R,matchOnNodes:boolean=true) {
+    return super.has(value) || (matchOnNodes && this.some(shape => shape.node === value.node && Object.getPrototypeOf(shape) === Object.getPrototypeOf(value)));
+  }
+
+
   //we cannot use NamedNodeSet here because of requirement loops
   getProperties(includeFromIncomingArcs: boolean = false): NodeSet<NamedNode> {
     var res = new NodeSet<NamedNode>();

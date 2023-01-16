@@ -73,7 +73,7 @@ export class NodeShape extends SHACL_Shape {
     return entities;
   }
 
-  validate(node: Node): boolean {
+  validateNode(node: Node): boolean {
     if (this.targetClass) {
       if (!(node instanceof NamedNode && node.has(rdf.type, this.targetClass))) {
         return false;
@@ -86,7 +86,7 @@ export class NodeShape extends SHACL_Shape {
       } else if (node instanceof NamedNode) {
         if (
           !this.getPropertyShapes().every((propertyShape) => {
-            return propertyShape.validate(node);
+            return propertyShape.validateNode(node);
           })
         ) {
           return false;
@@ -98,7 +98,7 @@ export class NodeShape extends SHACL_Shape {
 
   static getShapesOf(node: Node) {
     return this.getLocalInstances().filter((shape) => {
-      return shape.validate(node);
+      return shape.validateNode(node);
     });
   }
 }
@@ -195,8 +195,11 @@ export class PropertyShape extends SHACL_Shape {
     // }
     return entities;
   }
+  get parentNodeShape(): NodeShape {
+    return this.hasInverseProperty(shacl.property) ? new NodeShape(this.getOneInverse(shacl.property)) : null;
+  }
 
-  validate(node: NamedNode): boolean {
+  validateNode(node: NamedNode): boolean {
     //TODO: make property nodes support property paths beyond a single property
     let property = this.path;
     let values = node instanceof NamedNode ? node.getAll(property) : null;
@@ -213,7 +216,7 @@ export class PropertyShape extends SHACL_Shape {
     if (this.nodeShape) {
       //every value should be a valid instance of this nodeShape
       let nodeShape = this.nodeShape;
-      if (!values.every((value) => nodeShape.validate(value))) {
+      if (!values.every((value) => (value === node && this.parentNodeShape.equals(nodeShape)) || nodeShape.validateNode(value))) {
         return false;
       }
     }

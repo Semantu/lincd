@@ -5,7 +5,7 @@ let subject = NamedNode.create();
 let predicate = NamedNode.create();
 let value1 = NamedNode.create();
 let value2 = NamedNode.create();
-describe('property value sets',() => {
+describe('node value sets',() => {
   test('can add a value to a node',() => {
     subject.getAll(predicate).add(value1);
     expect(subject.hasProperty(predicate)).toBe(true);

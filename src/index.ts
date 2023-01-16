@@ -13,7 +13,7 @@ import * as NodeURIMappings from './collections/NodeURIMappings';
 import * as CoreSet from './collections/CoreSet';
 import * as CoreMap from './collections/CoreMap';
 import * as SearchMap from './collections/SearchMap';
-import * as PropertySet from './collections/PropertyValueSet';
+import * as PropertySet from './collections/NodeValuesSet';
 import * as NodeMap from './collections/NodeMap';
 import * as NodeSet from './collections/NodeSet';
 import * as QuadArray from './collections/QuadArray';

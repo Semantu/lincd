@@ -1,10 +1,9 @@
 {
   "name": "lincd",
   "license": "MPL-2.0",
-  "version": "0.5.0",
+  "version": "0.5.4",
   "description": "Linked Interoperable Code & Data - A javascript library for interoperability & collaboration based on W3C's Linked Data standards",
   "main": "lib/index.js",
-  "types": "dist/lincd.d.ts",
   "lincd": true,
   "scripts": {
     "build": "npm exec lincd build",
@@ -43,8 +42,11 @@
   },
   "devDependencies": {
     "@jest/globals": "^29.1.2",
+    "@types/jest": "^29.2.5",
     "@types/node": "^18.11.10",
+    "buffer": "^6.0.3",
     "jest": "^29.0.3",
+    "jest-environment-jsdom": "^29.3.1",
     "lincd-cli": "^0.2",
     "prettier": "^2.3.1",
     "ts-jest": "^29.0.1"

@@ -374,16 +374,13 @@ export function linkedPackage(
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
       let linkedProps = getLinkedComponentProps<ShapeType,DeclaredProps>(props,shapeClass);
 
-      //if we're not using any storage in this LINCD app, just render as usual
-      if (!Storage.isInitialised())
-      {
-        return functionalComponent(linkedProps);
-      }
+      //if we're not using any storage in this LINCD app, don't do any data loading
+      let usingStorage = Storage.isInitialised();
 
       let [isLoaded,setIsLoaded] = useState<any>(undefined);
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-        if (!props.isBound)
+        if (!props.isBound && usingStorage)
         {
           let cachedRequest = Storage.isLoaded(linkedProps.source.node,dataRequest);
           //if these properties were requested before and have finished loading
@@ -416,12 +413,12 @@ export function linkedPackage(
       },[linkedProps.source.node,props.isBound]);
 
       //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
-      let dataIsLoaded = props.isBound || isLoaded;
+      let dataIsLoaded = props.isBound || isLoaded || !usingStorage;
 
       //But for the first render, when the useEffect has not run yet,
       //and no this is not a bound component (so it's a top level linkedComponent),
       //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-      if (!props.isBound && typeof isLoaded === 'undefined')
+      if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage)
       {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
@@ -484,6 +481,9 @@ export function linkedPackage(
   {
     let [shapeClass,dataRequest,dataDeclaration,tracedDataResponse] = processDataDeclaration<ShapeType,DeclaredProps>(requiredData,functionalComponent,true);
 
+    //if we're not using any storage in this LINCD app, don't do any data loading
+    let usingStorage = Storage.isInitialised();
+
     //create a new functional component which wraps the original
     let _wrappedComponent: LinkedFunctionalSetComponent<DeclaredProps,ShapeType> = (props: DeclaredProps & LinkedSetComponentInputProps<ShapeType> & BoundComponentProps) => {
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
@@ -500,17 +500,11 @@ export function linkedPackage(
       //then we combine the dataRequest with the childComponent that this specific instance comes with
       let instanceDataRequest = props.as && (props.as as LinkedFunctionalComponent<ShapeType>).dataRequest ? [...dataRequest,...(props.as as LinkedFunctionalComponent<ShapeType>).dataRequest] : dataRequest;
 
-      //if we're not using any storage in this LINCD app, just render as usual
-      if (!Storage.isInitialised())
-      {
-        return functionalComponent(linkedProps);
-      }
-
       let [isLoaded,setIsLoaded] = useState<any>(undefined);
 
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-        if (!props.isBound)
+        if (!props.isBound && usingStorage)
         {
           let cachedRequest = Storage.setIsLoaded(linkedProps.sources.getNodes(),instanceDataRequest);
           //if these properties were requested before and have finished loading
@@ -546,12 +540,12 @@ export function linkedPackage(
       },[props.of,props.isBound]);
 
       //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
-      let dataIsLoaded = props.isBound || isLoaded;
+      let dataIsLoaded = props.isBound || isLoaded || !usingStorage;
 
       //But for the first render, when the useEffect has not run yet,
       //and no this is not a bound component (so it's a top level linkedComponent),
       //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-      if (!props.isBound && typeof isLoaded === 'undefined')
+      if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage)
       {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()

@@ -17,7 +17,7 @@ import {ICoreIterable} from './interfaces/ICoreIterable';
 import {IShape} from './interfaces/IShape';
 import {IGraphObject} from './interfaces/IGraphObject';
 
-import {PropertyValueSet} from './collections/PropertyValueSet';
+import {NodeValuesSet} from './collections/NodeValuesSet';
 import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
@@ -125,8 +125,8 @@ export abstract class Node extends EventEmitter {
     return undefined;
   }
 
-	getAll(property: NamedNode): PropertyValueSet {
-		return new PropertyValueSet(this,property);
+	getAll(property: NamedNode): NodeValuesSet {
+		return new NodeValuesSet(this,property);
 	}
 
   getValue(property?: NamedNode): string {
@@ -406,9 +406,9 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 	 * the inverse of 'properties' is not kept, so all results for reverse lookup will be created from 'asObject'
 	 * @internal
 	 */
-	properties: CoreMap<NamedNode, PropertyValueSet> = new CoreMap<
+	properties: CoreMap<NamedNode, NodeValuesSet> = new CoreMap<
 		NamedNode,
-		PropertyValueSet
+		NodeValuesSet
 	>();
 
   //keeping track of changes to be emitted in one batched event
@@ -486,7 +486,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 		//first make sure we have a QuadMap value for key=predicate
 		if (!this.asSubject.has(predicate)) {
 			this.asSubject.set(predicate, new QuadMap());
-			this.properties.set(predicate, new PropertyValueSet(this,predicate));
+			this.properties.set(predicate, new NodeValuesSet(this,predicate));
 		}
 
     //Add the quad to the QuadMap (see implementation for more details)
@@ -1015,14 +1015,14 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 	 * Returns all values this node has for the given property
 	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
 	 */
-	getAll(property: NamedNode): PropertyValueSet {
+	getAll(property: NamedNode): NodeValuesSet {
     //we usually just index all the existing properties
     //but to have consistent bahaviour with PropertyValueSets, when you request a property that has no values
     //we need to create an index for the empty result set
     if(!this.properties.has(property))
     {
       this.asSubject.set(property,new QuadMap());
-      this.properties.set(property,new PropertyValueSet(this,property));
+      this.properties.set(property,new NodeValuesSet(this,property));
     }
     return this.properties.get(property);
 		// return this.properties.has(property)

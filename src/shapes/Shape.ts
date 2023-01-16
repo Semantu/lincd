@@ -6,7 +6,7 @@
 import {EventEmitter} from '../events/EventEmitter';
 import {Literal,NamedNode,Node} from '../models';
 import {rdf} from '../ontologies/rdf';
-import {PropertyValueSet} from '../collections/PropertyValueSet';
+import {NodeValuesSet} from '../collections/NodeValuesSet';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {QuadArray} from '../collections/QuadArray';
@@ -19,6 +19,7 @@ import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
 import {NodeShape} from './SHACL';
 import {LinkedDataDeclaration,LinkedDataResponse,LinkedDataSetDeclaration} from '../interfaces/Component';
+import {ShapeValuesSet} from '../collections/ShapeValuesSet';
 
 declare var dprint: (item,includeIncomingProperties?: boolean) => void;
 
@@ -105,13 +106,32 @@ export abstract class Shape extends EventEmitter implements IShape
   /**
    * returns the rdf:Class that this type of instance represents.
    */
-  get instanceType(): NamedNode
+  get nodeShape(): NodeShape
   {
-    if (this.constructor['targetClass'])
-    {
-      return this.constructor['targetClass'];
-    }
-    throw new Error('The constructor of this instance has not defined a static targetClass.');
+    return (this.constructor as typeof Shape).shape;
+    // if (this.constructor['targetClass'])
+    // {
+    //   return this.constructor['targetClass'];
+    // }
+    // throw new Error('The constructor of this instance has not defined a static targetClass.');
+  }
+
+  /**
+   * Get all values of a certain property as instances of a certain shape.
+   * The returned set of shape will automatically update when the property values change in the graph.
+   * @param property
+   * @param shapeClass
+   */
+  getAllAs<T extends Shape>(
+    property:NamedNode,
+    shapeClass:typeof Shape
+  ): ShapeValuesSet<T>
+  {
+    return new ShapeValuesSet<T>(this.namedNode,property,shapeClass as any);
+  }
+
+  equals(other) {
+    return other instanceof Shape && other.node === this.node && Object.getPrototypeOf(other) === Object.getPrototypeOf(this);
   }
 
   /**
@@ -193,14 +213,15 @@ export abstract class Shape extends EventEmitter implements IShape
 
       //create a new temporary node, a Literal, NamedNode or BlankNode
       this._node = termType.create(true);
-      // if(termType === NamedNode || termType === BlankNode)
-      // {
-      //   this._node['isTemporaryNode'] = true;
-      // }
-      this._node.set(rdf.type,this.instanceType);
+
+      let nodeShape = this.nodeShape;
+      if(nodeShape && nodeShape.targetClass)
+      {
+        this._node.set(rdf.type,nodeShape.targetClass);
+      }
     }
 
-    //@TODO: do for literalresources as well if they implement events at some point?
+    //@TODO: do this for RdfsLiteral as well if they implement events at some point?
     if (this._node instanceof NamedNode)
     {
       this._node.on(NamedNode.NODE_REMOVED,this.destruct.bind(this));
@@ -216,6 +237,10 @@ export abstract class Shape extends EventEmitter implements IShape
     {
       this._node.removeAllListeners();
     }
+  }
+
+  validate():boolean {
+    return this.nodeShape?.validateNode(this.node) || false;
   }
 
   /**
@@ -306,10 +331,11 @@ export abstract class Shape extends EventEmitter implements IShape
     return this._node.getOne(property);
   }
 
-  getAll(property: NamedNode): PropertyValueSet | undefined
+  getAll(property: NamedNode): NodeValuesSet | undefined
   {
     return (this._node as NamedNode).getAll(property);
   }
+
 
   getAllExplicit(property): NodeSet
   {
@@ -591,13 +617,13 @@ export abstract class Shape extends EventEmitter implements IShape
 
   toString()
   {
-    return '[' + this.node + ' as ' + this.instanceType + ']';
+    return '[' + this.node + ' as ' + this.constructor.name + ']';
   }
 
   print(includeIncomingProperties: boolean = true)
   {
     // return Debug.print(this.node,includeIncomingProperties);
-    return `${Object.getPrototypeOf(this).name} of ${this.node.print()}`;
+    return `${this.constructor.name} of ${this.node.print()}`;
 
     // typeof (typeof window !== 'undefined' ? window['dprint'] : global.dprint)(this, includeIncomingProperties);
   }
@@ -713,20 +739,19 @@ export abstract class Shape extends EventEmitter implements IShape
     return new this(NamedNode.getOrCreate(uri));
   }
 
+  static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: NodeValuesSet): ShapeValuesSet<T>;
   static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: ICoreIterable<Node>): ShapeSet<T>
   {
-    // (this as any).typeCheck();
     if (!nodes)
     {
-      throw new Error('No node provided to create an instance of');
+      throw new Error('No nodes provided to create shape instances of');
     }
 
-    let set = new ShapeSet<T>();
-    nodes.forEach((node) => {
-      set.add(new this(node));
-    });
-    return set;
-    // return ShapeSet.getFromClass(nodes, this.type) as ShapeSet<T>;
+    if(nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode)
+    {
+      return new ShapeValuesSet(nodes.subject,nodes.property,this as any);
+    }
+    return new ShapeSet<T>(nodes.map(node => new this(node)));
   }
 }
 

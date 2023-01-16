@@ -6,10 +6,20 @@
 import {NodeSet} from './NodeSet';
 import {NamedNode,Node} from '../models';
 
-export class PropertyValueSet extends NodeSet {
-	constructor(private subject:Node,private property:NamedNode,iterable?: Iterable<Node>) {
+export class NodeValuesSet extends NodeSet {
+	constructor(private _subject:Node,private _property:NamedNode,iterable?: Iterable<Node>) {
 		super(iterable);
 	}
+
+  get subject()
+  {
+    return this._subject
+  }
+
+  get property()
+  {
+    return this._property
+  }
 
   /**
    * When cloned we switch to a NodeSet of all the values
@@ -27,7 +37,7 @@ export class PropertyValueSet extends NodeSet {
    * @param value the node to add
    */
 	add(value:Node): this {
-    this.subject.set(this.property,value);
+    this._subject.set(this._property,value);
 		return this;
 	}
 
@@ -38,7 +48,7 @@ export class PropertyValueSet extends NodeSet {
    * @param value the node to remove
    */
 	delete(value:Node): boolean {
-    return this.subject.unset(this.property,value);
+    return this._subject.unset(this._property,value);
 	}
 
   /**
