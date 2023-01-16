@@ -22,6 +22,8 @@ class Person extends Shape {
 
 let person1 = new Person();
 let person2 = new Person();
+let person3 = new Person();
+let person4 = new Person();
 person1.knows.add(person1);
 
 
@@ -31,5 +33,11 @@ describe('SHACL nodeshape validation',() => {
   });
   test('fails when required path is not defined',() => {
     expect(person2.validate()).toBe(false);
+  });
+  test('still succeeds with circular references',() => {
+    person3.knows.add(person4);
+    person4.knows.add(person3);
+    expect(person3.validate()).toBe(true);
+    expect(person4.validate()).toBe(true);
   });
 });
