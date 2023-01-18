@@ -374,6 +374,11 @@ export function linkedPackage(
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
       let linkedProps = getLinkedComponentProps<ShapeType,DeclaredProps>(props,shapeClass);
 
+      if(!linkedProps.source)
+      {
+        console.warn("No source provided to this component: "+functionalComponent.name);
+        return null;
+      }
       //if we're not using any storage in this LINCD app, don't do any data loading
       let usingStorage = Storage.isInitialised();
 
