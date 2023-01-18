@@ -740,7 +740,8 @@ export abstract class Shape extends EventEmitter implements IShape
   }
 
   static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: NodeValuesSet): ShapeValuesSet<T>;
-  static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: ICoreIterable<Node>): ShapeSet<T>
+  static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: ICoreIterable<Node>): ShapeSet<T>;
+  static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: NodeValuesSet|ICoreIterable<Node>): ShapeSet<T>|ShapeValuesSet<T>
   {
     if (!nodes)
     {
