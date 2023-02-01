@@ -12,7 +12,7 @@ import * as NodeURIMappings from './collections/NodeURIMappings';
 import * as CoreSet from './collections/CoreSet';
 import * as CoreMap from './collections/CoreMap';
 import * as SearchMap from './collections/SearchMap';
-import * as PropertySet from './collections/PropertySet';
+import * as PropertySet from './collections/NodeValuesSet';
 import * as NodeMap from './collections/NodeMap';
 import * as NodeSet from './collections/NodeSet';
 import * as QuadArray from './collections/QuadArray';
@@ -30,6 +30,7 @@ import * as NQuads from './utils/NQuads';
 import * as LinkedComponentClass from './utils/LinkedComponentClass';
 import * as ForwardReasoning from './utils/ForwardReasoning';
 import * as NameSpace from './utils/NameSpace';
+import * as Hooks from './utils/Hooks';
 import * as ShapeDecorators from './utils/ShapeDecorators';
 import * as List from './shapes/List';
 import * as IGraphObject from './interfaces/IGraphObject';
@@ -71,6 +72,7 @@ export function initModularApp()
     NameSpace,
     List,
     URI,
+    Hooks,
     ForwardReasoning,
     Find,
     Order,

@@ -4,3 +4,4 @@ dist
 lib
 /yarn-error.log
 .npmrc
+.yarnrc.yml

@@ -269,6 +269,11 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
     return res;
   }
 
+  //@TODO: remove promiseLoaded now that we have Shape loading functionality?
+  /**
+   * @deprecated
+   * @param loadInverseProperties
+   */
   promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
     return Promise.all(this.map((node) => node.promiseLoaded(loadInverseProperties)))
       .then((res) => {
@@ -278,7 +283,12 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
         return false;
       });
   }
-
+  //@TODO: remove generic isLoaded now that we have Shape loading functionality?
+  // perhaps we need to add a new shapeIsLoaded() method?
+  /**
+   * @deprecated
+   * @param includingInverseProperties
+   */
   isLoaded(includingInverseProperties: boolean = false): boolean {
     return this.every((node) => node.isLoaded(includingInverseProperties));
   }

@@ -18,5 +18,10 @@
       "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
     }
   },
-  "include": ["./src/index.ts", "./src/custom-types/next-tick.d.ts", "./src/tests/*"]
+  "include": [
+    "./src/index.ts",
+    "./src/custom-types/next-tick.d.ts",
+    "./src/tests/*",
+    "../node_modules/ts-jest/globals.d.ts"
+  ]
 }

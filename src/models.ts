@@ -17,14 +17,13 @@ import {ICoreIterable} from './interfaces/ICoreIterable';
 import {IShape} from './interfaces/IShape';
 import {IGraphObject} from './interfaces/IGraphObject';
 
-import {PropertySet} from './collections/PropertySet';
+import {NodeValuesSet} from './collections/NodeValuesSet';
 import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
 import {EventEmitter} from './events/EventEmitter';
 import {NodeMap} from './collections/NodeMap';
 import {NodeURIMappings} from './collections/NodeURIMappings';
 import {CoreSet} from './collections/CoreSet';
 import {Prefix} from './utils/Prefix';
-declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
 export abstract class Node extends EventEmitter {
   /** The type of node */
@@ -126,9 +125,9 @@ export abstract class Node extends EventEmitter {
     return undefined;
   }
 
-  getAll(property: NamedNode): PropertySet {
-    return new PropertySet();
-  }
+	getAll(property: NamedNode): NodeValuesSet {
+		return new NodeValuesSet(this,property);
+	}
 
   getValue(property?: NamedNode): string {
     return undefined;
@@ -302,6 +301,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
   private static nodesToRemove: CoreSet<[NamedNode, QuadArray]> = new CoreSet();
   private static nodesURIUpdated: CoreMap<NamedNode, [string, string]> = new CoreMap();
+  private static clearedProperties: CoreMap<NamedNode,[NamedNode,QuadArray][]> = new CoreMap();
 
   //### event types ###
 
@@ -399,14 +399,17 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    */
   private asPredicate: QuadArray;
 
-  /**
-   * map of QuadMaps indexed by property (where this node occurs as subject)
-   * NOTE: 'properties' serves only to increase lookup speed but also costs memory
-   * since reverse lookup (where this node occurs as object) will be much less frequent
-   * the inverse of 'properties' is not kept, so all results for reverse lookup will be created from 'asObject'
-   * @internal
-   */
-  properties: CoreMap<NamedNode, PropertySet> = new CoreMap<NamedNode, PropertySet>();
+	/**
+	 * map of QuadMaps indexed by property (where this node occurs as subject)
+	 * NOTE: 'properties' serves only to increase lookup speed but also costs memory
+	 * since reverse lookup (where this node occurs as object) will be much less frequent
+	 * the inverse of 'properties' is not kept, so all results for reverse lookup will be created from 'asObject'
+	 * @internal
+	 */
+	properties: CoreMap<NamedNode, NodeValuesSet> = new CoreMap<
+		NamedNode,
+		NodeValuesSet
+	>();
 
   //keeping track of changes to be emitted in one batched event
   //NOTE: the quad sets in these maps will contain both newly ADDED and REMOVED quads
@@ -425,18 +428,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     done?: boolean;
   };
   private removePromise: {promise: Promise<any>; resolve: any; reject: any};
-  private allPropertiesLoaded: {
-    promise: Promise<any>;
-    resolve?: any;
-    reject?: any;
-    done?: boolean;
-  };
-  private outgoingPropertiesLoaded: {
-    promise: Promise<any>;
-    resolve?: any;
-    reject?: any;
-    done?: boolean;
-  };
+
   // private static termType: string = 'NamedNode';
   termType: any = 'NamedNode';
 
@@ -450,7 +442,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     super(uri);
     if (this._isTemporaryNode) {
       //created locally, so we know everything about it there is to know
-      this.allPropertiesLoaded = {promise: Promise.resolve(this), done: true};
+      // this.allPropertiesLoaded = {promise: Promise.resolve(this), done: true};
     }
   }
 
@@ -478,20 +470,24 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     this._isTemporaryNode = val;
   }
 
-  /**
-   * Used by Quads to signal their subject about a new property
-   * @internal
-   * @param quad
-   * @param alteration
-   * @param emitEvents
-   */
-  registerProperty(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
-    var predicate: NamedNode = quad.predicate;
-    //first make sure we have a QuadMap value for key=predicate
-    if (!this.asSubject.has(predicate)) {
-      this.asSubject.set(predicate, new QuadMap());
-      this.properties.set(predicate, new PropertySet());
-    }
+	/**
+	 * Used by Quads to signal their subject about a new property
+	 * @internal
+	 * @param quad
+	 * @param alteration
+	 * @param emitEvents
+	 */
+	registerProperty(
+		quad: Quad,
+		alteration: boolean = false,
+		emitEvents: boolean = true,
+	) {
+		var predicate: NamedNode = quad.predicate;
+		//first make sure we have a QuadMap value for key=predicate
+		if (!this.asSubject.has(predicate)) {
+			this.asSubject.set(predicate, new QuadMap());
+			this.properties.set(predicate, new NodeValuesSet(this,predicate));
+		}
 
     //Add the quad to the QuadMap (see implementation for more details)
     let quadMap = this.asSubject.get(predicate);
@@ -1015,13 +1011,24 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     }
   }
 
-  /**
-   * Returns all values this node has for the given property
-   * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-   */
-  getAll(property: NamedNode): PropertySet {
-    return this.properties.has(property) ? this.properties.get(property) : new PropertySet();
-  }
+	/**
+	 * Returns all values this node has for the given property
+	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
+	 */
+	getAll(property: NamedNode): NodeValuesSet {
+    //we usually just index all the existing properties
+    //but to have consistent bahaviour with PropertyValueSets, when you request a property that has no values
+    //we need to create an index for the empty result set
+    if(!this.properties.has(property))
+    {
+      this.asSubject.set(property,new QuadMap());
+      this.properties.set(property,new NodeValuesSet(this,property));
+    }
+    return this.properties.get(property);
+		// return this.properties.has(property)
+		// 	? this.properties.get(property)
+		// 	: new PropertyValueSet(this,property);
+	}
 
   /**
    * Returns all values this node EXPLICITLY has for the given property
@@ -1435,18 +1442,37 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return false;
   }
 
-  /**
-   * unset (remove) all values of a certain property.
-   * Removes all connections (edges) in the graph between this node and other nodes, where the given property is used as the connecting 'edge' between them
-   * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-   */
-  unsetAll(property: NamedNode): boolean {
-    if (this.hasProperty(property)) {
-      this.asSubject.get(property).removeAll(true);
-      return true;
-    }
-    return false;
-  }
+	/**
+	 * unset (remove) all values of a certain property.
+	 * Removes all connections (edges) in the graph between this node and other nodes, where the given property is used as the connecting 'edge' between them
+	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
+	 */
+	unsetAll(property: NamedNode): boolean {
+		//if not a local node we will emit events for storage controllers to be picked up
+		if (!this.isTemporaryNode) {
+			//regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
+			if (!NamedNode.clearedProperties.has(this)) {
+				NamedNode.clearedProperties.set(this, []);
+				eventBatcher.register(NamedNode);
+			}
+			//we save the property that was cleared AND the quads that were cleared
+			NamedNode.clearedProperties
+				.get(this)
+				.push([
+					property,
+					this.asSubject.has(property)
+						? new QuadArray(...this.asSubject.get(property).getQuadSet())
+						: null,
+				]);
+		}
+
+		if (this.hasProperty(property)) {
+			//false as parameter because we don't need alteration events for each single quad, but rather manage this with clearedProperties events
+			this.asSubject.get(property).removeAll(false);
+			return true;
+		}
+		return false;
+	}
 
   /**
    * returns true if ANY node has this node as the value of the given property
@@ -1477,46 +1503,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return other === this;
   }
 
-  /**
-   * returns true if all the properties of this node have been loaded into memory
-   * @param includingInverseProperties if true, returns true if both normal properties AND properties (quads) where this node is used as the VALUE of another node are loaded
-   */
-  isLoaded(includingInverseProperties: boolean = false): boolean {
-    return (
-      this.isTemporaryNode ||
-      (includingInverseProperties
-        ? this.allPropertiesLoaded && this.allPropertiesLoaded.done
-        : this.outgoingPropertiesLoaded && this.outgoingPropertiesLoaded.done)
-    );
-  }
-
-  /**
-   * requests all the properties of this node to be loaded.
-   * Returns a promise that resolves when all the properties are loaded into local memory.
-   * @param loadInverseProperties if true, also loads properties where this node is used as the value
-   */
-  promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
-    if (loadInverseProperties) {
-      if (!this.allPropertiesLoaded) {
-        //create the promise to be fulfilled by the class that will handle the load event
-        this.allPropertiesLoaded = this.createPromise();
-        NamedNode.nodesToLoadFully.add(this);
-        eventBatcher.register(NamedNode);
-      }
-      return this.allPropertiesLoaded.promise;
-    } else {
-      //no need to load only outgoing if everything is already loaded
-      if (this.allPropertiesLoaded) return this.allPropertiesLoaded.promise;
-
-      if (!this.outgoingPropertiesLoaded) {
-        //create the promise to be fulfilled by the class that will handle the load event
-        this.outgoingPropertiesLoaded = this.createPromise();
-        NamedNode.nodesToLoad.add(this);
-        eventBatcher.register(NamedNode);
-      }
-      return this.outgoingPropertiesLoaded.promise;
-    }
-  }
 
   private createPromise() {
     var resolve, reject;
@@ -1525,27 +1511,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       reject = rej;
     });
     return {promise, resolve, reject};
-  }
-
-  /**
-   * Used by the framework to indicate the loading of a node has completed.
-   * @internal
-   * @param inversePropertiesLoaded
-   */
-  setLoaded(inversePropertiesLoaded: boolean = false) {
-    if (inversePropertiesLoaded) {
-      if (!this.allPropertiesLoaded) {
-        this.allPropertiesLoaded = this.createPromise();
-      }
-      this.allPropertiesLoaded.done = true;
-      this.allPropertiesLoaded.resolve(this);
-    } else {
-      if (!this.outgoingPropertiesLoaded) {
-        this.outgoingPropertiesLoaded = this.createPromise();
-      }
-      this.outgoingPropertiesLoaded.done = true;
-      this.outgoingPropertiesLoaded.resolve(this);
-    }
   }
 
   /**
@@ -1730,7 +1695,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       [this.changedProperties, NamedNode.PROPERTY_CHANGED],
       [this.changedInverseProperties, NamedNode.INVERSE_PROPERTY_CHANGED],
       [this.alteredProperties, NamedNode.PROPERTY_ALTERED],
-      [this.alteredInverseProperties, NamedNode.INVERSE_PROPERTY_ALTERED],
+      [this.alteredInverseProperties, NamedNode.INVERSE_PROPERTY_ALTERED]
     ].forEach(([map, event]: [CoreMap<NamedNode, QuadSet>, string]) => {
       if (!map) return;
       //for each individual change that was made
@@ -1799,6 +1764,11 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       this.emitter.emit(NamedNode.URI_UPDATED, this.nodesURIUpdated);
       this.nodesURIUpdated = new CoreMap();
     }
+
+    if (this.clearedProperties.size) {
+      this.emitter.emit(NamedNode.CLEARED_PROPERTIES, this.clearedProperties);
+      this.clearedProperties = new CoreMap();
+    }
   }
 
   /**
@@ -1812,7 +1782,8 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       this.nodesToSave.size > 0 ||
       this.nodesToLoad.size ||
       this.nodesToLoadFully.size > 0 ||
-      this.nodesURIUpdated.size > 0
+      this.nodesURIUpdated.size > 0 ||
+      this.clearedProperties.size > 0
     );
   }
 
@@ -2923,7 +2894,7 @@ export class Quad extends EventEmitter {
   }
 }
 
-
+//for debugging purposes
 let getNode = function (uri: string) {
   return NamedNode.getOrCreate(uri);
 };

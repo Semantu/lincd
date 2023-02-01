@@ -8,3 +8,7 @@ node_modules
 .prettierrc.json
 .gitignore
 .github
+.yarnrc.yml
+.npmrc
+assets
+jest.config.js

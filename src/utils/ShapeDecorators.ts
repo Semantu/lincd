@@ -228,9 +228,22 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
     }
     //we accept a shape configuration, which translates to a sh:nodeShape
     if (config.shape) {
-      let nodeShape = config.shape['shape'];
-      if (nodeShape) {
-        propertyShape.nodeShape = nodeShape;
+      //if this shape class has already got a NodeShape connected to it
+      if(config.shape['shape'])
+      {
+        //then we can use this NodeShape now as the value of nodeShape for this property shape
+        propertyShape.nodeShape = config.shape['shape']
+      }
+      else
+      {
+        //however the shape class may not have run its decorators yet
+        //so in that case we temporarily store a reference
+        //which gets processed in Module:linkedShape()
+        if(!config.shape['nodeShapeOf'])
+        {
+          config.shape['nodeShapeOf'] = [];
+        }
+        config.shape['nodeShapeOf'].push(propertyShape);
       }
     }
 
@@ -250,6 +263,7 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
       shape.addPropertyShape(propertyShape);
     } else {
       //if not, then store property shapes in a temporary array in the constructor
+      //this is picked up in Module.ts
       if (!target.constructor['propertyShapes']) {
         target.constructor['propertyShapes'] = [];
       }
