@@ -130,6 +130,17 @@ export abstract class Shape extends EventEmitter implements IShape
     return new ShapeValuesSet<T>(this.namedNode,property,shapeClass as any);
   }
 
+  /**
+   * If a value exists for the given property, this returns that value as an instance of the given shape
+   * If not, returns null
+   * @param property
+   * @param shape
+   */
+  getOneAs<S extends Shape = Shape>(property,shape:typeof Shape):S {
+    return this.hasProperty(property) ? new (shape as any)(this.getOne(property)) as S : null;
+  }
+
+
   equals(other) {
     return other instanceof Shape && other.node === this.node && Object.getPrototypeOf(other) === Object.getPrototypeOf(this);
   }
@@ -325,6 +336,7 @@ export abstract class Shape extends EventEmitter implements IShape
     //Instances of rdfs:Literal will return null so we can just return the node as is here, and use this method for type casting
     return this._node as NamedNode;
   }
+
 
   getOne(property: NamedNode): Node | null
   {

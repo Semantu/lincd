@@ -261,6 +261,8 @@ export interface LinkedPackageObject
    * Contains all linked components of the module.
    */
   packageExports: any;
+
+  packageName:string;
 }
 
 export function linkedPackage(
@@ -767,6 +769,7 @@ export function linkedPackage(
     registerPackageExport,
     registerPackageModule,
     packageExports: packageTreeObject,
+    packageName: packageName,
   } as LinkedPackageObject;
 }
 

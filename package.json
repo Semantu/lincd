@@ -31,10 +31,10 @@
     "email": "rene@semantu.com"
   },
   "dependencies": {
-    "@types/react": "^18.0.17",
-    "@types/react-dom": "^18.0.6",
     "@types/jest": "^29.2.5",
     "@types/node": "^18.11.10",
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
     "eventemitter3": "3.1.0",
     "next-tick": "^1.0.0",
     "rdflib": "^2.2.17",
