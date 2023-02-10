@@ -120,4 +120,15 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
   print(includeIncomingProperties: boolean = true) {
     return Debug.print(this, includeIncomingProperties);
   }
+
+  /**
+   * Similar to concat, but adds all items to THIS set instead of creating a new one
+   * @param sets
+   */
+  addFrom(...sets:ICoreIterable<R>[]): this {
+    for (var set of sets) {
+      set.forEach(this.add.bind(this));
+    }
+    return this;
+  }
 }
