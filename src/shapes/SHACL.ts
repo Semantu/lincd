@@ -13,6 +13,7 @@ import {NodeSet} from '../collections/NodeSet';
 import {rdf} from '../ontologies/rdf';
 import {NodeMap} from '../collections/NodeMap';
 import {CoreMap} from '../collections/CoreMap';
+import {ForwardReasoning} from '../utils/ForwardReasoning';
 
 export class SHACL_Shape extends Shape {
   static targetClass: NamedNode = shacl.Shape;
@@ -91,7 +92,9 @@ export class NodeShape extends SHACL_Shape {
     //whilst validating, if a connected node wants to validate THIS node, we consider this node to be valid until proven otherwise below
     validated.set(node,true);
     if (this.targetClass) {
-      if (!(node instanceof NamedNode && node.has(rdf.type, this.targetClass))) {
+      //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
+      //this would not be needed if a Forwards reasoning engine was in place
+      if (!(node instanceof NamedNode && ForwardReasoning.hasType(node,this.targetClass))) {
         validated.set(node,false);
         return false;
       }

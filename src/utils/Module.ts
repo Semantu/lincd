@@ -46,9 +46,11 @@ declare var global;
 
 export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 
-var packageParsePromises: Map<string,Promise<any>> = new Map();
-var loadedPackages: Set<NamedNode> = new Set();
+// var packageParsePromises: Map<string,Promise<any>> = new Map();
+// var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
+let ontologies: Set<any> = new Set();
+let _autoLoadOntologyData = false;
 /**
  * a map of requested property shapes for specific nodes
  * The value is a promise if it's still loading, or true if it is fully loaded
@@ -265,48 +267,29 @@ export interface LinkedPackageObject
   packageName:string;
 }
 
+export function autoLoadOntologyData(value:boolean) {
+  _autoLoadOntologyData = value;
+  //this may be set to true after some ontologies have already indexed,
+  if(_autoLoadOntologyData) {
+    // so in that case we load all data of ontologies that are already indexed
+    ontologies.forEach(ontologyExport => {
+      //see linkedOntology() where we store the data loading method under the _load key
+      if(ontologyExport['_load']) {
+        ontologyExport['_load']();
+      }
+    })
+  }
+}
+
 export function linkedPackage(
   packageName: string,
-  packageExports?: any,
-  packageNode?: NamedNode,
-  packageDataPromise?: Promise<any>,
-  ontologyDataPromises?: [NamedNode,Promise<any>][],
 ): LinkedPackageObject
 {
-  //handle module data and ontology data
-  if (!ontologyDataPromises) ontologyDataPromises = [];
-
-  //module is parsed when all of those are parsed
-  var packageParsedPromise = Promise.all([packageDataPromise || true,...ontologyDataPromises]);
-  packageParsePromises.set(packageName,packageParsedPromise);
-
-  //if no module node was given, we will determine the URI of the module for them
-  if (!packageNode)
-  {
-    // packageNode = NamedNode.getOrCreate(
-    // 	'http://data.lincd.pro/modules/npm/' + packageName,
-    // );
-    packageNode = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}`,true);
-  }
-
-  //register the ontologies once they're parsed
-  ontologyDataPromises.forEach(([ontology,ontologyPromise]) => {
-    ontologyPromise.then((parseResult) => {
-      //parseResult:JSONLDParseResult
-      //TODO: bring back support for ontologies?
-      // Ontology.registerOntology(ontology, parseResult.quads);
-    });
-  });
-
-  //AFTER all the data has been loaded
-  packageParsedPromise.then(() => {
-    loadedPackages.add(packageNode);
-  });
-
+  let packageNode = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}`,true);
   packageNode.set(rdf.type,lincdOntology.Module);
   packageNode.setValue(npm.packageName,packageName);
 
-  let packageTreeObject = registerPackageInTree(packageName,packageExports);
+  let packageTreeObject = registerPackageInTree(packageName);
 
   //#Create declarators for this module
   let registerPackageExport = function(object) {
@@ -318,18 +301,6 @@ export function linkedPackage(
     }
     packageTreeObject[object.name] = object;
   };
-
-  //create a declarator function which Components of this module can use register themselves and add themselves to the global tree
-  // let linkedUtil = function () {
-  //
-  // 	return (constructor) => {
-  // 		//add the component class of this module to the global tree
-  // 		registerPackageExport(constructor);
-  //
-  // 		//return the original class without modifications
-  // 		return constructor;
-  // 	};
-  // };
 
   let registerInPackageTree = function(exportName,exportedObject) {
     packageTreeObject[exportName] = exportedObject;
@@ -733,14 +704,7 @@ export function linkedPackage(
     loadData?,
     dataSource?: string | string[],
   ) {
-    // let linkedOntology = function(
-    // 	fn: () => [Object, (term: string) => NamedNode, string, () => Promise<any>],
-    // ) {
-    //the ontology file will call linkedOntology() whilst its parsing
-    // but the exports of the file will only be available once parsing has fully completed. So we execute the given function after the next tick
-    // nextTick(() => {
-    // 	let [exports, nameSpace, prefixAndFileName, loadData] = fn();
-    //make sure we can detect this as an ontology later
+    //store specifics in exports. And make sure we can detect this as an ontology later
     exports['_ns'] = nameSpace;
     exports['_prefix'] = prefixAndFileName;
     exports['_load'] = loadData;
@@ -753,9 +717,15 @@ export function linkedPackage(
       Prefix.add(prefixAndFileName,nameSpace('').uri);
     }
 
+    ontologies.add(exports);
     //register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
     registerInPackageTree(prefixAndFileName,exports);
     // });
+
+    if(autoLoadOntologyData) {
+      loadData();
+    }
+
   };
 
   //return the declarators so the module can use them
@@ -1153,21 +1123,21 @@ function registerComponent(exportedComponent: Component,shape?: typeof Shape)
   shapeToComponents.get(shape).add(exportedComponent);
 }
 
-function registerPackageInTree(moduleName,packageExports)
+function registerPackageInTree(packageName,packageExports?)
 {
   //prepare name for global tree reference
-  let moduleTreeKey = moduleName.replace(/-/g,'_');
+  let packageTreeKey = packageName.replace(/-/g,'_');
   //if something with this name already registered in the global tree
-  if (moduleTreeKey in lincd._modules)
+  if (packageTreeKey in lincd._modules)
   {
-    console.warn('A module with the name ' + moduleName + ' has already been registered.');
+    console.warn('A package with the name ' + packageName + ' has already been registered.');
   }
   else
   {
     //initiate an empty object for this module in the global tree
-    lincd._modules[moduleTreeKey] = packageExports || {};
+    lincd._modules[packageTreeKey] = packageExports || {};
   }
-  return lincd._modules[moduleTreeKey];
+  return lincd._modules[packageTreeKey];
 }
 
 function getSourceFromInputProps(props,shapeClass)

@@ -254,6 +254,9 @@ export abstract class Shape extends EventEmitter implements IShape
     return this.nodeShape?.validateNode(this.node) || false;
   }
 
+  static isValidNode(node:Node) {
+    return this.shape.validateNode(node);
+  }
   /**
    * Lets a LinkedComponent request specific data of a shape.
    *
@@ -722,20 +725,27 @@ export abstract class Shape extends EventEmitter implements IShape
     }
   }
 
-  private static typeCheck()
-  {
-    if (!this.targetClass)
-    {
-      throw new Error('static variable type:NamedNode is not implemented in ' + this.name);
-    }
-  }
-
+  /**
+   * use new Shape(node) instead, where Shape can be any class that extends Shape
+   * @deprecated
+   * @param node
+   */
   static getOf<T extends Shape>(this: ShapeLike<T>,node: Node): T
   {
     return new this(node);
   }
 
-  static getFromURI<T extends Shape>(this: ShapeLike<T>,uri: string): T
+  /**
+   * Retrieves an existing node or creates a new (temporary) node and then sets the right rdf:type
+   * Then uses that node to return an instance of the Shape that you call this method from
+   * So it works just like NamedNode.getOrCreate() but creates an instance of the right shape straight away.
+   * Note that if the URI did not yet exist, it creates a temporary node, and hence only once you SAVE that node or shape
+   * Will it (and its properties) be stored in permanent storage.
+   *
+   * @param uri
+   * @param isTemporaryNodeIfNew
+   */
+  static getFromURI<T extends Shape>(this: ShapeLike<T>,uri: string,isTemporaryNodeIfNew:boolean=true): T
   {
     let node = NamedNode.getNamedNode(uri);
     if (node)
@@ -744,7 +754,7 @@ export abstract class Shape extends EventEmitter implements IShape
     }
     else
     {
-      node = NamedNode.getOrCreate(uri);
+      node = NamedNode.getOrCreate(uri,true);
       node.set(rdf.type,this.targetClass);
       return new this(node);
     }

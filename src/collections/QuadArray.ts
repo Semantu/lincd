@@ -12,8 +12,12 @@ export class QuadArray extends Array<Quad> {
     this.forEach((quad) => quad.remove(alteration));
   }
 
-  moveTo(graph: Graph) {
-    this.forEach((quad) => quad.moveToGraph(graph));
+  moveTo(graph: Graph, alteration: boolean = true): QuadArray {
+    let result = new QuadArray();
+    this.forEach((quad) => {
+      result.push(quad.moveToGraph(graph, alteration));
+    });
+    return result;
   }
 
   makeExplicit() {

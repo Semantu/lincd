@@ -30,17 +30,8 @@ export abstract class Storage {
 
   static init() {
     if (!this._initialized) {
-      //listen to any quad changes in local memory
-      // Quad.emitter.on(Quad.QUADS_CREATED,(...args) =>
-      //   this.onQuadsCreated.apply(this,args),
-      // );
-      // Quad.emitter.on(Quad.QUADS_REMOVED,this.onQuadsRemoved.bind(this));
-
       Quad.emitter.on(Quad.QUADS_ALTERED, this.onEvent.bind(this, Quad.QUADS_ALTERED));
       NamedNode.emitter.on(NamedNode.STORE_NODES, this.onEvent.bind(this, NamedNode.STORE_NODES));
-
-      // Quad.emitter.on(Quad.QUADS_ALTERED,this.onQuadsAltered.bind(this));
-      // NamedNode.emitter.on(NamedNode.STORE_NODES,this.onStoreNodes.bind(this));
 
       NamedNode.emitter.on(NamedNode.REMOVE_NODES, this.onEvent.bind(this, NamedNode.REMOVE_NODES));
       NamedNode.emitter.on(NamedNode.CLEARED_PROPERTIES, this.onEvent.bind(this, NamedNode.CLEARED_PROPERTIES));
@@ -60,7 +51,7 @@ export abstract class Storage {
   static onEvent(eventType, ...args) {
     //so either a TRIPLES_ALTERED, CLEARED_PROPERTIES, STORE_RESOURCES or REMOVE_RESOURCES event comes in
 
-    //if we havn't stored any events yet
+    //if we have not stored any events yet
     if (!this.storedEvents) {
       //start storing
       this.storedEvents = {};
@@ -199,7 +190,7 @@ export abstract class Storage {
     this.defaultStorageGraph = graph;
   }
 
-  static storeShapesInGraph(graph: Graph, ...shapeClasses: typeof Shape[]) {
+  static setGraphForShapes(graph: Graph,...shapeClasses: typeof Shape[]) {
     shapeClasses.forEach((shapeClass) => {
       this.shapesToGraph.set(shapeClass, graph);
       if (shapeClass['shape']) {
@@ -227,10 +218,10 @@ export abstract class Storage {
    * @param store
    * @param shapes
    */
-  static storeShapesInStore(store: IQuadStore, ...shapes: typeof Shape[]) {
+  static setStoreForShapes(store: IQuadStore,...shapes: typeof Shape[]) {
     let graph = store.getDefaultGraph();
     this.setStoreForGraph(store, graph);
-    this.storeShapesInGraph(graph, ...shapes);
+    this.setGraphForShapes(graph, ...shapes);
   }
 
   private static assignQuadsToGraph(quads: ICoreIterable<Quad>) {
