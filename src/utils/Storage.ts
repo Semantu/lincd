@@ -18,7 +18,7 @@ export abstract class Storage {
   private static _initialized: boolean;
   private static graphToStore: CoreMap<Graph, IQuadStore> = new CoreMap();
   private static shapesToGraph: CoreMap<typeof Shape, Graph> = new CoreMap();
-  private static nodeShapesToGraph: CoreMap<NodeShape, Graph> = new CoreMap();
+  private static nodeShapesToGraph: CoreMap<NamedNode, Graph> = new CoreMap();
   private static defaultStorageGraph: Graph;
   private static processingPromise: {
     promise: Promise<void>;
@@ -194,7 +194,7 @@ export abstract class Storage {
     shapeClasses.forEach((shapeClass) => {
       this.shapesToGraph.set(shapeClass, graph);
       if (shapeClass['shape']) {
-        this.nodeShapesToGraph.set(shapeClass['shape'], graph);
+        this.nodeShapesToGraph.set(shapeClass['shape'].namedNode, graph);
       }
     });
     this.init();
@@ -229,8 +229,9 @@ export abstract class Storage {
     let alteredNodes = new CoreMap<NamedNode, Graph>();
     map.forEach((quads, graph) => {
       quads.forEach((quad) => {
-        //move the quad to the target graph (both old and new graph will be updated)
         if (quad.graph !== graph) {
+          //move the quad to the target graph (both old and new graph will be updated)
+          //this will trigger a QUADS_ALTERED event --> onQuadsAltered
           quad.moveToGraph(graph);
           //also keep track of which nodes had a quad that moved to a different graph
           if (!alteredNodes.has(quad.subject)) {
@@ -304,9 +305,9 @@ export abstract class Storage {
 
     //see if any of these shapes has a specific target graph
     for (let shape of subjectShapes) {
-      if (this.nodeShapesToGraph.has(shape)) {
+      if (this.nodeShapesToGraph.has(shape.namedNode)) {
         //currently, the target graph of the very first shape that has a target graph is returned
-        return this.nodeShapesToGraph.get(shape);
+        return this.nodeShapesToGraph.get(shape.namedNode);
       }
     }
 
