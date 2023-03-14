@@ -267,6 +267,9 @@ export abstract class Shape extends EventEmitter implements IShape
     dataRequestFn: (shapeInstance: T) => LinkedDataResponse,
   ): LinkedDataDeclaration<T>
   {
+    //calling this method like this so that we can keep it private without having to add it to the 'this' interface
+    this['ensureLinkedShape']();
+
     //return an object with the shape and a request key. The value of request is a function
     //that can be executed for a specific instance of the shape
     return {
@@ -287,6 +290,9 @@ export abstract class Shape extends EventEmitter implements IShape
     dataRequestFn: (shapeSet: ShapeSet<T>) => LinkedDataResponse,
   ): LinkedDataSetDeclaration<T>
   {
+    //calling this method like this so that we can keep it private without having to add it to the 'this' interface
+    this['ensureLinkedShape']();
+
     //return an object with the shape and a request key. The value of request is a function
     //that can be executed for a set of instances of the shape
     return {
@@ -302,6 +308,9 @@ export abstract class Shape extends EventEmitter implements IShape
     dataRequestFn: (shape: T) => LinkedDataResponse,
   ): LinkedDataSetDeclaration<T>
   {
+    //calling this method like this so that we can keep it private without having to add it to the 'this' interface
+    this['ensureLinkedShape']();
+    
     //return an object with the shape and a request key. The value of request is a function
     //that can be executed for a specific instance of the shape
     return {
@@ -310,6 +319,12 @@ export abstract class Shape extends EventEmitter implements IShape
         return dataRequestFn(shape);
       },
     };
+  }
+  
+  private static ensureLinkedShape() {
+    if(!this.shape) {
+      console.warn(this.name+" is not a linked shape. Did you forget to use the @linkedShape decorator?")
+    }
   }
 
   /**
@@ -755,7 +770,10 @@ export abstract class Shape extends EventEmitter implements IShape
     else
     {
       node = NamedNode.getOrCreate(uri,true);
-      node.set(rdf.type,this.targetClass);
+      if(this.targetClass)
+      {
+        node.set(rdf.type,this.targetClass);
+      }
       return new this(node);
     }
     return new this(NamedNode.getOrCreate(uri));

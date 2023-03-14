@@ -49,6 +49,7 @@ export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 // var packageParsePromises: Map<string,Promise<any>> = new Map();
 // var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
+let nodeShapeToShapeClass: Map<NamedNode,typeof Shape> = new Map();
 let ontologies: Set<any> = new Set();
 let _autoLoadOntologyData = false;
 /**
@@ -465,7 +466,7 @@ export function linkedPackage(
     //create a new functional component which wraps the original
     let _wrappedComponent: LinkedFunctionalSetComponent<DeclaredProps,ShapeType> = (props: DeclaredProps & LinkedSetComponentInputProps<ShapeType> & BoundComponentProps) => {
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
-      let linkedProps = getLinkedSetComponentProps<ShapeType,DeclaredProps>(props,shapeClass);
+      let linkedProps = getLinkedSetComponentProps<ShapeType,DeclaredProps>(props,shapeClass,functionalComponent);
 
       //if this component was created with an 'as' attribute (so <SetComponent of={sources} as={ChildComponent} />
       if(props.as)
@@ -630,9 +631,11 @@ export function linkedPackage(
       let packageNameURI = URI.sanitize(packageName);
 
       //create a new node shape for this shapeClass
-      let shape: NodeShape = new NodeShape(NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(constructor.name)}`,true));
-      shape.set(rdf.type,shacl.NodeShape);
+      let shape: NodeShape = NodeShape.getFromURI(`${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(constructor.name)}`);
+      //connect the typescript class to its NodeShape
       constructor.shape = shape;
+      //also keep track of the reverse: nodeShape to typescript class (helpful for sending shapes between environments with JSONWriter / JSONParser)
+      nodeShapeToShapeClass.set(shape.namedNode,constructor);
 
       //also create a representation in the graph of the shape class itself
       let shapeClass = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shapeclass/${URI.sanitize(constructor.name)}`,true);
@@ -741,6 +744,10 @@ export function linkedPackage(
     packageExports: packageTreeObject,
     packageName: packageName,
   } as LinkedPackageObject;
+}
+
+export function getShapeClass(nodeShape:NamedNode) {
+  return nodeShapeToShapeClass.get(nodeShape);
 }
 
 function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requiredData:typeof Shape | LinkedDataDeclaration<ShapeType>,functionalComponent:LinkableFunctionalComponent<DeclaredProps,ShapeType>,setComponent?:boolean);
@@ -1164,8 +1171,13 @@ function getLinkedComponentProps<ShapeType extends Shape,P>(
 function getLinkedSetComponentProps<ShapeType extends Shape,P>(
   props: LinkedSetComponentInputProps<ShapeType> & P,
   shapeClass,
+  functionalComponent,
 ): LinkedSetComponentProps<ShapeType> & P
 {
+  if(!(props.of instanceof NodeSet) && !(props.of instanceof ShapeSet) && !props.of['then']) {
+    throw Error("Invalid argument 'of' provided to "+functionalComponent.name.replace('_implementation','')+" component: "+props.of+". Make sure to provide a NodeSet, a ShapeSet or a Promise resolving to either of those.");
+  }
+
   let newProps = {
     ...props,
     //if a NodeSet was given, convert it to a ShapeSet
@@ -1336,3 +1348,7 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
 
 //when this file is used, make sure the tree is initialized
 initTree();
+
+let lincdPackage = linkedPackage('lincd');
+lincdPackage.linkedShape(NodeShape);
+lincdPackage.linkedShape(PropertyShape);

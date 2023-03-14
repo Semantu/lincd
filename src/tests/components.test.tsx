@@ -1,6 +1,5 @@
 import {Buffer} from 'buffer';
 import React from 'react';
-import {render,unmountComponentAtNode} from 'react-dom';
 import {act} from 'react-dom/test-utils';
 import {linkedComponent,linkedSetComponent,linkedShape} from '../package';
 import {Shape} from '../shapes/Shape';
@@ -11,7 +10,7 @@ import {createNameSpace} from '../utils/NameSpace';
 let foaf = createNameSpace('http://xmlns.com/foaf/0.1/');
 import {createRoot} from 'react-dom/client';
 
-//these were needed to get react components to work. Maybe one of them can go?
+//these were needed to get react components to work with the testing environment. Maybe one of them can go?
 Buffer && true;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 

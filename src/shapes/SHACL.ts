@@ -11,7 +11,6 @@ import {xsd} from '../ontologies/xsd';
 import {ShapeSet} from '../collections/ShapeSet';
 import {NodeSet} from '../collections/NodeSet';
 import {rdf} from '../ontologies/rdf';
-import {NodeMap} from '../collections/NodeMap';
 import {CoreMap} from '../collections/CoreMap';
 import {ForwardReasoning} from '../utils/ForwardReasoning';
 
@@ -22,7 +21,7 @@ export class SHACL_Shape extends Shape {
   }
 
 }
-
+//Note: this shape is linked in Module.ts to avoid cyclical dependencies
 export class NodeShape extends SHACL_Shape {
   static targetClass: NamedNode = shacl.NodeShape;
 
@@ -128,6 +127,7 @@ export class NodeShape extends SHACL_Shape {
 
 export class ValidationResult {}
 
+//Note: this shape is linked in Module.ts to avoid cyclical dependencies
 export class PropertyShape extends SHACL_Shape {
   static targetClass: NamedNode = shacl.PropertyShape;
 

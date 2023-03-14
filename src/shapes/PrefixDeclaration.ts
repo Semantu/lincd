@@ -1,10 +1,10 @@
 import {Literal, NamedNode} from '../models';
-import {SHACL_Shape} from './SHACL';
 import {shacl} from '../ontologies/shacl';
 import {linkedShape} from '../package';
+import {Shape} from './Shape';
 
 @linkedShape
-export class PrefixDeclaration extends SHACL_Shape {
+export class PrefixDeclaration extends Shape {
   static targetClass: NamedNode = shacl.PrefixDeclaration;
 
   get prefix(): string {
