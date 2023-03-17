@@ -12,7 +12,7 @@ export interface IQuadStore {
   /**
    * Prepares the store to be used.
    */
-  init(): Promise<any>;
+  init?(): Promise<any>;
 
   update(toAdd: ICoreIterable<Quad>, toRemove: ICoreIterable<Quad>): Promise<any>;
 
@@ -26,7 +26,7 @@ export interface IQuadStore {
 
   setURI(...nodes: NamedNode[]): Promise<any>;
 
-  getDefaultGraph(): Graph;
+  getDefaultGraph?(): Graph;
 
   removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
 

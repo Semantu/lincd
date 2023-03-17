@@ -1147,6 +1147,7 @@ function registerPackageInTree(packageName,packageExports?)
   //if something with this name already registered in the global tree
   if (packageTreeKey in lincd._modules)
   {
+    //This probably means package.ts is loaded twice, through different paths and could point to a problem
     console.warn('A package with the name ' + packageName + ' has already been registered.');
   }
   else

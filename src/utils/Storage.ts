@@ -213,6 +213,9 @@ export abstract class Storage {
     }
   }
 
+  static getStores():CoreSet<IQuadStore> {
+    return new CoreSet([...this.graphToStore.values()]);
+  }
   /**
    * Set the target store for instances of these shapes
    * @param store
@@ -316,7 +319,8 @@ export abstract class Storage {
     }
 
     //if no shape defined a target graph OR if the node is a temporary node
-    //then use the default graph
+    //then use the default graph (which is usually not connected to any store, and just lives in local memory)
+    //this prevents temporary local nodes from being automatically stored
     return defaultGraph;
   }
 
