@@ -213,6 +213,12 @@ it('renders a SetComponent with controlled children by using Shape.requestForEac
   });
   expect(container.textContent).toBe(`${person.name} knows ${person2.name+person3.name}`);
 });
+it("renders a SetComponent with controlled children using < SetComponent of={.. } />",async () => {
+  await act(async () => {
+    root = createRoot(container).render(<PersonOverview of={person.knows} />);
+  });
+  expect(container.textContent).toBe(person2.name+person3.name);
+});
 it("renders a SetComponent with configurable children using < SetComponent as={.. } />",async () => {
   await act(async () => {
     root = createRoot(container).render(<PersonOverviewWithConfigurableChildren of={person.knows} as={Card} />);

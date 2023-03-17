@@ -533,9 +533,19 @@ export function linkedPackage(
       //if the data is loaded
       if (dataIsLoaded)
       {
-
+        //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
+        if(dataDeclaration && dataDeclaration.request)
+        {
+          //then we provide that request as the getLinkedData prop
+          linkedProps.getLinkedData = function(source) {
+            //Note that tracedDataResponse is the results of processing dataDeclaration.request
+            //this already happened in a previous step, and just like we regard dataDeclaration.request as the childDataRequestFn
+            //we can also regard tracedDataResponse (its processed traced response) as childTracedDataResponse
+            return getLinkedDataResponse(dataDeclaration.request,source,tracedDataResponse);
+          }
+        }
         //if the component used a Shape.requestSet() data declaration function
-        if (dataDeclaration)
+        else if (dataDeclaration)
         {
           //then use that now to get the requested linkedData for this instance
           linkedProps.linkedData = getLinkedDataResponse(dataDeclaration.request || dataDeclaration.setRequest,linkedProps.sources,tracedDataResponse);
@@ -1322,17 +1332,6 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
 
             return childRenderFn(newChildProps);
           };
-        }
-        //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
-        else if(dataDeclaration.request)
-        {
-          //then we provide that request as the getLinkedData prop
-          newProps.getLinkedData = function(source) {
-            //Note that tracedDataResponse is the results of processing dataDeclaration.request
-            //this already happened in a previous step, and just like we regard dataDeclaration.request as the childDataRequestFn
-            //we can also regard tracedDataResponse (its processed traced response) as childTracedDataResponse
-            return getLinkedDataResponse(dataDeclaration.request,source,tracedDataResponse);
-          }
         }
 
         //render the child component (which is 'this')
