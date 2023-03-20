@@ -708,11 +708,9 @@ export abstract class Shape extends EventEmitter implements IShape
     }
   }
 
-  // TODO: to find Shape instances we need to not just check type, but all the constraints of this shape class
   static getLocalInstances<T extends Shape>(this: ShapeLike<T>,explicitInstancesOnly: boolean = false): ShapeSet<T>
   {
-    //this is because of the definition above. The goal of this is to return a set of instances with the type of the class that extends Shape
-    //without this the compiler complains about the methods of `this` being called
+    //'this' is listed as a parameter ti be able to return a set of instances with the type of the actual class that extends Shape
     // https://www.typescriptlang.org/docs/handbook/generics.html#using-class-types-in-generics
     // https://stackoverflow.com/questions/34098023/typescript-self-referencing-return-type-for-static-methods-in-inheriting-classe?rq=1
     return this.getSetOf(this.getLocalInstanceNodes());
@@ -724,20 +722,23 @@ export abstract class Shape extends EventEmitter implements IShape
     return this.getLocalInstanceNodes().size;
   }
 
-  //TODO: to find Shape instances we need to not just check type, but all the constraints of this shape class
   static getLocalInstanceNodes(explicitInstancesOnly: boolean = false): NodeSet
   {
+    //start by getting a list of all nodes that have the correct type
+    let potentialInstances;
     if (explicitInstancesOnly)
     {
-      return this.targetClass
+      potentialInstances = this.targetClass
         .getInverseQuads(rdf.type)
         .filter((quad) => !quad.implicit)
         .getSubjects();
     }
     else
     {
-      return this.targetClass.getAllInverse(rdf.type);
+      potentialInstances = this.targetClass.getAllInverse(rdf.type);
     }
+    //return only those instance nodes that are actual valid instances of this shape
+    return potentialInstances.filter(node => this.isValidNode(node));
   }
 
   /**

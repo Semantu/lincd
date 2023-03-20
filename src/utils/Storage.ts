@@ -503,10 +503,11 @@ export abstract class Storage {
       // return new QuadArray();
       let quads = new QuadArray();
       results.forEach(result => {
-        quads.push(...result as any);
+        if(result instanceof QuadArray)
+        {
+          quads.push(...result as any);
+        }
       });
-      return quads;
-    }).then(quads => {
       //update the cache to indicate these property shapes have finished loading for these nodes
       this.setNodesLoaded(nodes,shapeOrRequest,true);
       return quads;
