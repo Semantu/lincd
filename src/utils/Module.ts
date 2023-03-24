@@ -31,7 +31,7 @@ import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
 import {lincd as lincdOntology} from '../ontologies/lincd';
 import {npm} from '../ontologies/npm';
-import {createElement,default as React,useEffect,useState} from 'react';
+import React, {createElement, useEffect,useState} from 'react';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {Storage} from './Storage';
@@ -1072,10 +1072,8 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
   return traceShape as any;
 }
 
-class TestNode extends NamedNode
-{
-  constructor(public property?: NamedNode)
-  {
+export class TestNode extends NamedNode {
+  constructor(public property?: NamedNode) {
     let uri = NamedNode.createNewTempUri();
     super(uri,true);
   }
@@ -1143,19 +1141,20 @@ function registerComponent(exportedComponent: Component,shape?: typeof Shape)
 function registerPackageInTree(packageName,packageExports?)
 {
   //prepare name for global tree reference
-  let packageTreeKey = packageName.replace(/-/g,'_');
+  // let packageTreeKey = packageName.replace(/-/g,'_');
   //if something with this name already registered in the global tree
-  if (packageTreeKey in lincd._modules)
+  if (packageName in lincd._modules)
   {
     //This probably means package.ts is loaded twice, through different paths and could point to a problem
-    console.warn('A package with the name ' + packageName + ' has already been registered.');
+    console.warn('A package with the name ' + packageName + ' has already been registered. Adding to existing object');
+    Object.assign(lincd._modules[packageName],packageExports);
   }
   else
   {
     //initiate an empty object for this module in the global tree
-    lincd._modules[packageTreeKey] = packageExports || {};
+    lincd._modules[packageName] = packageExports || {};
   }
-  return lincd._modules[packageTreeKey];
+  return lincd._modules[packageName];
 }
 
 function getSourceFromInputProps(props,shapeClass)
