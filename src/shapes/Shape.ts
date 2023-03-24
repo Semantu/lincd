@@ -780,6 +780,21 @@ export abstract class Shape extends EventEmitter implements IShape
     return new this(NamedNode.getOrCreate(uri));
   }
 
+  static getFromParams<T extends Shape>(this: ShapeLike<T>,prefixURI:string,...uniqueParams: any[]): T {
+    let postfix;
+    if(uniqueParams.length)
+    {
+      postfix = uniqueParams.join('/');
+    }
+    else
+    {
+      //here we expect that we'll create a new node, so the counter will be increased when we actually create it
+      postfix = NamedNode.getCounter()+1;
+    }
+    let uri = prefixURI + this.targetClass.uri + '/' + postfix;
+    return this.getFromURI(uri);
+  }
+
   static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: NodeValuesSet): ShapeValuesSet<T>;
   static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: ICoreIterable<Node>): ShapeSet<T>;
   static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: NodeValuesSet|ICoreIterable<Node>): ShapeSet<T>|ShapeValuesSet<T>
@@ -811,6 +826,6 @@ export interface ShapeLike<M extends Shape> extends Constructor<M>
   targetClass: NamedNode;
 
   getSetOf<M extends Shape>(this: ShapeLike<M>,nodes: ICoreIterable<Node>): ShapeSet<M>;
-
+  getFromURI<T extends Shape>(this: ShapeLike<T>,uri: string,isTemporaryNodeIfNew?:boolean): T
   getLocalInstanceNodes(explicitInstancesOnly?: boolean): NodeSet;
 }

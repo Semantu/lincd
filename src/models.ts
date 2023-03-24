@@ -1872,6 +1872,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return this.TEMP_URI_BASE + this.tempCounter++; //+'/';+Date.now()+Math.random();
   }
 
+  static getCounter():number {
+    return this.tempCounter;
+  }
+
   /**
    * The proper way to obtain a node from a URI.
    * If requested before, this returns the existing NamedNode for the given URI.
