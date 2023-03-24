@@ -780,6 +780,14 @@ export abstract class Shape extends EventEmitter implements IShape
     return new this(NamedNode.getOrCreate(uri));
   }
 
+  /**
+   * Generates a URI from the given prefixURI + optional unique parameters
+   * Then returns an instance of this shape with that URI, either from an existing or new node
+   * This method is intended to be extended by other shapes.
+   * The base implementation in Shape.ts will generate a unique URI if no uniqueParams are given, so extending methods may use super.getFromParams() when no params are given
+   * @param prefixURI
+   * @param uniqueParams
+   */
   static getFromParams<T extends Shape>(this: ShapeLike<T>,prefixURI:string,...uniqueParams: any[]): T {
     let postfix;
     if(uniqueParams.length)
