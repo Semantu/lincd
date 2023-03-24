@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode,Node} from '../models';
+import {NamedNode,Node,Quad} from '../models';
 import {Shape} from '../shapes/Shape';
 import {NodeShape,PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
@@ -1109,7 +1109,9 @@ export class TestNode extends NamedNode {
   {
     if (!super.hasProperty(property))
     {
-      this.set(property,new TestNode(property));
+      //test nodes AUTOMATICALLY generate a dummy test-node value when a property is requested
+      //however they avoid sending events about this
+      new Quad(this, property, new TestNode(property), undefined, false, false);
     }
     return super.getOne(property) as any;
   }
