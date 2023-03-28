@@ -528,6 +528,10 @@ export abstract class Storage {
    * @param byPassCache
    */
   static loadShape(shapeInstance: Shape, shapeOrRequest: LinkedDataRequest,byPassCache:boolean=false): Promise<QuadArray> {
+
+    //@TODO: optimise the shapeOrRequest. Currently if the same property is requested twice, but once with more sub properties, then both will be requested.
+    // This can be merged into 1 shape request because the longer one automatically loads the shorter one
+
     let node = shapeInstance.node;
     if(!byPassCache)
     {

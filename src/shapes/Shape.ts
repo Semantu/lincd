@@ -255,6 +255,7 @@ export abstract class Shape extends EventEmitter implements IShape
   }
 
   static isValidNode(node:Node) {
+    this.ensureLinkedShape();
     return this.shape.validateNode(node);
   }
   /**
