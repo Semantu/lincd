@@ -154,6 +154,9 @@ export abstract class Shape extends EventEmitter implements IShape
   {
     if (!type)
     {
+      if(shapeClass === Shape) {
+        return;
+      }
       //TODO: add support for sh:targetNode, sh:targetObjectsOf and sh:targetSubjectsOf. Those would be fine as alternatives to targetClass (and the latter 2 define a PropertyShape)
       //warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
       if (!shapeClass.hasOwnProperty('targetClass'))

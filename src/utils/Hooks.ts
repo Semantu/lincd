@@ -10,7 +10,7 @@ export const useStyles = (
   styles?: React.CSSProperties,
 ) => {
   let classNames;
-  let rootStyles;
+  let combinedStyles;
   if (props.className) {
     if (typeof props.className === 'string') {
       classNames = [props.className];
@@ -19,7 +19,7 @@ export const useStyles = (
     }
   }
   if (props.style) {
-    rootStyles = props.style;
+    combinedStyles = props.style;
   }
 
   if (classNamesOrStyles) {
@@ -41,14 +41,14 @@ export const useStyles = (
       else
       {
         //merge props.style with first param (which is a React.CSSProperties object)
-        rootStyles = {...rootStyles,...classNamesOrStyles as object}
+        combinedStyles = {...props.style,...classNamesOrStyles as object}
       }
     }
     if(styles) {
       //merge props.style with second param (first param must have been class names)
-      rootStyles = {...rootStyles,...styles}
+      combinedStyles = {...combinedStyles,...styles}
     }
   }
 
-  return {className: classNames.filter(Boolean).join(' '), style: rootStyles};
+  return {className: classNames.filter(Boolean).join(' '), style: combinedStyles};
 };

@@ -264,7 +264,10 @@ export abstract class Storage {
     });
   }
 
-  static promiseUpdated(): Promise<void> {
+  static async promiseUpdated(): Promise<void> {
+    if(this.defaultStore) {
+      await this.defaultStore.init();
+    }
     //we wait till all events are dispatched
     return eventBatcher.promiseDone().then(() => {
       //if that triggered a storage update
