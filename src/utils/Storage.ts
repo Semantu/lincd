@@ -173,6 +173,9 @@ export abstract class Storage {
     }
   }
 
+  static getDefaultStore() {
+    return this.defaultStore;
+  }
   static setDefaultStore(store: IQuadStore) {
     this.defaultStore = store;
     this.defaultStore.init();
@@ -485,6 +488,7 @@ export abstract class Storage {
   }
 
   static loadShapes(shapeSet: ShapeSet, shapeOrRequest: LinkedDataRequest,byPassCache:boolean=false): Promise<QuadArray> {
+
     let nodes = shapeSet.getNodes();
     if(!byPassCache)
     {
@@ -530,8 +534,13 @@ export abstract class Storage {
    * @param shapeOrRequest
    * @param byPassCache
    */
-  static loadShape(shapeInstance: Shape, shapeOrRequest: LinkedDataRequest,byPassCache:boolean=false): Promise<QuadArray> {
+  static loadShape(shapeInstance: Shape, shapeOrRequest?: LinkedDataRequest,byPassCache:boolean=false): Promise<QuadArray> {
 
+    //if no shape is requested then we automatically request all properties of the shape
+    if(!shapeOrRequest) {
+      //TODO: maybe we can optimise requests by not sending all the shapes and letting the backend fill in the property shapes
+      shapeOrRequest = [...shapeInstance.nodeShape.getPropertyShapes()]
+    }
     //@TODO: optimise the shapeOrRequest. Currently if the same property is requested twice, but once with more sub properties, then both will be requested.
     // This can be merged into 1 shape request because the longer one automatically loads the shorter one
 
