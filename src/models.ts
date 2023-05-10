@@ -2037,6 +2037,9 @@ export class Literal extends Node implements IGraphObject, ILiteral {
    */
   constructor(value: string, protected _datatype: NamedNode = null, private _language: string = '') {
     super(value);
+    if(typeof value !== 'string') {
+      throw new Error('Literal value must be a string. Given value was a '+typeof value+' ('+value+')');
+    }
   }
 
   getAs<T extends IShape>(type: {new (): T; getOf(node: Node): T}): T {
