@@ -2688,6 +2688,10 @@ export class Quad extends EventEmitter {
    * @param newGraph
    */
   moveToGraph(newGraph: Graph, alteration: boolean = true): Quad {
+    if(newGraph === this._graph)
+    {
+      return this;
+    }
     let newQuad = Quad.getOrCreate(this.subject, this.predicate, this.object, newGraph, this.implicit, alteration);
     this.remove(alteration);
     return newQuad;

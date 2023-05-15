@@ -24,12 +24,12 @@ export class NQuads {
   static fromGraphs(graphs: ICoreIterable<Graph>): string {
     let res = '';
     graphs.forEach((graph: Graph) => {
-      res += this.fromQuads(graph.getContents(), graph);
+      res += this.fromQuads(graph.getContents());
     });
     return res;
   }
 
-  static fromQuads(quadset: QuadSet | Quad[], graph: Graph = null): string {
+  static fromQuads(quadset: QuadSet | Quad[], includeGraphs:boolean=true,fixedGraph: Graph = null): string {
     let resultString: string = '';
 
     BlankNode.includeBlankNodes(quadset);
@@ -43,7 +43,7 @@ export class NQuads {
         this.toString(quad.predicate) +
         ' ' +
         this.toString(quad.object) +
-        (graph && graph.node.uri !== '' ? ' ' + this.toString(graph) : '') +
+        (fixedGraph && fixedGraph.node.uri !== '' ? ' ' + this.toString(fixedGraph) : (includeGraphs && quad.graph && quad.graph.node.uri !== '' ? ' '+this.toString(quad.graph) : '')) +
         '.\n';
     });
     return resultString;

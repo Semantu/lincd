@@ -184,8 +184,9 @@ export abstract class Storage {
       this.setDefaultStorageGraph(defaultGraph);
       this.setStoreForGraph(store, defaultGraph);
     } else {
-      console.warn('Default store did not return a default graph.');
+      // console.warn('Default store did not return a default graph.');
     }
+
     this.init();
   }
 
@@ -298,7 +299,7 @@ export abstract class Storage {
     //go over each store that has added/removed quads
     return Promise.all(
       stores.map((store) => {
-        return store.update(addMap.get(store) || [], removeMap.get(store) || []);
+        return store.update(addMap.get(store) || new QuadArray(), removeMap.get(store) || new QuadArray());
       }),
     )
       .then((res) => {
@@ -425,26 +426,26 @@ export abstract class Storage {
     // return this.defaultStore;
   }
 
-  private static groupQuadsBySubject(quads: ICoreIterable<Quad>): CoreMap<NamedNode, Quad[]> {
-    let subjectsToQuads: CoreMap<NamedNode, Quad[]> = new CoreMap();
+  private static groupQuadsBySubject(quads: ICoreIterable<Quad>): CoreMap<NamedNode, QuadArray> {
+    let subjectsToQuads: CoreMap<NamedNode, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
       if (!subjectsToQuads.has(quad.subject)) {
-        subjectsToQuads.set(quad.subject, []);
+        subjectsToQuads.set(quad.subject, new QuadArray());
       }
       subjectsToQuads.get(quad.subject).push(quad);
     });
     return subjectsToQuads;
   }
 
-  private static getTargetGraphMap(quads: ICoreIterable<Quad>): CoreMap<Graph, Quad[]> {
-    let graphMap: CoreMap<Graph, Quad[]> = new CoreMap();
+  private static getTargetGraphMap(quads: ICoreIterable<Quad>): CoreMap<Graph,QuadArray> {
+    let graphMap: CoreMap<Graph, QuadArray> = new CoreMap();
     let quadsBySubject = this.groupQuadsBySubject(quads);
     quadsBySubject.forEach((quads, subjectNode) => {
       let targetGraph = this.getTargetGraph(subjectNode);
       if (!graphMap.has(targetGraph)) {
-        graphMap.set(targetGraph, []);
+        graphMap.set(targetGraph, new QuadArray());
       }
-      graphMap.set(targetGraph, graphMap.get(targetGraph).concat(quads));
+      graphMap.set(targetGraph, new QuadArray(...graphMap.get(targetGraph).concat(quads)));
     });
     return graphMap;
   }
@@ -472,14 +473,14 @@ export abstract class Storage {
     return storeMap;
   }
 
-  private static getTargetStoreMap(quads: ICoreIterable<Quad>): CoreMap<IQuadStore, Quad[]> {
-    let storeMap: CoreMap<IQuadStore, Quad[]> = new CoreMap();
+  private static getTargetStoreMap(quads: ICoreIterable<Quad>): CoreMap<IQuadStore, QuadArray> {
+    let storeMap: CoreMap<IQuadStore, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
       let store = this.getTargetStoreForGraph(quad.graph);
       //if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
       if (store) {
         if (!storeMap.has(store)) {
-          storeMap.set(store, []);
+          storeMap.set(store, new QuadArray());
         }
         storeMap.get(store).push(quad);
       }
