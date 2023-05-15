@@ -336,7 +336,7 @@ export abstract class Storage {
     let subjects = new NodeSet<NamedNode>(clearProperties.keys());
 
     //get a map of where each of these nodes are stored
-    let storeMap = this.getTargetStoreMapForNodes(subjects);
+    let storeMap = this.getStoreMapForNodes(subjects);
 
     //call on each store to remove the appropriate nodes
     await Promise.all(
@@ -371,7 +371,7 @@ export abstract class Storage {
     });
 
     //get a map of where each of these nodes are stored
-    let storeMap = this.getTargetStoreMapForNodes(nodes);
+    let storeMap = this.getStoreMapForNodes(nodes);
 
     //turn the quads back off (they should be removed after all)
     nodesAndQuads.forEach(([node, quads]) => {
@@ -396,7 +396,7 @@ export abstract class Storage {
     //TODO: no need to convert to QuadSet once we phase out QuadArray
     let nodesWithTempURIs = nodes.filter((node) => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0);
 
-    let storeMap = this.getTargetStoreMapForNodes(nodesWithTempURIs);
+    let storeMap = this.getStoreMapForNodes(nodesWithTempURIs);
     await Promise.all(
       [...storeMap.entries()].map(([store, temporaryNodes]) => {
         return store.setURI(...temporaryNodes);
@@ -413,12 +413,12 @@ export abstract class Storage {
     this.assignQuadsToGraph(quads);
   }
 
-  private static getTargetStoreForNode(node: NamedNode) {
+  static getStoreForNode(node: NamedNode) {
     let graph = this.getTargetGraph(node);
-    return this.getTargetStoreForGraph(graph);
+    return this.getStoreForGraph(graph);
   }
 
-  private static getTargetStoreForGraph(graph: Graph) {
+  static getStoreForGraph(graph: Graph) {
     return this.graphToStore.get(graph);
     // if(this.graphToStore.has(graph))
     // {
@@ -450,10 +450,10 @@ export abstract class Storage {
     return graphMap;
   }
 
-  private static getTargetStoreMapForNodes(nodes: CoreSet<NamedNode>): CoreMap<IQuadStore, NamedNode[]> {
+  static getStoreMapForNodes(nodes: CoreSet<NamedNode>): CoreMap<IQuadStore, NamedNode[]> {
     return this.getStoreMapForIGraphObjects(nodes) as CoreMap<IQuadStore, NamedNode[]>;
   }
-  private static getTargetStoreMapForShapes(shapes: ShapeSet): CoreMap<IQuadStore, Shape[]>
+  static getStoreMapForShapes(shapes: ShapeSet): CoreMap<IQuadStore, Shape[]>
   {
     return this.getStoreMapForIGraphObjects(shapes) as CoreMap<IQuadStore, Shape[]>;
   }
@@ -461,7 +461,7 @@ export abstract class Storage {
   {
     let storeMap: CoreMap<IQuadStore, (NamedNode|Shape)[]> = new CoreMap();
     objects.forEach((object) => {
-      let store = this.getTargetStoreForNode(object.node || object);
+      let store = this.getStoreForNode(object.node || object);
       //if store is null, this means no store is observing this node. This will usually happen for the default graph which contains temporary nodes
       if (store) {
         if (!storeMap.has(store)) {
@@ -476,7 +476,7 @@ export abstract class Storage {
   private static getTargetStoreMap(quads: ICoreIterable<Quad>): CoreMap<IQuadStore, QuadArray> {
     let storeMap: CoreMap<IQuadStore, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
-      let store = this.getTargetStoreForGraph(quad.graph);
+      let store = this.getStoreForGraph(quad.graph);
       //if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
       if (store) {
         if (!storeMap.has(store)) {
@@ -486,6 +486,36 @@ export abstract class Storage {
       }
     });
     return storeMap;
+  }
+
+  static async setURI(nodes: NodeSet<NamedNode>): Promise<[string, string][]> {
+    //organise the nodes by their appropriate store
+    //and because these are nodes that are about to receive a URI so they can be stored
+    //we temporarily make them non-temporary :)
+    //this way the store map will contain the right target store for STORED nodes
+    //so that THAT store can determine the URI
+    nodes.forEach(node => {
+      node['tmp'] = node.isTemporaryNode;
+      node.isTemporaryNode = false;
+    })
+    let storeMap = this.getStoreMapForNodes(nodes);
+    nodes.forEach(node => {
+      node.isTemporaryNode = node['tmp'];
+    })
+
+    let promises = [];
+    //let each store update the URI's
+    storeMap.forEach((nodes, store) => {
+      promises.push(store.setURI(...nodes));
+    });
+    //combine the results to return an array of old to new URI's
+    return Promise.all(promises).then(results => {
+      let combinedResults:[string,string][] = [].concat(...results);
+      return combinedResults;
+    });
+  }
+  static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void|any> {
+    return this.onQuadsAltered(toAdd,toRemove);
   }
 
   static loadShapes(shapeSet: ShapeSet, shapeOrRequest: LinkedDataRequest,byPassCache:boolean=false): Promise<QuadArray> {
@@ -502,7 +532,7 @@ export abstract class Storage {
       }
     }
 
-    let storeMap = this.getTargetStoreMapForShapes(shapeSet);
+    let storeMap = this.getStoreMapForShapes(shapeSet);
     let storePromises = [];
     storeMap.map((shapes,store) => {
       storePromises.push(store.loadShapes(new ShapeSet(shapes),shapeOrRequest));
@@ -556,7 +586,7 @@ export abstract class Storage {
         return cachedResult === true ? Promise.resolve(true) : cachedResult;
       }
     }
-    let store = this.getTargetStoreForNode(shapeInstance.namedNode);
+    let store = this.getStoreForNode(shapeInstance.namedNode);
     if(store)
     {
       let promise = store.loadShape(shapeInstance, shapeOrRequest).then(res => {

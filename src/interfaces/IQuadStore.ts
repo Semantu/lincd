@@ -24,7 +24,7 @@ export interface IQuadStore {
 
   deleteMultiple(quads: QuadSet): Promise<any>;
 
-  setURI(...nodes: NamedNode[]): Promise<any>;
+  setURI(...nodes: NamedNode[]): Promise<[string,string][]>;
 
   getDefaultGraph?(): Graph;
 
