@@ -9,22 +9,11 @@ import {QuadSet} from '../collections/QuadSet';
 import {Shape} from '../shapes/Shape';
 
 export class NQuads {
-  // static stringify(object: ICoreIterable<Graph> | QuadSet | Quad[]): string {
-  // 	var res = '';
-  // 	if (object instanceof QuadSet || object instanceof Array) {
-  // 		res = this.fromQuads(object, res);
-  // 	} else {
-  // 		object.forEach((graph: Graph) => {
-  // 			res = this.fromQuads(graph.getContents(), res, graph);
-  // 		});
-  // 	}
-  // 	return res;
-  // }
 
-  static fromGraphs(graphs: ICoreIterable<Graph>): string {
+  static fromGraphs(graphs: ICoreIterable<Graph>,includeGraphs:boolean=true): string {
     let res = '';
     graphs.forEach((graph: Graph) => {
-      res += this.fromQuads(graph.getContents());
+      res += this.fromQuads(graph.getContents(),includeGraphs);
     });
     return res;
   }

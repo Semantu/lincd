@@ -28,6 +28,10 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGr
     return super.has(value) || (matchOnNodes && this.some(shape => shape.node === value.node && Object.getPrototypeOf(shape) === Object.getPrototypeOf(value)));
   }
 
+  delete(value: R) {
+    //if we can find a shape with the same node, delete that
+    return super.delete(this.find(shape => shape.node === value.node));
+  }
 
   //we cannot use NamedNodeSet here because of requirement loops
   getProperties(includeFromIncomingArcs: boolean = false): NodeSet<NamedNode> {

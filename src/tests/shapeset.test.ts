@@ -29,6 +29,11 @@ describe('shape set',() => {
     shapeSet.delete(person1);
     expect(shapeSet.size).toBe(0);
   });
+  test('you can remove identical shapes from it',() => {
+    shapeSet.add(person1);
+    shapeSet.delete(person1Identical);
+    expect(shapeSet.size).toBe(0);
+  });
   test('has returns true for identical shapes',() => {
     shapeSet.add(person1);
     expect(shapeSet.has(person1Identical)).toBe(true);

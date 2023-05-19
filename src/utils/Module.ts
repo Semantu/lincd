@@ -736,7 +736,9 @@ export function linkedPackage(
     // });
 
     if(autoLoadOntologyData) {
-      loadData();
+      loadData().catch(err => {
+        console.warn("Could not load ontology data. Do you need to rebuild the module of the "+prefixAndFileName+" ontology?", err);
+      })
     }
 
   };

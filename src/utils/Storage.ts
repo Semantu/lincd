@@ -310,17 +310,21 @@ export abstract class Storage {
       });
   }
 
-  private static getTargetGraph(subject: NamedNode): Graph {
-    let subjectShapes = NodeShape.getShapesOf(subject);
+  static getGraphForNode(subject: NamedNode,checkShapes:boolean=true): Graph {
+    if(checkShapes)
+    {
+      let subjectShapes = NodeShape.getShapesOf(subject);
 
-    //see if any of these shapes has a specific target graph
-    for (let shape of subjectShapes) {
-      if (this.nodeShapesToGraph.has(shape.namedNode)) {
-        //currently, the target graph of the very first shape that has a target graph is returned
-        return this.nodeShapesToGraph.get(shape.namedNode);
+      //see if any of these shapes has a specific target graph
+      for (let shape of subjectShapes) {
+        if (this.nodeShapesToGraph.has(shape.namedNode)) {
+          //currently, the target graph of the very first shape that has a target graph is returned
+          return this.nodeShapesToGraph.get(shape.namedNode);
+        }
       }
     }
 
+    //if it's not a temporary node, and we have a default graph for permanent storage, then use that
     if (!subject.isTemporaryNode && this.defaultStorageGraph) {
       return this.defaultStorageGraph;
     }
@@ -329,6 +333,10 @@ export abstract class Storage {
     //then use the default graph (which is usually not connected to any store, and just lives in local memory)
     //this prevents temporary local nodes from being automatically stored
     return defaultGraph;
+  }
+
+  static getDefaultStorageGraph() {
+    return this.defaultStorageGraph || defaultGraph;
   }
 
   private static async onClearedProperties(clearProperties: CoreMap<NamedNode,[NamedNode,QuadArray][]>): Promise<any> {
@@ -414,7 +422,7 @@ export abstract class Storage {
   }
 
   static getStoreForNode(node: NamedNode) {
-    let graph = this.getTargetGraph(node);
+    let graph = this.getGraphForNode(node);
     return this.getStoreForGraph(graph);
   }
 
@@ -441,7 +449,7 @@ export abstract class Storage {
     let graphMap: CoreMap<Graph, QuadArray> = new CoreMap();
     let quadsBySubject = this.groupQuadsBySubject(quads);
     quadsBySubject.forEach((quads, subjectNode) => {
-      let targetGraph = this.getTargetGraph(subjectNode);
+      let targetGraph = this.getGraphForNode(subjectNode);
       if (!graphMap.has(targetGraph)) {
         graphMap.set(targetGraph, new QuadArray());
       }
@@ -450,14 +458,14 @@ export abstract class Storage {
     return graphMap;
   }
 
-  static getStoreMapForNodes(nodes: CoreSet<NamedNode>): CoreMap<IQuadStore, NamedNode[]> {
+  static getStoreMapForNodes(nodes: ICoreIterable<NamedNode>): CoreMap<IQuadStore, NamedNode[]> {
     return this.getStoreMapForIGraphObjects(nodes) as CoreMap<IQuadStore, NamedNode[]>;
   }
   static getStoreMapForShapes(shapes: ShapeSet): CoreMap<IQuadStore, Shape[]>
   {
     return this.getStoreMapForIGraphObjects(shapes) as CoreMap<IQuadStore, Shape[]>;
   }
-  private static getStoreMapForIGraphObjects(objects:ShapeSet|CoreSet<NamedNode>)
+  private static getStoreMapForIGraphObjects(objects:ShapeSet|ICoreIterable<NamedNode>)
   {
     let storeMap: CoreMap<IQuadStore, (NamedNode|Shape)[]> = new CoreMap();
     objects.forEach((object) => {
@@ -514,8 +522,24 @@ export abstract class Storage {
       return combinedResults;
     });
   }
+
   static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void|any> {
     return this.onQuadsAltered(toAdd,toRemove);
+  }
+
+  static clearProperties(subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>): Promise<boolean> {
+    let subjects = [...subjectToPredicates.keys()];
+    let storeMap = this.getStoreMapForNodes(subjects);
+    let promises = [];
+    storeMap.forEach((nodes, store) => {
+      let map = new CoreMap(nodes.map(node => {
+        return [node, subjectToPredicates.get(node)];
+      }));
+      promises.push(store.clearProperties(map));
+    });
+    return Promise.all(promises).then((results) => {
+      return results.every((result:boolean) => result === true);
+    });
   }
 
   static loadShapes(shapeSet: ShapeSet, shapeOrRequest: LinkedDataRequest,byPassCache:boolean=false): Promise<QuadArray> {
