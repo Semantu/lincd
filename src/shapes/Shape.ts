@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {EventEmitter} from '../events/EventEmitter';
-import {Literal,NamedNode,Node} from '../models';
+import {Literal,NamedNode,Node,Quad} from '../models';
 import {rdf} from '../ontologies/rdf';
 import {NodeValuesSet} from '../collections/NodeValuesSet';
 import {rdfs} from '../ontologies/rdfs';
@@ -123,8 +123,8 @@ export abstract class Shape extends EventEmitter implements IShape
    * @param shapeClass
    */
   getAllAs<T extends Shape>(
-    property:NamedNode,
-    shapeClass:typeof Shape
+    property: NamedNode,
+    shapeClass: typeof Shape,
   ): ShapeValuesSet<T>
   {
     return new ShapeValuesSet<T>(this.namedNode,property,shapeClass as any);
@@ -136,12 +136,13 @@ export abstract class Shape extends EventEmitter implements IShape
    * @param property
    * @param shape
    */
-  getOneAs<S extends Shape = Shape>(property,shape:typeof Shape):S {
+  getOneAs<S extends Shape = Shape>(property,shape: typeof Shape): S
+  {
     return this.hasProperty(property) ? new (shape as any)(this.getOne(property)) as S : null;
   }
 
-
-  equals(other) {
+  equals(other)
+  {
     return other instanceof Shape && other.node === this.node && Object.getPrototypeOf(other) === Object.getPrototypeOf(this);
   }
 
@@ -154,7 +155,8 @@ export abstract class Shape extends EventEmitter implements IShape
   {
     if (!type)
     {
-      if(shapeClass === Shape) {
+      if (shapeClass === Shape)
+      {
         return;
       }
       //TODO: add support for sh:targetNode, sh:targetObjectsOf and sh:targetSubjectsOf. Those would be fine as alternatives to targetClass (and the latter 2 define a PropertyShape)
@@ -229,7 +231,7 @@ export abstract class Shape extends EventEmitter implements IShape
       this._node = termType.create(true);
 
       let nodeShape = this.nodeShape;
-      if(nodeShape && nodeShape.targetClass)
+      if (nodeShape && nodeShape.targetClass)
       {
         this._node.set(rdf.type,nodeShape.targetClass);
       }
@@ -253,14 +255,17 @@ export abstract class Shape extends EventEmitter implements IShape
     }
   }
 
-  validate():boolean {
+  validate(): boolean
+  {
     return this.nodeShape?.validateNode(this.node) || false;
   }
 
-  static isValidNode(node:Node) {
+  static isValidNode(node: Node)
+  {
     this.ensureLinkedShape();
     return this.shape.validateNode(node);
   }
+
   /**
    * Lets a LinkedComponent request specific data of a shape.
    *
@@ -314,7 +319,7 @@ export abstract class Shape extends EventEmitter implements IShape
   {
     //calling this method like this so that we can keep it private without having to add it to the 'this' interface
     this['ensureLinkedShape']();
-    
+
     //return an object with the shape and a request key. The value of request is a function
     //that can be executed for a specific instance of the shape
     return {
@@ -324,10 +329,12 @@ export abstract class Shape extends EventEmitter implements IShape
       },
     };
   }
-  
-  private static ensureLinkedShape() {
-    if(!this.shape) {
-      console.warn(this.name+" is not a linked shape. Did you forget to use the @linkedShape decorator?")
+
+  private static ensureLinkedShape()
+  {
+    if (!this.shape)
+    {
+      console.warn(this.name + ' is not a linked shape. Did you forget to use the @linkedShape decorator?');
     }
   }
 
@@ -359,7 +366,6 @@ export abstract class Shape extends EventEmitter implements IShape
     return this._node as NamedNode;
   }
 
-
   getOne(property: NamedNode): Node | null
   {
     return this._node.getOne(property);
@@ -369,7 +375,6 @@ export abstract class Shape extends EventEmitter implements IShape
   {
     return (this._node as NamedNode).getAll(property);
   }
-
 
   getAllExplicit(property): NodeSet
   {
@@ -546,6 +551,27 @@ export abstract class Shape extends EventEmitter implements IShape
   getAllQuads(includeAsObject: boolean = false,includeImplicit: boolean = false): QuadArray
   {
     return this._node.getAllQuads(includeAsObject,includeImplicit);
+  }
+
+  /**
+   * Returns all quads related to this shape.
+   * Overwrite this method to automatically send over quads to the frontend when this shape is sent over
+   * This method is used internally by JSONWriter when sending a shape between environments by converting it to JSON & JSON-LD
+   * @param includeImplicit
+   */
+  getDataQuads(includeImplicit: boolean = false): Quad[]
+  {
+    return this._node.getAllQuads(includeImplicit);
+  }
+
+  get value(): string
+  {
+    return this._node.value;
+  }
+
+  get uri(): string
+  {
+    return this._node.value;
   }
 
   //TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
@@ -765,7 +791,7 @@ export abstract class Shape extends EventEmitter implements IShape
    * @param uri
    * @param isTemporaryNodeIfNew
    */
-  static getFromURI<T extends Shape>(this: ShapeLike<T>,uri: string,isTemporaryNodeIfNew:boolean=true): T
+  static getFromURI<T extends Shape>(this: ShapeLike<T>,uri: string,isTemporaryNodeIfNew: boolean = true): T
   {
     let node = NamedNode.getNamedNode(uri);
     if (node)
@@ -775,7 +801,7 @@ export abstract class Shape extends EventEmitter implements IShape
     else
     {
       node = NamedNode.getOrCreate(uri,true);
-      if(this.targetClass)
+      if (this.targetClass)
       {
         node.set(rdf.type,this.targetClass);
       }
@@ -792,16 +818,17 @@ export abstract class Shape extends EventEmitter implements IShape
    * @param prefixURI
    * @param uniqueParams
    */
-  static getFromParams<T extends Shape>(this: ShapeLike<T>,prefixURI:string,...uniqueParams: any[]): T {
+  static getFromParams<T extends Shape>(this: ShapeLike<T>,prefixURI: string,...uniqueParams: any[]): T
+  {
     let postfix;
-    if(uniqueParams.length)
+    if (uniqueParams.length)
     {
       postfix = uniqueParams.join('/');
     }
     else
     {
       //here we expect that we'll create a new node, so the counter will be increased when we actually create it
-      postfix = NamedNode.getCounter()+1;
+      postfix = NamedNode.getCounter() + 1;
     }
     let uri = prefixURI + this.targetClass.uri + '/' + postfix;
     return this.getFromURI(uri);
@@ -809,14 +836,14 @@ export abstract class Shape extends EventEmitter implements IShape
 
   static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: NodeValuesSet): ShapeValuesSet<T>;
   static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: ICoreIterable<Node>): ShapeSet<T>;
-  static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: NodeValuesSet|ICoreIterable<Node>): ShapeSet<T>|ShapeValuesSet<T>
+  static getSetOf<T extends Shape>(this: ShapeLike<T>,nodes: NodeValuesSet | ICoreIterable<Node>): ShapeSet<T> | ShapeValuesSet<T>
   {
     if (!nodes)
     {
       throw new Error('No nodes provided to create shape instances of');
     }
 
-    if(nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode)
+    if (nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode)
     {
       return new ShapeValuesSet(nodes.subject,nodes.property,this as any);
     }
@@ -838,6 +865,8 @@ export interface ShapeLike<M extends Shape> extends Constructor<M>
   targetClass: NamedNode;
 
   getSetOf<M extends Shape>(this: ShapeLike<M>,nodes: ICoreIterable<Node>): ShapeSet<M>;
-  getFromURI<T extends Shape>(this: ShapeLike<T>,uri: string,isTemporaryNodeIfNew?:boolean): T
+
+  getFromURI<T extends Shape>(this: ShapeLike<T>,uri: string,isTemporaryNodeIfNew?: boolean): T;
+
   getLocalInstanceNodes(explicitInstancesOnly?: boolean): NodeSet;
 }

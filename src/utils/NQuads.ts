@@ -38,14 +38,22 @@ export class NQuads {
     return resultString;
   }
 
+  private static checkUri(uri:string) {
+    if(uri.startsWith(' ') || uri.endsWith(' ')) {
+      throw new Error('URIs cannot start or end with a space: '+uri);
+    }
+  }
+
   private static toString(element: Node | Graph | Quad | string, escapeNewLines: boolean = true) {
     if (element instanceof Shape) {
       return this.toString(element.node);
     } else if (element instanceof BlankNode) {
       return element.uri;
     } else if (element instanceof Graph) {
+      this.checkUri(element.node.uri);
       return '<' + element.node.uri + '>';
     } else if (element instanceof NamedNode) {
+      this.checkUri(element.uri);
       return '<' + element.uri + '>';
     } else if (element instanceof Literal) {
       //TODO: if there are every problems with this (the enters as escaped \\n) then we should check for indexOf \n

@@ -366,7 +366,7 @@ export abstract class Storage {
         return res;
       })
       .catch((err) => {
-        console.warn('Error during removal of nodes from storage: ' + err);
+        console.warn('Could not clear properties: ' + err);
       });
   }
   private static async onRemoveNodes(nodesAndQuads: CoreSet<[NamedNode, QuadArray]>): Promise<any> {
@@ -396,7 +396,7 @@ export abstract class Storage {
         return res;
       })
       .catch((err) => {
-        console.warn('Error during removal of nodes from storage: ' + err);
+        console.warn('Could not remove nodes from storage: ' + err);
       });
   }
 

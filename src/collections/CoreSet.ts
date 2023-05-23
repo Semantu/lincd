@@ -40,11 +40,21 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
     return this.values().next().value;
   }
 
+  /**
+   * Returns the last element added to the set
+   */
+  last(): R {
+    //unfortunately there is no efficient way to do this. Either we convert the set to an array or we loop over all values to discover the last
+    let item;
+    for (item of this);
+    return item;
+  }
+
   getFirst(n: number) {
     return this.createNew([...this].slice(0, n));
   }
 
-  slice(start: number, end: number) {
+  slice(start?: number, end?: number) {
     return this.createNew([...this].slice(start, end));
   }
 
@@ -127,7 +137,10 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
    */
   addFrom(...sets:ICoreIterable<R>[]): this {
     for (var set of sets) {
-      set.forEach(this.add.bind(this));
+      if(set)
+      {
+        set.forEach(this.add.bind(this));
+      }
     }
     return this;
   }

@@ -2828,6 +2828,14 @@ export class Quad extends EventEmitter {
     return subject.getQuads(predicate, object).find((q) => q._graph === graph);
   }
 
+  static moveQuadsToGraph(quads: Quad[], graph: Graph,alteration:boolean=false) {
+    let result = new (Object.getPrototypeOf(quads)).constructor();
+    quads.forEach((quad) => {
+      result.push(quad.moveToGraph(graph, alteration));
+    });
+    return result;
+  }
+
   /**
    * Remove this quad from the graph
    * Will be removed both locally and from the graph database
