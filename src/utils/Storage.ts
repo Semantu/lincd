@@ -289,7 +289,7 @@ export abstract class Storage {
     //first see if any new quads need to move to the right graphs (note that this will possibly add "mimiced" quads (with the previous graph as their graph) to quadsRemoved)
     this.assignQuadsToGraph(quadsCreated);
 
-    //next, notify the right stores about these changes
+    //next, notify the right stores about these changes, this filters out any temporary nodes
     let addMap = this.getTargetStoreMap(quadsCreated);
     let removeMap = this.getTargetStoreMap(quadsRemoved);
 
@@ -298,8 +298,10 @@ export abstract class Storage {
 
     //go over each store that has added/removed quads
     return Promise.all(
-      stores.map((store) => {
-        return store.update(addMap.get(store) || new QuadArray(), removeMap.get(store) || new QuadArray());
+      stores.map(async (store) => {
+        let storeAddQuads = addMap.get(store) || new QuadArray();
+        let storeRemoveQuads = removeMap.get(store) || new QuadArray()
+        return store.update(storeAddQuads,storeRemoveQuads);
       }),
     )
       .then((res) => {
@@ -410,6 +412,17 @@ export abstract class Storage {
         return store.setURI(...temporaryNodes);
       }),
     );
+
+    //now that their URI's are updated we can indicate that they are no longer temporary nodes
+    //NOTE though that the code below will move the nodes to the right graphs, which will trigger update events (which ACTUALLY stores the nodes)
+    //if in the meantime requests get made that involve this node as a value of a property, then the data of this node will no longer be sent over
+    //even though it may NOT be known yet on the server. If this is a problem, we may want to (somehow) wait with setting temporaryNode to false untill after all the quads are moved AND stored
+    nodes.forEach(node => {
+      node.isTemporaryNode = false;
+      //this may need to move to a later point, after quads are stored
+      node.isStoring = false;
+    })
+
     //move all the quads to the right graph.
     //note that IF this is a new graph, this will trigger onQuadsAltered, which will notify the right stores to store these quads
     let quads = new QuadSet();

@@ -431,6 +431,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 
   // private static termType: string = 'NamedNode';
   termType: any = 'NamedNode';
+  private _isStoring: boolean;
 
   /**
    * WARNING: Do not directly create a Node, instead use NamedNode.getOrCreate(uri)
@@ -470,7 +471,15 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     this._isTemporaryNode = val;
   }
 
-	/**
+  get isStoring(): boolean {
+    return this._isStoring;
+  }
+
+  set isStoring(val: boolean) {
+    this._isStoring = val;
+  }
+
+  /**
 	 * Used by Quads to signal their subject about a new property
 	 * @internal
 	 * @param quad
@@ -1519,9 +1528,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    */
   save() {
     if (this.isTemporaryNode) {
+      this._isStoring = true;
       NamedNode.nodesToSave.add(this);
       eventBatcher.register(NamedNode);
-      this.isTemporaryNode = false;
+      // this.isTemporaryNode = false;
     }
   }
 

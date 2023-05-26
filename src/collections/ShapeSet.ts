@@ -42,6 +42,19 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGr
     return res;
   }
 
+  concat(...sets: ICoreIterable<R>[]): this {
+    var res = this.createNew(this);
+    for (var set of sets) {
+      set.forEach(item => {
+        //for shape sets we need to manually check if an equivalent shape is already in the resulting shape set, to avoid duplicates
+        if(!res.has(item)){
+          res.add(item)
+        }
+      });
+    }
+    return res;
+  }
+
   getInverseProperties(): NodeSet<NamedNode> {
     var res = new NodeSet<NamedNode>();
     for (var instance of this) {
