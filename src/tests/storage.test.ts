@@ -55,8 +55,7 @@ class TestStore implements IQuadStore
     return null;
   }
 
-  setURI(...nodes: NamedNode[]): Promise<any>
-  {
+  setURIs(nodeToCurrentUriMap: CoreMap<NamedNode,string>): Promise<[string,string][]> {
     return null;
   }
 

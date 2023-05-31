@@ -231,15 +231,23 @@ export abstract class Storage {
     this.setGraphForShapes(graph, ...shapes);
   }
 
-  private static assignQuadsToGraph(quads: ICoreIterable<Quad>) {
+  private static assignQuadsToGraph(quads: QuadSet|QuadArray,removeFromSet:boolean=false) {
     let map = this.getTargetGraphMap(quads);
     let alteredNodes = new CoreMap<NamedNode, Graph>();
-    map.forEach((quads, graph) => {
-      quads.forEach((quad) => {
+    let movedQuads = new QuadSet();
+    map.forEach((graphQuads, graph) => {
+      graphQuads.forEach((quad) => {
         if (quad.graph !== graph) {
           //move the quad to the target graph (both old and new graph will be updated)
           //this will trigger a QUADS_ALTERED event --> onQuadsAltered
           quad.moveToGraph(graph);
+
+          //we also remove the quad from the set it was in, if requested
+          //this prevents moved quads from still being added to the store of the old graph
+          if(removeFromSet) {
+            quads instanceof QuadSet ? quads.delete(quad) : quads.splice(quads.indexOf(quad), 1)
+          }
+          movedQuads.add(quad);
           //also keep track of which nodes had a quad that moved to a different graph
           if (!alteredNodes.has(quad.subject)) {
             alteredNodes.set(quad.subject, graph);
@@ -251,10 +259,11 @@ export abstract class Storage {
     //now that all quads have been updated, we need to check one more thing
     //changes in quads MAY have changed which shapes the subject nodes are an instance of
     //thus the target graph of the whole node may have changed, so:
-    this.moveAllQuadsOfNodeIfRequired(alteredNodes);
+    return movedQuads.concat(this.moveAllQuadsOfNodeIfRequired(alteredNodes));
   }
 
-  private static moveAllQuadsOfNodeIfRequired(alteredNodes: CoreMap<NamedNode, Graph>) {
+  private static moveAllQuadsOfNodeIfRequired(alteredNodes: CoreMap<NamedNode, Graph>):QuadSet {
+    let movedQuads = new QuadSet();
     //for all subjects who have a quad that moved to a different graph
     alteredNodes.forEach((graph, subjectNode) => {
       //go over each quad of that node
@@ -263,9 +272,11 @@ export abstract class Storage {
         if (quad.graph !== graph) {
           //then update it
           quad.moveToGraph(graph);
+          movedQuads.add(quad);
         }
       });
     });
+    return movedQuads;
   }
 
   static async promiseUpdated(): Promise<void> {
@@ -282,25 +293,57 @@ export abstract class Storage {
     });
   }
 
-  private static onQuadsAltered(quadsCreated: QuadSet, quadsRemoved: QuadSet) {
+  private static onQuadsAltered(quadsCreated: QuadSet, quadsRemoved: QuadSet,baseStoreOnSubject:boolean=false) {
     //quads may have been removed since they have been created and emitted filter that out here
-    quadsCreated = quadsCreated.filter((q) => !q.isRemoved);
+    let addMap,removeMap;
+    if(quadsCreated)
+    {
+      quadsCreated = quadsCreated.filter((q) => !q.isRemoved);
 
-    //first see if any new quads need to move to the right graphs (note that this will possibly add "mimiced" quads (with the previous graph as their graph) to quadsRemoved)
-    this.assignQuadsToGraph(quadsCreated);
+      //first see if any new quads need to move to the right graphs (note that this will possibly add "mimiced" quads (with the previous graph as their graph) to quadsRemoved)
+      //true, signals that we want to remove the quads from quadsCreated if they get moved
+      this.assignQuadsToGraph(quadsCreated,true);
+      if(baseStoreOnSubject) {
+        addMap = this.getStoreMapForNodes(quadsCreated.getSubjects());
+      }
+      else
+      {
+        //default: get the right stores based on the graph of the quads
+        addMap = this.getTargetStoreMap(quadsCreated);
+      }
+    }
+    if(quadsRemoved) {
+      if(baseStoreOnSubject) {
+        removeMap = this.getStoreMapForNodes(quadsRemoved.getSubjects());
+      }
+      else
+      {
+        //default: get the right stores based on the graph of the quads
+        removeMap = this.getTargetStoreMap(quadsRemoved);
+      }
+    }
 
-    //next, notify the right stores about these changes, this filters out any temporary nodes
-    let addMap = this.getTargetStoreMap(quadsCreated);
-    let removeMap = this.getTargetStoreMap(quadsRemoved);
 
     //combine the keys of both maps (which are stores)
-    let stores = [...addMap.keys(), ...removeMap.keys()];
+    let stores = [...(addMap ? addMap.keys() : []), ...(removeMap ? removeMap.keys() : [])];
 
     //go over each store that has added/removed quads
     return Promise.all(
       stores.map(async (store) => {
-        let storeAddQuads = addMap.get(store) || new QuadArray();
-        let storeRemoveQuads = removeMap.get(store) || new QuadArray()
+        let storeAddQuads,storeRemoveQuads;
+        if(baseStoreOnSubject) {
+          //in case we looked up target stores based on the subject of the quads,
+          // we need to still filter the quads to get only those that are relevant for this store
+          let storeAddSubjects = addMap?.get(store);
+          let storeRemoveSubjects = removeMap?.get(store);
+          storeAddQuads = storeAddSubjects ? quadsCreated.filter(q => storeAddSubjects.includes(q.subject)) : null;
+          storeRemoveQuads = storeRemoveSubjects ? quadsRemoved.filter(q => storeRemoveSubjects.includes(q.subject)) : null;
+        }
+        else
+        {
+          storeAddQuads = addMap?.get(store) || null;
+          storeRemoveQuads = removeMap?.get(store) || null;
+        }
         return store.update(storeAddQuads,storeRemoveQuads);
       }),
     )
@@ -409,7 +452,18 @@ export abstract class Storage {
     let storeMap = this.getStoreMapForNodes(nodesWithTempURIs);
     await Promise.all(
       [...storeMap.entries()].map(([store, temporaryNodes]) => {
-        return store.setURI(...temporaryNodes);
+        let nodeUriMap:CoreMap<NamedNode,string> = new CoreMap();
+        temporaryNodes.forEach((node) => {
+          nodeUriMap.set(node, node.uri);
+        });
+        //let the store determine the URI's for these nodes
+        return store.setURIs(nodeUriMap).then((uriUpdates) => {
+          //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
+          uriUpdates.forEach(([oldUri,newUri]) => {
+            let currentNode = NamedNode.getNamedNode(oldUri);
+            currentNode.uri = newUri;
+          });
+        });
       }),
     );
 
@@ -418,8 +472,9 @@ export abstract class Storage {
     //if in the meantime requests get made that involve this node as a value of a property, then the data of this node will no longer be sent over
     //even though it may NOT be known yet on the server. If this is a problem, we may want to (somehow) wait with setting temporaryNode to false untill after all the quads are moved AND stored
     nodes.forEach(node => {
-      node.isTemporaryNode = false;
+      // node.isTemporaryNode = false;
       //this may need to move to a later point, after quads are stored
+      //this also resolves the promise that was returned when the node was .saved()
       node.isStoring = false;
     })
 
@@ -509,25 +564,32 @@ export abstract class Storage {
     return storeMap;
   }
 
-  static async setURI(nodes: NodeSet<NamedNode>): Promise<[string, string][]> {
+  static async setURIs(nodeUriMap: CoreMap<NamedNode, string>): Promise<[string, string][]> {
     //organise the nodes by their appropriate store
     //and because these are nodes that are about to receive a URI so they can be stored
     //we temporarily make them non-temporary :)
     //this way the store map will contain the right target store for STORED nodes
     //so that THAT store can determine the URI
-    nodes.forEach(node => {
+    let nodes:NodeSet<NamedNode> = new NodeSet();
+    nodeUriMap.forEach((currentEnvironmentURI,node) => {
       node['tmp'] = node.isTemporaryNode;
       node.isTemporaryNode = false;
-    })
+      nodes.add(node);
+    });
+
     let storeMap = this.getStoreMapForNodes(nodes);
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       node.isTemporaryNode = node['tmp'];
     })
 
     let promises = [];
     //let each store update the URI's
     storeMap.forEach((nodes, store) => {
-      promises.push(store.setURI(...nodes));
+      let storeNodeUriMap:CoreMap<NamedNode,string> = new CoreMap();
+      nodes.forEach(node => {
+        storeNodeUriMap.set(node,nodeUriMap.get(node));
+      });
+      promises.push(store.setURIs(storeNodeUriMap));
     });
     //combine the results to return an array of old to new URI's
     return Promise.all(promises).then(results => {
@@ -537,7 +599,13 @@ export abstract class Storage {
   }
 
   static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void|any> {
-    return this.onQuadsAltered(toAdd,toRemove);
+    // let storeMap = this.getStoreMapForNodes(toRemove.getSubjects());
+    // storeMap.forEach((nodes, store) => {
+    //   let quads = toRemove.filter(q => nodes.includes(q.subject));
+    //   store.deleteMultiple(quads);
+    //
+    // });
+    return this.onQuadsAltered(toAdd,toRemove,true);
   }
 
   static clearProperties(subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>): Promise<boolean> {

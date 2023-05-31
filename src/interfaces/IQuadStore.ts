@@ -24,7 +24,14 @@ export interface IQuadStore {
 
   deleteMultiple(quads: QuadSet): Promise<any>;
 
-  setURI(...nodes: NamedNode[]): Promise<[string,string][]>;
+  /**
+   * Determines the right URI for several nodes
+   * The URI's are determined by the store, and the store returns a mapping of current URI's to new URI's
+   * Stores that implement this method should note that the URI's of the nodes used as keys may not be the same as the URI's
+   * of the nodes in the environment that requested the URI change. Hence, a map is provided. The node (the key) can be used to access properties, whilst the currentUri (the value of the map) should be returned in the resulting [currentUri,newUri] array
+   * @param nodeToCurrentUriMap
+   */
+  setURIs(nodeToCurrentUriMap: CoreMap<NamedNode,string>): Promise<[string,string][]>;
 
   getDefaultGraph?(): Graph;
 

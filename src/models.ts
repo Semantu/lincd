@@ -431,7 +431,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 
   // private static termType: string = 'NamedNode';
   termType: any = 'NamedNode';
-  private _isStoring: boolean;
+  private _isStoring: {promise?, resolve?, reject?};
 
   /**
    * WARNING: Do not directly create a Node, instead use NamedNode.getOrCreate(uri)
@@ -472,11 +472,23 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   }
 
   get isStoring(): boolean {
-    return this._isStoring;
+    return this._isStoring && true;
   }
 
-  set isStoring(val: boolean) {
-    this._isStoring = val;
+  set isStoring(storing: boolean) {
+    //when storing
+    if (storing) {
+      //create a deferred promise and store it as _isStoring
+      this._isStoring = {};
+      this._isStoring.promise = new Promise((resolve, reject) => {
+        this._isStoring.resolve = resolve;
+        this._isStoring.reject = reject;
+      });
+    } else {
+      //when done storing, resolve the promise
+      this._isStoring.resolve();
+      delete this._isStoring;
+    }
   }
 
   /**
@@ -1525,13 +1537,21 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   /**
    * Save this node into the graph database.
    * Newly created nodes will exist only in local memory until you call this function
+   * @returns a promise that resolves when the node has received a permanent URI
    */
-  save() {
+  save():Promise<void> {
     if (this.isTemporaryNode) {
-      this._isStoring = true;
-      NamedNode.nodesToSave.add(this);
-      eventBatcher.register(NamedNode);
-      // this.isTemporaryNode = false;
+      if(!this._isStoring)
+      {
+        this._isTemporaryNode = false;
+        //this creates a promise that will resolve when the node is stored
+        this.isStoring = true;
+        NamedNode.nodesToSave.add(this);
+        eventBatcher.register(NamedNode);
+      }
+      //always return a promise
+      return this._isStoring.promise;
+
     }
   }
 
