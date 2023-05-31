@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {BlankNode, Literal, NamedNode, Node} from '../models';
+import {Literal, NamedNode, Node} from '../models';
 import {Shape} from './Shape';
 import {shacl} from '../ontologies/shacl';
 import {List} from './List';
@@ -139,11 +139,19 @@ export class PropertyShape extends SHACL_Shape {
     this.overwrite(shacl.class, value);
   }
 
-  get nodeShape(): NodeShape {
+  /**
+   * Returns the NodeShape that all value nodes need to conform to
+   * On a graph level this accessor returns the value of shacl:node for this PropertyShape (if any)
+   * Note: it's named valueShape because node & nodeShape are already used internally in LINCD
+   * @see https://www.w3.org/TR/shacl/#NodeConstraintComponent
+   *
+   */
+  //@NOTE: If the name valueShape is an issue we could always rename `get nodeShape` to `get shaclShape` in Shape.ts
+  get valueShape(): NodeShape {
     return this.hasProperty(shacl.node) ? NodeShape.getOf(this.getOne(shacl.node)) : null;
   }
 
-  set nodeShape(value: NodeShape) {
+  set valueShape(value: NodeShape) {
     this.overwrite(shacl.node, value.node);
   }
 
@@ -241,9 +249,9 @@ export class PropertyShape extends SHACL_Shape {
         return false;
       }
     }
-    if (this.nodeShape) {
+    if (this.valueShape) {
       //every value should be a valid instance of this nodeShape
-      let nodeShape = this.nodeShape;
+      let nodeShape = this.valueShape;
       if (!values.every((value) => {
         //nodes referring to each other or to themselves may cause loops here
         //this is currently avoided by keeping track of which nodes have already been validated, during the validation of the root most node

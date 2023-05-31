@@ -405,7 +405,10 @@ export function linkedPackage(
       }
 
       //if the data is loaded
-      if (dataIsLoaded)
+      //TODO: remove check for typeof window, this is temporary solution to fix hydration errors
+      // but really we should find a way to send the data to the frontend for initial page loads AND notify storage that that data is loaded
+      // then this check can be turned off. We can possibly do this with RDFA (rdf in html), then we can probably parse the data from the html, whilst rendering it on the server in one go.
+      if (dataIsLoaded && typeof window !== 'undefined')
       {
         //if the component used a Shape.requestSet() data declaration function
         if (dataDeclaration)
@@ -684,7 +687,7 @@ export function linkedPackage(
       {
         constructor.nodeShapeOf.forEach((propertyShape: PropertyShape) => {
           //now that we have a NodeShape for this shape class, we can set the nodeShape of the property shape
-          propertyShape.nodeShape = shape;
+          propertyShape.valueShape = shape;
         });
       }
     }
@@ -1014,25 +1017,25 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
       {
         //if this is a get method that used a @linkedProperty decorator
         //then it should match with a propertyShape
-        let propertyShape = shapeClass['shape']
+        let propertyShape = finger['shape']
           .getPropertyShapes()
           .find((propertyShape) => propertyShape.label === key);
-        if (propertyShape)
+        //get the get method (that's the one place that we support @linkedProperty decorators for, for now)
+        let g = descriptor.get != null;
+        if (g)
         {
-          // let propertyShape:PropertyShape = descriptor.get['propertyShape'];
-          let g = descriptor.get != null;
-          // let s = descriptor.set != null;
+          let newDescriptor: PropertyDescriptor = {};
+          newDescriptor.enumerable = descriptor.enumerable;
+          newDescriptor.configurable = descriptor.configurable;
 
-          if (g)
+          //not sure if we can or want to?..
+          // newDescriptor.value= descriptor.value;
+          // newDescriptor.writable = descriptor.writable;
+
+          if (propertyShape)
           {
-            let newDescriptor: PropertyDescriptor = {};
-            newDescriptor.enumerable = descriptor.enumerable;
-            newDescriptor.configurable = descriptor.configurable;
 
-            //not sure if we can or want to?..
-            // newDescriptor.value= descriptor.value;
-            // newDescriptor.writable = descriptor.writable;
-
+            //create a new get function
             newDescriptor.get = ((key: string,propertyShape: PropertyShape,descriptor: PropertyDescriptor) => {
               // console.log(debugName + ' requested get ' + key + ' - ' + propertyShape.path.value);
 
@@ -1058,12 +1061,25 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
 
               return returnedValue;
             }).bind(detectionClass.prototype,key,propertyShape,descriptor);
-            //bind this descriptor to the class that defines it
-            //and bind the required arguments (which we know only now, but we need to know them when the descriptor runs, hence we bind them)
-
-            //overwrite the get method
-            Object.defineProperty(detectionClass.prototype,key,newDescriptor);
           }
+          else
+          {
+            //if no propertyShape was found, then this is a get method that was not decorated with @linkedProperty
+            //however if that method is accessed by the dataRequest function of a linkedComponent
+            //then probably someone forgot to add a @linkedProperty decorator!
+            //or at least it won't add any data to the dataRequest, so let's warn the developer of that
+            newDescriptor.get = () => {
+              console.log(debugName + ' requested get ' + key + ' - ' + propertyShape.path.value+ ' because a linked component used it in its dataRequest function');
+              console.info('However "get '+key+'" is not decorated with a linked property decorator (like @linkedProperty), so it will not add any data to the dataRequest');
+
+              return descriptor.get.call(traceShape);
+            };
+          }
+          //bind this descriptor to the class that defines it
+          //and bind the required arguments (which we know only now, but we need to know them when the descriptor runs, hence we bind them)
+
+          //overwrite the get method
+          Object.defineProperty(detectionClass.prototype,key,newDescriptor);
         }
       }
     }

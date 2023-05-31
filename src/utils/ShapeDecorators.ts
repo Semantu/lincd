@@ -232,7 +232,7 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
       if(config.shape['shape'])
       {
         //then we can use this NodeShape now as the value of nodeShape for this property shape
-        propertyShape.nodeShape = config.shape['shape']
+        propertyShape.valueShape = config.shape['shape']
       }
       else
       {
@@ -254,7 +254,9 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
     // }
 
     //if the shape has already been initiated (with linkedShape)
-    let shape: NodeShape = target.constructor.shape;
+    //Note that the constructor may have shape defined if the class that it extends is already decorated with linkedShape
+    //so we need to check hasOwnProperty
+    let shape: NodeShape = target.constructor.hasOwnProperty('shape') ? target.constructor.shape : null;
     if (shape) {
       //update the URI (by extending the URI of the shape)
       propertyShape.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;

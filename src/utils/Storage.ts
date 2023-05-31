@@ -26,7 +26,7 @@ export abstract class Storage {
     reject?: any;
   };
   private static storedEvents: any;
-  private static nodeToPropertyRequests: CoreMap<Node,CoreMap<PropertyShape,true | Promise<any>>> = new CoreMap();
+  private static nodeToPropertyRequests: CoreMap<Node,CoreMap<NamedNode,true | Promise<any>>> = new CoreMap();
 
   static init() {
     if (!this._initialized) {
@@ -748,11 +748,11 @@ export abstract class Storage {
       {
         //the property will be the first entry, the subRequest the second, but we don't do anything with that here
         //we only check the top level, which regards this source
-        propertyReqResult = propertiesRequested.get(propertyRequest[0]);
+        propertyReqResult = propertiesRequested.get(propertyRequest[0].namedNode);
       }
       else
       {
-        propertyReqResult = propertiesRequested.get(propertyRequest);
+        propertyReqResult = propertiesRequested.get(propertyRequest.namedNode);
       }
       if (!propertyReqResult)
       {
@@ -794,7 +794,7 @@ export abstract class Storage {
       {
         //propertyRequest is of the shape [propertyShape,subRequest]
         //update the cache for the property-shapes that regard this source
-        requestedProperties.set(propertyRequest[0],requestState);
+        requestedProperties.set(propertyRequest[0].namedNode,requestState);
 
         //if loading has finished
         if(requestState === true)
@@ -808,7 +808,7 @@ export abstract class Storage {
       else
       {
         //propertyRequest is a PropertyShape
-        requestedProperties.set(propertyRequest,requestState);
+        requestedProperties.set(propertyRequest.namedNode,requestState);
       }
     });
   }
