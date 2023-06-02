@@ -1,5 +1,7 @@
 import {rdf} from '../ontologies/rdf';
 import {rdfs} from '../ontologies/rdfs';
+import {owl} from '../ontologies/owl';
+import {NamedNode} from '../models';
 
 export class ForwardReasoning {
   /**
@@ -9,10 +11,13 @@ export class ForwardReasoning {
    * @param targetType
    * @private
    */
-  static hasType(node, targetType) {
+  static hasType(node:NamedNode, targetType:NamedNode) {
     //checks if any of the types matches the target type, or is a subclass of the target type (then the node also has that inferred type) or if the type is a subclass of a type that is a subclass of the target type (iteratively, so could be any level deep)
+    //OR in the presence of an owl:equivalentClass property, if any of the equivalentClasses is equivalent to the target type, or is a subClassOf the targetClass
     return node.getAll(rdf.type).some((type) => {
-      return type === targetType || this.isSubClassOf(type, targetType);
+      return type === targetType || this.isSubClassOf(type, targetType) || (type.hasProperty(owl.equivalentClass) && type.getAll(owl.equivalentClass).some(equivalentClass => {
+        return equivalentClass === targetType || this.isSubClassOf(equivalentClass, targetType);
+      }));
     });
   }
 

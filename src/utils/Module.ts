@@ -38,6 +38,7 @@ import {Storage} from './Storage';
 import {ShapeSet} from '../collections/ShapeSet';
 import {URI} from './URI';
 import {shacl} from '../ontologies/shacl';
+import {addNodeShapeToShapeClass} from './ShapeClass';
 
 //global tree
 declare var lincd: any;
@@ -49,7 +50,6 @@ export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 // var packageParsePromises: Map<string,Promise<any>> = new Map();
 // var loadedPackages: Set<NamedNode> = new Set();
 let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
-let nodeShapeToShapeClass: Map<NamedNode,typeof Shape> = new Map();
 let ontologies: Set<any> = new Set();
 let _autoLoadOntologyData = false;
 /**
@@ -648,7 +648,7 @@ export function linkedPackage(
       //connect the typescript class to its NodeShape
       constructor.shape = shape;
       //also keep track of the reverse: nodeShape to typescript class (helpful for sending shapes between environments with JSONWriter / JSONParser)
-      nodeShapeToShapeClass.set(shape.namedNode,constructor);
+      addNodeShapeToShapeClass(shape,constructor);
 
       //also create a representation in the graph of the shape class itself
       let shapeClass = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shapeclass/${URI.sanitize(constructor.name)}`,true);
@@ -759,10 +759,6 @@ export function linkedPackage(
     packageExports: packageTreeObject,
     packageName: packageName,
   } as LinkedPackageObject;
-}
-
-export function getShapeClass(nodeShape:NamedNode) {
-  return nodeShapeToShapeClass.get(nodeShape);
 }
 
 function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requiredData:typeof Shape | LinkedDataDeclaration<ShapeType>,functionalComponent:LinkableFunctionalComponent<DeclaredProps,ShapeType>,setComponent?:boolean);

@@ -31,6 +31,7 @@ import * as LinkedComponentClass from './utils/LinkedComponentClass';
 import * as ForwardReasoning from './utils/ForwardReasoning';
 import * as NameSpace from './utils/NameSpace';
 import * as Hooks from './utils/Hooks';
+import * as ShapeClass from './utils/ShapeClass';
 import * as ShapeDecorators from './utils/ShapeDecorators';
 import * as List from './shapes/List';
 import * as IGraphObject from './interfaces/IGraphObject';
@@ -73,6 +74,7 @@ export function initModularApp()
     List,
     URI,
     Hooks,
+    ShapeClass,
     ForwardReasoning,
     Find,
     Order,
