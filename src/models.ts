@@ -641,7 +641,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
         //so here we check if any other object that is still registered equals the current object
         if (![...quadMap.keys()].some((object) => quad.object.equals(object))) {
           //if that's not the case, then also remove this object from the propertySet index (the index should exist)
-          this.properties.get(predicate).__delete(quad.object);
+          //Note: in some cases, for example when a quad moved between graphs, the object registered here as property value might not be the same as the as the object of the quad that is still registered,
+          // therefor we also check & remove equivalent values in case regular removal didnt work
+          //TODO: we could improve this by making sure that this.properties stays up to date with the actual quads
+          this.properties.get(predicate).__delete(quad.object) || this.properties.get(predicate).__delete(this.properties.get(predicate).find((object) => object.equals(quad.object)));
         }
 
         //if we now also no longer hold any values for this predicate
