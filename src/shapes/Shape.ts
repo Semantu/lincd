@@ -830,7 +830,7 @@ export abstract class Shape extends EventEmitter implements IShape
       //here we expect that we'll create a new node, so the counter will be increased when we actually create it
       postfix = NamedNode.getCounter() + 1;
     }
-    let uri = prefixURI + this.targetClass.uri + '/' + postfix;
+    let uri = prefixURI + this.name + '/' + postfix;
     return this.getFromURI(uri);
   }
 
