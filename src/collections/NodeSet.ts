@@ -62,6 +62,17 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
     return res;
   }
 
+  /**
+   * Returns an array of the URI's or literal values (for Literals) of the nodes in this set
+   */
+  getNodeValues(): string[] {
+    var res = [];
+    for (var node of this) {
+      res.push(node.value);
+    }
+    return res;
+  }
+
   getOneFromPath(...properties: NamedNode[]): Node | undefined {
     //NOTE: same implementation as in NamedNode
 

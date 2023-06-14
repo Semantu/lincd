@@ -6,6 +6,7 @@
 import {NamedNode} from '../models';
 import {ShapeSet} from './ShapeSet';
 import {Shape} from '../shapes/Shape';
+import {QuadSet} from './QuadSet';
 
 export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
 
@@ -72,6 +73,25 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
   delete(value:S): boolean {
     this.subject.unset(this.property,value.node);
     return super.delete(value);
+  }
+
+  /**
+   * Listen to any changes in the valueset for this subject + property combination
+   * If you provide context (usually 'this'), removing the onChange listener will remove all listeners for this property & context, regardless of what callback you provide. (this is helpful if you dont have access to the excact same callback function)
+   * @param callback
+   * @param context
+   */
+  onChange(callback:(quads?: QuadSet, property?: NamedNode) => void,context?) {
+    (this.subject as NamedNode).onChange(this.property,callback,context)
+  }
+  /**
+   * Remove listener for changes in the valueset for this subject + property combination
+   * If you provide context (usually 'this'), removing the onChange listener will remove all listeners for this property & context, regardless of what callback you provide. (this is helpful if you dont have access to the excact same callback function)
+   * @param callback
+   * @param context
+   */
+  removeOnChange(callback:(quads?: QuadSet, property?: NamedNode) => void,context?) {
+    (this.subject as NamedNode).removeOnChange(this.property,callback,context)
   }
 
 }

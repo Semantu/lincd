@@ -5,6 +5,7 @@
  */
 import {NodeSet} from './NodeSet';
 import {NamedNode,Node} from '../models';
+import {QuadSet} from './QuadSet';
 
 export class NodeValuesSet extends NodeSet {
 	constructor(private _subject:Node,private _property:NamedNode,iterable?: Iterable<Node>) {
@@ -19,6 +20,25 @@ export class NodeValuesSet extends NodeSet {
   get property()
   {
     return this._property
+  }
+
+  /**
+   * Listen to any changes in the valueset for this subject + property combination
+   * If you provide context (usually 'this'), removing the onChange listener will remove all listeners for this property & context, regardless of what callback you provide. (this is helpful if you dont have access to the excact same callback function)
+   * @param callback
+   * @param context
+   */
+  onChange(callback:(quads?: QuadSet, property?: NamedNode) => void,context?) {
+    (this._subject as NamedNode).onChange(this._property,callback,context)
+  }
+  /**
+   * Remove listener for changes in the valueset for this subject + property combination
+   * If you provide context (usually 'this'), removing the onChange listener will remove all listeners for this property & context, regardless of what callback you provide. (this is helpful if you dont have access to the excact same callback function)
+   * @param callback
+   * @param context
+   */
+  removeOnChange(callback:(quads?: QuadSet, property?: NamedNode) => void,context?) {
+    (this._subject as NamedNode).removeOnChange(this._property,callback,context)
   }
 
   /**
