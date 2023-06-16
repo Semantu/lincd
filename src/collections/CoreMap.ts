@@ -105,4 +105,7 @@ export class CoreMap<K, V> extends Map<K, V> implements ICoreIterable<V> {
     }
     return res;
   }
+  print() {
+    console.log(this.toString());
+  }
 }

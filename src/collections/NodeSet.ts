@@ -9,6 +9,7 @@ import {IGraphObjectSet} from '../interfaces/IGraphObjectSet';
 import {QuadSet} from './QuadSet';
 import {QuadArray} from './QuadArray';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
+import {Debug} from '../utils/Debug';
 
 export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraphObjectSet<Node> {
   constructor(iterable?: Iterable<R>) {
@@ -307,4 +308,10 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
   toString(): string {
     return 'NodeSet {\n' + [...this].map((node) => '\t' + node.toString()).join(',\n') + '\n}';
   }
+
+  print(includeIncomingProperties: boolean = true) {
+    return Debug.print(this, includeIncomingProperties);
+  }
+
+
 }

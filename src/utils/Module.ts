@@ -647,6 +647,8 @@ export function linkedPackage(
       let shape: NodeShape = NodeShape.getFromURI(`${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(constructor.name)}`);
       //connect the typescript class to its NodeShape
       constructor.shape = shape;
+      //set the name
+      shape.label = constructor.name;
       //also keep track of the reverse: nodeShape to typescript class (helpful for sending shapes between environments with JSONWriter / JSONParser)
       addNodeShapeToShapeClass(shape,constructor);
 

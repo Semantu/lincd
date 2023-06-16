@@ -1394,6 +1394,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   /**
    * Update a certain property so that only the given value is a value of this property.
    * Overwrites (and thus removes) any previously set values
+   * If value is null, the current value(s) will be removed
    * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
    * @param value - a single node. Can be a NamedNode or Literal
    */

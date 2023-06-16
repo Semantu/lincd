@@ -11,15 +11,95 @@ export function getShapeClass(nodeShape:NamedNode):typeof Shape {
 }
 
 export function getSubShapesClasses(shape:typeof Shape|typeof Shape[]):typeof Shape[] {
-  let extendsGivenShapeClass = Array.isArray(shape) ? (shapeClass) => {
-      return shape.some(s => shapeClass.constructor.prototype instanceof s);
-    } : (shapeClass) => {
-      return shapeClass.constructor.prototype instanceof shape;
-    }
+  //make sure we have a real class
+  shape = ensureShapeConstructor(shape);
+  //apply the hasSuperclass function to the shape
+  let filterFunction = applyFnToShapeOrArray(shape,hasSubClass);
+  //filter and then sort the results based on their inheritance (most specific classes first, so we use hasSuperClass for the sorting)
+  return filterShapeClasses(filterFunction).sort((a,b) => {
+    return hasSubClass(a,b) ? 1 : -1;
+  });
+  // let extendsGivenShapeClass = Array.isArray(shape) ? (shapeClass) => {
+  //     return shape.some(s => shapeClass.constructor.prototype instanceof s);
+  //   } : (shapeClass) => {
+  //     return shapeClass.constructor.prototype instanceof shape;
+  //   }
+  //
+  // let result = [];
+  // nodeShapeToShapeClass.forEach((shapeClass) => {
+  //   if(extendsGivenShapeClass(shapeClass)) {
+  //     result.push(shapeClass);
+  //   }
+  // });
+  // return result;
+}
 
+export function getSuperShapesClasses(shape:typeof Shape|typeof Shape[]):typeof Shape[]
+{
+  //make sure we have a real class
+  shape = ensureShapeConstructor(shape);
+  //apply the hasSuperclass function to the shape
+  let filterFunction = applyFnToShapeOrArray(shape,hasSuperClass);
+  //filter and then sort the results based on their inheritance
+  return filterShapeClasses(filterFunction).sort((a,b) => {
+    return hasSubClass(a,b) ? 1 : -1;
+  });
+}
+
+//https://stackoverflow.com/a/30760236
+function isClass(v) {
+  return typeof v === 'function' && /^\s*class\s+/.test(v.toString());
+}
+
+function ensureShapeConstructor(shape:typeof Shape|typeof Shape[]) {
+  //TODO: figure out why sometimes we need shape.prototype, sometimes we need shape.constructor.prototype
+  // in other words, why we sometimes get a ES6 Class and sometimes its constructor?
+  //make sure we have a real class
+  if(Array.isArray(shape))
+  {
+    return shape.map(s => {
+      if (!isClass(s))
+      {
+        return s.constructor as any;
+      }
+      return s;
+    }) as any[];
+  } else {
+    if (!isClass(shape))
+    {
+      return shape.constructor as any;
+    }
+    return shape;
+  }
+}
+function hasSuperClass(a:Function,b:Function) {
+  return (a as Function).prototype instanceof b
+}
+function hasSubClass(a:Function,b:Function) {
+  return (b as Function).prototype instanceof a
+}
+
+function applyFnToShapeOrArray(shape,filterFn) {
+  if (Array.isArray(shape))
+  {
+    return (shapeClass) => {
+      //returns true if one of the given shapes extends the shapeClass passed as argument
+      return (shape as Function[]).some(s => filterFn(s,shapeClass));
+    }
+  }
+  else
+  {
+    //first argument will be the given shape class, second argument will be each stored shape class in the map
+    //will filter down where the given shape extends the stored shape
+    return filterFn.bind(null,shape)
+  }
+
+}
+
+function filterShapeClasses(filterFn) {
   let result = [];
   nodeShapeToShapeClass.forEach((shapeClass) => {
-    if(extendsGivenShapeClass(shapeClass)) {
+    if(filterFn(shapeClass)) {
       result.push(shapeClass);
     }
   });

@@ -564,6 +564,124 @@ export abstract class Shape extends EventEmitter implements IShape
     return this._node.getAllQuads(includeImplicit);
   }
 
+
+  /**
+   * Fires the given call back when ANY property of this node changes.
+   * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
+   * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
+   */
+  onChangeAny(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+    this.namedNode?.onChangeAny(callback, context);
+  }
+
+  /**
+   * Fires the given call back when this node become the value or is no longer the value of another node
+   * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
+   * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
+   */
+  onChangeAnyInverse(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+    this.namedNode?.onChangeAnyInverse(callback, context);
+  }
+
+  /**
+   * Fires the given call back when this node changes the values of the given property
+   * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
+   * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
+   */
+  onChange(property: NamedNode, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+    this.namedNode?.onChange(property,callback, context);
+  }
+
+  /**
+   * Fires the given callback when this node become the value or is no longer the value of the given property of another node
+   * Example: if someGroup hasParticipant thisResource, and the group removes this node from its participants, it will trigger onChangeInverse for this node
+   * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
+   * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
+   */
+  onChangeInverse(property, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+    this.namedNode?.onChangeInverse(property,callback, context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onChangeAny events. Make sure to provide the exact same BOUND instance of a method to properly clear the listener. OR make sure to provide a context both when setting and clearing the listener.
+   * @param callback the exact same method you supplied to onChangeAny
+   * @param context the same context you supplied to onChangeAny
+   */
+  removeOnChangeAny(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+    this.namedNode?.removeOnChangeAny(callback, context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onChangeAnyInverse events. Make sure to provide the exact same BOUND instance of a method to properly clear the listener. OR make sure to provide a context both when setting and clearing the listener.
+   * @param callback the exact same method you supplied to onChangeAnyInverse
+   * @param context the same context you supplied to onChangeAnyInverse
+   */
+  removeOnChangeAnyInverse(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+    this.namedNode?.removeOnChangeAnyInverse(callback, context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onChange events. Make sure to provide the exact same BOUND instance of a method as callback to properly clear the listener. OR make sure to provide a context both when setting and clearing the listener.
+   * @param callback the exact same method you supplied to onChange
+   * @param context the same context you supplied to onChange
+   */
+  removeOnChange(property: NamedNode, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+    this.namedNode?.removeOnChange(property,callback, context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onChangeInverse events. Make sure to provide the exact same BOUND instance of a method as callback to properly clear the listener. OR make sure to provide a context both when setting and clearing the listener.
+   * @param callback the exact same method you supplied to onChangeInverse
+   * @param context the same context you supplied to onChangeInverse
+   */
+  removeOnChangeInverse(property, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+    this.namedNode?.removeOnChangeInverse(property,callback, context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onChangeAny events. Other then removeOnChangeAny you only have to supply the context.
+   * Use this if you no longer have access to the same bound listener function or you're otherwise unable to clear with removeOnChangeAny
+   * @param context the same context you supplied to onChangeAny
+   */
+  clearOnChangeAny(context: any) {
+    this.namedNode?.clearOnChangeAny(context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onChangeAnyInverse events. Other then removeOnChangeAnyInverse you only have to supply the context.
+   * Use this if you no longer have access to the same bound listener function or you're otherwise unable to clear with removeOnChangeAnyInverse
+   * @param context the same context you supplied to onChangeAnyInverse
+   */
+  clearOnChangeAnyInverse(context: any) {
+    this.namedNode?.clearOnChangeAnyInverse(context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onChange events. Other then removeOnChange you only have to supply the context.
+   * Use this if you no longer have access to the same bound listener function or you're otherwise unable to clear with removeOnChange
+   * @param context the same context you supplied to onChange
+   */
+  clearOnChange(property: NamedNode, context?: any) {
+    this.namedNode?.clearOnChange(property,context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onChangeInverse events. Other then removeOnChangeInverse you only have to supply the context.
+   * Use this if you no longer have access to the same bound listener function or you're otherwise unable to clear with removeOnChangeInverse
+   * @param context the same context you supplied to onChangeAny
+   */
+  clearOnChangeInverse(property, context: any) {
+    this.namedNode?.clearOnChangeInverse(property,context);
+  }
+
+  /**
+   * Call this when you want to stop listening for onPredicateChange events
+   * @param context the same context you supplied to onPredicateChange
+   */
+  clearOnPredicateChange(context: any) {
+    this.namedNode?.clearOnPredicateChange(context);
+  }
+
   get value(): string
   {
     return this._node.value;
