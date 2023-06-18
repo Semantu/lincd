@@ -4,12 +4,13 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {CoreSet} from './CoreSet';
-import {NamedNode, Node} from '../models';
+import {NamedNode, Node, Literal} from '../models';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet';
 import {QuadSet} from './QuadSet';
 import {QuadArray} from './QuadArray';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {Debug} from '../utils/Debug';
+import {URI} from '../utils/URI';
 
 export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraphObjectSet<Node> {
   constructor(iterable?: Iterable<R>) {
@@ -314,4 +315,7 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
   }
 
 
+  static fromValues<T extends Node = Node>(strings: string[]): NodeSet<T> {
+    return new NodeSet<T>(strings.map((s) => (URI.isURI(s) ? NamedNode.getOrCreate(s) : new Literal(s)) as any as T));
+  }
 }

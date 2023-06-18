@@ -876,7 +876,8 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
    */
   hasProperty(property: NamedNode): boolean {
-    return this.properties.has(property);
+    //properties can be empty sets, so we need to check if there are any values in the set
+    return this.properties.has(property) && this.properties.get(property).size > 0;
   }
 
   /**
