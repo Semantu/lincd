@@ -648,11 +648,13 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
         }
 
         //if we now also no longer hold any values for this predicate
-        if (quadMap.size === 0) {
-          //delete both indices for this predicate
-          this.asSubject.delete(predicate);
-          this.properties.delete(predicate);
-        }
+        //NOTE: this was turned off because NodeValuesSets are reused, recreating a new one when a new value
+        // is added then does not add the value to the old one.
+        // if (quadMap.size === 0) {
+        //   //delete both indices for this predicate
+        //   this.asSubject.delete(predicate);
+        //   this.properties.delete(predicate);
+        // }
       }
     }
 
