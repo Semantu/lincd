@@ -1044,7 +1044,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 	 */
 	getAll(property: NamedNode): NodeValuesSet {
     //we usually just index all the existing properties
-    //but to have consistent bahaviour with PropertyValueSets, when you request a property that has no values
+    //but to have consistent behaviour with PropertyValueSets, when you request a property that has no values
     //we need to create an index for the empty result set
     if(!this.properties.has(property))
     {
@@ -1397,17 +1397,19 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   /**
    * Update a certain property so that only the given value is a value of this property.
    * Overwrites (and thus removes) any previously set values
-   * If value is null, the current value(s) will be removed
    * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
    * @param value - a single node. Can be a NamedNode or Literal
    */
-  overwrite(property: NamedNode, value: Node | null): boolean {
+  overwrite(property: NamedNode, value: Node): boolean {
+    if(!value) {
+      throw new Error("Cannot overwrite a property with an empty value. To clear remove all current values use unsetAll() instead");
+    }
+    //don't do anything if the current value is already equivalent to the new value
     if (this.getAll(property).size == 1 && value && this.has(property, value)) return false;
 
+    //clear all values and set new value
     this.unsetAll(property);
-    if (value) {
-      return this.set(property, value);
-    }
+    return this.set(property, value);
   }
 
   /**
@@ -1418,7 +1420,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param values
    */
   moverwrite(property: NamedNode, values: ICoreIterable<Node>): boolean {
-    //dont update if the new set of values is the same (or equivalent) as the old set of values
+    //don't update if the new set of values is the same (or equivalent) as the old set of values
     if (
       this.getAll(property).size === (values.size || values.length) &&
       values.every((value) => this.has(property, value))

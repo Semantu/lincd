@@ -33,6 +33,7 @@ import * as NameSpace from './utils/NameSpace';
 import * as Hooks from './utils/Hooks';
 import * as ShapeClass from './utils/ShapeClass';
 import * as ShapeDecorators from './utils/ShapeDecorators';
+import * as ClassNames from './utils/ClassNames';
 import * as List from './shapes/List';
 import * as IGraphObject from './interfaces/IGraphObject';
 import * as IGraphObjectSet from './interfaces/IGraphObjectSet';
@@ -72,6 +73,7 @@ export function initModularApp()
     Debug,
     NameSpace,
     List,
+    ClassNames,
     URI,
     Hooks,
     ShapeClass,

@@ -169,7 +169,7 @@ interface LinkedComponentInputBaseProps extends React.PropsWithChildren{
   style?:React.CSSProperties;
 }
 export type BoundComponentFactory<P={},ShapeType extends Shape=Shape> = BoundFunctionalComponentFactory<P,ShapeType> | BoundSetComponentFactory<P,ShapeType>;
-export type ResponseUnit = Node|Shape|string|number|ICoreIterable<Node|Shape|string|number>;
+export type ResponseUnit = Node|Shape|string|number|boolean|ICoreIterable<Node|Shape|string|number|boolean>;
 export type LinkedDataResponse = (() => BoundComponentFactory<any,any>) | (ResponseUnit|((() => BoundComponentFactory<any,any>)|ResponseUnit))[] | {[key: string]: ResponseUnit|((() => BoundComponentFactory<any,any>)|ResponseUnit)};
 export type TransformedLinkedDataResponse = BoundComponentFactory<any,any> | (ResponseUnit|(BoundComponentFactory<any,any>|ResponseUnit))[] | {[key: string]: ResponseUnit|(BoundComponentFactory<any,any>|ResponseUnit)};
 

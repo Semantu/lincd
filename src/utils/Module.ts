@@ -1045,7 +1045,11 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
               //if a shape was returned, make sure we trace that shape too
               if (returnedValue instanceof Shape)
               {
-                returnedValue = createTraceShape(Object.getPrototypeOf(returnedValue),returnedValue);
+                returnedValue = createTraceShape(
+                  Object.getPrototypeOf(returnedValue).constructor,
+                  returnedValue,
+                  Object.getPrototypeOf(returnedValue).constructor.name
+                )
               }
 
               //store which property shapes were requested in the detectionClass defined above
@@ -1063,14 +1067,19 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
           else
           {
             //if no propertyShape was found, then this is a get method that was not decorated with @linkedProperty
-            //however if that method is accessed by the dataRequest function of a linkedComponent
-            //then probably someone forgot to add a @linkedProperty decorator!
-            //or at least it won't add any data to the dataRequest, so let's warn the developer of that
             newDescriptor.get = () => {
-              console.log(debugName + ' requested get ' + key + ' - ' + propertyShape.path.value+ ' because a linked component used it in its dataRequest function');
-              console.info('However "get '+key+'" is not decorated with a linked property decorator (like @linkedProperty), so it will not add any data to the dataRequest');
+              let numRequested = traceShape.requested.length;
+              //so we call the method as it was
+              let result = descriptor.get.call(traceShape);
+              //and if no new property shapes have been accessed
+              if(traceShape.requested.length === numRequested) {
+                //then probably someone forgot to add a @linkedProperty decorator!
+                //or at least it won't add any data to the dataRequest of the linked component, so let's warn the developer of that
+                console.warn(`"${traceShape.nodeShape?.label}.${descriptor.get.name.replace('get ','')}" was requested by a linked component. However '${descriptor.get.name}' is not decorated with a linked property decorator (like @linkedProperty), so LINCD can not automatically load this data`);
+              }
+              //(else, the method probably accessed other methods of the shape that DO use linkedProperty decorators, thus adding more traced propertyShapes. This is fine and works as intended)
 
-              return descriptor.get.call(traceShape);
+              return result;
             };
           }
           //bind this descriptor to the class that defines it
@@ -1274,7 +1283,7 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
       let dummyInstance = createTraceShape(
         shapeClass,
         null,
-        this.name || this.toString().substring(0,80) + ' ...',
+        this.name || this.toString().substring(0,60).replace(/\n/g,' ') + ' ...',
       );
 
       //and run the function that the component provided to see which properties it needs
