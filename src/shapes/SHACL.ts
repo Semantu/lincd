@@ -125,8 +125,6 @@ export class NodeShape extends SHACL_Shape {
   }
 }
 
-export class ValidationResult {}
-
 //Note: this shape is linked in Module.ts to avoid cyclical dependencies
 export class PropertyShape extends SHACL_Shape {
   static targetClass: NamedNode = shacl.PropertyShape;
