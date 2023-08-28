@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode,Node,Quad} from '../models';
+import {NamedNode, Node, Quad} from '../models';
 import {Shape} from '../shapes/Shape';
-import {NodeShape,PropertyShape} from '../shapes/SHACL';
+import {NodeShape, PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
 import {
   BoundComponentFactory,
@@ -15,7 +15,8 @@ import {
   LinkableFunctionalComponent,
   LinkableFunctionalSetComponent,
   LinkedComponentInputProps,
-  LinkedComponentProps,LinkedDataChildRequestFn,
+  LinkedComponentProps,
+  LinkedDataChildRequestFn,
   LinkedDataDeclaration,
   LinkedDataRequest,
   LinkedDataRequestFn,
@@ -31,7 +32,7 @@ import {CoreSet} from '../collections/CoreSet';
 import {rdf} from '../ontologies/rdf';
 import {lincd as lincdOntology} from '../ontologies/lincd';
 import {npm} from '../ontologies/npm';
-import React, {createElement, useEffect,useState} from 'react';
+import React, {createElement, useEffect, useState} from 'react';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
 import {Storage} from './Storage';
@@ -49,21 +50,20 @@ export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 
 // var packageParsePromises: Map<string,Promise<any>> = new Map();
 // var loadedPackages: Set<NamedNode> = new Set();
-let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
+let shapeToComponents: Map<typeof Shape, CoreSet<Component>> = new Map();
 let ontologies: Set<any> = new Set();
 let _autoLoadOntologyData = false;
 /**
  * a map of requested property shapes for specific nodes
  * The value is a promise if it's still loading, or true if it is fully loaded
  */
-type ClassDecorator = <T extends {new(...args: any[]): {}}>(constructor: T) => T;
+type ClassDecorator = <T extends {new (...args: any[]): {}}>(constructor: T) => T;
 
 /**
  * This object, returned by [linkedPackage()](/docs/lincd.js/modules/utils_Module#linkedPackage),
  * contains the decorators to link different parts of a LINCD module.
  */
-export interface LinkedPackageObject
-{
+export interface LinkedPackageObject {
   /**
    * Links a functional component to its shape
    * Once linked, the component receives an extra property "sourceShape" which will be an instance of the linked Shape.
@@ -84,11 +84,11 @@ export interface LinkedPackageObject
    * });
    * ```
    */
-  linkedComponent<ShapeType extends Shape,DeclaredProps = {}>(
+  linkedComponent<ShapeType extends Shape, DeclaredProps = {}>(
     requiredData: typeof Shape | LinkedDataDeclaration<ShapeType>,
     // dataDeclarationOrComponent:FunctionalComponent<P,ShapeType>|LinkedDataDeclaration<ShapeType>,
-    functionalComponent: LinkableFunctionalComponent<DeclaredProps,ShapeType>,
-  ): LinkedFunctionalComponent<DeclaredProps,ShapeType>;
+    functionalComponent: LinkableFunctionalComponent<DeclaredProps, ShapeType>,
+  ): LinkedFunctionalComponent<DeclaredProps, ShapeType>;
 
   /**
    * Links a functional Set component to its shape
@@ -111,10 +111,10 @@ export interface LinkedPackageObject
    * });
    * ```
    */
-  linkedSetComponent<ShapeType extends Shape,DeclaredProps = {}>(
+  linkedSetComponent<ShapeType extends Shape, DeclaredProps = {}>(
     requiredData: typeof Shape | LinkedDataSetDeclaration<ShapeType>,
-    functionalComponent: LinkableFunctionalSetComponent<DeclaredProps,ShapeType>,
-  ): LinkedFunctionalSetComponent<DeclaredProps,ShapeType>;
+    functionalComponent: LinkableFunctionalSetComponent<DeclaredProps, ShapeType>,
+  ): LinkedFunctionalSetComponent<DeclaredProps, ShapeType>;
 
   /**
    * Class decorator that links a class-based component to its shape.
@@ -142,7 +142,7 @@ export interface LinkedPackageObject
    * }
    * ```
    */
-  linkedComponentClass: <ShapeType extends Shape,P = {}>(shapeClass: typeof Shape) => ClassDecorator;
+  linkedComponentClass: <ShapeType extends Shape, P = {}>(shapeClass: typeof Shape) => ClassDecorator;
 
   /**
    * Register a file (a javascript module) and all its exported objects.
@@ -265,37 +265,33 @@ export interface LinkedPackageObject
    */
   packageExports: any;
 
-  packageName:string;
+  packageName: string;
 }
 
-export function autoLoadOntologyData(value:boolean) {
+export function autoLoadOntologyData(value: boolean) {
   _autoLoadOntologyData = value;
   //this may be set to true after some ontologies have already indexed,
-  if(_autoLoadOntologyData) {
+  if (_autoLoadOntologyData) {
     // so in that case we load all data of ontologies that are already indexed
-    ontologies.forEach(ontologyExport => {
+    ontologies.forEach((ontologyExport) => {
       //see linkedOntology() where we store the data loading method under the _load key
-      if(ontologyExport['_load']) {
+      if (ontologyExport['_load']) {
         ontologyExport['_load']();
       }
-    })
+    });
   }
 }
 
-export function linkedPackage(
-  packageName: string,
-): LinkedPackageObject
-{
-  let packageNode = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}`,true);
-  packageNode.set(rdf.type,lincdOntology.Module);
-  packageNode.setValue(npm.packageName,packageName);
+export function linkedPackage(packageName: string): LinkedPackageObject {
+  let packageNode = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}`, true);
+  packageNode.set(rdf.type, lincdOntology.Module);
+  packageNode.setValue(npm.packageName, packageName);
 
   let packageTreeObject = registerPackageInTree(packageName);
 
   //#Create declarators for this module
-  let registerPackageExport = function(object) {
-    if (object.name in packageTreeObject)
-    {
+  let registerPackageExport = function (object) {
+    if (object.name in packageTreeObject) {
       console.warn(
         `Key ${object.name} was already defined for package ${packageName}. Note that LINCD currently only supports unique names across your entire package. Overwriting ${object.name} with new value`,
       );
@@ -303,31 +299,27 @@ export function linkedPackage(
     packageTreeObject[object.name] = object;
   };
 
-  let registerInPackageTree = function(exportName,exportedObject) {
+  let registerInPackageTree = function (exportName, exportedObject) {
     packageTreeObject[exportName] = exportedObject;
   };
 
-  function registerPackageModule(_module): void
-  {
-    for (var key in _module.exports)
-    {
+  function registerPackageModule(_module): void {
+    for (var key in _module.exports) {
       //if the exported object itself (usually FunctionalComponents) is not named or its name is _wrappedComponent (which ends up happening in the linkedComponent method above)
       //then we give it the same name as it's export name.
-      if (!_module.exports[key].name || _module.exports[key].name === '_wrappedComponent')
-      {
-        Object.defineProperty(_module.exports[key],'name',{value: key});
+      if (!_module.exports[key].name || _module.exports[key].name === '_wrappedComponent') {
+        Object.defineProperty(_module.exports[key], 'name', {value: key});
         //manual 'hack' to set the name of the original function
-        if (_module.exports[key]['original'] && !_module.exports[key]['original']['name'])
-        {
-          Object.defineProperty(_module.exports[key]['original'],'name',{value: key + '_implementation'});
+        if (_module.exports[key]['original'] && !_module.exports[key]['original']['name']) {
+          Object.defineProperty(_module.exports[key]['original'], 'name', {value: key + '_implementation'});
         }
       }
-      registerInPackageTree(key,_module.exports[key]);
+      registerInPackageTree(key, _module.exports[key]);
     }
   }
 
   //create a declarator function which Components of this module can use register themselves and add themselves to the global tree
-  let linkedUtil = function(constructor) {
+  let linkedUtil = function (constructor) {
     //add the component class of this module to the global tree
     registerPackageExport(constructor);
 
@@ -336,50 +328,46 @@ export function linkedPackage(
   };
 
   //method to create a linked functional component
-  function linkedComponent<ShapeType extends Shape,DeclaredProps = {}>(
+  function linkedComponent<ShapeType extends Shape, DeclaredProps = {}>(
     requiredData: typeof Shape | LinkedDataDeclaration<ShapeType>,
-    functionalComponent: LinkableFunctionalComponent<DeclaredProps,ShapeType>,
-  ): LinkedFunctionalComponent<DeclaredProps,ShapeType>
-  {
-    let [shapeClass,dataRequest,dataDeclaration,tracedDataResponse] = processDataDeclaration<ShapeType,DeclaredProps>(requiredData,functionalComponent);
+    functionalComponent: LinkableFunctionalComponent<DeclaredProps, ShapeType>,
+  ): LinkedFunctionalComponent<DeclaredProps, ShapeType> {
+    let [shapeClass, dataRequest, dataDeclaration, tracedDataResponse] = processDataDeclaration<
+      ShapeType,
+      DeclaredProps
+    >(requiredData, functionalComponent);
 
     //create a new functional component which wraps the original
-    let _wrappedComponent: LinkedFunctionalComponent<DeclaredProps,ShapeType> = (props: DeclaredProps & LinkedComponentInputProps<ShapeType> & BoundComponentProps) => {
+    let _wrappedComponent: LinkedFunctionalComponent<DeclaredProps, ShapeType> = (
+      props: DeclaredProps & LinkedComponentInputProps<ShapeType> & BoundComponentProps,
+    ) => {
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
-      let linkedProps = getLinkedComponentProps<ShapeType,DeclaredProps>(props,shapeClass);
+      let linkedProps = getLinkedComponentProps<ShapeType, DeclaredProps>(props, shapeClass);
 
-      if(!linkedProps.source)
-      {
-        console.warn("No source provided to this component: "+functionalComponent.name);
+      if (!linkedProps.source) {
+        console.warn('No source provided to this component: ' + functionalComponent.name);
         return null;
       }
       //if we're not using any storage in this LINCD app, don't do any data loading
       let usingStorage = Storage.isInitialised();
 
-      let [isLoaded,setIsLoaded] = useState<any>(undefined);
+      let [isLoaded, setIsLoaded] = useState<any>(undefined);
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-        if (!props.isBound && usingStorage)
-        {
-          let cachedRequest = Storage.isLoaded(linkedProps.source.node,dataRequest);
+        if (!props.isBound && usingStorage) {
+          let cachedRequest = Storage.isLoaded(linkedProps.source.node, dataRequest);
           //if these properties were requested before and have finished loading
-          if (cachedRequest === true)
-          {
+          if (cachedRequest === true) {
             //then we can set state to loaded straight away
             setIsLoaded(true);
-          }
-          else if(cachedRequest === false)
-          {
+          } else if (cachedRequest === false) {
             //if we did not request all these properties before then we continue to
             // load the required PropertyShapes from storage for this specific source
-            Storage.loadShape(linkedProps.source,dataRequest).then((quads) => {
-
+            Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
             });
-          }
-          else
-          {
+          } else {
             //if some requiredProperties are still being loaded
             //cachedResult will be a promise (there is no other return type)
             //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
@@ -389,7 +377,7 @@ export function linkedPackage(
             });
           }
         }
-      },[linkedProps.source.node,props.isBound]);
+      }, [linkedProps.source.node, props.isBound]);
 
       //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
       let dataIsLoaded = props.isBound || isLoaded || !usingStorage;
@@ -397,39 +385,43 @@ export function linkedPackage(
       //But for the first render, when the useEffect has not run yet,
       //and no this is not a bound component (so it's a top level linkedComponent),
       //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-      if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage)
-      {
+      if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded = Storage.isLoaded(linkedProps.source.node,dataRequest) === true;
+        dataIsLoaded = Storage.isLoaded(linkedProps.source.node, dataRequest) === true;
       }
 
       //if the data is loaded
       //TODO: remove check for typeof window, this is temporary solution to fix hydration errors
       // but really we should find a way to send the data to the frontend for initial page loads AND notify storage that that data is loaded
       // then this check can be turned off. We can possibly do this with RDFA (rdf in html), then we can probably parse the data from the html, whilst rendering it on the server in one go.
-      if (dataIsLoaded && typeof window !== 'undefined')
-      {
+      if (dataIsLoaded && typeof window !== 'undefined') {
         //if the component used a Shape.requestSet() data declaration function
-        if (dataDeclaration)
-        {
+        if (dataDeclaration) {
           //then use that now to get the requested linkedData for this instance
-          linkedProps.linkedData = getLinkedDataResponse(dataDeclaration.request,linkedProps.source,tracedDataResponse as TransformedLinkedDataResponse);
+          linkedProps.linkedData = getLinkedDataResponse(
+            dataDeclaration.request,
+            linkedProps.source,
+            tracedDataResponse as TransformedLinkedDataResponse,
+          );
         }
 
         //render the original components with the original + generated properties
+        //if this is a component using React.forwardRef, we need to account for that differently:
+        if (functionalComponent['render']) {
+          return functionalComponent['render'](linkedProps);
+        }
+        //else just render the original functional component with the original + generated properties
         return functionalComponent(linkedProps);
-      }
-      else
-      {
+      } else {
         //render loading
-        return createElement('div',null,'...');
+        return createElement('div', null, '...');
       }
     };
 
     //connect the Component.of() function, which is called bindComponentToData here
     //<DeclaredProps & LinkedComponentInputProps<ShapeType>, ShapeType>
-    _wrappedComponent.of = bindComponentToData.bind(_wrappedComponent,tracedDataResponse);
+    _wrappedComponent.of = bindComponentToData.bind(_wrappedComponent, tracedDataResponse);
 
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
@@ -439,10 +431,9 @@ export function linkedPackage(
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
     //IF this component is a function that has a name
-    if (functionalComponent.name)
-    {
+    if (functionalComponent.name) {
       //then copy the name (have to do it this way, name is protected)
-      Object.defineProperty(_wrappedComponent,'name',{
+      Object.defineProperty(_wrappedComponent, 'name', {
         value: functionalComponent.name,
       });
       //and add the component class of this module to the global tree
@@ -451,62 +442,62 @@ export function linkedPackage(
     //NOTE: if it does NOT have a name, the developer will need to manually use registerPackageExport
 
     //register the component and its shape
-    registerComponent(_wrappedComponent,shapeClass);
+    registerComponent(_wrappedComponent, shapeClass);
 
     return _wrappedComponent;
   }
 
-  function linkedSetComponent<ShapeType extends Shape,DeclaredProps = {}>(
+  function linkedSetComponent<ShapeType extends Shape, DeclaredProps = {}>(
     requiredData: typeof Shape | LinkedDataSetDeclaration<ShapeType>,
-    functionalComponent: LinkableFunctionalSetComponent<DeclaredProps,ShapeType>,
-  ): LinkedFunctionalSetComponent<DeclaredProps,ShapeType>
-  {
-    let [shapeClass,dataRequest,dataDeclaration,tracedDataResponse] = processDataDeclaration<ShapeType,DeclaredProps>(requiredData,functionalComponent,true);
+    functionalComponent: LinkableFunctionalSetComponent<DeclaredProps, ShapeType>,
+  ): LinkedFunctionalSetComponent<DeclaredProps, ShapeType> {
+    let [shapeClass, dataRequest, dataDeclaration, tracedDataResponse] = processDataDeclaration<
+      ShapeType,
+      DeclaredProps
+    >(requiredData, functionalComponent, true);
 
     //if we're not using any storage in this LINCD app, don't do any data loading
     let usingStorage = Storage.isInitialised();
 
     //create a new functional component which wraps the original
-    let _wrappedComponent: LinkedFunctionalSetComponent<DeclaredProps,ShapeType> = (props: DeclaredProps & LinkedSetComponentInputProps<ShapeType> & BoundComponentProps) => {
+    let _wrappedComponent: LinkedFunctionalSetComponent<DeclaredProps, ShapeType> = (
+      props: DeclaredProps & LinkedSetComponentInputProps<ShapeType> & BoundComponentProps,
+    ) => {
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
-      let linkedProps = getLinkedSetComponentProps<ShapeType,DeclaredProps>(props,shapeClass,functionalComponent);
+      let linkedProps = getLinkedSetComponentProps<ShapeType, DeclaredProps>(props, shapeClass, functionalComponent);
 
       //if this component was created with an 'as' attribute (so <SetComponent of={sources} as={ChildComponent} />
-      if(props.as)
-      {
+      if (props.as) {
         //then we should make that available as the ChildComponent (in other cases ChildComponent is already defined by children or dataRequest, but here we need to do it based on props)
         linkedProps.ChildComponent = props.as;
       }
 
       //if this component was created with an 'as' attribute,
       //then we combine the dataRequest with the childComponent that this specific instance comes with
-      let instanceDataRequest = props.as && (props.as as LinkedFunctionalComponent<ShapeType>).dataRequest ? [...dataRequest,...(props.as as LinkedFunctionalComponent<ShapeType>).dataRequest] : dataRequest;
+      let instanceDataRequest =
+        props.as && (props.as as LinkedFunctionalComponent<ShapeType>).dataRequest
+          ? [...dataRequest, ...(props.as as LinkedFunctionalComponent<ShapeType>).dataRequest]
+          : dataRequest;
 
-      let [isLoaded,setIsLoaded] = useState<any>(undefined);
+      let [isLoaded, setIsLoaded] = useState<any>(undefined);
 
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-        if (!props.isBound && usingStorage)
-        {
-          let cachedRequest = Storage.setIsLoaded(linkedProps.sources.getNodes(),instanceDataRequest);
+        if (!props.isBound && usingStorage) {
+          let cachedRequest = Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest);
           //if these properties were requested before and have finished loading
-          if (cachedRequest === true)
-          {
+          if (cachedRequest === true) {
             //we can set state to reflect that
             setIsLoaded(true);
-          }
-          else if(cachedRequest === false)
-          {
+          } else if (cachedRequest === false) {
             //if we did not request all these properties before then we continue to load them all
             //load the required PropertyShapes from storage for this specific source
             //we bypass cache because already checked cache ourselves above
-            Storage.loadShapes(linkedProps.sources,instanceDataRequest,true).then((quads) => {
+            Storage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
             });
-          }
-          else
-          {
+          } else {
             //if some requiredProperties are still being loaded
             //cachedResult will be a promise (there is no other return type)
             //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
@@ -519,7 +510,7 @@ export function linkedPackage(
         //note: this useEffect function should be re-triggered if a different set of source nodes is given
         //however the actual set could be a new one every time. For now we check the 'of' prop, but if this triggers
         //on every parent update whilst it shouldn't, we could try linkedProps.sources.map(s => s.node.value).join("")
-      },[props.of,props.isBound]);
+      }, [props.of, props.isBound]);
 
       //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
       let dataIsLoaded = props.isBound || isLoaded || !usingStorage;
@@ -527,46 +518,48 @@ export function linkedPackage(
       //But for the first render, when the useEffect has not run yet,
       //and no this is not a bound component (so it's a top level linkedComponent),
       //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-      if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage)
-      {
+      if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded = Storage.setIsLoaded(linkedProps.sources.getNodes(),instanceDataRequest) === true;
+        dataIsLoaded = Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest) === true;
       }
       //if the data is loaded
-      if (dataIsLoaded)
-      {
+      if (dataIsLoaded) {
         //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
-        if(dataDeclaration && dataDeclaration.request)
-        {
+        if (dataDeclaration && dataDeclaration.request) {
           //then we provide that request as the getLinkedData prop
-          linkedProps.getLinkedData = function(source) {
+          linkedProps.getLinkedData = function (source) {
             //Note that tracedDataResponse is the results of processing dataDeclaration.request
             //this already happened in a previous step, and just like we regard dataDeclaration.request as the childDataRequestFn
             //we can also regard tracedDataResponse (its processed traced response) as childTracedDataResponse
-            return getLinkedDataResponse(dataDeclaration.request,source,tracedDataResponse);
-          }
+            return getLinkedDataResponse(dataDeclaration.request, source, tracedDataResponse);
+          };
         }
         //if the component used a Shape.requestSet() data declaration function
-        else if (dataDeclaration)
-        {
+        else if (dataDeclaration) {
           //then use that now to get the requested linkedData for this instance
-          linkedProps.linkedData = getLinkedDataResponse(dataDeclaration.request || dataDeclaration.setRequest,linkedProps.sources,tracedDataResponse);
+          linkedProps.linkedData = getLinkedDataResponse(
+            dataDeclaration.request || dataDeclaration.setRequest,
+            linkedProps.sources,
+            tracedDataResponse,
+          );
         }
 
         //render the original components with the original + generated properties
         return functionalComponent(linkedProps);
-      }
-      else
-      {
+      } else {
         //render loading
-        return createElement('div',null,'...');
+        return createElement('div', null, '...');
       }
     };
 
-
     //attach the 'of(source)' function. Here named bindSetComponentToData()
-    _wrappedComponent.of = bindSetComponentToData.bind(_wrappedComponent,shapeClass,tracedDataResponse,dataDeclaration);
+    _wrappedComponent.of = bindSetComponentToData.bind(
+      _wrappedComponent,
+      shapeClass,
+      tracedDataResponse,
+      dataDeclaration,
+    );
 
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
@@ -576,10 +569,9 @@ export function linkedPackage(
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
     //IF this component is a function that has a name
-    if (functionalComponent.name)
-    {
+    if (functionalComponent.name) {
       //then copy the name (have to do it this way, name is protected)
-      Object.defineProperty(_wrappedComponent,'name',{
+      Object.defineProperty(_wrappedComponent, 'name', {
         value: functionalComponent.name,
       });
       //and add the component class of this module to the global tree
@@ -588,13 +580,12 @@ export function linkedPackage(
     //NOTE: if it does NOT have a name, the developer will need to manually use registerPackageExport
 
     //register the component and its shape
-    registerComponent(_wrappedComponent,shapeClass);
+    registerComponent(_wrappedComponent, shapeClass);
 
     return _wrappedComponent;
   }
 
-  function linkedComponentClass<ShapeType extends Shape,P = {}>(shapeClass: typeof Shape): ClassDecorator
-  {
+  function linkedComponentClass<ShapeType extends Shape, P = {}>(shapeClass: typeof Shape): ClassDecorator {
     //this is for Components declared with ES Classes
     //in this case the function we're in will be used as a decorator: @linkedComponent(SomeShapeClass)
     //class decorators return a function that receives a constructor and returns a constructor.
@@ -606,7 +597,7 @@ export function linkedPackage(
       constructor['shape'] = shapeClass;
 
       //register the component and its shape
-      registerComponent(constructor as any,shapeClass);
+      registerComponent(constructor as any, shapeClass);
 
       //return the original class without modifications
       // return constructor;
@@ -614,24 +605,22 @@ export function linkedPackage(
       //only here we have shapeClass as a value (not in LinkedComponentClass)
       //so here we can return a new class that extends the original class,
       //but it adds linked properties like sourceShape
-      let wrappedClass = class extends constructor
-      {
-        constructor(props)
-        {
-          let linkedProps = getLinkedComponentProps<ShapeType,P>(props,shapeClass);
+      let wrappedClass = class extends constructor {
+        constructor(props) {
+          let linkedProps = getLinkedComponentProps<ShapeType, P>(props, shapeClass);
           super(linkedProps);
         }
       } as any as T;
       //copy the name
-      Object.defineProperty(wrappedClass,'name',{value: constructor.name});
-      Object.defineProperty(wrappedClass,'original',{value: constructor});
+      Object.defineProperty(wrappedClass, 'name', {value: constructor.name});
+      Object.defineProperty(wrappedClass, 'original', {value: constructor});
       return wrappedClass;
     };
     return decoratorFunction;
   }
 
   //create a declarator function which Shapes of this module can use register themselves and add themselves to the global tree
-  let linkedShape = function(constructor) {
+  let linkedShape = function (constructor) {
     //add the component class of this module to the global tree
     registerPackageExport(constructor);
 
@@ -639,40 +628,41 @@ export function linkedPackage(
     Shape.registerByType(constructor);
 
     //if no shape object has been attached to the constructor
-    if (!Object.getOwnPropertyNames(constructor).includes('shape'))
-    {
+    if (!Object.getOwnPropertyNames(constructor).includes('shape')) {
       let packageNameURI = URI.sanitize(packageName);
 
       //create a new node shape for this shapeClass
-      let shape: NodeShape = NodeShape.getFromURI(`${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(constructor.name)}`);
+      let shape: NodeShape = NodeShape.getFromURI(
+        `${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(constructor.name)}`,
+      );
       //connect the typescript class to its NodeShape
       constructor.shape = shape;
       //set the name
       shape.label = constructor.name;
       //also keep track of the reverse: nodeShape to typescript class (helpful for sending shapes between environments with JSONWriter / JSONParser)
-      addNodeShapeToShapeClass(shape,constructor);
+      addNodeShapeToShapeClass(shape, constructor);
 
       //also create a representation in the graph of the shape class itself
-      let shapeClass = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageNameURI}/shapeclass/${URI.sanitize(constructor.name)}`,true);
-      shapeClass.set(lincdOntology.definesShape,shape.node);
-      shapeClass.set(rdf.type,lincdOntology.ShapeClass);
+      let shapeClass = NamedNode.getOrCreate(
+        `${LINCD_DATA_ROOT}module/${packageNameURI}/shapeclass/${URI.sanitize(constructor.name)}`,
+        true,
+      );
+      shapeClass.set(lincdOntology.definesShape, shape.node);
+      shapeClass.set(rdf.type, lincdOntology.ShapeClass);
 
       //and connect it back to the module
-      shapeClass.set(lincdOntology.module,packageNode);
+      shapeClass.set(lincdOntology.module, packageNode);
 
       //if linkedProperties have already registered themselves
-      if (constructor.propertyShapes)
-      {
+      if (constructor.propertyShapes) {
         //then add them to this node shape now
         constructor.propertyShapes.forEach((propertyShape) => {
-
           let uri = shape.namedNode.uri + `/${URI.sanitize(propertyShape.label)}`;
 
           //with react hot reload, sometimes the same code gets loaded twice
           //and a node with this URI will already exist,
           //in that case we can ignore it, since the nodeShape will already have the propertyShape
-          if (!NamedNode.getNamedNode(uri))
-          {
+          if (!NamedNode.getNamedNode(uri)) {
             //update the URI (by extending the URI of the shape)
             propertyShape.namedNode.uri = shape.namedNode.uri + `/${URI.sanitize(propertyShape.label)}`;
 
@@ -685,22 +675,18 @@ export function linkedPackage(
 
       //if property shapes referred to this node shape as the required shape for their values
       // (note that accessor decorators always evaluate before class decorators, hence we sometimes need to process this here, AFTER the property decorators have run)
-      if (constructor.nodeShapeOf)
-      {
+      if (constructor.nodeShapeOf) {
         constructor.nodeShapeOf.forEach((propertyShape: PropertyShape) => {
           //now that we have a NodeShape for this shape class, we can set the nodeShape of the property shape
           propertyShape.valueShape = shape;
         });
       }
-    }
-    else
-    {
+    } else {
       // (constructor.shape.node as NamedNode).uri = URI;
-      console.warn('This ShapeClass already has a shape: ',constructor.shape);
+      console.warn('This ShapeClass already has a shape: ', constructor.shape);
     }
 
-    if (constructor.targetClass)
-    {
+    if (constructor.targetClass) {
       (constructor.shape as NodeShape).targetClass = constructor.targetClass;
     }
 
@@ -715,7 +701,7 @@ export function linkedPackage(
    * @param nameSpace the base URI of the ontology
    * @param prefixAndFileName the file name MUST match the prefix for this ontology
    */
-  let linkedOntology = function(
+  let linkedOntology = function (
     exports,
     nameSpace: (term: string) => NamedNode,
     prefixAndFileName: string,
@@ -729,23 +715,24 @@ export function linkedPackage(
     exports['_data'] = dataSource;
 
     //register the prefix here (so just calling linkedOntology with a prefix will automatically register that prefix)
-    if (prefixAndFileName)
-    {
+    if (prefixAndFileName) {
       //run the namespace without any term name, this will give back a named node with just the namespace as URI, then get that URI to provide it as full URI
-      Prefix.add(prefixAndFileName,nameSpace('').uri);
+      Prefix.add(prefixAndFileName, nameSpace('').uri);
     }
 
     ontologies.add(exports);
     //register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
-    registerInPackageTree(prefixAndFileName,exports);
+    registerInPackageTree(prefixAndFileName, exports);
     // });
 
-    if(autoLoadOntologyData) {
-      loadData().catch(err => {
-        console.warn("Could not load ontology data. Do you need to rebuild the module of the "+prefixAndFileName+" ontology?", err);
-      })
+    if (autoLoadOntologyData) {
+      loadData().catch((err) => {
+        console.warn(
+          'Could not load ontology data. Do you need to rebuild the module of the ' + prefixAndFileName + ' ontology?',
+          err,
+        );
+      });
     }
-
   };
 
   //return the declarators so the module can use them
@@ -763,35 +750,46 @@ export function linkedPackage(
   } as LinkedPackageObject;
 }
 
-function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requiredData:typeof Shape | LinkedDataDeclaration<ShapeType>,functionalComponent:LinkableFunctionalComponent<DeclaredProps,ShapeType>,setComponent?:boolean);
-function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requiredData:typeof Shape | LinkedDataSetDeclaration<ShapeType>,functionalComponent:LinkableFunctionalSetComponent<DeclaredProps,ShapeType>,setComponent?:boolean);
-function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requiredData:typeof Shape | LinkedDataDeclaration<ShapeType> | LinkedDataSetDeclaration<ShapeType>,functionalComponent:LinkableFunctionalComponent<DeclaredProps,ShapeType>|LinkableFunctionalSetComponent<DeclaredProps,ShapeType>,setComponent:boolean=false) {
+function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
+  requiredData: typeof Shape | LinkedDataDeclaration<ShapeType>,
+  functionalComponent: LinkableFunctionalComponent<DeclaredProps, ShapeType>,
+  setComponent?: boolean,
+);
+function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
+  requiredData: typeof Shape | LinkedDataSetDeclaration<ShapeType>,
+  functionalComponent: LinkableFunctionalSetComponent<DeclaredProps, ShapeType>,
+  setComponent?: boolean,
+);
+function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
+  requiredData: typeof Shape | LinkedDataDeclaration<ShapeType> | LinkedDataSetDeclaration<ShapeType>,
+  functionalComponent:
+    | LinkableFunctionalComponent<DeclaredProps, ShapeType>
+    | LinkableFunctionalSetComponent<DeclaredProps, ShapeType>,
+  setComponent: boolean = false,
+) {
   let shapeClass: typeof Shape;
   let dataRequest: LinkedDataRequest;
   let tracedDataResponse: TransformedLinkedDataResponse;
-  let dataDeclaration: LinkedDataSetDeclaration<ShapeType>|LinkedDataDeclaration<ShapeType>;
+  let dataDeclaration: LinkedDataSetDeclaration<ShapeType> | LinkedDataDeclaration<ShapeType>;
 
   //if a Shape class was given (the actual class that extends Shape)
-  if (requiredData['prototype'] instanceof Shape || requiredData === Shape)
-  {
+  if (requiredData['prototype'] instanceof Shape || requiredData === Shape) {
     //then we will load instances of this shape
     // and require instances of this shape to be used for this component
     shapeClass = requiredData as typeof Shape;
     //but we don't specifically request any data
     dataRequest = [];
     // dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : [];
-  }
-  else
-  {
+  } else {
     //requiredData is a LinkedDataDeclaration or a LinkedDataSetDeclaration
-    dataDeclaration = requiredData as LinkedDataSetDeclaration<ShapeType>|LinkedDataDeclaration<ShapeType>;
+    dataDeclaration = requiredData as LinkedDataSetDeclaration<ShapeType> | LinkedDataDeclaration<ShapeType>;
     shapeClass = dataDeclaration.shape;
 
     //create a test instance of the shape
     let dummyInstance = createTraceShape(
       shapeClass,
       null,
-      functionalComponent.name || functionalComponent.toString().substring(0,80) + ' ...',
+      functionalComponent.name || functionalComponent.toString().substring(0, 80) + ' ...',
     );
 
     //if setComponent is true then linkedSetComponent() was used
@@ -802,90 +800,119 @@ function processDataDeclaration<ShapeType extends Shape,DeclaredProps = {}>(requ
     let dummySet = provideSetToDataRequestFn ? new ShapeSet([dummyInstance]) : dummyInstance;
 
     //create a dataRequest object, we will use this for requesting data from stores
-    [dataRequest,tracedDataResponse] = createDataRequestObject(dataDeclaration.request || (dataDeclaration as any).setRequest,dummySet as any);
+    [dataRequest, tracedDataResponse] = createDataRequestObject(
+      dataDeclaration.request || (dataDeclaration as any).setRequest,
+      dummySet as any,
+    );
   }
-  return [shapeClass,dataRequest,dataDeclaration,tracedDataResponse];
+  return [shapeClass, dataRequest, dataDeclaration, tracedDataResponse];
 }
-function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<ShapeSet<ShapeType>>,source: ShapeSet<ShapeType>,tracedDataResponse: TransformedLinkedDataResponse): LinkedDataResponse;
-function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<ShapeType>,source: ShapeType,tracedDataResponse: TransformedLinkedDataResponse): LinkedDataResponse;
-function getLinkedDataResponse<ShapeType extends Shape>(dataRequestFn: LinkedDataRequestFn<any>,source: ShapeType | ShapeSet<ShapeType>,tracedDataResponse: TransformedLinkedDataResponse): LinkedDataResponse
-{
-
+function getLinkedDataResponse<ShapeType extends Shape>(
+  dataRequestFn: LinkedDataRequestFn<ShapeSet<ShapeType>>,
+  source: ShapeSet<ShapeType>,
+  tracedDataResponse: TransformedLinkedDataResponse,
+): LinkedDataResponse;
+function getLinkedDataResponse<ShapeType extends Shape>(
+  dataRequestFn: LinkedDataRequestFn<ShapeType>,
+  source: ShapeType,
+  tracedDataResponse: TransformedLinkedDataResponse,
+): LinkedDataResponse;
+function getLinkedDataResponse<ShapeType extends Shape>(
+  dataRequestFn: LinkedDataRequestFn<any>,
+  source: ShapeType | ShapeSet<ShapeType>,
+  tracedDataResponse: TransformedLinkedDataResponse,
+): LinkedDataResponse {
   let dataResponse: LinkedDataResponse = dataRequestFn(source);
 
-  let replaceBoundComponent = (value,key?) => {
+  let replaceBoundComponent = (value, key?) => {
     //if a function was returned for this key
-    if (typeof value === 'function')
-    {
-
+    if (typeof value === 'function') {
       //then call the function to get the actual intended value
       let evaluated = (value as Function)();
       //if a bound component was returned
-      if (evaluated && evaluated._create)
-      {
+      if (evaluated && evaluated._create) {
         //here we get the propertyShapes that were required to obtain the source
         // when we evaluated the function when the component was first initialised
         let props = key ? tracedDataResponse[key]._props : (tracedDataResponse as BoundComponentFactory)._props;
-        evaluated = (evaluated as BoundComponentFactory<any,any>)._create(props);
+        evaluated = (evaluated as BoundComponentFactory<any, any>)._create(props);
       }
       return evaluated;
     }
     return value;
   };
-  if (Array.isArray(dataResponse))
-  {
-    (dataResponse as any[]).forEach((value,index) => {
-      dataResponse[index] = replaceBoundComponent(value,index);
+  if (Array.isArray(dataResponse)) {
+    (dataResponse as any[]).forEach((value, index) => {
+      dataResponse[index] = replaceBoundComponent(value, index);
     });
-  }
-  else if (typeof dataResponse === 'function')
-  {
+  } else if (typeof dataResponse === 'function') {
     dataResponse = replaceBoundComponent(dataResponse);
-  }
-  else
-  {
+  } else {
     Object.getOwnPropertyNames(dataResponse).forEach((key) => {
-      dataResponse[key] = replaceBoundComponent(dataResponse[key],key);
+      dataResponse[key] = replaceBoundComponent(dataResponse[key], key);
     });
   }
-
   return dataResponse;
 }
 
+function replaceSubRequestsFromTraceShapes(traceShape: Shape) {
+  //for each propertyShape that was requested
+  (traceShape as TraceShape).requested.forEach((propertyShapeRequest, index) => {
+    //get returned value for this requested property shape
+    let value = (traceShape as TraceShape).responses[index];
+    //if the value is a traceShape
+    if (value instanceof Shape) {
+      //then iteratively replace that shapes sub requests
+      replaceSubRequestsFromTraceShapes(value as TraceShape);
+
+      //and replace the previous value with a new subrequest
+      (traceShape as TraceShape).requested[index] = [
+        propertyShapeRequest as PropertyShape,
+        (value as TraceShape).requested,
+      ];
+    }
+  });
+}
 
 //This method can be used in two ways, the first parameter must match with the type of the second,
 //hence the multiple function declarations (overloads)
 function createDataRequestObject<ShapeType extends Shape>(
   dataRequestFn: LinkedDataRequestFn<ShapeType>,
   instance: ShapeType & TraceShape,
-): [LinkedDataRequest,TransformedLinkedDataResponse];
+): [LinkedDataRequest, TransformedLinkedDataResponse];
 function createDataRequestObject<ShapeType extends Shape>(
   dataRequestFn: LinkedFunctionalComponent<ShapeType> | LinkedDataRequestFn<ShapeSet<ShapeType>>,
   instance: ShapeSet<ShapeType & TraceShape>,
-): [LinkedDataRequest,TransformedLinkedDataResponse];
+): [LinkedDataRequest, TransformedLinkedDataResponse];
 function createDataRequestObject<ShapeType extends Shape>(
-  dataRequestFn: LinkedFunctionalComponent<ShapeType> | LinkedDataRequestFn<ShapeType> | LinkedDataRequestFn<ShapeSet<ShapeType>>,
+  dataRequestFn:
+    | LinkedFunctionalComponent<ShapeType>
+    | LinkedDataRequestFn<ShapeType>
+    | LinkedDataRequestFn<ShapeSet<ShapeType>>,
   instance: any,
-): [LinkedDataRequest,TransformedLinkedDataResponse]
-{
-
-  if ((dataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
-  {
-    return [null,null];
+): [LinkedDataRequest, TransformedLinkedDataResponse] {
+  if ((dataRequestFn as LinkedFunctionalComponent<ShapeType>).of) {
+    return [null, null];
   }
   //run the function that the component provided to see which properties it needs
   let dataResponse = dataRequestFn(instance);
 
   //for sets, we should get a set with a single item, so we can retrieve traced properties from that single item
-  let traceInstance = (instance instanceof ShapeSet ? instance.first() : instance);
+  let traceInstance = instance instanceof ShapeSet ? instance.first() : instance;
+
+  //first finish up the dataRequest object by inserted nested requests from shapes
+  replaceSubRequestsFromTraceShapes(traceInstance);
 
   //start with the requested properties, which is an array of PropertyShapes
   let dataRequest: LinkedDataRequest = traceInstance.requested;
 
-  let replaceBoundFactory = (value,target?,key?) => {
+  let insertSubRequestsFromBoundComponent = (value, target?, key?) => {
+    //if a shape was returned for this key
+    // if (value instanceof Shape) {
+    //   //then add all the things that were requested from this shape as a nested sub request
+    //   insertSubRequestForTraceShape(dataRequest,key,value as TraceShape);
+    // }
     //if a function was returned for this key
-    if (typeof value === 'function')
-    {
+    if (typeof value === 'function') {
       //count the current amount of property shapes requested so far
       let previousNumPropShapes = traceInstance.requested.length;
 
@@ -893,9 +920,7 @@ function createDataRequestObject<ShapeType extends Shape>(
       //this will also trigger new accessors to be called & property shapes to be added to 'traceInstance.requested'
       let evaluated = (value as Function)();
       //if a bound component was returned
-      if (evaluated && (evaluated as BoundComponentFactory)._create)
-      {
-
+      if (evaluated && (evaluated as BoundComponentFactory)._create) {
         //retrieve and remove any propertyShape that were requested
         let appliedPropertyShapes = traceInstance.requested.splice(previousNumPropShapes);
         //store them in the bound component factory object,
@@ -906,25 +931,22 @@ function createDataRequestObject<ShapeType extends Shape>(
         //and which subRequest need to be made for those as defined by the bound child component
         let subRequest: LinkedDataRequest = (evaluated as BoundComponentFactory)._comp.dataRequest;
 
-        if ((evaluated as BoundSetComponentFactory)._childDataRequest)
-        {
-          subRequest = subRequest.concat((evaluated as BoundSetComponentFactory<any,any>)._childDataRequest) as LinkedDataRequest;
+        if ((evaluated as BoundSetComponentFactory)._childDataRequest) {
+          subRequest = subRequest.concat(
+            (evaluated as BoundSetComponentFactory<any, any>)._childDataRequest,
+          ) as LinkedDataRequest;
         }
-        if (appliedPropertyShapes.length > 1)
-        {
+        if (appliedPropertyShapes.length > 1) {
           console.warn('Using multiple property shapes for subRequests are not yet supported');
         }
         let propertyShape = appliedPropertyShapes[0];
 
         //add an entry for the bound property with its subRequest (the data request of the component it was bound to)
         //if a specific property shape was requested for this component (like CompA(Shape.request(shape => CompB.of(shape.subProperty))
-        if (propertyShape)
-        {
+        if (propertyShape) {
           //then add it as a propertyShape + subRequest
-          dataRequest.push([propertyShape,subRequest]);
-        }
-        else
-        {
+          dataRequest.push([propertyShape, subRequest]);
+        } else {
           //but if not, then the component uses the SAME source (like CompA(Shape.request(s => CompB.of(s)))
           //in this case the dataRequest of CompB can be directly added to that of CompA
           //because its requesting properties of the same subject
@@ -938,56 +960,50 @@ function createDataRequestObject<ShapeType extends Shape>(
   };
 
   //whether the component returned an array, a function or an object, replace the values that are bound-component-factories
-  if (Array.isArray(dataResponse))
-  {
-    (dataResponse as any[]).forEach((value,index) => {
-      dataResponse[index] = replaceBoundFactory(value);
+  if (Array.isArray(dataResponse)) {
+    (dataResponse as any[]).forEach((value, index) => {
+      dataResponse[index] = insertSubRequestsFromBoundComponent(value);
     });
-  }
-  else if (typeof dataResponse === 'function')
-  {
-    dataResponse = replaceBoundFactory(dataResponse);
-  }
-  else
-  {
+  } else if (typeof dataResponse === 'function') {
+    dataResponse = insertSubRequestsFromBoundComponent(dataResponse);
+  } else {
     Object.getOwnPropertyNames(dataResponse).forEach((key) => {
-      dataResponse[key] = replaceBoundFactory(dataResponse[key]);
+      dataResponse[key] = insertSubRequestsFromBoundComponent(dataResponse[key]);
     });
   }
-  return [dataRequest,dataResponse as any as TransformedLinkedDataResponse];
+  return [dataRequest, dataResponse as any as TransformedLinkedDataResponse];
 }
 
-interface TraceShape extends Shape
-{
+interface TraceShape extends Shape {
   // constructor(p:TestNode):TraceShape;
-  requested: PropertyShape[];
+  requested: LinkedDataRequest;
   // resultOrigins:CoreMap<any,any>;
   usedAccessors: any[];
+  responses: any[];
 }
 
 // function addTestDataAccessors(detectionClass,shapeClass,dummyShape):
-function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shapeInstance?: Shape,debugName?: string): ShapeType & TraceShape
-{
-  let detectionClass = class extends shapeClass implements TraceShape
-  {
-    requested: PropertyShape[] = [];
+function createTraceShape<ShapeType extends Shape>(
+  shapeClass: typeof Shape,
+  shapeInstance?: Shape,
+  debugName?: string,
+): ShapeType & TraceShape {
+  let detectionClass = class extends shapeClass implements TraceShape {
+    requested: LinkedDataRequest = [];
     // resultOrigins:CoreMap<any,any> = new CoreMap();
     usedAccessors: any[] = [];
+    responses: any[] = [];
 
-    constructor(p: TestNode)
-    {
+    constructor(p: TestNode) {
       super(p as NamedNode);
     }
   };
   let traceShape: TraceShape;
-  if (!shapeInstance)
-  {
+  if (!shapeInstance) {
     //if not provided we create a new detectionClass instance
     let dummyNode = new TestNode();
     traceShape = new detectionClass(dummyNode);
-  }
-  else
-  {
+  } else {
     //if an instance was provided
     // (this happens if a testnode generates a testnode value on demand
     // and the original shape get-accessor returns an instance of a shape of that testnode)
@@ -998,30 +1014,23 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
   //here in the constructor (now that we have a 'this')
   //we will overwrite all the methods of the class we extend and that classes that that extends
   let finger = shapeClass;
-  while (finger)
-  {
+  while (finger) {
     //check this superclass still extends Shape, otherwise break;
-    if (!(finger.prototype instanceof Shape) || finger === Shape)
-    {
+    if (!(finger.prototype instanceof Shape) || finger === Shape) {
       break;
     }
 
     let descriptors = Object.getOwnPropertyDescriptors(finger.prototype);
 
-    for (var key in descriptors)
-    {
+    for (var key in descriptors) {
       let descriptor = descriptors[key];
-      if (descriptor.configurable)
-      {
+      if (descriptor.configurable) {
         //if this is a get method that used a @linkedProperty decorator
         //then it should match with a propertyShape
-        let propertyShape = finger['shape']
-          .getPropertyShapes()
-          .find((propertyShape) => propertyShape.label === key);
+        let propertyShape = finger['shape'].getPropertyShapes().find((propertyShape) => propertyShape.label === key);
         //get the get method (that's the one place that we support @linkedProperty decorators for, for now)
         let g = descriptor.get != null;
-        if (g)
-        {
+        if (g) {
           let newDescriptor: PropertyDescriptor = {};
           newDescriptor.enumerable = descriptor.enumerable;
           newDescriptor.configurable = descriptor.configurable;
@@ -1030,11 +1039,9 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
           // newDescriptor.value= descriptor.value;
           // newDescriptor.writable = descriptor.writable;
 
-          if (propertyShape)
-          {
-
+          if (propertyShape) {
             //create a new get function
-            newDescriptor.get = ((key: string,propertyShape: PropertyShape,descriptor: PropertyDescriptor) => {
+            newDescriptor.get = ((key: string, propertyShape: PropertyShape, descriptor: PropertyDescriptor) => {
               // console.log(debugName + ' requested get ' + key + ' - ' + propertyShape.path.value);
 
               //use dummyShape as 'this'
@@ -1043,18 +1050,18 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
               // console.log('\tresult -> ', returnedValue && returnedValue.print ? returnedValue.print() : returnedValue);
 
               //if a shape was returned, make sure we trace that shape too
-              if (returnedValue instanceof Shape)
-              {
+              if (returnedValue instanceof Shape) {
                 returnedValue = createTraceShape(
                   Object.getPrototypeOf(returnedValue).constructor,
                   returnedValue,
-                  Object.getPrototypeOf(returnedValue).constructor.name
-                )
+                  Object.getPrototypeOf(returnedValue).constructor.name,
+                );
               }
 
               //store which property shapes were requested in the detectionClass defined above
               traceShape.requested.push(propertyShape);
               traceShape.usedAccessors.push(descriptor.get);
+              traceShape.responses.push(returnedValue);
 
               //also store which result was returned for which property shape (we need this in Component.to().. / bindComponentToData())
               // traceShape.resultOrigins.set(returnedValue,descriptor.get);
@@ -1062,20 +1069,25 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
               // returnedValue['_accessor'] = descriptor.get;
 
               return returnedValue;
-            }).bind(detectionClass.prototype,key,propertyShape,descriptor);
-          }
-          else
-          {
+            }).bind(detectionClass.prototype, key, propertyShape, descriptor);
+          } else {
             //if no propertyShape was found, then this is a get method that was not decorated with @linkedProperty
             newDescriptor.get = () => {
               let numRequested = traceShape.requested.length;
               //so we call the method as it was
               let result = descriptor.get.call(traceShape);
               //and if no new property shapes have been accessed
-              if(traceShape.requested.length === numRequested) {
+              if (traceShape.requested.length === numRequested) {
                 //then probably someone forgot to add a @linkedProperty decorator!
                 //or at least it won't add any data to the dataRequest of the linked component, so let's warn the developer of that
-                console.warn(`"${traceShape.nodeShape?.label}.${descriptor.get.name.replace('get ','')}" was requested by a linked component. However '${descriptor.get.name}' is not decorated with a linked property decorator (like @linkedProperty), so LINCD can not automatically load this data`);
+                console.warn(
+                  `"${traceShape.nodeShape?.label}.${descriptor.get.name.replace(
+                    'get ',
+                    '',
+                  )}" was requested by a linked component. However '${
+                    descriptor.get.name
+                  }' is not decorated with a linked property decorator (like @linkedProperty), so LINCD can not automatically load this data`,
+                );
               }
               //(else, the method probably accessed other methods of the shape that DO use linkedProperty decorators, thus adding more traced propertyShapes. This is fine and works as intended)
 
@@ -1086,7 +1098,7 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
           //and bind the required arguments (which we know only now, but we need to know them when the descriptor runs, hence we bind them)
 
           //overwrite the get method
-          Object.defineProperty(detectionClass.prototype,key,newDescriptor);
+          Object.defineProperty(detectionClass.prototype, key, newDescriptor);
         }
       }
     }
@@ -1100,40 +1112,31 @@ function createTraceShape<ShapeType extends Shape>(shapeClass: typeof Shape,shap
 export class TestNode extends NamedNode {
   constructor(public property?: NamedNode) {
     let uri = NamedNode.createNewTempUri();
-    super(uri,true);
+    super(uri, true);
   }
 
-  getValue()
-  {
+  getValue() {
     let label = '';
-    if (this.property)
-    {
-      if (this.property.hasProperty(rdfs.label))
-      {
+    if (this.property) {
+      if (this.property.hasProperty(rdfs.label)) {
         label = this.property.getValue(rdfs.label);
-      }
-      else
-      {
+      } else {
         label = this.property.uri.split(/[\/#]/).pop();
       }
     }
     return label;
   }
 
-  hasProperty(property: NamedNode)
-  {
+  hasProperty(property: NamedNode) {
     return true;
   }
 
-  getAll(property: NamedNode)
-  {
+  getAll(property: NamedNode) {
     return new NodeSet([this.getOne(property)]) as any;
   }
 
-  getOne(property: NamedNode): TestNode
-  {
-    if (!super.hasProperty(property))
-    {
+  getOne(property: NamedNode): TestNode {
+    if (!super.hasProperty(property)) {
       //test nodes AUTOMATICALLY generate a dummy test-node value when a property is requested
       //however they avoid sending events about this
       new Quad(this, property, new TestNode(property), undefined, false, false);
@@ -1144,60 +1147,50 @@ export class TestNode extends NamedNode {
   //@TODO: other methods like getDeep, etc
 }
 
-function registerComponent(exportedComponent: Component,shape?: typeof Shape)
-{
-  if (!shape)
-  {
+function registerComponent(exportedComponent: Component, shape?: typeof Shape) {
+  if (!shape) {
     //warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
-    if (!exportedComponent.hasOwnProperty('shape'))
-    {
+    if (!exportedComponent.hasOwnProperty('shape')) {
       console.warn(`Component ${exportedComponent.displayName || exportedComponent.name} is not linked to a shape.`);
       return;
     }
     shape = exportedComponent.shape;
   }
 
-  if (!shapeToComponents.has(shape))
-  {
-    shapeToComponents.set(shape,new CoreSet<any>());
+  if (!shapeToComponents.has(shape)) {
+    shapeToComponents.set(shape, new CoreSet<any>());
   }
 
   shapeToComponents.get(shape).add(exportedComponent);
 }
 
-function registerPackageInTree(packageName,packageExports?)
-{
+function registerPackageInTree(packageName, packageExports?) {
   //prepare name for global tree reference
   // let packageTreeKey = packageName.replace(/-/g,'_');
   //if something with this name already registered in the global tree
-  if (packageName in lincd._modules)
-  {
+  if (packageName in lincd._modules) {
     //This probably means package.ts is loaded twice, through different paths and could point to a problem
     console.warn('A package with the name ' + packageName + ' has already been registered. Adding to existing object');
-    Object.assign(lincd._modules[packageName],packageExports);
-  }
-  else
-  {
+    Object.assign(lincd._modules[packageName], packageExports);
+  } else {
     //initiate an empty object for this module in the global tree
     lincd._modules[packageName] = packageExports || {};
   }
   return lincd._modules[packageName];
 }
 
-function getSourceFromInputProps(props,shapeClass)
-{
+function getSourceFromInputProps(props, shapeClass) {
   return props.of instanceof Node ? new shapeClass(props.of) : props.of;
 }
 
-function getLinkedComponentProps<ShapeType extends Shape,P>(
+function getLinkedComponentProps<ShapeType extends Shape, P>(
   props: LinkedComponentInputProps<ShapeType> & P,
   shapeClass,
-): LinkedComponentProps<ShapeType> & P
-{
+): LinkedComponentProps<ShapeType> & P {
   let newProps = {
     ...props,
     //if a node was given, convert it to a shape instance
-    source: getSourceFromInputProps(props,shapeClass),
+    source: getSourceFromInputProps(props, shapeClass),
   };
 
   delete newProps['of'];
@@ -1205,45 +1198,49 @@ function getLinkedComponentProps<ShapeType extends Shape,P>(
   return newProps;
 }
 
-function getLinkedSetComponentProps<ShapeType extends Shape,P>(
+function getLinkedSetComponentProps<ShapeType extends Shape, P>(
   props: LinkedSetComponentInputProps<ShapeType> & P,
   shapeClass,
   functionalComponent,
-): LinkedSetComponentProps<ShapeType> & P
-{
-  if(!(props.of instanceof NodeSet) && !(props.of instanceof ShapeSet) && !props.of['then']) {
-    throw Error("Invalid argument 'of' provided to "+functionalComponent.name.replace('_implementation','')+" component: "+props.of+". Make sure to provide a NodeSet, a ShapeSet or a Promise resolving to either of those.");
+): LinkedSetComponentProps<ShapeType> & P {
+  if (!(props.of instanceof NodeSet) && !(props.of instanceof ShapeSet) && !props.of['then']) {
+    throw Error(
+      "Invalid argument 'of' provided to " +
+        functionalComponent.name.replace('_implementation', '') +
+        ' component: ' +
+        props.of +
+        '. Make sure to provide a NodeSet, a ShapeSet or a Promise resolving to either of those.',
+    );
   }
 
   let newProps = {
     ...props,
     //if a NodeSet was given, convert it to a ShapeSet
-    sources: props.of instanceof NodeSet ? new ShapeSet(shapeClass.getSetOf(props.of)) as ShapeSet<ShapeType> : props.of,
+    sources:
+      props.of instanceof NodeSet ? (new ShapeSet(shapeClass.getSetOf(props.of)) as ShapeSet<ShapeType>) : props.of,
   };
 
   delete newProps['of'];
   return newProps;
 }
 
-export function initTree()
-{
+export function initTree() {
   let globalObject = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : undefined;
-  if ('lincd' in globalObject)
-  {
+  if ('lincd' in globalObject) {
     throw new Error('Multiple versions of LINCD are loaded');
-  }
-  else
-  {
+  } else {
     globalObject['lincd'] = {_modules: {}};
   }
 }
 
-function bindComponentToData<P,ShapeType extends Shape>(tracedDataResponse: TransformedLinkedDataResponse,source: Node | Shape): BoundComponentFactory<P,ShapeType>
-{
+function bindComponentToData<P, ShapeType extends Shape>(
+  tracedDataResponse: TransformedLinkedDataResponse,
+  source: Node | Shape,
+): BoundComponentFactory<P, ShapeType> {
   return {
     _comp: this,
     _create: (propertyShapes) => {
-      let boundComponent: LinkedFunctionalComponent<P,ShapeType> = (props) => {
+      let boundComponent: LinkedFunctionalComponent<P, ShapeType> = (props) => {
         //TODO: use propertyShapes for RDFa
 
         //add this result as the source of the bound child component
@@ -1255,39 +1252,42 @@ function bindComponentToData<P,ShapeType extends Shape>(tracedDataResponse: Tran
         newProps['isBound'] = true;
 
         //render the child component (which is 'this')
-        return React.createElement(this,newProps);
+        return React.createElement(this, newProps);
       };
       return boundComponent;
     },
   };
 }
 
-function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Shape,tracedDataResponse: TransformedLinkedDataResponse,dataDeclaration:LinkedDataSetDeclaration<ShapeType>,sources: NodeSet | ShapeSet<ShapeType>,childDataRequestFn?: LinkedDataChildRequestFn<ShapeType>): BoundSetComponentFactory<P,ShapeType>
-{
-
+function bindSetComponentToData<P, ShapeType extends Shape>(
+  shapeClass: typeof Shape,
+  tracedDataResponse: TransformedLinkedDataResponse,
+  dataDeclaration: LinkedDataSetDeclaration<ShapeType>,
+  sources: NodeSet | ShapeSet<ShapeType>,
+  childDataRequestFn?: LinkedDataChildRequestFn<ShapeType>,
+): BoundSetComponentFactory<P, ShapeType> {
   let tracedChildDataResponse: TransformedLinkedDataResponse;
   let childDataRequest: LinkedDataRequest;
   //if a childDataRequestFn was given (as second argument of SetComponent.of())
-  if (childDataRequestFn)
-  {
+  if (childDataRequestFn) {
     //if a single bound component was given
-    if((childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
-    {
+    if ((childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of) {
       //we can access its required properties directly
       childDataRequest = (childDataRequestFn as LinkedFunctionalComponent<ShapeType>).dataRequest;
-    }
-    else
-    {
+    } else {
       //else, a child data request function was given as second argument of .of()
       //then create a test instance of the shape
       let dummyInstance = createTraceShape(
         shapeClass,
         null,
-        this.name || this.toString().substring(0,60).replace(/\n/g,' ') + ' ...',
+        this.name || this.toString().substring(0, 60).replace(/\n/g, ' ') + ' ...',
       );
 
       //and run the function that the component provided to see which properties it needs
-      [childDataRequest,tracedChildDataResponse] = createDataRequestObject(childDataRequestFn as LinkedDataRequestFn<ShapeType>,dummyInstance);
+      [childDataRequest, tracedChildDataResponse] = createDataRequestObject(
+        childDataRequestFn as LinkedDataRequestFn<ShapeType>,
+        dummyInstance,
+      );
     }
   }
 
@@ -1296,11 +1296,11 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
     //we store the childDataRequest (an array of property shapes) so that it can be accessed when stringing together a full data request
     _childDataRequest: childDataRequest,
     _create: (propertyShapes) => {
-      let boundComponent: LinkedFunctionalSetComponent<P,ShapeType> = (props) => {
+      let boundComponent: LinkedFunctionalSetComponent<P, ShapeType> = (props) => {
         //TODO: use propertyShapes for RDFa
 
         //manually transfer the value of the first parameter of Component.of() to an of prop in JSX
-        let newProps:LinkedSetComponentProps<any> = {...props} as any;
+        let newProps: LinkedSetComponentProps<any> = {...props} as any;
         //Note: we use bracket notation here because technically this method is working with InputProps and adding to those input props
         //But we are setting props to be used in the final LinkedSetComponentProps, so we're using that definition to define other properties below
         //But here we need to define 'of' which is an input prop
@@ -1310,26 +1310,21 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
 
         //if SetComponent.of received a child data request as second argument
         // i.e. Grid.of(persons,PersonProfileCard) which means shows a grid of persons as profile cards
-        if (childDataRequestFn)
-        {
+        if (childDataRequestFn) {
           let childRenderFn;
           //if a single component was given, instead of a request
-          if ((childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
-          {
+          if ((childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of) {
             //then use that component as to render the child items
             childRenderFn = childDataRequestFn;
-          }
-          else
-          {
+          } else {
             //else, a child data request function was given as second argument
             //for this, props.children must be single item that is a function that we can use to render the children
-            if (typeof props.children === 'function')
-            {
-              childRenderFn = (props.children as Function);
-            }
-            else if (React.Children.count(props.children) == 0)
-            {
-              throw new Error('Invalid use of Grid. Provide fixed child components or a render function as a single child. Alternatively, return a single bound component in the child data request.');
+            if (typeof props.children === 'function') {
+              childRenderFn = props.children as Function;
+            } else if (React.Children.count(props.children) == 0) {
+              throw new Error(
+                'Invalid use of Grid. Provide fixed child components or a render function as a single child. Alternatively, return a single bound component in the child data request.',
+              );
             }
           }
 
@@ -1341,20 +1336,23 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
             newChildProps['isBound'] = true;
 
             //automatically set a key for each child component if a source is set
-            if (newChildProps.of)
-            {
-              newChildProps['key'] = newChildProps.of instanceof Shape ? newChildProps.of.node.toString() : newChildProps.of.toString();
+            if (newChildProps.of) {
+              newChildProps['key'] =
+                newChildProps.of instanceof Shape ? newChildProps.of.node.toString() : newChildProps.of.toString();
             }
 
             //if a dataRequest was given (not a component)
-            if (!(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of)
-            {
+            if (!(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of) {
               //NOTE: unlike other places where we call getLinkedDataResponse, the child component is a linkedComponent, which will convert the input props ('of') to source. so, we don't want to already do that here.
               // Hence, we manually get the source from props to get the linkedDataResponse
-              let source = getSourceFromInputProps(childProps,shapeClass);
+              let source = getSourceFromInputProps(childProps, shapeClass);
 
               //then we resolve that and use it as linkedData for the child component
-              newChildProps.linkedData = getLinkedDataResponse(childDataRequestFn as LinkedDataRequestFn<ShapeType>,source,tracedChildDataResponse as TransformedLinkedDataResponse);
+              newChildProps.linkedData = getLinkedDataResponse(
+                childDataRequestFn as LinkedDataRequestFn<ShapeType>,
+                source,
+                tracedChildDataResponse as TransformedLinkedDataResponse,
+              );
             }
 
             return childRenderFn(newChildProps);
@@ -1362,14 +1360,13 @@ function bindSetComponentToData<P,ShapeType extends Shape>(shapeClass: typeof Sh
         }
 
         //render the child component (which is 'this')
-        return React.createElement(this,newProps);
+        return React.createElement(this, newProps);
       };
       //set an identifiable name for this bound component
-      Object.defineProperty(boundComponent,'name',{value: 'bound_' + this.name});
+      Object.defineProperty(boundComponent, 'name', {value: 'bound_' + this.name});
       return boundComponent;
     },
   };
-
 }
 
 //when this file is used, make sure the tree is initialized

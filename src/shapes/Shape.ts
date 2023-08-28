@@ -918,7 +918,7 @@ export abstract class Shape extends EventEmitter implements IShape
     }
     else
     {
-      node = NamedNode.getOrCreate(uri,true);
+      node = NamedNode.getOrCreate(uri,isTemporaryNodeIfNew);
       if (this.targetClass)
       {
         node.set(rdf.type,this.targetClass);

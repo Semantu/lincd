@@ -1401,15 +1401,15 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param value - a single node. Can be a NamedNode or Literal
    */
   overwrite(property: NamedNode, value: Node): boolean {
-    if(!value) {
-      throw new Error("Cannot overwrite a property with an empty value. To clear remove all current values use unsetAll() instead");
-    }
     //don't do anything if the current value is already equivalent to the new value
     if (this.getAll(property).size == 1 && value && this.has(property, value)) return false;
 
     //clear all values and set new value
     this.unsetAll(property);
-    return this.set(property, value);
+    if(value)
+    {
+      return this.set(property, value);
+    }
   }
 
   /**
@@ -1871,9 +1871,9 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   static register(node: NamedNode) {
     if (this.namedNodes.has(node.uri)) {
       throw new Error(
-        'A node with this URI already exists:' +
+        'A node with this URI already exists: "' +
           node.uri +
-          ' You should probably use NamedNode.getOrCreate instead of NamedNode.create (' +
+          '". You should probably use NamedNode.getOrCreate instead of NamedNode.create (' +
           node.uri +
           ')',
       );
