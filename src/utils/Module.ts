@@ -338,11 +338,18 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     >(requiredData, functionalComponent);
 
     //create a new functional component which wraps the original
-    let _wrappedComponent: LinkedFunctionalComponent<DeclaredProps, ShapeType> = (
-      props: DeclaredProps & LinkedComponentInputProps<ShapeType> & BoundComponentProps,
-    ) => {
+    //also, first of all use React.forwardRef to support OPTIONAL use of forwardRef by the linked component itself
+    //Combining HOC (Linked Component) with forwardRef was tricky to understand and get to work. Inspiration came from: https://dev.to/justincy/using-react-forwardref-and-an-hoc-on-the-same-component-455m
+    let _wrappedComponent: LinkedFunctionalComponent<DeclaredProps, ShapeType> = React.forwardRef<
+      any,
+      DeclaredProps & LinkedComponentInputProps<ShapeType> & BoundComponentProps
+    >((props, ref) => {
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
       let linkedProps = getLinkedComponentProps<ShapeType, DeclaredProps>(props, shapeClass);
+      //if a ref was given, we need to manually add it back to the props, React will extract it and provide is as second argument to React.forwardRef in the linked component itself
+      if (ref) {
+        linkedProps['ref'] = ref;
+      }
 
       if (!linkedProps.source) {
         console.warn('No source provided to this component: ' + functionalComponent.name);
@@ -406,18 +413,13 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
           );
         }
 
-        //render the original components with the original + generated properties
-        //if this is a component using React.forwardRef, we need to account for that differently:
-        if (functionalComponent['render']) {
-          return functionalComponent['render'](linkedProps);
-        }
-        //else just render the original functional component with the original + generated properties
-        return functionalComponent(linkedProps);
+        // //render the original components with the original + generated properties
+        return React.createElement(functionalComponent, linkedProps);
       } else {
         //render loading
         return createElement('div', null, '...');
       }
-    };
+    });
 
     //connect the Component.of() function, which is called bindComponentToData here
     //<DeclaredProps & LinkedComponentInputProps<ShapeType>, ShapeType>

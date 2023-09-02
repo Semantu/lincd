@@ -1,0 +1,49 @@
+:root {
+  --ld-ref-font-color: #101010;
+  --ld-ref-font-family: Arial, Helvetica, sans-serif;
+  --ld-ref-font-size-s: 0.75rem;
+  --ld-ref-font-size-m: 0.875rem;
+  --ld-ref-font-size-l: 1rem;
+
+  //TODO: fill all these in
+  --ld-ref-font-weight-thin: 100;
+  --ld-ref-font-weight-extra-light: 200;
+  --ld-ref-font-weight-light: 300;
+  --ld-ref-font-weight-normal: 400;
+  --ld-ref-font-weight-medium: 500;
+  --ld-ref-font-weight-semi-bold: 600;
+  --ld-ref-font-weight-bold: 700;
+  --ld-ref-font-weight-extra-bold: 800;
+  --ld-ref-font-weight-blac: 900;
+
+  --ld-ref-line-height: 1.5;
+
+  --ld-ref-letter-spacing-none: 0;
+  --ld-ref-letter-spacing-s: 0.5px;
+  --ld-ref-letter-spacing-m: 1px;
+  --ld-ref-letter-spacing-l: 2px;
+
+  //space (aka units, dimension, spacing)
+  --ld-ref-spacing-xs: 2px;
+  --ld-ref-spacing-s: 4px;
+  --ld-ref-spacing-m: 8px;
+  --ld-ref-spacing-l: 16px;
+  --ld-ref-spacing-xl: 32px;
+
+  //size (aka sizing)
+  //--ld-ref-border: 1px solid var(--ld-ref-color-primary);
+  --ld-ref-border-radius-xs: 2px;
+  --ld-ref-border-radius-s: 4px;
+  --ld-ref-border-radius-m: 8px;
+  --ld-ref-border-radius-l: 16px;
+  --ld-ref-border-radius-xl: 32px;
+
+  //@TODO: elevation (aka z-index, layer, layering)
+
+  //@TODO: breakpoints (aka media-query, responsive)
+
+  //TODO: add more shadow options
+  //shadow (aka depth)
+  --ld-ref-shadow-m: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --ld-ref-shadow-l: 0 1px 5px rgba(0, 0, 0, 0.3);
+}
