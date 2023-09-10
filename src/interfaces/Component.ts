@@ -214,3 +214,11 @@ export declare type SubRequest = LinkedDataRequest;
  */
 export declare type LinkedDataRequest = SingleDataRequest[];
 export declare type SingleDataRequest = PropertyShape | [PropertyShape, SubRequest];
+
+export type LinkedDataRequestObject = {
+  // "@context": context,        // optional
+  select: [string,string,string][];
+  where: [string,string,string][];
+  // "groupBy": group-by-clause, // optional
+  // "having": having-clause     // optional
+}
