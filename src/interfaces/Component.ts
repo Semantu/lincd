@@ -143,7 +143,7 @@ export interface LinkedSetComponentInputProps<ShapeType extends Shape = Shape> e
    * The primary set of data sources that this component will represent.
    * Can be a set of Nodes in the graph or a set of instances of the Shape that this component uses
    */
-  of: NodeSet | ShapeSet<ShapeType>;
+  of?: NodeSet | ShapeSet<ShapeType>;
   as?: React.FC | LinkedFunctionalComponent<any, ShapeType>;
 }
 export interface LinkedComponentInputProps<ShapeType extends Shape = Shape> extends LinkedComponentInputBaseProps {

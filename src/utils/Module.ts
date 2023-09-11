@@ -19,7 +19,7 @@ import {
   LinkedDataChildRequestFn,
   LinkedDataDeclaration,
   LinkedDataRequest,
-  LinkedDataRequestFn,
+  LinkedDataRequestFn, LinkedDataRequestObject,
   LinkedDataResponse,
   LinkedDataSetDeclaration,
   LinkedFunctionalComponent,
@@ -268,6 +268,24 @@ export interface LinkedPackageObject {
   packageName: string;
 }
 
+function dataRequestToQueryObject(subject:Shape,dataRequest:LinkedDataRequest) {
+  let queryObject:LinkedDataRequestObject = {
+    //primarySubject:node,
+    select:[],
+    where:[],
+  };
+  // dataRequest.forEach(([propertyShape,subRequest]) => {
+  //     let path = propertyShape.path;
+  //     let key = path.value;
+  //     let value = node.getValue(path);
+  //     if (subRequest) {
+  //     value = dataRequestToQueryObject(value,subRequest);
+  //     }
+  //     queryObject[key] = value;
+  // });
+  return queryObject;
+}
+
 export function autoLoadOntologyData(value: boolean) {
   _autoLoadOntologyData = value;
   //this may be set to true after some ontologies have already indexed,
@@ -370,6 +388,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
           } else if (cachedRequest === false) {
             //if we did not request all these properties before then we continue to
             // load the required PropertyShapes from storage for this specific source
+            let queryObject = dataRequestToQueryObject(linkedProps.source,dataRequest);
+            // Storage.query(queryObject);
             Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
@@ -1205,17 +1225,17 @@ function getLinkedSetComponentProps<ShapeType extends Shape, P>(
   shapeClass,
   functionalComponent,
 ): LinkedSetComponentProps<ShapeType> & P {
-  if (!(props.of instanceof NodeSet) && !(props.of instanceof ShapeSet) && !props.of['then']) {
+  if (props.of && !(props.of instanceof NodeSet) && !(props.of instanceof ShapeSet) && !props.of['then']) {
     throw Error(
       "Invalid argument 'of' provided to " +
         functionalComponent.name.replace('_implementation', '') +
         ' component: ' +
         props.of +
-        '. Make sure to provide a NodeSet, a ShapeSet or a Promise resolving to either of those.',
+        '. Make sure to provide a NodeSet, a ShapeSet or a Promise resolving to either of those. Or no argument at all to load all instances.',
     );
   }
 
-  let newProps = {
+  const newProps = {
     ...props,
     //if a NodeSet was given, convert it to a ShapeSet
     sources:
@@ -1370,6 +1390,7 @@ function bindSetComponentToData<P, ShapeType extends Shape>(
     },
   };
 }
+
 
 //when this file is used, make sure the tree is initialized
 initTree();
