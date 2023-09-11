@@ -12,16 +12,11 @@
     "esModuleInterop": true,
     "pretty": true,
     "jsx": "react",
-    "types": ["node", "react", "eventemitter3","jest"],
+    "types": ["node", "react", "eventemitter3"],
     "baseUrl": "./",
     "paths": {
       "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
     }
   },
-  "include": [
-    "./src/index.ts",
-    "./src/custom-types/next-tick.d.ts",
-    "./src/tests/*",
-    "../node_modules/ts-jest/globals.d.ts"
-  ]
+  "include": ["./src/index.ts", "./src/custom-types/next-tick.d.ts", "./src/tests/*", "../node_modules/ts-jest/globals.d.ts"]
 }
