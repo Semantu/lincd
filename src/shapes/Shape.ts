@@ -20,7 +20,7 @@ import {QuadSet} from '../collections/QuadSet';
 import {NodeShape} from './SHACL';
 import {LinkedDataDeclaration, LinkedDataResponse, LinkedDataSetDeclaration} from '../interfaces/Component';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet';
-import {getMostSpecificShapes, getSubShapesClasses} from '../utils/ShapeClass';
+import {getMostSpecificShapes, getShapeOrSubShape, getSubShapesClasses} from '../utils/ShapeClass';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -787,27 +787,25 @@ export abstract class Shape extends EventEmitter implements IShape {
   }
 
   static getLocalInstanceNodes(explicitInstancesOnly: boolean = false): NodeSet {
-    //start by getting a list of all nodes that have the correct type
-    let potentialInstances = new NodeSet();
-    let targetClasses = [this.targetClass].concat(
-      getSubShapesClasses(this).map((shapeClass) => shapeClass.targetClass),
+    let instanceNodes = new NodeSet();
+    //by default, look for instances of this shape class and all classes that extend it
+    let targetClasses = [this].concat(
+      getSubShapesClasses(this)
     );
-    targetClasses.forEach((targetClass) => {
-      potentialInstances = potentialInstances.concat(targetClass.getAllInverse(rdf.type));
+    targetClasses.forEach((shapeClass) => {
+      let potentialInstances = new NodeSet();
       if (explicitInstancesOnly) {
-        potentialInstances = potentialInstances.concat(
-          targetClass
+        potentialInstances = shapeClass.targetClass
             .getInverseQuads(rdf.type)
             .filter((quad) => !quad.implicit)
-            .getSubjects(),
-        );
+            .getSubjects();
       } else {
-        potentialInstances = potentialInstances.concat(targetClass.getAllInverse(rdf.type));
+        potentialInstances = shapeClass.targetClass.getAllInverse(rdf.type);
       }
+      //return only those instance nodes that are actual valid instances of this shape
+      instanceNodes = instanceNodes.concat(potentialInstances.filter((node) => shapeClass.isValidNode(node)));
     });
-
-    //return only those instance nodes that are actual valid instances of this shape
-    return potentialInstances.filter((node) => this.isValidNode(node));
+    return instanceNodes;
   }
 
   /**
@@ -863,20 +861,23 @@ export abstract class Shape extends EventEmitter implements IShape {
     return this.getFromURI(uri);
   }
 
-  static getSetOf<T extends Shape>(this: ShapeLike<T>, nodes: NodeValuesSet): ShapeValuesSet<T>;
-  static getSetOf<T extends Shape>(this: ShapeLike<T>, nodes: ICoreIterable<Node>): ShapeSet<T>;
+  static getSetOf<T extends Shape>(this: ShapeLike<T>, nodes: NodeValuesSet,allowSubShapes?:boolean): ShapeValuesSet<T>;
+  static getSetOf<T extends Shape>(this: ShapeLike<T>, nodes: ICoreIterable<Node>,allowSubShapes?:boolean): ShapeSet<T>;
   static getSetOf<T extends Shape>(
     this: ShapeLike<T>,
     nodes: NodeValuesSet | ICoreIterable<Node>,
+    allowSubShapes:boolean=false
   ): ShapeSet<T> | ShapeValuesSet<T> {
     if (!nodes) {
       throw new Error('No nodes provided to create shape instances of');
     }
 
     if (nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode) {
-      return new ShapeValuesSet(nodes.subject, nodes.property, this as any);
+      return new ShapeValuesSet(nodes.subject, nodes.property, this as any,allowSubShapes);
     }
-    return new ShapeSet<T>(nodes.map((node) => new this(node)));
+    return new ShapeSet<T>(nodes.map((node) => {
+      return allowSubShapes ? getShapeOrSubShape(node,this as any) : new this(node)
+    }));
   }
 }
 
