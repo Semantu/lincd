@@ -47,7 +47,7 @@ export function getSuperShapesClasses(shape:typeof Shape|typeof Shape[]):typeof 
 }
 
 //https://stackoverflow.com/a/30760236
-function isClass(v) {
+export function isClass(v) {
   return typeof v === 'function' && /^\s*class\s+/.test(v.toString());
 }
 

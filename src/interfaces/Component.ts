@@ -215,10 +215,15 @@ export declare type SubRequest = LinkedDataRequest;
 export declare type LinkedDataRequest = SingleDataRequest[];
 export declare type SingleDataRequest = PropertyShape | [PropertyShape, SubRequest];
 
+//{"?s":["rdf:type", "foaf:name"]}
+export type QuerySelectObject = {
+  [key: string]: QuerySelectUnit[];
+};
+export type QuerySelectUnit = string | QuerySelectObject;
 export type LinkedDataRequestObject = {
   // "@context": context,        // optional
-  select: [string,string,string][];
-  where: [string,string,string][];
+  select: QuerySelectUnit[];
+  where: [string, string, string][];
   // "groupBy": group-by-clause, // optional
   // "having": having-clause     // optional
-}
+};

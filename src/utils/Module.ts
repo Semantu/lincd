@@ -19,13 +19,17 @@ import {
   LinkedDataChildRequestFn,
   LinkedDataDeclaration,
   LinkedDataRequest,
-  LinkedDataRequestFn, LinkedDataRequestObject,
+  LinkedDataRequestFn,
+  LinkedDataRequestObject,
   LinkedDataResponse,
   LinkedDataSetDeclaration,
   LinkedFunctionalComponent,
   LinkedFunctionalSetComponent,
   LinkedSetComponentInputProps,
   LinkedSetComponentProps,
+  QuerySelectObject,
+  QuerySelectUnit,
+  SubRequest,
   TransformedLinkedDataResponse,
 } from '../interfaces/Component';
 import {CoreSet} from '../collections/CoreSet';
@@ -39,7 +43,7 @@ import {Storage} from './Storage';
 import {ShapeSet} from '../collections/ShapeSet';
 import {URI} from './URI';
 import {shacl} from '../ontologies/shacl';
-import {addNodeShapeToShapeClass} from './ShapeClass';
+import {addNodeShapeToShapeClass, isClass} from './ShapeClass';
 
 //global tree
 declare var lincd: any;
@@ -267,22 +271,44 @@ export interface LinkedPackageObject {
 
   packageName: string;
 }
+const prefix = (n) => Prefix.toPrefixed(n.uri);
 
-function dataRequestToQueryObject(subject:Shape,dataRequest:LinkedDataRequest) {
-  let queryObject:LinkedDataRequestObject = {
-    //primarySubject:node,
-    select:[],
-    where:[],
-  };
-  // dataRequest.forEach(([propertyShape,subRequest]) => {
-  //     let path = propertyShape.path;
-  //     let key = path.value;
-  //     let value = node.getValue(path);
-  //     if (subRequest) {
-  //     value = dataRequestToQueryObject(value,subRequest);
-  //     }
-  //     queryObject[key] = value;
-  // });
+function toQuerySelectObject(subjectVariable: string, dataRequest: LinkedDataRequest): QuerySelectObject {
+  const subjectPaths: QuerySelectUnit[] = [];
+  dataRequest.forEach((singleDataRequest) => {
+    let propertyShape, subRequest;
+    if (singleDataRequest instanceof PropertyShape) {
+      propertyShape = singleDataRequest;
+    } else {
+      [propertyShape, subRequest] = singleDataRequest;
+    }
+    //TODO: if we add support for path being multiple nodes, then we need to account for that
+    const prefixedPredicate = prefix(propertyShape.path);
+    //for sub-requests, we iteratively build a new object like {"some:prop":["nested:props","..."]}
+    if (subRequest && subRequest.length > 0) {
+      subjectPaths.push(toQuerySelectObject(prefixedPredicate, subRequest));
+    } else {
+      subjectPaths.push(prefixedPredicate);
+    }
+  });
+  return {[subjectVariable]: subjectPaths};
+}
+
+function dataRequestToQueryObject(shapeType: typeof Shape, dataRequest: LinkedDataRequest, subject?: Shape | ShapeSet) {
+  let queryObject: LinkedDataRequestObject;
+  if (!subject) {
+    //if not subject is given, select all instances of the given shape
+    queryObject = {
+      select: [],
+      where: [['?s', prefix(rdf.type), prefix(shapeType.targetClass)]],
+    };
+  }
+
+  //convert the data request to a query select object
+  const querySelectObject = toQuerySelectObject('?s', dataRequest);
+  //add it to the things we're selecting
+  queryObject.select.push(querySelectObject);
+
   return queryObject;
 }
 
@@ -388,7 +414,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
           } else if (cachedRequest === false) {
             //if we did not request all these properties before then we continue to
             // load the required PropertyShapes from storage for this specific source
-            let queryObject = dataRequestToQueryObject(linkedProps.source,dataRequest);
+            let queryObject = dataRequestToQueryObject(shapeClass, dataRequest, linkedProps.source);
             // Storage.query(queryObject);
             Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
@@ -506,15 +532,19 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
         if (!props.isBound && usingStorage) {
-          let cachedRequest = Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest);
+          let cachedRequest =
+            linkedProps.sources && Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest);
           //if these properties were requested before and have finished loading
           if (cachedRequest === true) {
             //we can set state to reflect that
             setIsLoaded(true);
-          } else if (cachedRequest === false) {
+          } else if (!cachedRequest) {
             //if we did not request all these properties before then we continue to load them all
             //load the required PropertyShapes from storage for this specific source
             //we bypass cache because already checked cache ourselves above
+
+            let queryObject = dataRequestToQueryObject(shapeClass, dataRequest);
+            console.log(queryObject);
             Storage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
@@ -543,7 +573,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded = Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest) === true;
+        dataIsLoaded =
+          linkedProps.sources && Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest) === true;
       }
       //if the data is loaded
       if (dataIsLoaded) {
@@ -1390,7 +1421,6 @@ function bindSetComponentToData<P, ShapeType extends Shape>(
     },
   };
 }
-
 
 //when this file is used, make sure the tree is initialized
 initTree();
