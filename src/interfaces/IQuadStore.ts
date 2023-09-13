@@ -6,7 +6,7 @@ import {Shape} from '../shapes/Shape';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreMap} from '../collections/CoreMap';
 import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest} from './Component';
+import {LinkedDataRequest, LinkedDataRequestObject} from './Component';
 
 export interface IQuadStore {
   /**
@@ -31,11 +31,13 @@ export interface IQuadStore {
    * of the nodes in the environment that requested the URI change. Hence, a map is provided. The node (the key) can be used to access properties, whilst the currentUri (the value of the map) should be returned in the resulting [currentUri,newUri] array
    * @param nodeToCurrentUriMap
    */
-  setURIs(nodeToCurrentUriMap: CoreMap<NamedNode,string>): Promise<[string,string][]>;
+  setURIs(nodeToCurrentUriMap: CoreMap<NamedNode, string>): Promise<[string, string][]>;
 
   getDefaultGraph?(): Graph;
 
   removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
+
+  query(queryObject: LinkedDataRequestObject, shapeClass: Shape | typeof Shape): Promise<QuadArray>;
 
   loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
 
@@ -46,5 +48,5 @@ export interface IQuadStore {
    * @param subjectToPredicates a map of subjects as keys and sets of properties (predicates) to clear as the values
    * @return A promise that resolves to true if properties were cleared, or false if no properties were cleared
    */
-  clearProperties(subjectToPredicates:CoreMap<NamedNode,NodeSet<NamedNode>>): Promise<boolean>;
+  clearProperties(subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>): Promise<boolean>;
 }

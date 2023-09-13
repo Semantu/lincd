@@ -271,6 +271,11 @@ export interface LinkedPackageObject {
 
   packageName: string;
 }
+
+/**
+ *  Convert some node to a prefixed format:
+ * - http://some-example.org/prop > ex:prop
+ *  */
 const prefix = (n) => Prefix.toPrefixed(n.uri);
 
 function toQuerySelectObject(subjectVariable: string, dataRequest: LinkedDataRequest): QuerySelectObject {
@@ -302,7 +307,22 @@ function dataRequestToQueryObject(shapeType: typeof Shape, dataRequest: LinkedDa
       select: [],
       where: [['?s', prefix(rdf.type), prefix(shapeType.targetClass)]],
     };
+  } else if (subject instanceof Shape) {
+    queryObject = {
+      select: [],
+      where: [['?s', '@id', subject.uri]],
+    };
   }
+  // TODO: when subject is a 'ShapeSet'
+  // else {
+  //   queryObject = {
+  //     select: [],
+  //     where: []
+  //   }
+  //   subject.forEach((shape) => {
+  //     queryObject.where.push(["", "", ""])
+  //   })
+  // }
 
   //convert the data request to a query select object
   const querySelectObject = toQuerySelectObject('?s', dataRequest);
@@ -415,11 +435,11 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             //if we did not request all these properties before then we continue to
             // load the required PropertyShapes from storage for this specific source
             let queryObject = dataRequestToQueryObject(shapeClass, dataRequest, linkedProps.source);
-            // Storage.query(queryObject);
-            Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
-              //set the 'isLoaded' state to true, so we don't need to even check cache again.
-              setIsLoaded(true);
-            });
+            Storage.query(queryObject, shapeClass).then((quads) => setIsLoaded(true));
+            // Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
+            //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
+            //   setIsLoaded(true);
+            // });
           } else {
             //if some requiredProperties are still being loaded
             //cachedResult will be a promise (there is no other return type)
@@ -545,10 +565,11 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
             let queryObject = dataRequestToQueryObject(shapeClass, dataRequest);
             console.log(queryObject);
-            Storage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
-              //set the 'isLoaded' state to true, so we don't need to even check cache again.
-              setIsLoaded(true);
-            });
+            Storage.query(queryObject, shapeClass);
+            // Storage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
+            //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
+            //   setIsLoaded(true);
+            // });
           } else {
             //if some requiredProperties are still being loaded
             //cachedResult will be a promise (there is no other return type)

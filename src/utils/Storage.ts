@@ -11,7 +11,7 @@ import nextTick from 'next-tick';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreSet} from '../collections/CoreSet';
 import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest, TransformedLinkedDataResponse} from '../interfaces/Component';
+import {LinkedDataRequest, LinkedDataRequestObject, TransformedLinkedDataResponse} from '../interfaces/Component';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass';
 
 export abstract class Storage {
@@ -590,6 +590,19 @@ export abstract class Storage {
       let combinedResults: [string, string][] = [].concat(...results);
       return combinedResults;
     });
+  }
+
+  static query(queryObject: LinkedDataRequestObject, shapeClass: Shape | typeof Shape): Promise<QuadArray> {
+    let quadStore: IQuadStore;
+    if (shapeClass instanceof Shape) {
+      console.info('Getting storage by URI (Shape):', shapeClass.namedNode.uri);
+      quadStore = Storage.getStoreForNode(shapeClass.namedNode);
+    } else {
+      console.info('Getting storage by URI (typeof Shape):', shapeClass.targetClass.uri);
+      quadStore = Storage.getStoreForNode(shapeClass.targetClass);
+    }
+
+    return quadStore.query(queryObject, shapeClass);
   }
 
   static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void | any> {
