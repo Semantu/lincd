@@ -279,7 +279,7 @@ export interface LinkedPackageObject {
 const prefix = (n) => Prefix.toPrefixed(n.uri);
 
 function toQuerySelectObject(subjectVariable: string, dataRequest: LinkedDataRequest): QuerySelectObject {
-  const subjectPaths: QuerySelectUnit[] = [];
+  const subjectPaths: QuerySelectUnit[] = ['@id'];
   dataRequest.forEach((singleDataRequest) => {
     let propertyShape, subRequest;
     if (singleDataRequest instanceof PropertyShape) {
