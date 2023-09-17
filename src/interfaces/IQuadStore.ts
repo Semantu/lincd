@@ -6,7 +6,7 @@ import {Shape} from '../shapes/Shape';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreMap} from '../collections/CoreMap';
 import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest, LinkedDataRequestObject} from './Component';
+import {LinkedDataRequest, LinkedDataGenericQuery} from './Component';
 
 export interface IQuadStore {
   /**
@@ -37,7 +37,7 @@ export interface IQuadStore {
 
   removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
 
-  query(queryObject: LinkedDataRequestObject, shapeClass: Shape | typeof Shape): Promise<QuadArray>;
+  query(queryObject: LinkedDataGenericQuery, shapeClass: Shape | typeof Shape): Promise<QuadArray>;
 
   loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
 

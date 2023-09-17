@@ -4,9 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NamedNode, Node, Quad} from '../models';
-import {Shape} from '../shapes/Shape';
 import {NodeShape, PropertyShape} from '../shapes/SHACL';
+import {Shape} from '../shapes/Shape';
 import {Prefix} from './Prefix';
+// import {dataRequestToQueryObject} from 'lincd-sparql/lib/utils';
+import React, {createElement, useEffect, useState} from 'react';
+import {CoreSet} from '../collections/CoreSet';
+import {NodeSet} from '../collections/NodeSet';
+import {ShapeSet} from '../collections/ShapeSet';
 import {
   BoundComponentFactory,
   BoundComponentProps,
@@ -18,32 +23,24 @@ import {
   LinkedComponentProps,
   LinkedDataChildRequestFn,
   LinkedDataDeclaration,
+  LinkedDataGenericQuery,
   LinkedDataRequest,
   LinkedDataRequestFn,
-  LinkedDataRequestObject,
   LinkedDataResponse,
   LinkedDataSetDeclaration,
   LinkedFunctionalComponent,
   LinkedFunctionalSetComponent,
   LinkedSetComponentInputProps,
   LinkedSetComponentProps,
-  QuerySelectObject,
-  QuerySelectUnit,
-  SubRequest,
   TransformedLinkedDataResponse,
 } from '../interfaces/Component';
-import {CoreSet} from '../collections/CoreSet';
-import {rdf} from '../ontologies/rdf';
 import {lincd as lincdOntology} from '../ontologies/lincd';
 import {npm} from '../ontologies/npm';
-import React, {createElement, useEffect, useState} from 'react';
+import {rdf} from '../ontologies/rdf';
 import {rdfs} from '../ontologies/rdfs';
-import {NodeSet} from '../collections/NodeSet';
+import {addNodeShapeToShapeClass} from './ShapeClass';
 import {Storage} from './Storage';
-import {ShapeSet} from '../collections/ShapeSet';
 import {URI} from './URI';
-import {shacl} from '../ontologies/shacl';
-import {addNodeShapeToShapeClass, isClass} from './ShapeClass';
 
 //global tree
 declare var lincd: any;
@@ -278,60 +275,6 @@ export interface LinkedPackageObject {
  *  */
 const prefix = (n) => Prefix.toPrefixed(n.uri);
 
-function toQuerySelectObject(subjectVariable: string, dataRequest: LinkedDataRequest): QuerySelectObject {
-  const subjectPaths: QuerySelectUnit[] = ['@id'];
-  dataRequest.forEach((singleDataRequest) => {
-    let propertyShape, subRequest;
-    if (singleDataRequest instanceof PropertyShape) {
-      propertyShape = singleDataRequest;
-    } else {
-      [propertyShape, subRequest] = singleDataRequest;
-    }
-    //TODO: if we add support for path being multiple nodes, then we need to account for that
-    const prefixedPredicate = prefix(propertyShape.path);
-    //for sub-requests, we iteratively build a new object like {"some:prop":["nested:props","..."]}
-    if (subRequest && subRequest.length > 0) {
-      subjectPaths.push(toQuerySelectObject(prefixedPredicate, subRequest));
-    } else {
-      subjectPaths.push(prefixedPredicate);
-    }
-  });
-  return {[subjectVariable]: subjectPaths};
-}
-
-function dataRequestToQueryObject(shapeType: typeof Shape, dataRequest: LinkedDataRequest, subject?: Shape | ShapeSet) {
-  let queryObject: LinkedDataRequestObject;
-  if (!subject) {
-    //if not subject is given, select all instances of the given shape
-    queryObject = {
-      select: [],
-      where: [['?s', prefix(rdf.type), prefix(shapeType.targetClass)]],
-    };
-  } else if (subject instanceof Shape) {
-    queryObject = {
-      select: [],
-      where: [['?s', '@id', subject.uri]],
-    };
-  }
-  // TODO: when subject is a 'ShapeSet'
-  // else {
-  //   queryObject = {
-  //     select: [],
-  //     where: []
-  //   }
-  //   subject.forEach((shape) => {
-  //     queryObject.where.push(["", "", ""])
-  //   })
-  // }
-
-  //convert the data request to a query select object
-  const querySelectObject = toQuerySelectObject('?s', dataRequest);
-  //add it to the things we're selecting
-  queryObject.select.push(querySelectObject);
-
-  return queryObject;
-}
-
 export function autoLoadOntologyData(value: boolean) {
   _autoLoadOntologyData = value;
   //this may be set to true after some ontologies have already indexed,
@@ -344,6 +287,30 @@ export function autoLoadOntologyData(value: boolean) {
       }
     });
   }
+}
+
+function dataRequestToGenericQuery(
+  shapeType: typeof Shape,
+  dataRequest: LinkedDataRequest,
+  subject?: Shape | ShapeSet,
+) {
+  let genericQuery: LinkedDataGenericQuery;
+
+  let where: [string, string, string][];
+  if (!subject) {
+    where = [['?s', prefix(rdf.type), prefix(shapeType.targetClass)]];
+  } else if (subject instanceof Shape) {
+    where = [['?s', '@id', subject.uri]];
+  } else {
+    // ShapeSet
+  }
+
+  genericQuery = {
+    select: dataRequest,
+    where,
+  };
+
+  return genericQuery;
 }
 
 export function linkedPackage(packageName: string): LinkedPackageObject {
@@ -434,7 +401,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
           } else if (cachedRequest === false) {
             //if we did not request all these properties before then we continue to
             // load the required PropertyShapes from storage for this specific source
-            let queryObject = dataRequestToQueryObject(shapeClass, dataRequest, linkedProps.source);
+            let queryObject = dataRequestToGenericQuery(shapeClass, dataRequest, linkedProps.source);
             Storage.query(queryObject, shapeClass).then((quads) => setIsLoaded(true));
             // Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
             //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
@@ -563,9 +530,9 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             //load the required PropertyShapes from storage for this specific source
             //we bypass cache because already checked cache ourselves above
 
-            let queryObject = dataRequestToQueryObject(shapeClass, dataRequest);
+            let queryObject = dataRequestToGenericQuery(shapeClass, dataRequest);
             console.log(queryObject);
-            Storage.query(queryObject, shapeClass);
+            Storage.query(queryObject, shapeClass).then((quads) => setIsLoaded(true));
             // Storage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
             //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
             //   setIsLoaded(true);

@@ -11,7 +11,7 @@ import nextTick from 'next-tick';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreSet} from '../collections/CoreSet';
 import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest, LinkedDataRequestObject, TransformedLinkedDataResponse} from '../interfaces/Component';
+import {LinkedDataRequest, LinkedDataGenericQuery, TransformedLinkedDataResponse} from '../interfaces/Component';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass';
 
 export abstract class Storage {
@@ -592,7 +592,7 @@ export abstract class Storage {
     });
   }
 
-  static query(queryObject: LinkedDataRequestObject, shapeClass: Shape | typeof Shape): Promise<QuadArray> {
+  static query(queryObject: LinkedDataGenericQuery, shapeClass: Shape | typeof Shape): Promise<QuadArray> {
     let quadStore: IQuadStore;
     if (shapeClass instanceof Shape) {
       console.info('Getting storage by URI (Shape):', shapeClass.namedNode.uri);

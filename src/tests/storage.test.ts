@@ -11,7 +11,7 @@ import {QuadArray} from '../collections/QuadArray';
 import {NodeSet} from '../collections/NodeSet';
 import {CoreMap} from '../collections/CoreMap';
 import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest, LinkedDataRequestObject} from '../interfaces/Component';
+import {LinkedDataRequest, LinkedDataGenericQuery} from '../interfaces/Component';
 
 class TestStore implements IQuadStore {
   defaultGraph = Graph.create();
@@ -59,7 +59,7 @@ class TestStore implements IQuadStore {
     return null;
   }
 
-  query(queryObject: LinkedDataRequestObject, shapeClass: Shape | typeof Shape): Promise<QuadArray> {
+  query(queryObject: LinkedDataGenericQuery, shapeClass: Shape | typeof Shape): Promise<QuadArray> {
     return null;
   }
 

@@ -220,10 +220,17 @@ export type QuerySelectObject = {
   [key: string]: QuerySelectUnit[];
 };
 export type QuerySelectUnit = string | QuerySelectObject;
-export type LinkedDataRequestObject = {
+export type LinkedDataGenericQuery = {
   // "@context": context,        // optional
-  select: QuerySelectUnit[];
+  select: LinkedDataRequest;
   where: [string, string, string][];
   // "groupBy": group-by-clause, // optional
   // "having": having-clause     // optional
 };
+
+export type LinkedDataPreparedQuery = {
+  select: QuerySelectObject;
+  where: [string, string, string][];
+};
+
+// where: [[{method: "count", subject: propshape}, ">", 1], [...]]
