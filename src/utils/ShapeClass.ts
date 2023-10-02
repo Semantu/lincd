@@ -55,19 +55,26 @@ function ensureShapeConstructor(shape: typeof Shape | (typeof Shape)[]) {
   //TODO: figure out why sometimes we need shape.prototype, sometimes we need shape.constructor.prototype
   // in other words, why we sometimes get a ES6 Class and sometimes its constructor?
   //make sure we have a real class
-  if (Array.isArray(shape)) {
-    return shape.map((s) => {
-      if (!isClass(s)) {
-        return s.constructor as any;
-      }
-      return s;
-    }) as any[];
-  } else {
-    if (!isClass(shape)) {
-      return shape.constructor as any;
-    }
-    return shape;
-  }
+
+  //NOTE: update, this started breaking for when classes are functions. the constructor is native Function
+  //had to turn it off for now, waiting for issues to come back up to understand what needs to happen
+  return shape;
+  // if(Array.isArray(shape))
+  // {
+  //   return shape.map(s => {
+  //     if (!isClass(s))
+  //     {
+  //       return s.constructor as any;
+  //     }
+  //     return s;
+  //   }) as any[];
+  // } else {
+  //   if (!isClass(shape))
+  //   {
+  //     return shape.constructor as any;
+  //   }
+  //   return shape;
+  // }
 }
 function hasSuperClass(a: Function, b: Function) {
   return (a as Function).prototype instanceof b;
@@ -195,8 +202,9 @@ export function getMostSpecificShapes(
     }
     //else, remove the shapes we just tried from the subShapes array
     //and try again with less specific shapes
-    subShapes = subShapes.filter((subShape) => {
-      return !mostSpecificSubShapes.has(subShape);
+    mostSpecificSubShapes.forEach((mostSpecificSubShape) => {
+      subShapes.splice(subShapes.indexOf(mostSpecificSubShape), 1);
     });
   }
+  return [];
 }
