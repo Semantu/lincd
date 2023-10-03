@@ -109,7 +109,7 @@ export interface PropertyShapeConfig {
    @linkedProperty({nodeKind:NamedNode})
    ```
    */
-  nodeKind?: typeof Node | typeof Node[];
+  nodeKind?: typeof Node | (typeof Node)[];
 
   /**
    * The shape that values of this property path need to confirm to.
@@ -186,7 +186,11 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
  * ```
  */
 export const linkedProperty = (config: PropertyShapeConfig) => {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
     let propertyShape = new PropertyShape();
     propertyShape.path = config.path;
     propertyShape.label = propertyKey;
@@ -229,18 +233,14 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
     //we accept a shape configuration, which translates to a sh:nodeShape
     if (config.shape) {
       //if this shape class has already got a NodeShape connected to it
-      if(config.shape['shape'])
-      {
+      if (config.shape['shape']) {
         //then we can use this NodeShape now as the value of nodeShape for this property shape
-        propertyShape.valueShape = config.shape['shape']
-      }
-      else
-      {
+        propertyShape.valueShape = config.shape['shape'];
+      } else {
         //however the shape class may not have run its decorators yet
         //so in that case we temporarily store a reference
         //which gets processed in Module:linkedShape()
-        if(!config.shape['nodeShapeOf'])
-        {
+        if (!config.shape['nodeShapeOf']) {
           config.shape['nodeShapeOf'] = [];
         }
         config.shape['nodeShapeOf'].push(propertyShape);
@@ -256,7 +256,9 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
     //if the shape has already been initiated (with linkedShape)
     //Note that the constructor may have shape defined if the class that it extends is already decorated with linkedShape
     //so we need to check hasOwnProperty
-    let shape: NodeShape = target.constructor.hasOwnProperty('shape') ? target.constructor.shape : null;
+    let shape: NodeShape = target.constructor.hasOwnProperty('shape')
+      ? target.constructor.shape
+      : null;
     if (shape) {
       //update the URI (by extending the URI of the shape)
       propertyShape.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;

@@ -10,7 +10,10 @@ import {QuadArray} from '../collections/QuadArray';
 import {ICoreIterable} from './ICoreIterable';
 
 export interface IGraphObject {
-  getProperties(includeFromIncomingArcs?: boolean, includeImplicitFacts?: boolean): NodeSet<NamedNode>;
+  getProperties(
+    includeFromIncomingArcs?: boolean,
+    includeImplicitFacts?: boolean,
+  ): NodeSet<NamedNode>;
 
   getInverseProperties(): NodeSet<NamedNode>;
 
@@ -31,7 +34,11 @@ export interface IGraphObject {
 
   getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet;
 
-  getDeep(property: NamedNode, maxDepth?: number, partialResult?: NodeSet): NodeSet;
+  getDeep(
+    property: NamedNode,
+    maxDepth?: number,
+    partialResult?: NodeSet,
+  ): NodeSet;
 
   //TODO: since the implementation of these methods is pretty much the same across all classes that implement IGraphObjects maybe it should be moved to Find or another UTIL to avoid repeating ourselves
   getOneFromPath(...properties: NamedNode[]): Node | undefined;

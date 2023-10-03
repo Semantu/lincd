@@ -13,13 +13,19 @@ import {ICoreIterable} from '../interfaces/ICoreIterable';
  * A map who's values are sets
  * When you iterate over this map with methods like map and forEach you'll iterate over the values of the sets
  */
-class CoreMapToSet<K, S extends CoreSet<V>, V> extends Map<K, S> implements ICoreIterable<V> {
+class CoreMapToSet<K, S extends CoreSet<V>, V>
+  extends Map<K, S>
+  implements ICoreIterable<V>
+{
   /**
    * Determines whether all the members of an array satisfy the specified test.
    * @param callbackfn A function that accepts up to three arguments. The every method calls the callbackfn function for each element in array1 until the callbackfn returns false, or until the end of the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  every(callbackfn: (value: V, key: K, map: CoreMapToSet<K, S, V>) => boolean, thisArg?: any): boolean {
+  every(
+    callbackfn: (value: V, key: K, map: CoreMapToSet<K, S, V>) => boolean,
+    thisArg?: any,
+  ): boolean {
     for (let [key, set] of this) {
       for (let value of set) {
         if (!callbackfn.apply(thisArg, [value, key, this])) {
@@ -39,7 +45,10 @@ class CoreMapToSet<K, S extends CoreSet<V>, V> extends Map<K, S> implements ICor
    * @param callbackfn
    * @param thisArg
    */
-  forEach(callbackfn: (value: any, key: any, map: any) => void, thisArg?: any): void {
+  forEach(
+    callbackfn: (value: any, key: any, map: any) => void,
+    thisArg?: any,
+  ): void {
     for (let [key, set] of this) {
       for (let value of set) {
         callbackfn.apply(thisArg, [value, key, this]);
@@ -52,7 +61,10 @@ class CoreMapToSet<K, S extends CoreSet<V>, V> extends Map<K, S> implements ICor
    * @param callbackfn A function that accepts up to three arguments. The some method calls the callbackfn function for each element in array1 until the callbackfn returns true, or until the end of the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  some(callbackfn: (value: V, key: K, set: S, map: this) => boolean, thisArg?: any): boolean {
+  some(
+    callbackfn: (value: V, key: K, set: S, map: this) => boolean,
+    thisArg?: any,
+  ): boolean {
     for (let [key, set] of this) {
       for (let value of set) {
         if (callbackfn.apply(thisArg, [value, key, set, this])) {
@@ -120,7 +132,10 @@ class CoreMapToSet<K, S extends CoreSet<V>, V> extends Map<K, S> implements ICor
    * Returns the value of the first element in the Set where predicate is true, and undefined
    * otherwise.
    */
-  find(predicate: (value: V, index: K, set: S) => boolean, thisArg?: any): V | undefined {
+  find(
+    predicate: (value: V, index: K, set: S) => boolean,
+    thisArg?: any,
+  ): V | undefined {
     for (let [key, set] of this) {
       for (let value of set) {
         if (predicate.apply(thisArg, [value, key, this])) {
@@ -158,7 +173,7 @@ export class QuadMap extends CoreMapToSet<Node, QuadSet, Quad> {
   }
 
   getQuadSet(): QuadSet {
-    return this.map((q) => q,QuadSet);
+    return this.map((q) => q, QuadSet);
   }
 
   delete(v): boolean {

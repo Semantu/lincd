@@ -8,6 +8,9 @@ import {NamedNode, Node} from '../models';
 import {ICoreIterable} from './ICoreIterable';
 
 export interface IShape extends IGraphObject {
+  namedNode: NamedNode;
+  node: Node;
+
   set(property: NamedNode, value: Node): boolean;
 
   mset(property: NamedNode, values: ICoreIterable<Node>): boolean;
@@ -34,10 +37,10 @@ export interface IShape extends IGraphObject {
 
   hasPathTo(properties: NamedNode[], value?: Node): boolean;
 
-  hasPathToSomeInSet(properties: NamedNode[], endPoints?: ICoreIterable<Node>): boolean;
+  hasPathToSomeInSet(
+    properties: NamedNode[],
+    endPoints?: ICoreIterable<Node>,
+  ): boolean;
 
   hasExplicit(property: NamedNode, value: Node): boolean;
-
-  namedNode: NamedNode;
-  node: Node;
 }

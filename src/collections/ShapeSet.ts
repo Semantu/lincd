@@ -12,7 +12,10 @@ import {QuadArray} from './QuadArray';
 import {NodeSet} from './NodeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 
-export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGraphObjectSet<R> {
+export class ShapeSet<R extends Shape = Shape>
+  extends CoreSet<R>
+  implements IGraphObjectSet<R>
+{
   constructor(iterable?: Iterable<R>) {
     super(iterable);
   }
@@ -24,13 +27,21 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGr
    * @param value the shape you want to check for
    * @param matchOnNodes set to false if you only want to check for true matches of identical instances
    */
-  has(value:R,matchOnNodes:boolean=true) {
-    return super.has(value) || (matchOnNodes && this.some(shape => shape.node === value.node && Object.getPrototypeOf(shape) === Object.getPrototypeOf(value)));
+  has(value: R, matchOnNodes: boolean = true) {
+    return (
+      super.has(value) ||
+      (matchOnNodes &&
+        this.some(
+          (shape) =>
+            shape.node === value.node &&
+            Object.getPrototypeOf(shape) === Object.getPrototypeOf(value),
+        ))
+    );
   }
 
   delete(value: R) {
     //if we can find a shape with the same node, delete that
-    return super.delete(this.find(shape => shape.node === value.node));
+    return super.delete(this.find((shape) => shape.node === value.node));
   }
 
   //we cannot use NamedNodeSet here because of requirement loops
@@ -45,10 +56,10 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGr
   concat(...sets: ICoreIterable<R>[]): this {
     var res = this.createNew(this);
     for (var set of sets) {
-      set.forEach(item => {
+      set.forEach((item) => {
         //for shape sets we need to manually check if an equivalent shape is already in the resulting shape set, to avoid duplicates
-        if(!res.has(item)){
-          res.add(item)
+        if (!res.has(item)) {
+          res.add(item);
         }
       });
     }
@@ -182,7 +193,10 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGr
     return res;
   }
 
-  getAllQuads(includeAsObject?: boolean, includeImplicit: boolean = false): QuadArray {
+  getAllQuads(
+    includeAsObject?: boolean,
+    includeImplicit: boolean = false,
+  ): QuadArray {
     var res = new QuadArray();
     for (var instance of this) {
       for (var item of instance.getAllQuads(includeAsObject, includeImplicit)) {
@@ -286,7 +300,9 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGr
   }
 
   promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
-    return Promise.all(this.map((instance) => instance.promiseLoaded(loadInverseProperties)))
+    return Promise.all(
+      this.map((instance) => instance.promiseLoaded(loadInverseProperties)),
+    )
       .then((res) => {
         return res.every((result) => result === true);
       })
@@ -296,10 +312,16 @@ export class ShapeSet<R extends Shape = Shape> extends CoreSet<R> implements IGr
   }
 
   isLoaded(includingInverseProperties: boolean = false): boolean {
-    return this.every((instance) => instance.isLoaded(includingInverseProperties));
+    return this.every((instance) =>
+      instance.isLoaded(includingInverseProperties),
+    );
   }
 
   toString(): string {
-    return 'ShapeSet {\n' + [...this].map((instance) => '\t' + instance.toString()).join(',\n') + '\n}';
+    return (
+      'ShapeSet {\n' +
+      [...this].map((instance) => '\t' + instance.toString()).join(',\n') +
+      '\n}'
+    );
   }
 }

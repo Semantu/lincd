@@ -4,22 +4,24 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NodeSet} from './NodeSet';
-import {NamedNode,Node} from '../models';
+import {NamedNode, Node} from '../models';
 import {QuadSet} from './QuadSet';
 
 export class NodeValuesSet extends NodeSet {
-	constructor(private _subject:Node,private _property:NamedNode,iterable?: Iterable<Node>) {
-		super(iterable);
-	}
-
-  get subject()
-  {
-    return this._subject
+  constructor(
+    private _subject: Node,
+    private _property: NamedNode,
+    iterable?: Iterable<Node>,
+  ) {
+    super(iterable);
   }
 
-  get property()
-  {
-    return this._property
+  get subject() {
+    return this._subject;
+  }
+
+  get property() {
+    return this._property;
   }
 
   /**
@@ -28,17 +30,28 @@ export class NodeValuesSet extends NodeSet {
    * @param callback
    * @param context
    */
-  onChange(callback:(quads?: QuadSet, property?: NamedNode) => void,context?) {
-    (this._subject as NamedNode).onChange(this._property,callback,context)
+  onChange(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?,
+  ) {
+    (this._subject as NamedNode).onChange(this._property, callback, context);
   }
+
   /**
    * Remove listener for changes in the valueset for this subject + property combination
    * If you provide context (usually 'this'), removing the onChange listener will remove all listeners for this property & context, regardless of what callback you provide. (this is helpful if you dont have access to the excact same callback function)
    * @param callback
    * @param context
    */
-  removeOnChange(callback:(quads?: QuadSet, property?: NamedNode) => void,context?) {
-    (this._subject as NamedNode).removeOnChange(this._property,callback,context)
+  removeOnChange(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?,
+  ) {
+    (this._subject as NamedNode).removeOnChange(
+      this._property,
+      callback,
+      context,
+    );
   }
 
   /**
@@ -56,10 +69,10 @@ export class NodeValuesSet extends NodeSet {
    * This is equivalent to manually adding a new property value using `subject.set(predicate,object)`
    * @param value the node to add
    */
-	add(value:Node): this {
-    this._subject.set(this._property,value);
-		return this;
-	}
+  add(value: Node): this {
+    this._subject.set(this._property, value);
+    return this;
+  }
 
   /**
    * Remove a node from this set of values.
@@ -67,9 +80,9 @@ export class NodeValuesSet extends NodeSet {
    * This is equivalent to manually removing a property value using `subject.unset(predicate,object)`
    * @param value the node to remove
    */
-	delete(value:Node): boolean {
-    return this._subject.unset(this._property,value);
-	}
+  delete(value: Node): boolean {
+    return this._subject.unset(this._property, value);
+  }
 
   /**
    * Actually removes a node from this value set. Does not remove any quads in the local graph

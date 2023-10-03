@@ -32,7 +32,12 @@ export class Debug {
 }
 
 //attach dprint to global or window object
-let g = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : null;
+let g =
+  typeof window !== 'undefined'
+    ? window
+    : typeof global !== 'undefined'
+    ? global
+    : null;
 if (g) {
   g['dprint'] = (item: any, includeIncomingProperties: boolean = true) =>
     console.log(Debug.print(item, includeIncomingProperties));

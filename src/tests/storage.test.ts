@@ -11,7 +11,7 @@ import {QuadArray} from '../collections/QuadArray';
 import {NodeSet} from '../collections/NodeSet';
 import {CoreMap} from '../collections/CoreMap';
 import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest, LinkedDataGenericQuery} from '../interfaces/Component';
+import {LinkedDataRequest} from '../interfaces/Component';
 
 class TestStore implements IQuadStore {
   defaultGraph = Graph.create();
@@ -25,7 +25,10 @@ class TestStore implements IQuadStore {
     this.contents = new QuadSet();
   }
 
-  update(added: ICoreIterable<Quad>, removed: ICoreIterable<Quad>): Promise<any> {
+  update(
+    added: ICoreIterable<Quad>,
+    removed: ICoreIterable<Quad>,
+  ): Promise<any> {
     added.forEach((q) => this.contents.add(q));
     removed.forEach((q) => this.contents.delete(q));
     return null;
@@ -47,7 +50,9 @@ class TestStore implements IQuadStore {
     return null;
   }
 
-  setURIs(nodeToCurrentUriMap: CoreMap<NamedNode, string>): Promise<[string, string][]> {
+  setURIs(
+    nodeToCurrentUriMap: CoreMap<NamedNode, string>,
+  ): Promise<[string, string][]> {
     return null;
   }
 
@@ -59,22 +64,29 @@ class TestStore implements IQuadStore {
     return null;
   }
 
-  query(queryObject: LinkedDataGenericQuery, shapeClass: Shape | typeof Shape): Promise<QuadArray> {
+  loadShape(
+    shapeInstance: Shape,
+    request: LinkedDataRequest,
+  ): Promise<QuadArray> {
     return null;
   }
 
-  loadShape(shapeInstance: Shape, request: LinkedDataRequest): Promise<QuadArray> {
+  loadShapes(
+    shapeSet: ShapeSet,
+    request: LinkedDataRequest,
+  ): Promise<QuadArray> {
     return null;
   }
 
-  loadShapes(shapeSet: ShapeSet, request: LinkedDataRequest): Promise<QuadArray> {
-    return null;
-  }
-
-  clearProperties(subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>): Promise<boolean> {
+  clearProperties(
+    subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>,
+  ): Promise<boolean> {
     let deleted = false;
     this.contents.forEach((q) => {
-      if (subjectToPredicates.has(q.subject) && subjectToPredicates.get(q.subject).has(q.predicate)) {
+      if (
+        subjectToPredicates.has(q.subject) &&
+        subjectToPredicates.get(q.subject).has(q.predicate)
+      ) {
         this.contents.delete(q);
         deleted = true;
       }

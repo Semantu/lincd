@@ -19,7 +19,11 @@ export class EventEmitter extends EventEmitter3 {
    */
   protected _eventsCount: number;
 
-  removeListenerByContext(event: string | symbol, context?: any, once?: boolean): this {
+  removeListenerByContext(
+    event: string | symbol,
+    context?: any,
+    once?: boolean,
+  ): this {
     //copied from source and adjusted
     var evt = prefix && typeof event === 'string' ? prefix + event : event;
 
@@ -32,7 +36,10 @@ export class EventEmitter extends EventEmitter3 {
 
     if (listeners.fn) {
       //check if 'once' and 'context' match
-      if ((once && !listeners.fn.once) || (context && listeners.fn.context !== context)) {
+      if (
+        (once && !listeners.fn.once) ||
+        (context && listeners.fn.context !== context)
+      ) {
         //if not we keep it 'as is'
         eventsToKeep = listeners;
       }
@@ -41,7 +48,10 @@ export class EventEmitter extends EventEmitter3 {
       //if there's an array of listeners, go over each
       for (var i = 0, length = listeners.length; i < length; i++) {
         //check if 'once' and 'context' match
-        if ((once && !listeners[i].once) || (context && listeners[i].context !== context)) {
+        if (
+          (once && !listeners[i].once) ||
+          (context && listeners[i].context !== context)
+        ) {
           //if not, keep this single listener
           eventsToKeep.push(listeners[i]);
         }
@@ -51,7 +61,11 @@ export class EventEmitter extends EventEmitter3 {
     // update events and events count
     if (eventsToKeep) {
       //take the one event, or, if its an array, take the array, unless theres only one element left, then just use that directly
-      this._events[evt] = eventsToKeep.fn ? eventsToKeep : eventsToKeep.length === 1 ? eventsToKeep[0] : eventsToKeep;
+      this._events[evt] = eventsToKeep.fn
+        ? eventsToKeep
+        : eventsToKeep.length === 1
+        ? eventsToKeep[0]
+        : eventsToKeep;
     } else {
       --this._eventsCount;
       delete this._events[evt];

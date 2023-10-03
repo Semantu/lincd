@@ -31,24 +31,12 @@ import {NamedNode} from '../models';
  * }
  * ```
  */
-export class LinkedComponentClass<ShapeClass extends Shape, P = {}, S = any> extends React.Component<
-  P & LinkedComponentProps<ShapeClass>,
-  S
-> {
+export class LinkedComponentClass<
+  ShapeClass extends Shape,
+  P = {},
+  S = any,
+> extends React.Component<P & LinkedComponentProps<ShapeClass>, S> {
   private _shape: ShapeClass;
-
-  componentDidUpdate(
-    prevProps: Readonly<P & LinkedComponentProps<ShapeClass>>,
-    prevState: Readonly<S>,
-    snapshot?: any,
-  ) {
-    if (prevProps.source !== this.props.source && this.props.source instanceof NamedNode) {
-      (this.props.source as NamedNode).onChangeAny((changes, property) => {
-        console.log('Properties of source ' + this._shape.toString() + ' changed. Updating.');
-        this.forceUpdate();
-      });
-    }
-  }
 
   get sourceShape(): ShapeClass {
     if (typeof this._shape === 'undefined') {
@@ -64,5 +52,25 @@ export class LinkedComponentClass<ShapeClass extends Shape, P = {}, S = any> ext
       }
     }
     return this._shape;
+  }
+
+  componentDidUpdate(
+    prevProps: Readonly<P & LinkedComponentProps<ShapeClass>>,
+    prevState: Readonly<S>,
+    snapshot?: any,
+  ) {
+    if (
+      prevProps.source !== this.props.source &&
+      this.props.source instanceof NamedNode
+    ) {
+      (this.props.source as NamedNode).onChangeAny((changes, property) => {
+        console.log(
+          'Properties of source ' +
+            this._shape.toString() +
+            ' changed. Updating.',
+        );
+        this.forceUpdate();
+      });
+    }
   }
 }

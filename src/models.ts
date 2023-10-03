@@ -3,7 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {DefaultGraph as TFDefaultGraph, Literal as ILiteral, NamedNode as INamedNode, Term} from 'rdflib/lib/tf-types';
+import {
+  DefaultGraph as TFDefaultGraph,
+  Literal as ILiteral,
+  NamedNode as INamedNode,
+  Term,
+} from 'rdflib/lib/tf-types';
 import {DefaultGraphTermType, TermType} from 'rdflib/lib/types';
 import {defaultGraphURI} from 'rdflib/lib/utils/default-graph-uri';
 
@@ -58,7 +63,10 @@ export abstract class Node extends EventEmitter {
    * OR use getAsAsync automatically ensures the data of the node is fully loaded before creating an instance.
    * @param type - a class that extends Shape and thus who's instances represent a node as an instance of one specific type.
    */
-  getStrictlyAs<T extends IShape>(type: {new (): T; getStrictlyOf(node: Node): T}): T {
+  getStrictlyAs<T extends IShape>(type: {
+    new (): T;
+    getStrictlyOf(node: Node): T;
+  }): T {
     return type.getStrictlyOf(this);
   }
 
@@ -125,15 +133,19 @@ export abstract class Node extends EventEmitter {
     return undefined;
   }
 
-	getAll(property: NamedNode): NodeValuesSet {
-		return new NodeValuesSet(this,property);
-	}
+  getAll(property: NamedNode): NodeValuesSet {
+    return new NodeValuesSet(this, property);
+  }
 
   getValue(property?: NamedNode): string {
     return undefined;
   }
 
-  getDeep(property: NamedNode, maxDepth: number = -1, partialResult: NodeSet = new NodeSet()): NodeSet {
+  getDeep(
+    property: NamedNode,
+    maxDepth: number = -1,
+    partialResult: NodeSet = new NodeSet(),
+  ): NodeSet {
     return partialResult;
   }
 
@@ -141,7 +153,11 @@ export abstract class Node extends EventEmitter {
     return undefined;
   }
 
-  getOneWhere(property: NamedNode, filterProperty: NamedNode, filterValue: Node): undefined {
+  getOneWhere(
+    property: NamedNode,
+    filterProperty: NamedNode,
+    filterValue: Node,
+  ): undefined {
     return undefined;
   }
 
@@ -174,7 +190,10 @@ export abstract class Node extends EventEmitter {
     return false;
   }
 
-  hasPathToSomeInSet(properties: NamedNode[], endPoints?: ICoreIterable<Node>): boolean {
+  hasPathToSomeInSet(
+    properties: NamedNode[],
+    endPoints?: ICoreIterable<Node>,
+  ): boolean {
     return false;
   }
 
@@ -202,7 +221,10 @@ export abstract class Node extends EventEmitter {
     return new QuadArray();
   }
 
-  getAllQuads(includeAsObject: boolean = false, includeImplicit: boolean = false): QuadArray {
+  getAllQuads(
+    includeAsObject: boolean = false,
+    includeImplicit: boolean = false,
+  ): QuadArray {
     return null;
   }
 
@@ -238,7 +260,11 @@ export abstract class Node extends EventEmitter {
    * @internal
    * @param quad
    */
-  unregisterInverseProperty(quad: Quad, alteration?: boolean, emitEvents?: boolean): void {}
+  unregisterInverseProperty(
+    quad: Quad,
+    alteration?: boolean,
+    emitEvents?: boolean,
+  ): void {}
 
   /**
    * registers the use of a quad. Since a quad can only be used in 1 quad
@@ -247,13 +273,18 @@ export abstract class Node extends EventEmitter {
    * @internal
    * @param quad
    */
-  registerInverseProperty(quad: Quad, alteration?: boolean, emitEvents?: boolean): Node {
+  registerInverseProperty(
+    quad: Quad,
+    alteration?: boolean,
+    emitEvents?: boolean,
+  ): Node {
     return null;
   }
 
   clone(): Node {
     return null;
   }
+
   print() {
     return '';
   }
@@ -279,68 +310,51 @@ export abstract class Node extends EventEmitter {
  * let node = NamedNode.getOrCreate("http://url.of.some/node")
  * ```
  */
-export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter, INamedNode {
+export class NamedNode
+  extends Node
+  implements IGraphObject, BatchedEventEmitter, INamedNode
+{
   /**
    * The base of temporary URI's
    * @internal
    */
   public static TEMP_URI_BASE: string = 'lin://tmp/';
-
-  private static namedNodes: NodeMap<NamedNode> = new NodeMap();
-  private static tempCounter: number = 0;
-
   /**
    * Emitter used by the class itself by static methods emitting events.
    * Anyone wanting to listen to that should therefore add a listener with NamedNode.emitter.on(...)
    * @internal
    */
   static emitter = new EventEmitter();
-
-  private static nodesToSave: NodeSet<NamedNode> = new NodeSet();
-  private static nodesToLoad: NodeSet<NamedNode> = new NodeSet();
-  private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
-  private static nodesToRemove: CoreSet<[NamedNode, QuadArray]> = new CoreSet();
-  private static nodesURIUpdated: CoreMap<NamedNode, [string, string]> = new CoreMap();
-  private static clearedProperties: CoreMap<NamedNode,[NamedNode,QuadArray][]> = new CoreMap();
-
-  //### event types ###
-
   /**
    * event emitted when nodes need to be stored
    * @internal
    */
   static STORE_NODES: string = 'STORE_NODES';
-
   /**
    * Event emitted when previous values have been overwritten (for example with update or moverwrite)
    * NOTE: Locally we may not know all the properties, but the intend of update / moverwrite is to overwrite ANY existing properties. So event handlers listening to this event should clear any previous property values they can find.
    * @internal
    */
   static CLEARED_PROPERTIES: string = 'CLEARED_PROPERTIES';
-
   /**
    * event emitted when nodes need to be removed
    * @internal
    */
   static REMOVE_NODES: string = 'REMOVE_NODES';
-
   /**
    * event emitted when the URI of a node has been updated
    */
   static URI_UPDATED: string = 'URI_UPDATED';
-
   /**
    * event emitted when nodes need to be loaded
    * @internal
    */
   static LOAD_NODES: string = 'LOAD_NODES';
-
   /**
    * event emitted by a single node when its properties have changed
    * @internal
    */
   static PROPERTY_CHANGED: string = 'PROPERTY_CHANGED';
-
   /**
    * event emitted by a single node when its properties have been altered
    * NOTE: we use 'altered' for changes made by user interaction vs 'changed' for changes that
@@ -348,13 +362,13 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @internal
    */
   static PROPERTY_ALTERED: string = 'PROPERTY_ALTERED';
-
   /**
    * event emitted by a single node when its inverse properties have been changed
    * @internal
    */
   static INVERSE_PROPERTY_CHANGED: string = 'INVERSE_PROPERTY_CHANGED';
 
+  //### event types ###
   /**
    * event emitted by a single node when its inverse properties have been altered
    * NOTE: we use 'altered' for changes made by user interaction vs 'changed' for changes that
@@ -362,56 +376,63 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @internal
    */
   static INVERSE_PROPERTY_ALTERED: string = 'INVERSE_PROPERTY_ALTERED';
-
   /**
    * event emitted by a single node when its used or not used anymore as a predicate
    * @internal
    */
   static AS_PREDICATE_CHANGED: string = 'AS_PREDICATE_CHANGED';
-
   /**
    * event emitted by a single node when its used or not used anymore as a predicate due to user requested alterations
    * @internal
    */
   static AS_PREDICATE_ALTERED: string = 'AS_PREDICATE_ALTERED';
-
   /**
    * event emitted by a single node when it's been removed
    */
   static NODE_REMOVED: string = 'NODE_REMOVED';
-
+  private static namedNodes: NodeMap<NamedNode> = new NodeMap();
+  private static tempCounter: number = 0;
+  private static nodesToSave: NodeSet<NamedNode> = new NodeSet();
+  private static nodesToLoad: NodeSet<NamedNode> = new NodeSet();
+  private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
+  private static nodesToRemove: CoreSet<[NamedNode, QuadArray]> = new CoreSet();
+  private static nodesURIUpdated: CoreMap<NamedNode, [string, string]> =
+    new CoreMap();
+  private static clearedProperties: CoreMap<
+    NamedNode,
+    [NamedNode, QuadArray][]
+  > = new CoreMap();
+  /**
+   * map of QuadMaps indexed by property (where this node occurs as subject)
+   * NOTE: 'properties' serves only to increase lookup speed but also costs memory
+   * since reverse lookup (where this node occurs as object) will be much less frequent
+   * the inverse of 'properties' is not kept, so all results for reverse lookup will be created from 'asObject'
+   * @internal
+   */
+  properties: CoreMap<NamedNode, NodeValuesSet> = new CoreMap<
+    NamedNode,
+    NodeValuesSet
+  >();
+  // private static termType: string = 'NamedNode';
+  termType: any = 'NamedNode';
   /**
    * map of QuadMaps indexed by property where this node occurs as subject
    * NOTE: we use QuadMap here because in ES5 a quadMap is much faster than a quadSet, because we can check by key with uri directly if the quad exists instead of having to look in an array with indexOf (ES5 does not support objects as keys)
    * @internal
    */
   private asSubject: Map<NamedNode, QuadMap> = new Map<NamedNode, QuadMap>();
-
   /**
    * map of QuadMaps indexed by property where this node occurs as object
    * @internal
    */
   private asObject: Map<NamedNode, QuadMap>; // = new Map<NamedNode,QuadMap>();
 
+  //keeping track of changes to be emitted in one batched event
   /**
    * array of Quads in which this node occurs as predicate
    * @internal
    */
   private asPredicate: QuadArray;
-
-	/**
-	 * map of QuadMaps indexed by property (where this node occurs as subject)
-	 * NOTE: 'properties' serves only to increase lookup speed but also costs memory
-	 * since reverse lookup (where this node occurs as object) will be much less frequent
-	 * the inverse of 'properties' is not kept, so all results for reverse lookup will be created from 'asObject'
-	 * @internal
-	 */
-	properties: CoreMap<NamedNode, NodeValuesSet> = new CoreMap<
-		NamedNode,
-		NodeValuesSet
-	>();
-
-  //keeping track of changes to be emitted in one batched event
   //NOTE: the quad sets in these maps will contain both newly ADDED and REMOVED quads
   private changedProperties: CoreMap<NamedNode, QuadSet>;
   private alteredProperties: CoreMap<NamedNode, QuadSet>;
@@ -419,7 +440,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   private alteredInverseProperties: CoreMap<NamedNode, QuadSet>;
   private changedAsPredicate: QuadArray;
   private alteredAsPredicate: QuadArray;
-
   //keep track of promises so that we only do loading/removing/saving once
   private savePromise: {
     promise: Promise<any>;
@@ -428,10 +448,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     done?: boolean;
   };
   private removePromise: {promise: Promise<any>; resolve: any; reject: any};
-
-  // private static termType: string = 'NamedNode';
-  termType: any = 'NamedNode';
-  private _isStoring: {promise?, resolve?, reject?};
 
   /**
    * WARNING: Do not directly create a Node, instead use NamedNode.getOrCreate(uri)
@@ -444,6 +460,28 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     if (this._isTemporaryNode) {
       //created locally, so we know everything about it there is to know
       // this.allPropertiesLoaded = {promise: Promise.resolve(this), done: true};
+    }
+  }
+
+  private _isStoring: {promise?; resolve?; reject?};
+
+  get isStoring(): boolean {
+    return this._isStoring && true;
+  }
+
+  set isStoring(storing: boolean) {
+    //when storing
+    if (storing) {
+      //create a deferred promise and store it as _isStoring
+      this._isStoring = {};
+      this._isStoring.promise = new Promise((resolve, reject) => {
+        this._isStoring.resolve = resolve;
+        this._isStoring.reject = reject;
+      });
+    } else {
+      //when done storing, resolve the promise
+      this._isStoring.resolve();
+      delete this._isStoring;
     }
   }
 
@@ -471,44 +509,230 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     this._isTemporaryNode = val;
   }
 
-  get isStoring(): boolean {
-    return this._isStoring && true;
+  get value(): string {
+    return this._value;
   }
 
-  set isStoring(storing: boolean) {
-    //when storing
-    if (storing) {
-      //create a deferred promise and store it as _isStoring
-      this._isStoring = {};
-      this._isStoring.promise = new Promise((resolve, reject) => {
-        this._isStoring.resolve = resolve;
-        this._isStoring.reject = reject;
-      });
-    } else {
-      //when done storing, resolve the promise
-      this._isStoring.resolve();
-      delete this._isStoring;
+  set value(newUri: string) {
+    if (NamedNode.namedNodes.has(newUri)) {
+      throw new Error(
+        'Cannot update URI. A node with this URI already exists: ' +
+          newUri +
+          '. You tried to update the URI of ' +
+          this._value,
+      );
+    }
+
+    var oldUri = this._value;
+    NamedNode.namedNodes.delete(this._value);
+    this._value = newUri;
+    NamedNode.namedNodes.set(this._value, this);
+
+    // //if this node had a temporary URI
+    // if (this._isTemporaryNode) {
+    // 	//it now has an explicit URI, so it's no longer temporary
+    // 	this._isTemporaryNode = false;
+    // }
+
+    this.emit(NamedNode.URI_UPDATED, this, oldUri, newUri);
+
+    eventBatcher.register(NamedNode);
+    NamedNode.nodesURIUpdated.set(this, [oldUri, newUri]);
+  }
+
+  /**
+   * Emits the batched (property) events of the NamedNode CLASS (meaning events that relate to all nodes)
+   * Used internally by the framework to batch and emit change events
+   * @internal
+   */
+  static emitBatchedEvents(resolve, reject) {
+    if (this.nodesToRemove.size) {
+      this.emitter.emit(NamedNode.REMOVE_NODES, this.nodesToRemove);
+      this.nodesToRemove = new CoreSet<[NamedNode, QuadArray]>();
+    }
+
+    if (this.nodesToSave.size) {
+      this.emitter.emit(NamedNode.STORE_NODES, this.nodesToSave);
+      this.nodesToSave = new NodeSet<NamedNode>();
+    }
+
+    if (this.nodesToLoad.size || this.nodesToLoadFully.size) {
+      this.emitter.emit(
+        NamedNode.LOAD_NODES,
+        this.nodesToLoad,
+        this.nodesToLoadFully,
+      );
+      this.nodesToLoad = new NodeSet<NamedNode>();
+      this.nodesToLoadFully = new NodeSet<NamedNode>();
+    }
+
+    if (this.nodesURIUpdated.size) {
+      this.emitter.emit(NamedNode.URI_UPDATED, this.nodesURIUpdated);
+      this.nodesURIUpdated = new CoreMap();
+    }
+
+    if (this.clearedProperties.size) {
+      this.emitter.emit(NamedNode.CLEARED_PROPERTIES, this.clearedProperties);
+      this.clearedProperties = new CoreMap();
     }
   }
 
   /**
-	 * Used by Quads to signal their subject about a new property
-	 * @internal
-	 * @param quad
-	 * @param alteration
-	 * @param emitEvents
-	 */
-	registerProperty(
-		quad: Quad,
-		alteration: boolean = false,
-		emitEvents: boolean = true,
-	) {
-		var predicate: NamedNode = quad.predicate;
-		//first make sure we have a QuadMap value for key=predicate
-		if (!this.asSubject.has(predicate)) {
-			this.asSubject.set(predicate, new QuadMap());
-			this.properties.set(predicate, new NodeValuesSet(this,predicate));
-		}
+   * Returns true if this node has any batched events waiting to be emitted
+   * Used internally by the framework to batch and emit change events
+   * @internal
+   */
+  static hasBatchedEvents() {
+    return (
+      this.nodesToRemove.size > 0 ||
+      this.nodesToSave.size > 0 ||
+      this.nodesToLoad.size ||
+      this.nodesToLoadFully.size > 0 ||
+      this.nodesURIUpdated.size > 0 ||
+      this.clearedProperties.size > 0
+    );
+  }
+
+  /**
+   * Converts the string '<http://some.uri>' into a NamedNode
+   * @param uriString the string representation of a NamedNode, consisting of its URI surrounded by brackets: '<' URI '>'
+   */
+  static fromString(uriString: string): NamedNode {
+    var firstChar = uriString.substr(0, 1);
+    if (firstChar == '<') {
+      return this.getOrCreate(uriString.substr(1, uriString.length - 2));
+    } else {
+      throw new Error(
+        'fromString expects a URI wrapped in brackets, like <http://www.example.com>',
+      );
+    }
+  }
+
+  /**
+   * Resets the map of nodes that is known in this local environment
+   * Mostly used for test functionality
+   */
+  static reset() {
+    this.tempCounter = 0;
+    this.namedNodes = new NodeMap();
+  }
+
+  /**
+   * Create a new local NamedNode. A temporary URI will be generated for its URI.
+   * This node will not exist in the graph database (persistent storage) until you call `node.save()`
+   * Until saved, `node.isTemporaryNode()` will return true.
+   */
+  static create(): NamedNode {
+    return this._create(this.createNewTempUri(), true);
+  }
+
+  /**
+   * Registers a NamedNode to the locally known list of nodes
+   * @internal
+   * @param node
+   */
+  static register(node: NamedNode) {
+    if (this.namedNodes.has(node.uri)) {
+      throw new Error(
+        'A node with this URI already exists: "' +
+          node.uri +
+          '". You should probably use NamedNode.getOrCreate instead of NamedNode.create (' +
+          node.uri +
+          ')',
+      );
+    }
+    this.namedNodes.set(node.uri, node);
+  }
+
+  /**
+   * Unregisters a NamedNode from the locally known list of nodes
+   * @internal
+   * @param node
+   */
+  static unregister(node: NamedNode) {
+    if (!this.namedNodes.has(node.uri)) {
+      throw new Error(
+        'This node has already been removed from the registry: ' + node.uri,
+      );
+    }
+    this.namedNodes.delete(node.uri);
+  }
+
+  /**
+   * Returns a map of all locally known nodes.
+   * The map will have URI's as keys and NamedNodes as values
+   * @param node
+   */
+  static getAllNamedNodes(): NodeMap<NamedNode> {
+    return this.namedNodes;
+  }
+
+  /**
+   * Returns a map of all locally known nodes.
+   * The map will have URI's as keys and NamedNodes as values
+   * @param node
+   */
+  static createNewTempUri() {
+    return this.TEMP_URI_BASE + this.tempCounter++; //+'/';+Date.now()+Math.random();
+  }
+
+  static getCounter(): number {
+    return this.tempCounter;
+  }
+
+  /**
+   * ##########################################################################
+   * ############# PUBLIC METHODS FOR REGULAR USE #############
+   * ##########################################################################
+   */
+
+  /**
+   * The proper way to obtain a node from a URI.
+   * If requested before, this returns the existing NamedNode for the given URI.
+   * Or, if this is the first request for this URI, it creates a new NamedNode first, and returns that
+   * Using this method over `new NamedNode()` makes sure all nodes are registered, and no duplicates will exist.
+   * `new NamedNode()` should therefore never be used.
+   * @param uri
+   */
+  static getOrCreate(uri: string, isTemporaryNode: boolean = false) {
+    return this.getNamedNode(uri) || this._create(uri, isTemporaryNode);
+  }
+
+  /**
+   * Returns the NamedNode with the given URI, IF it exists.
+   * DOES NOT create a new NamedNode if it didn't exist yet, instead it returns undefined.
+   * You can therefore use this method to see if a NamedNode already exists locally.
+   * Use `getOrCreate()` if you want to simply get a NamedNode for a certain URI
+   * @param uri
+   */
+  static getNamedNode(uri: string): NamedNode | undefined {
+    return this.namedNodes.get(uri);
+  }
+
+  private static _create(uri: string, isLocalNode: boolean = false): NamedNode {
+    var node = new NamedNode(uri, isLocalNode);
+    this.register(node);
+    return node;
+  }
+
+  /**
+   * Used by Quads to signal their subject about a new property
+   * @internal
+   * @param quad
+   * @param alteration
+   * @param emitEvents
+   */
+  registerProperty(
+    quad: Quad,
+    alteration: boolean = false,
+    emitEvents: boolean = true,
+  ) {
+    var predicate: NamedNode = quad.predicate;
+    //first make sure we have a QuadMap value for key=predicate
+    if (!this.asSubject.has(predicate)) {
+      this.asSubject.set(predicate, new QuadMap());
+      this.properties.set(predicate, new NodeValuesSet(this, predicate));
+    }
 
     //Add the quad to the QuadMap (see implementation for more details)
     let quadMap = this.asSubject.get(predicate);
@@ -519,18 +743,25 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     //Now for the property index (which gives direct access to the object values of a certain predicate)
     //Because multiple graphs can hold the same subj-pred-obj triple, we want to avoid adding literal values
     //that have the exact same literal value, so we need to test for equality here before adding it
-    if (!this.properties.get(predicate).some((object) => object.equals(quad.object))) {
+    if (
+      !this.properties
+        .get(predicate)
+        .some((object) => object.equals(quad.object))
+    ) {
       this.properties.get(predicate).__add(quad.object);
     }
 
     //add this quad to the map of events to send on the next tick
     if (emitEvents) {
       if (!this.changedProperties) this.changedProperties = new CoreMap();
-      if (alteration && !this.alteredProperties) this.alteredProperties = new CoreMap();
+      if (alteration && !this.alteredProperties)
+        this.alteredProperties = new CoreMap();
       //register this change as alteration (user input) or as normal (automatic, data based) property change
       this.registerPropertyChange(
         quad,
-        alteration ? [this.changedProperties, this.alteredProperties] : [this.changedProperties],
+        alteration
+          ? [this.changedProperties, this.alteredProperties]
+          : [this.changedProperties],
       );
     }
   }
@@ -543,7 +774,11 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param alteration
    * @param emitEvents
    */
-  registerInverseProperty(quad: Quad, alteration: boolean = false, emitEvents: boolean = true): Node {
+  registerInverseProperty(
+    quad: Quad,
+    alteration: boolean = false,
+    emitEvents: boolean = true,
+  ): Node {
     //asObject is not always initialised - to save some memory on nodes without incoming properties (only used as subject)
     if (!this.asObject) {
       this.asObject = new CoreMap<NamedNode, QuadMap>();
@@ -556,11 +791,15 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 
     //add this quad to the map of events to send on the next tick
     if (emitEvents) {
-      if (!this.changedInverseProperties) this.changedInverseProperties = new CoreMap();
-      if (alteration && !this.alteredInverseProperties) this.alteredInverseProperties = new CoreMap();
+      if (!this.changedInverseProperties)
+        this.changedInverseProperties = new CoreMap();
+      if (alteration && !this.alteredInverseProperties)
+        this.alteredInverseProperties = new CoreMap();
       this.registerPropertyChange(
         quad,
-        alteration ? [this.changedInverseProperties, this.alteredInverseProperties] : [this.changedInverseProperties],
+        alteration
+          ? [this.changedInverseProperties, this.alteredInverseProperties]
+          : [this.changedInverseProperties],
       );
     }
 
@@ -581,34 +820,21 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     }
     this.registerPropertyChange(
       quad,
-      alteration ? [this.changedProperties, this.alteredProperties] : [this.changedProperties],
+      alteration
+        ? [this.changedProperties, this.alteredProperties]
+        : [this.changedProperties],
     );
-  }
-
-  /**
-   * Adds the quad to all given maps
-   * @param quad
-   * @param maps
-   * @private
-   */
-  private registerPropertyChange(quad: Quad, maps: Map<NamedNode, QuadSet>[]) {
-    //register that this class has some events to emit
-    eventBatcher.register(this);
-    //for each given map
-    maps.forEach((map) => {
-      //add this quad under the predicate as key
-      if (!map.has(quad.predicate)) {
-        map.set(quad.predicate, new QuadSet());
-      }
-      map.get(quad.predicate).add(quad);
-    });
   }
 
   /**
    * Called when this node occurs as predicate in a quad
    * @internal
    */
-  registerAsPredicate(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
+  registerAsPredicate(
+    quad: Quad,
+    alteration: boolean = false,
+    emitEvents: boolean = true,
+  ) {
     //asPredicate is not always initialised because only properties can occur as predicate
     if (!this.asPredicate) {
       this.asPredicate = new QuadArray();
@@ -624,7 +850,11 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * This method is used by the class Quad to communicate with its nodes
    * @internal
    */
-  unregisterProperty(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
+  unregisterProperty(
+    quad: Quad,
+    alteration: boolean = false,
+    emitEvents: boolean = true,
+  ) {
     var predicate: NamedNode = quad.predicate;
 
     //start by looking through the QuadMap (it is more complete than the quick & easy properties index, as it accounts for multiple quads per object value in different graphs)
@@ -644,7 +874,14 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
           //Note: in some cases, for example when a quad moved between graphs, the object registered here as property value might not be the same as the as the object of the quad that is still registered,
           // therefor we also check & remove equivalent values in case regular removal didnt work
           //TODO: we could improve this by making sure that this.properties stays up to date with the actual quads
-          this.properties.get(predicate).__delete(quad.object) || this.properties.get(predicate).__delete(this.properties.get(predicate).find((object) => object.equals(quad.object)));
+          this.properties.get(predicate).__delete(quad.object) ||
+            this.properties
+              .get(predicate)
+              .__delete(
+                this.properties
+                  .get(predicate)
+                  .find((object) => object.equals(quad.object)),
+              );
         }
 
         //if we now also no longer hold any values for this predicate
@@ -662,11 +899,14 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     //event listeners will have to filter out which quad was added or removed
     if (emitEvents) {
       if (!this.changedProperties) this.changedProperties = new CoreMap();
-      if (alteration && !this.alteredProperties) this.alteredProperties = new CoreMap();
+      if (alteration && !this.alteredProperties)
+        this.alteredProperties = new CoreMap();
 
       this.registerPropertyChange(
         quad,
-        alteration ? [this.changedProperties, this.alteredProperties] : [this.changedProperties],
+        alteration
+          ? [this.changedProperties, this.alteredProperties]
+          : [this.changedProperties],
       );
     }
   }
@@ -675,7 +915,11 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * This method is used by the class Quad to communicate with its nodes
    * @internal
    */
-  unregisterInverseProperty(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
+  unregisterInverseProperty(
+    quad: Quad,
+    alteration: boolean = false,
+    emitEvents: boolean = true,
+  ) {
     //start by looking through the QuadMap (it is more complete than the quick & easy properties index, as it accounts for identical sub-pred-obj triples that occur in different graphs)
     //here we get a map of all the quads for the given predicate, grouped by subject (each map contains identical triples, but with different graphs)
     var quadMap: QuadMap = this.asObject.get(quad.predicate);
@@ -695,12 +939,16 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     //also when removing the property do wee add the removed quad to the list of changed properties
     //event listeners will have to filter out which quad was added or removed
     if (emitEvents) {
-      if (!this.changedInverseProperties) this.changedInverseProperties = new CoreMap();
-      if (alteration && !this.alteredInverseProperties) this.alteredInverseProperties = new CoreMap();
+      if (!this.changedInverseProperties)
+        this.changedInverseProperties = new CoreMap();
+      if (alteration && !this.alteredInverseProperties)
+        this.alteredInverseProperties = new CoreMap();
 
       this.registerPropertyChange(
         quad,
-        alteration ? [this.changedInverseProperties, this.alteredInverseProperties] : [this.changedInverseProperties],
+        alteration
+          ? [this.changedInverseProperties, this.alteredInverseProperties]
+          : [this.changedInverseProperties],
       );
     }
   }
@@ -709,25 +957,15 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * This method is used by the class Quad to communicate with its nodes
    * @internal
    */
-  unregisterAsPredicate(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
+  unregisterAsPredicate(
+    quad: Quad,
+    alteration: boolean = false,
+    emitEvents: boolean = true,
+  ) {
     this.asPredicate.splice(this.asPredicate.indexOf(quad), 1);
 
     if (emitEvents) {
       this.registerPredicateChange(quad, alteration);
-    }
-  }
-
-  private registerPredicateChange(quad: Quad, alteration: boolean) {
-    eventBatcher.register(this);
-    if (!this.changedAsPredicate) {
-      this.changedAsPredicate = new QuadArray();
-    }
-    this.changedAsPredicate.push(quad);
-    if (alteration) {
-      if (!this.alteredAsPredicate) {
-        this.alteredAsPredicate = new QuadArray();
-      }
-      this.alteredAsPredicate.push(quad);
     }
   }
 
@@ -746,7 +984,9 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * Currently used by Reasoner to allow for immediate application of reasoning
    */
   getPendingInverseChanges(property: NamedNode): QuadSet {
-    return this.changedInverseProperties ? this.changedInverseProperties.get(property) : new QuadSet();
+    return this.changedInverseProperties
+      ? this.changedInverseProperties.get(property)
+      : new QuadSet();
   }
 
   /**
@@ -757,12 +997,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   getPendingChanges(property: NamedNode): QuadSet {
     return this.changedProperties.get(property);
   }
-
-  /**
-   * ##########################################################################
-   * ############# PUBLIC METHODS FOR REGULAR USE #############
-   * ##########################################################################
-   */
 
   /**
    * Set the a single property value
@@ -820,10 +1054,16 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    */
   has(property: NamedNode, value: Node): boolean {
     if (!value) {
-      throw new Error('No value provided to NamedNode.has(). Did you mean `hasProperty`?');
+      throw new Error(
+        'No value provided to NamedNode.has(). Did you mean `hasProperty`?',
+      );
     }
     var properties = this.properties.get(property);
-    return properties && (properties.has(value) || properties.some((object) => object.equals(value)));
+    return (
+      properties &&
+      (properties.has(value) ||
+        properties.some((object) => object.equals(value)))
+    );
   }
 
   /**
@@ -857,7 +1097,12 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    */
   hasValue(property: NamedNode, value: string): boolean {
     var properties = this.properties.get(property);
-    return properties && properties.some((object) => 'value' in object && object['value'] === value);
+    return (
+      properties &&
+      properties.some(
+        (object) => 'value' in object && object['value'] === value,
+      )
+    );
   }
 
   /**
@@ -879,7 +1124,9 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    */
   hasProperty(property: NamedNode): boolean {
     //properties can be empty sets, so we need to check if there are any values in the set
-    return this.properties.has(property) && this.properties.get(property).size > 0;
+    return (
+      this.properties.has(property) && this.properties.get(property).size > 0
+    );
   }
 
   /**
@@ -926,7 +1173,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param properties an array of NamedNodes
    * @param endPoint the node to reach, a Literal or a NamedNode
    */
-  hasPathToSomeInSet(properties: NamedNode[], endPoints?: ICoreIterable<Node>): boolean {
+  hasPathToSomeInSet(
+    properties: NamedNode[],
+    endPoints?: ICoreIterable<Node>,
+  ): boolean {
     //we just need to find one matching path, so we do a depth-first algorithm which will be more performant, so:
     //take first property
     var property = properties.shift();
@@ -1000,7 +1250,9 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * See the documentation for more information about implicit vs explicit facts
    * @param includeFromIncomingArcs if true, also includes predicates (properties) of quads where this node is the VALUE of another nodes' property. Default: false
    */
-  getExplicitProperties(includeFromIncomingArcs: boolean = false): NodeSet<NamedNode> {
+  getExplicitProperties(
+    includeFromIncomingArcs: boolean = false,
+  ): NodeSet<NamedNode> {
     return new NodeSet<NamedNode>([
       ...this.getAllQuads(includeFromIncomingArcs)
         .filter((t) => !t.implicit)
@@ -1013,7 +1265,9 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * For example if this node is Jenny and the following is true: Mike foaf:hasFriend Jenny, calling this method on Jenny will return hasFriend
    */
   getInverseProperties() {
-    return this.asObject ? new NodeSet<NamedNode>(this.asObject.keys()) : new NodeSet<NamedNode>();
+    return this.asObject
+      ? new NodeSet<NamedNode>(this.asObject.keys())
+      : new NodeSet<NamedNode>();
   }
 
   /**
@@ -1022,7 +1276,9 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
    */
   getOne(property: NamedNode): Node | undefined {
-    return this.properties.has(property) ? this.properties.get(property).first() : undefined;
+    return this.properties.has(property)
+      ? this.properties.get(property).first()
+      : undefined;
   }
 
   /**
@@ -1038,24 +1294,23 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     }
   }
 
-	/**
-	 * Returns all values this node has for the given property
-	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 */
-	getAll(property: NamedNode): NodeValuesSet {
+  /**
+   * Returns all values this node has for the given property
+   * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
+   */
+  getAll(property: NamedNode): NodeValuesSet {
     //we usually just index all the existing properties
     //but to have consistent behaviour with PropertyValueSets, when you request a property that has no values
     //we need to create an index for the empty result set
-    if(!this.properties.has(property))
-    {
-      this.asSubject.set(property,new QuadMap());
-      this.properties.set(property,new NodeValuesSet(this,property));
+    if (!this.properties.has(property)) {
+      this.asSubject.set(property, new QuadMap());
+      this.properties.set(property, new NodeValuesSet(this, property));
     }
     return this.properties.get(property);
-		// return this.properties.has(property)
-		// 	? this.properties.get(property)
-		// 	: new PropertyValueSet(this,property);
-	}
+    // return this.properties.has(property)
+    // 	? this.properties.get(property)
+    // 	: new PropertyValueSet(this,property);
+  }
 
   /**
    * Returns all values this node EXPLICITLY has for the given property
@@ -1083,7 +1338,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       //we do this by checking if value exists in the valueObject.
       //And we do that like this because we dont want to explicitly import Literal here.
       //@TODO: Possibly create an interface to avoid this 'hacky' workaround
-      if (valueObject['value'] && (!language || valueObject['isOfLanguage'](language))) {
+      if (
+        valueObject['value'] &&
+        (!language || valueObject['isOfLanguage'](language))
+      ) {
         return valueObject.value;
       }
     }
@@ -1206,7 +1464,11 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
    * @param maxDepth - the maximum number of connections that resulting nodes are removed from this node. In the example above maxDepth=2 would return true only if Mike is the persons friend, or friend of a friend
    */
-  hasDeep(property: NamedNode, value: Node, maxDepth: number = Infinity): boolean {
+  hasDeep(
+    property: NamedNode,
+    value: Node,
+    maxDepth: number = Infinity,
+  ): boolean {
     var checked = new NodeSet();
     var stack = new NodeSet([this as Node]);
     while (stack.size > 0 && maxDepth > 0) {
@@ -1248,7 +1510,8 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
    */
   getAllInverse(property: NamedNode): NodeSet<NamedNode> {
-    if (!this.asObject || !this.asObject.has(property)) return new NodeSet<NamedNode>();
+    if (!this.asObject || !this.asObject.has(property))
+      return new NodeSet<NamedNode>();
     return this.asObject.get(property).getSubjects();
   }
 
@@ -1302,14 +1565,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     } else {
       return this.asSubject.get(property).getQuadSet();
     }
-  }
-
-  private getQuadsByValue(property: NamedNode, value?: Node): QuadSet {
-    return value instanceof NamedNode
-      ? this.asSubject.get(property).has(value)
-        ? this.asSubject.get(property).get(value)
-        : new QuadSet()
-      : this.asSubject.get(property).filter((quad) => quad.object.equals(value), QuadSet);
   }
 
   /**
@@ -1372,7 +1627,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param includeAsObject if true, includes quads from both directions (so also inverse properties where this node is the object of the quad)
    * @param includeImplicit if true, includes both implicit and explicit quads. By default false, so will only return explicit quads
    */
-  getAllQuads(includeAsObject: boolean = false, includeImplicit: boolean = false): QuadArray {
+  getAllQuads(
+    includeAsObject: boolean = false,
+    includeImplicit: boolean = false,
+  ): QuadArray {
     var res: QuadArray = new QuadArray();
     this.asSubject.forEach((quadMap) => {
       quadMap.forEach((quad) => {
@@ -1402,15 +1660,21 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    */
   overwrite(property: NamedNode, value: Node): boolean {
     //don't do anything if the current value is already equivalent to the new value
-    if (this.getAll(property).size == 1 && value && this.has(property, value)) return false;
+    if (this.getAll(property).size == 1 && value && this.has(property, value))
+      return false;
 
     //clear all values and set new value
     this.unsetAll(property);
-    if(value)
-    {
+    if (value) {
       return this.set(property, value);
     }
   }
+
+  /**
+   * #######################################################################
+   * ######################## EVENT METHODS / LISTENERS ####################
+   * #######################################################################
+   **/
 
   /**
    * Update a certain property so that only the given values are the values of this property.
@@ -1472,37 +1736,37 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return false;
   }
 
-	/**
-	 * unset (remove) all values of a certain property.
-	 * Removes all connections (edges) in the graph between this node and other nodes, where the given property is used as the connecting 'edge' between them
-	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 */
-	unsetAll(property: NamedNode): boolean {
-		//if not a local node we will emit events for storage controllers to be picked up
-		if (!this.isTemporaryNode) {
-			//regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
-			if (!NamedNode.clearedProperties.has(this)) {
-				NamedNode.clearedProperties.set(this, []);
-				eventBatcher.register(NamedNode);
-			}
-			//we save the property that was cleared AND the quads that were cleared
-			NamedNode.clearedProperties
-				.get(this)
-				.push([
-					property,
-					this.asSubject.has(property)
-						? new QuadArray(...this.asSubject.get(property).getQuadSet())
-						: null,
-				]);
-		}
+  /**
+   * unset (remove) all values of a certain property.
+   * Removes all connections (edges) in the graph between this node and other nodes, where the given property is used as the connecting 'edge' between them
+   * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
+   */
+  unsetAll(property: NamedNode): boolean {
+    //if not a local node we will emit events for storage controllers to be picked up
+    if (!this.isTemporaryNode) {
+      //regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
+      if (!NamedNode.clearedProperties.has(this)) {
+        NamedNode.clearedProperties.set(this, []);
+        eventBatcher.register(NamedNode);
+      }
+      //we save the property that was cleared AND the quads that were cleared
+      NamedNode.clearedProperties
+        .get(this)
+        .push([
+          property,
+          this.asSubject.has(property)
+            ? new QuadArray(...this.asSubject.get(property).getQuadSet())
+            : null,
+        ]);
+    }
 
-		if (this.hasProperty(property)) {
-			//false as parameter because we don't need alteration events for each single quad, but rather manage this with clearedProperties events
-			this.asSubject.get(property).removeAll(false);
-			return true;
-		}
-		return false;
-	}
+    if (this.hasProperty(property)) {
+      //false as parameter because we don't need alteration events for each single quad, but rather manage this with clearedProperties events
+      this.asSubject.get(property).removeAll(false);
+      return true;
+    }
+    return false;
+  }
 
   /**
    * returns true if ANY node has this node as the value of the given property
@@ -1520,7 +1784,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param value - a single node. Can be a NamedNode or Literal
    */
   hasInverse(property: NamedNode, value: Node): boolean {
-    return this.asObject && this.asObject.get(property).some((quad) => quad.subject.equals(value));
+    return (
+      this.asObject &&
+      this.asObject.get(property).some((quad) => quad.subject.equals(value))
+    );
   }
 
   /**
@@ -1533,25 +1800,14 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return other === this;
   }
 
-
-  private createPromise() {
-    var resolve, reject;
-    var promise = new Promise((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    return {promise, resolve, reject};
-  }
-
   /**
    * Save this node into the graph database.
    * Newly created nodes will exist only in local memory until you call this function
    * @returns a promise that resolves when the node has received a permanent URI
    */
-  save():Promise<void> {
+  save(): Promise<void> {
     if (this.isTemporaryNode) {
-      if(!this._isStoring)
-      {
+      if (!this._isStoring) {
         this._isTemporaryNode = false;
         //this creates a promise that will resolve when the node is stored
         this.isStoring = true;
@@ -1560,7 +1816,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       }
       //always return a promise
       return this._isStoring.promise;
-
     }
   }
 
@@ -1587,7 +1842,9 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   print(includeIncomingProperties: boolean = true) {
     var print = '';
     this.getAsSubjectQuads().forEach((quadMap) => {
-      BlankNode.includeBlankNodes(quadMap.getQuadSet()).forEach((quad) => (print += '\t' + quad.print() + '.\n'));
+      BlankNode.includeBlankNodes(quadMap.getQuadSet()).forEach(
+        (quad) => (print += '\t' + quad.print() + '.\n'),
+      );
     });
     if (this.asObject && includeIncomingProperties) {
       print += '<----\n';
@@ -1601,17 +1858,14 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   }
 
   /**
-   * #######################################################################
-   * ######################## EVENT METHODS / LISTENERS ####################
-   * #######################################################################
-   **/
-
-  /**
    * Fires the given call back when ANY property of this node changes.
    * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
    * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
    */
-  onChangeAny(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  onChangeAny(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.on(NamedNode.PROPERTY_CHANGED, callback, context);
   }
 
@@ -1620,7 +1874,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
    * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
    */
-  onChangeAnyInverse(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  onChangeAnyInverse(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.on(NamedNode.INVERSE_PROPERTY_CHANGED, callback, context);
   }
 
@@ -1629,7 +1886,11 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
    * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
    */
-  onChange(property: NamedNode, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  onChange(
+    property: NamedNode,
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.on(NamedNode.PROPERTY_CHANGED + property.uri, callback, context);
   }
 
@@ -1639,8 +1900,16 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
    * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
    */
-  onChangeInverse(property, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
-    this.on(NamedNode.INVERSE_PROPERTY_CHANGED + property.uri, callback, context);
+  onChangeInverse(
+    property,
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
+    this.on(
+      NamedNode.INVERSE_PROPERTY_CHANGED + property.uri,
+      callback,
+      context,
+    );
   }
 
   /**
@@ -1648,7 +1917,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param callback the exact same method you supplied to onChangeAny
    * @param context the same context you supplied to onChangeAny
    */
-  removeOnChangeAny(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  removeOnChangeAny(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.off(NamedNode.PROPERTY_CHANGED, callback, context);
   }
 
@@ -1657,16 +1929,28 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param callback the exact same method you supplied to onChangeAnyInverse
    * @param context the same context you supplied to onChangeAnyInverse
    */
-  removeOnChangeAnyInverse(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  removeOnChangeAnyInverse(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.off(NamedNode.INVERSE_PROPERTY_CHANGED, callback, context);
   }
+
+  /* #######################################################################
+   * ######################### STATIC METHODS ##############################
+   * #######################################################################
+   */
 
   /**
    * Call this when you want to stop listening for onChange events. Make sure to provide the exact same BOUND instance of a method as callback to properly clear the listener. OR make sure to provide a context both when setting and clearing the listener.
    * @param callback the exact same method you supplied to onChange
    * @param context the same context you supplied to onChange
    */
-  removeOnChange(property: NamedNode, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  removeOnChange(
+    property: NamedNode,
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.off(NamedNode.PROPERTY_CHANGED + property.uri, callback, context);
   }
 
@@ -1675,8 +1959,16 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param callback the exact same method you supplied to onChangeInverse
    * @param context the same context you supplied to onChangeInverse
    */
-  removeOnChangeInverse(property, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
-    this.off(NamedNode.INVERSE_PROPERTY_CHANGED + property.uri, callback, context);
+  removeOnChangeInverse(
+    property,
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
+    this.off(
+      NamedNode.INVERSE_PROPERTY_CHANGED + property.uri,
+      callback,
+      context,
+    );
   }
 
   /**
@@ -1703,7 +1995,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param context the same context you supplied to onChange
    */
   clearOnChange(property: NamedNode, context?: any) {
-    this.removeListenerByContext(NamedNode.PROPERTY_CHANGED + property.uri, context);
+    this.removeListenerByContext(
+      NamedNode.PROPERTY_CHANGED + property.uri,
+      context,
+    );
   }
 
   /**
@@ -1712,7 +2007,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param context the same context you supplied to onChangeAny
    */
   clearOnChangeInverse(property, context: any) {
-    this.removeListenerByContext(NamedNode.INVERSE_PROPERTY_CHANGED + property.uri, context);
+    this.removeListenerByContext(
+      NamedNode.INVERSE_PROPERTY_CHANGED + property.uri,
+      context,
+    );
   }
 
   /**
@@ -1734,7 +2032,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       [this.changedProperties, NamedNode.PROPERTY_CHANGED],
       [this.changedInverseProperties, NamedNode.INVERSE_PROPERTY_CHANGED],
       [this.alteredProperties, NamedNode.PROPERTY_ALTERED],
-      [this.alteredInverseProperties, NamedNode.INVERSE_PROPERTY_ALTERED]
+      [this.alteredInverseProperties, NamedNode.INVERSE_PROPERTY_ALTERED],
     ].forEach(([map, event]: [CoreMap<NamedNode, QuadSet>, string]) => {
       if (!map) return;
       //for each individual change that was made
@@ -1772,207 +2070,66 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return this.asObject;
   }
 
-  /* #######################################################################
-   * ######################### STATIC METHODS ##############################
-   * #######################################################################
-   */
-
   /**
-   * Emits the batched (property) events of the NamedNode CLASS (meaning events that relate to all nodes)
-   * Used internally by the framework to batch and emit change events
-   * @internal
+   * Adds the quad to all given maps
+   * @param quad
+   * @param maps
+   * @private
    */
-  static emitBatchedEvents(resolve, reject) {
-    if (this.nodesToRemove.size) {
-      this.emitter.emit(NamedNode.REMOVE_NODES, this.nodesToRemove);
-      this.nodesToRemove = new CoreSet<[NamedNode, QuadArray]>();
-    }
+  private registerPropertyChange(quad: Quad, maps: Map<NamedNode, QuadSet>[]) {
+    //register that this class has some events to emit
+    eventBatcher.register(this);
+    //for each given map
+    maps.forEach((map) => {
+      //add this quad under the predicate as key
+      if (!map.has(quad.predicate)) {
+        map.set(quad.predicate, new QuadSet());
+      }
+      map.get(quad.predicate).add(quad);
+    });
+  }
 
-    if (this.nodesToSave.size) {
-      this.emitter.emit(NamedNode.STORE_NODES, this.nodesToSave);
-      this.nodesToSave = new NodeSet<NamedNode>();
+  private registerPredicateChange(quad: Quad, alteration: boolean) {
+    eventBatcher.register(this);
+    if (!this.changedAsPredicate) {
+      this.changedAsPredicate = new QuadArray();
     }
-
-    if (this.nodesToLoad.size || this.nodesToLoadFully.size) {
-      this.emitter.emit(NamedNode.LOAD_NODES, this.nodesToLoad, this.nodesToLoadFully);
-      this.nodesToLoad = new NodeSet<NamedNode>();
-      this.nodesToLoadFully = new NodeSet<NamedNode>();
-    }
-
-    if (this.nodesURIUpdated.size) {
-      this.emitter.emit(NamedNode.URI_UPDATED, this.nodesURIUpdated);
-      this.nodesURIUpdated = new CoreMap();
-    }
-
-    if (this.clearedProperties.size) {
-      this.emitter.emit(NamedNode.CLEARED_PROPERTIES, this.clearedProperties);
-      this.clearedProperties = new CoreMap();
+    this.changedAsPredicate.push(quad);
+    if (alteration) {
+      if (!this.alteredAsPredicate) {
+        this.alteredAsPredicate = new QuadArray();
+      }
+      this.alteredAsPredicate.push(quad);
     }
   }
 
-  /**
-   * Returns true if this node has any batched events waiting to be emitted
-   * Used internally by the framework to batch and emit change events
-   * @internal
-   */
-  static hasBatchedEvents() {
-    return (
-      this.nodesToRemove.size > 0 ||
-      this.nodesToSave.size > 0 ||
-      this.nodesToLoad.size ||
-      this.nodesToLoadFully.size > 0 ||
-      this.nodesURIUpdated.size > 0 ||
-      this.clearedProperties.size > 0
-    );
+  private getQuadsByValue(property: NamedNode, value?: Node): QuadSet {
+    return value instanceof NamedNode
+      ? this.asSubject.get(property).has(value)
+        ? this.asSubject.get(property).get(value)
+        : new QuadSet()
+      : this.asSubject
+          .get(property)
+          .filter((quad) => quad.object.equals(value), QuadSet);
   }
 
-  /**
-   * Converts the string '<http://some.uri>' into a NamedNode
-   * @param uriString the string representation of a NamedNode, consisting of its URI surrounded by brackets: '<' URI '>'
-   */
-  static fromString(uriString: string): NamedNode {
-    var firstChar = uriString.substr(0, 1);
-    if (firstChar == '<') {
-      return this.getOrCreate(uriString.substr(1, uriString.length - 2));
-    } else {
-      throw new Error('fromString expects a URI wrapped in brackets, like <http://www.example.com>');
-    }
-  }
-
-  /**
-   * Resets the map of nodes that is known in this local environment
-   * Mostly used for test functionality
-   */
-  static reset() {
-    this.tempCounter = 0;
-    this.namedNodes = new NodeMap();
-  }
-
-  /**
-   * Create a new local NamedNode. A temporary URI will be generated for its URI.
-   * This node will not exist in the graph database (persistent storage) until you call `node.save()`
-   * Until saved, `node.isTemporaryNode()` will return true.
-   */
-  static create(): NamedNode {
-    return this._create(this.createNewTempUri(), true);
-  }
-
-  private static _create(uri: string, isLocalNode: boolean = false): NamedNode {
-    var node = new NamedNode(uri, isLocalNode);
-    this.register(node);
-    return node;
-  }
-
-  /**
-   * Registers a NamedNode to the locally known list of nodes
-   * @internal
-   * @param node
-   */
-  static register(node: NamedNode) {
-    if (this.namedNodes.has(node.uri)) {
-      throw new Error(
-        'A node with this URI already exists: "' +
-          node.uri +
-          '". You should probably use NamedNode.getOrCreate instead of NamedNode.create (' +
-          node.uri +
-          ')',
-      );
-    }
-    this.namedNodes.set(node.uri, node);
-  }
-
-  /**
-   * Unregisters a NamedNode from the locally known list of nodes
-   * @internal
-   * @param node
-   */
-  static unregister(node: NamedNode) {
-    if (!this.namedNodes.has(node.uri)) {
-      throw new Error('This node has already been removed from the registry: ' + node.uri);
-    }
-    this.namedNodes.delete(node.uri);
-  }
-
-  /**
-   * Returns a map of all locally known nodes.
-   * The map will have URI's as keys and NamedNodes as values
-   * @param node
-   */
-  static getAllNamedNodes(): NodeMap<NamedNode> {
-    return this.namedNodes;
-  }
-
-  /**
-   * Returns a map of all locally known nodes.
-   * The map will have URI's as keys and NamedNodes as values
-   * @param node
-   */
-  static createNewTempUri() {
-    return this.TEMP_URI_BASE + this.tempCounter++; //+'/';+Date.now()+Math.random();
-  }
-
-  static getCounter():number {
-    return this.tempCounter;
-  }
-
-  /**
-   * The proper way to obtain a node from a URI.
-   * If requested before, this returns the existing NamedNode for the given URI.
-   * Or, if this is the first request for this URI, it creates a new NamedNode first, and returns that
-   * Using this method over `new NamedNode()` makes sure all nodes are registered, and no duplicates will exist.
-   * `new NamedNode()` should therefore never be used.
-   * @param uri
-   */
-  static getOrCreate(uri: string, isTemporaryNode: boolean = false) {
-    return this.getNamedNode(uri) || this._create(uri, isTemporaryNode);
-  }
-
-  /**
-   * Returns the NamedNode with the given URI, IF it exists.
-   * DOES NOT create a new NamedNode if it didn't exist yet, instead it returns undefined.
-   * You can therefore use this method to see if a NamedNode already exists locally.
-   * Use `getOrCreate()` if you want to simply get a NamedNode for a certain URI
-   * @param uri
-   */
-  static getNamedNode(uri: string): NamedNode | undefined {
-    return this.namedNodes.get(uri);
-  }
-
-  get value(): string {
-    return this._value;
-  }
-
-  set value(newUri: string) {
-    if (NamedNode.namedNodes.has(newUri)) {
-      throw new Error(
-        'Cannot update URI. A node with this URI already exists: ' +
-          newUri +
-          '. You tried to update the URI of ' +
-          this._value,
-      );
-    }
-
-    var oldUri = this._value;
-    NamedNode.namedNodes.delete(this._value);
-    this._value = newUri;
-    NamedNode.namedNodes.set(this._value, this);
-
-    // //if this node had a temporary URI
-    // if (this._isTemporaryNode) {
-    // 	//it now has an explicit URI, so it's no longer temporary
-    // 	this._isTemporaryNode = false;
-    // }
-
-    this.emit(NamedNode.URI_UPDATED, this, oldUri, newUri);
-
-    eventBatcher.register(NamedNode);
-    NamedNode.nodesURIUpdated.set(this, [oldUri, newUri]);
+  private createPromise() {
+    var resolve, reject;
+    var promise = new Promise((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return {promise, resolve, reject};
   }
 }
 
 //cannot import from xsd ontology here without creating circular dependencies
-var rdfLangString: NamedNode = NamedNode.getOrCreate('http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
-var xsdString: NamedNode = NamedNode.getOrCreate('http://www.w3.org/2001/XMLSchema#string');
+var rdfLangString: NamedNode = NamedNode.getOrCreate(
+  'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString',
+);
+var xsdString: NamedNode = NamedNode.getOrCreate(
+  'http://www.w3.org/2001/XMLSchema#string',
+);
 
 export class BlankNode extends NamedNode {
   private static counter: number = 0;
@@ -2009,7 +2166,8 @@ export class BlankNode extends NamedNode {
     includeSubjectBlankNodes: boolean = false,
     blankNodes: NodeURIMappings = new NodeURIMappings(),
   ) {
-    let add = quads instanceof Set ? quads.add.bind(quads) : quads.push.bind(quads);
+    let add =
+      quads instanceof Set ? quads.add.bind(quads) : quads.push.bind(quads);
     quads.forEach((quad) => {
       if (includeObjectBlankNodes && quad.object instanceof BlankNode) {
         this.addBlankNodeQuads(quad.object, add, blankNodes);
@@ -2063,9 +2221,8 @@ export class BlankNode extends NamedNode {
  * See also: https://www.w3.org/TR/rdf-concepts/#section-Graph-Literal
  */
 export class Literal extends Node implements IGraphObject, ILiteral {
-  private referenceQuad: Quad;
-
   termType: 'Literal' = 'Literal';
+  private referenceQuad: Quad;
 
   /**
    * Other than with NamedNodes, its fine to do `new Literal("my string value")`
@@ -2074,10 +2231,177 @@ export class Literal extends Node implements IGraphObject, ILiteral {
    * @param datatype
    * @param language
    */
-  constructor(value: string, protected _datatype: NamedNode = null, private _language: string = '') {
+  constructor(
+    value: string,
+    protected _datatype: NamedNode = null,
+    private _language: string = '',
+  ) {
     super(value);
-    if(typeof value !== 'string') {
-      throw new Error('Literal value must be a string. Given value was a '+typeof value+' ('+value+')');
+    if (typeof value !== 'string') {
+      throw new Error(
+        'Literal value must be a string. Given value was a ' +
+          typeof value +
+          ' (' +
+          value +
+          ')',
+      );
+    }
+  }
+
+  /**
+   * get the language tag of this literal which states which language this literal is written in
+   * See also: http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
+   */
+  get language(): string {
+    //list of language tags: http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
+    return this._language;
+  }
+
+  /**
+   * update the language tag of this literal
+   */
+  set language(lang: string) {
+    this._language = lang;
+
+    //the datatype of any literal with a language tag is rdf:langString
+    this._datatype = rdfLangString;
+  }
+
+  /**
+   * returns the datatype of this literal
+   * Note that datatypes are NamedNodes themselves, who always have rdf:type rdf:Datatype
+   * If no datatype is set, the default datatype xsd:string will be returned
+   * If a language tag is set, the returned datatype will be rdf:langString
+   */
+  get datatype(): NamedNode {
+    if (this._datatype) {
+      return this._datatype;
+    }
+    //default datatype is xsd:string, if language is set this.datatype should be langString already
+    return xsdString;
+  }
+
+  /**
+   * Update the datatype of this literal
+   * @param datatype
+   */
+  set datatype(datatype: NamedNode) {
+    this._datatype = datatype;
+  }
+
+  /**
+   * Return the value of this literal
+   * @param datatype
+   */
+  get value(): string {
+    return this._value;
+  }
+
+  /**
+   * update the literal value of this literal
+   * @param datatype
+   */
+  set value(value: string) {
+    let previousValue: Literal;
+    //if this literal is being used in a quad
+    if (this.referenceQuad) {
+      //remember the previous value for the events below
+      previousValue = this.clone();
+    }
+    //update the value
+    this._value = value;
+    if (this.referenceQuad) {
+      //register change for subject node (for node.onChange(prop) listeners)
+      this.referenceQuad.subject.registerValueChange(this.referenceQuad, true);
+      //notify the graph of a change (will mimic a removed and added quad)
+      // this.referenceQuad.graph.registerQuadValueChange(previousValue,this.referenceQuad);
+      //notify the quad that the value of it's object has changed (will mimic a removed and added quad)
+      this.referenceQuad.onValueChanged(previousValue);
+    }
+  }
+
+  /**
+   * Returns the literal value of the first Literal that occurs as object for the given subject and property and optionally also matches the given language
+   * @param subject
+   * @param property
+   * @param language
+   * @deprecated
+   * @returns {string|undefined}
+   */
+  static getValue(
+    subject: NamedNode,
+    property: NamedNode,
+    language: string = '',
+  ): string | undefined {
+    for (var value of subject.getAll(property)) {
+      if (
+        value instanceof Literal &&
+        (!language || value.isOfLanguage(language))
+      ) {
+        return value.value;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Returns all literal values of the Literals that occur as object for the given subject and property and optionally also match the given language
+   * @param subject
+   * @param property
+   * @param language
+   * @returns {string[]}
+   */
+  static getValues(
+    subject: NamedNode,
+    property: NamedNode,
+    language: string = '',
+  ): string[] {
+    var res = [];
+    for (var value of subject.getAll(property)) {
+      if (
+        value instanceof Literal &&
+        (!language || value.isOfLanguage(language))
+      ) {
+        res.push(value.value);
+      }
+    }
+    return res;
+  }
+
+  static isLiteralString(literalString: string): boolean {
+    var regex = new RegExp(
+      '(\\"[^\\"^\\n]*\\")(@[a-z]{1,3}|\\^\\^[a-zA-Z]+\\:[a-zA-Z0-9_-]+|\\<https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)\\>)?',
+    );
+    return regex.test(literalString);
+  }
+
+  static fromString(literalString: string): Literal {
+    //self made regex thatL
+    // match anything between quotes or quad quotes (the quotes are group 1 and 3)
+    // except escaped quotes (2)
+    //and everything behind it (4) for language or datatype
+    //..with a little help on the escaped quotes from here
+    //https://stackoverflow.com/questions/38563414/javascript-regex-to-select-quoted-string-but-not-escape-quotes
+
+    let match = literalString.match(
+      /("|""")([^"\\]*(?:\\.[^"\\]*)*)("|""")(.*)/,
+    );
+
+    //NOTE: if \n replacement turns out to be not correct here it should at least be moved to JSONLDParser, see https://github.com/digitalbazaar/jsonld.js/issues/242
+    let literal = (match[2] ? match[2] : '')
+      .replace(/\\"/g, '"')
+      .replace(/\\n/g, '\n');
+    let suffix = match[4];
+    if (!suffix) {
+      return new Literal(literal);
+    }
+    if (suffix[0] == '@') {
+      return new Literal(literal, null, suffix.substr(1));
+    } else if (suffix[0] == '^') {
+      var dataType = NamedNode.fromString(suffix.substr(2));
+      return new Literal(literal, dataType);
+    } else {
+      throw new Error('Invalid literal string format: ' + literalString);
     }
   }
 
@@ -2135,29 +2459,10 @@ export class Literal extends Node implements IGraphObject, ILiteral {
   }
 
   /**
-   * get the language tag of this literal which states which language this literal is written in
-   * See also: http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
-   */
-  get language(): string {
-    //list of language tags: http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
-    return this._language;
-  }
-
-  /**
    * returns true if the language tag of this literal matches the given language
    */
   isOfLanguage(language: string) {
     return this._language === language;
-  }
-
-  /**
-   * update the language tag of this literal
-   */
-  set language(lang: string) {
-    this._language = lang;
-
-    //the datatype of any literal with a language tag is rdf:langString
-    this._datatype = rdfLangString;
   }
 
   /**
@@ -2166,59 +2471,6 @@ export class Literal extends Node implements IGraphObject, ILiteral {
   hasDatatype(): boolean {
     //checks for null and undefined
     return this._datatype != null;
-  }
-
-  /**
-   * returns the datatype of this literal
-   * Note that datatypes are NamedNodes themselves, who always have rdf:type rdf:Datatype
-   * If no datatype is set, the default datatype xsd:string will be returned
-   * If a language tag is set, the returned datatype will be rdf:langString
-   */
-  get datatype(): NamedNode {
-    if (this._datatype) {
-      return this._datatype;
-    }
-    //default datatype is xsd:string, if language is set this.datatype should be langString already
-    return xsdString;
-  }
-
-  /**
-   * Update the datatype of this literal
-   * @param datatype
-   */
-  set datatype(datatype: NamedNode) {
-    this._datatype = datatype;
-  }
-
-  /**
-   * Return the value of this literal
-   * @param datatype
-   */
-  get value(): string {
-    return this._value;
-  }
-
-  /**
-   * update the literal value of this literal
-   * @param datatype
-   */
-  set value(value: string) {
-    let previousValue: Literal;
-    //if this literal is being used in a quad
-    if (this.referenceQuad) {
-      //remember the previous value for the events below
-      previousValue = this.clone();
-    }
-    //update the value
-    this._value = value;
-    if (this.referenceQuad) {
-      //register change for subject node (for node.onChange(prop) listeners)
-      this.referenceQuad.subject.registerValueChange(this.referenceQuad, true);
-      //notify the graph of a change (will mimic a removed and added quad)
-      // this.referenceQuad.graph.registerQuadValueChange(previousValue,this.referenceQuad);
-      //notify the quad that the value of it's object has changed (will mimic a removed and added quad)
-      this.referenceQuad.onValueChanged(previousValue);
-    }
   }
 
   /**
@@ -2239,6 +2491,89 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 
   equalsCaseInsensitive(other: Term) {
     return this._equals(other, false);
+  }
+
+  /**
+   * Creates a new Literal with exact the same properties (value,datatype and language)
+   */
+  clone(): Literal {
+    return new Literal(this._value, this.datatype, this.language) as this;
+  }
+
+  getReferenceQuad() {
+    return this.referenceQuad;
+  }
+
+  hasInverseProperty(property: NamedNode): boolean {
+    return this.referenceQuad && this.referenceQuad.predicate === property;
+  }
+
+  hasInverse(property: NamedNode, value: Node): boolean {
+    return (
+      this.referenceQuad &&
+      this.referenceQuad.predicate === property &&
+      this.referenceQuad.subject === value
+    );
+  }
+
+  getOneInverse(property: NamedNode): NamedNode | undefined {
+    return this.referenceQuad && this.referenceQuad.predicate === property
+      ? this.referenceQuad.subject
+      : undefined;
+  }
+
+  getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet<NamedNode> {
+    if (properties.find((p) => p === this.referenceQuad.predicate)) {
+      return new NodeSet<NamedNode>([this.referenceQuad.subject]);
+    }
+    return new NodeSet<NamedNode>();
+  }
+
+  getAllInverseQuads(includeImplicit?: boolean): QuadArray {
+    return !includeImplicit || !this.referenceQuad.implicit
+      ? new QuadArray(this.referenceQuad)
+      : new QuadArray();
+  }
+
+  getAllQuads(
+    includeAsObject: boolean = false,
+    includeImplicit: boolean = false,
+  ): QuadArray {
+    return includeAsObject && (!includeImplicit || !this.referenceQuad.implicit)
+      ? new QuadArray(this.referenceQuad)
+      : new QuadArray();
+  }
+
+  promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  isLoaded(includingInverseProperties: boolean = false): boolean {
+    return true;
+  }
+
+  toString(): string {
+    //quotes are needed to differentiate the literal "http://test.com" from the URI http://test.com, so the literal value is always surrounded by quotes
+    //quad quotes are needed in case of newlines
+    // let quotes = this._value.indexOf("\n") != -1 ? '"""' : '"';
+    let quotes = '"';
+    let suffix = '';
+    if (this.hasLanguage()) {
+      suffix = '@' + this.language;
+    } else if (this.hasDatatype()) {
+      suffix = '^^<' + this.datatype.uri + '>';
+    }
+    //quotes in the value need to be escaped
+    return (
+      quotes +
+      this._value.replace(/\"/g, '\\"').replace(/\n/g, '\\n') +
+      quotes +
+      suffix
+    );
+  }
+
+  print(includeIncomingProperties: boolean = true) {
+    return this.toString();
   }
 
   private _equals(other: Term, caseSensitive: boolean = true) {
@@ -2269,7 +2604,8 @@ export class Literal extends Node implements IGraphObject, ILiteral {
     if (caseSensitive) {
       valueMatch = this._value === valueToMatch;
     } else {
-      valueMatch = this._value.toLocaleLowerCase() == valueToMatch.toLocaleLowerCase();
+      valueMatch =
+        this._value.toLocaleLowerCase() == valueToMatch.toLocaleLowerCase();
     }
 
     //if values match
@@ -2288,149 +2624,9 @@ export class Literal extends Node implements IGraphObject, ILiteral {
     }
     return false;
   }
-
-  /**
-   * Creates a new Literal with exact the same properties (value,datatype and language)
-   */
-  clone(): Literal {
-    return new Literal(this._value, this.datatype, this.language) as this;
-  }
-
-  /**
-   * Returns the literal value of the first Literal that occurs as object for the given subject and property and optionally also matches the given language
-   * @param subject
-   * @param property
-   * @param language
-   * @deprecated
-   * @returns {string|undefined}
-   */
-  static getValue(subject: NamedNode, property: NamedNode, language: string = ''): string | undefined {
-    for (var value of subject.getAll(property)) {
-      if (value instanceof Literal && (!language || value.isOfLanguage(language))) {
-        return value.value;
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * Returns all literal values of the Literals that occur as object for the given subject and property and optionally also match the given language
-   * @param subject
-   * @param property
-   * @param language
-   * @returns {string[]}
-   */
-  static getValues(subject: NamedNode, property: NamedNode, language: string = ''): string[] {
-    var res = [];
-    for (var value of subject.getAll(property)) {
-      if (value instanceof Literal && (!language || value.isOfLanguage(language))) {
-        res.push(value.value);
-      }
-    }
-    return res;
-  }
-
-  getReferenceQuad() {
-    return this.referenceQuad;
-  }
-
-  hasInverseProperty(property: NamedNode): boolean {
-    return this.referenceQuad && this.referenceQuad.predicate === property;
-  }
-
-  hasInverse(property: NamedNode, value: Node): boolean {
-    return this.referenceQuad && this.referenceQuad.predicate === property && this.referenceQuad.subject === value;
-  }
-
-  getOneInverse(property: NamedNode): NamedNode | undefined {
-    return this.referenceQuad && this.referenceQuad.predicate === property ? this.referenceQuad.subject : undefined;
-  }
-
-  getMultipleInverse(properties: ICoreIterable<NamedNode>): NodeSet<NamedNode> {
-    if (properties.find((p) => p === this.referenceQuad.predicate)) {
-      return new NodeSet<NamedNode>([this.referenceQuad.subject]);
-    }
-    return new NodeSet<NamedNode>();
-  }
-
-  getAllInverseQuads(includeImplicit?: boolean): QuadArray {
-    return !includeImplicit || !this.referenceQuad.implicit ? new QuadArray(this.referenceQuad) : new QuadArray();
-  }
-
-  getAllQuads(includeAsObject: boolean = false, includeImplicit: boolean = false): QuadArray {
-    return includeAsObject && (!includeImplicit || !this.referenceQuad.implicit)
-      ? new QuadArray(this.referenceQuad)
-      : new QuadArray();
-  }
-
-  promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
-    return Promise.resolve(true);
-  }
-
-  isLoaded(includingInverseProperties: boolean = false): boolean {
-    return true;
-  }
-
-  toString(): string {
-    //quotes are needed to differentiate the literal "http://test.com" from the URI http://test.com, so the literal value is always surrounded by quotes
-    //quad quotes are needed in case of newlines
-    // let quotes = this._value.indexOf("\n") != -1 ? '"""' : '"';
-    let quotes = '"';
-    let suffix = '';
-    if (this.hasLanguage()) {
-      suffix = '@' + this.language;
-    } else if (this.hasDatatype()) {
-      suffix = '^^<' + this.datatype.uri + '>';
-    }
-    //quotes in the value need to be escaped
-    return quotes + this._value.replace(/\"/g, '\\"').replace(/\n/g, '\\n') + quotes + suffix;
-  }
-
-  print(includeIncomingProperties: boolean = true) {
-    return this.toString();
-  }
-
-  static isLiteralString(literalString: string): boolean {
-    var regex = new RegExp(
-      '(\\"[^\\"^\\n]*\\")(@[a-z]{1,3}|\\^\\^[a-zA-Z]+\\:[a-zA-Z0-9_-]+|\\<https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)\\>)?',
-    );
-    return regex.test(literalString);
-  }
-
-  static fromString(literalString: string): Literal {
-    //self made regex thatL
-    // match anything between quotes or quad quotes (the quotes are group 1 and 3)
-    // except escaped quotes (2)
-    //and everything behind it (4) for language or datatype
-    //..with a little help on the escaped quotes from here
-    //https://stackoverflow.com/questions/38563414/javascript-regex-to-select-quoted-string-but-not-escape-quotes
-
-    let match = literalString.match(/("|""")([^"\\]*(?:\\.[^"\\]*)*)("|""")(.*)/);
-
-    //NOTE: if \n replacement turns out to be not correct here it should at least be moved to JSONLDParser, see https://github.com/digitalbazaar/jsonld.js/issues/242
-    let literal = (match[2] ? match[2] : '').replace(/\\"/g, '"').replace(/\\n/g, '\n');
-    let suffix = match[4];
-    if (!suffix) {
-      return new Literal(literal);
-    }
-    if (suffix[0] == '@') {
-      return new Literal(literal, null, suffix.substr(1));
-    } else if (suffix[0] == '^') {
-      var dataType = NamedNode.fromString(suffix.substr(2));
-      return new Literal(literal, dataType);
-    } else {
-      throw new Error('Invalid literal string format: ' + literalString);
-    }
-  }
 }
 
 export class Graph implements Term {
-  private static graphs: CoreMap<string, Graph> = new CoreMap<string, Graph>();
-  private quads: QuadSet;
-  private _node: NamedNode;
-  // private static addedQuads: Map<Graph,QuadArray> = new Map();
-  // private static removedQuads: Map<Graph,QuadArray> = new Map();
-  // private static addedQuadsAlterations: Map<Graph,QuadArray> = new Map();
   // private static removedQuadsAlterations: Map<Graph,QuadArray> = new Map();
   /**
    * Emitted when changes have been made to this graph. Only emitted when data has actually changed, not just when data is loaded
@@ -2440,8 +2636,12 @@ export class Graph implements Term {
    * Emitted when the contents of this graph have changed. Can also be due to loading data
    */
   static CONTENTS_CHANGED = 'CONTENTS_ALTERED';
-
+  private static graphs: CoreMap<string, Graph> = new CoreMap<string, Graph>();
+  // private static addedQuads: Map<Graph,QuadArray> = new Map();
+  // private static removedQuads: Map<Graph,QuadArray> = new Map();
+  // private static addedQuadsAlterations: Map<Graph,QuadArray> = new Map();
   termType: string = 'Graph';
+  private quads: QuadSet;
 
   constructor(public value: string, quads?: QuadSet) {
     // super();
@@ -2449,9 +2649,7 @@ export class Graph implements Term {
     this.quads = quads ? quads : new QuadSet();
   }
 
-  equals(other: Term) {
-    return other === this;
-  }
+  private _node: NamedNode;
 
   get node(): NamedNode {
     return this._node;
@@ -2465,28 +2663,39 @@ export class Graph implements Term {
     this.graphs = new CoreMap<string, Graph>();
   }
 
-  /**
-   * @internal
-   * @param quad
-   */
-  registerQuad(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
-    this.quads.add(quad);
-    // if(emitEvents)
-    // {
-    //   Graph.registerGraphEvent(this,quad,alteration ? [Graph.addedQuads] : [Graph.addedQuads,Graph.addedQuadsAlterations]);
-    // }
+  static create(quads?: QuadSet): Graph {
+    var uri = NamedNode.createNewTempUri();
+    return this._create(uri, quads);
   }
 
   /**
    * @internal
-   * @param quad
+   * @param graph
    */
-  unregisterQuad(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
-    this.quads.delete(quad);
-    // if(emitEvents)
-    // {
-    //   Graph.registerGraphEvent(this,quad,alteration ? [Graph.removedQuads] : [Graph.removedQuads,Graph.removedQuadsAlterations])
-    // }
+  static register(graph: Graph) {
+    if (this.graphs.has(graph.node.uri)) {
+      throw new Error(
+        'A graph with this URI already exists. You should probably use Graph.getOrCreate instead of Graph.create (' +
+          graph.node.uri +
+          ')',
+      );
+    }
+    this.graphs.set(graph.node.uri, graph);
+    // super.register(graph);
+  }
+
+  /**
+   * @internal
+   * @param graph
+   */
+  static unregister(graph: Graph) {
+    if (!this.graphs.has(graph.node.uri)) {
+      throw new Error(
+        'This node has already been removed from the registry: ' +
+          graph.node.uri,
+      );
+    }
+    this.graphs.delete(graph.node.uri);
   }
 
   /**
@@ -2523,61 +2732,6 @@ export class Graph implements Term {
     }
   }*/
 
-  hasQuad(quad: Quad) {
-    return this.quads.has(quad);
-  }
-
-  //Note: cannot name this getQuads, because NamedNode already uses that for getting all quads of all its properties
-  getContents(): QuadSet {
-    return this.quads;
-  }
-
-  setContents(quads: QuadSet) {
-    this.quads = quads;
-  }
-
-  toString() {
-    return 'Graph: [' + this.node.uri.toString() + ' - ' + this.quads.size + ' quads]';
-  }
-
-  static create(quads?: QuadSet): Graph {
-    var uri = NamedNode.createNewTempUri();
-    return this._create(uri, quads);
-  }
-
-  private static _create(uri: string, quads?: QuadSet): Graph {
-    var graph = new Graph(uri, quads);
-    this.register(graph);
-    return graph;
-  }
-
-  /**
-   * @internal
-   * @param graph
-   */
-  static register(graph: Graph) {
-    if (this.graphs.has(graph.node.uri)) {
-      throw new Error(
-        'A graph with this URI already exists. You should probably use Graph.getOrCreate instead of Graph.create (' +
-          graph.node.uri +
-          ')',
-      );
-    }
-    this.graphs.set(graph.node.uri, graph);
-    // super.register(graph);
-  }
-
-  /**
-   * @internal
-   * @param graph
-   */
-  static unregister(graph: Graph) {
-    if (!this.graphs.has(graph.node.uri)) {
-      throw new Error('This node has already been removed from the registry: ' + graph.node.uri);
-    }
-    this.graphs.delete(graph.node.uri);
-  }
-
   static getOrCreate(uri: string) {
     return this.getGraph(uri) || this._create(uri);
   }
@@ -2600,6 +2754,71 @@ export class Graph implements Term {
 
   static getAll(): CoreMap<string, Graph> {
     return this.graphs;
+  }
+
+  private static _create(uri: string, quads?: QuadSet): Graph {
+    var graph = new Graph(uri, quads);
+    this.register(graph);
+    return graph;
+  }
+
+  equals(other: Term) {
+    return other === this;
+  }
+
+  /**
+   * @internal
+   * @param quad
+   */
+  registerQuad(
+    quad: Quad,
+    alteration: boolean = false,
+    emitEvents: boolean = true,
+  ) {
+    this.quads.add(quad);
+    // if(emitEvents)
+    // {
+    //   Graph.registerGraphEvent(this,quad,alteration ? [Graph.addedQuads] : [Graph.addedQuads,Graph.addedQuadsAlterations]);
+    // }
+  }
+
+  /**
+   * @internal
+   * @param quad
+   */
+  unregisterQuad(
+    quad: Quad,
+    alteration: boolean = false,
+    emitEvents: boolean = true,
+  ) {
+    this.quads.delete(quad);
+    // if(emitEvents)
+    // {
+    //   Graph.registerGraphEvent(this,quad,alteration ? [Graph.removedQuads] : [Graph.removedQuads,Graph.removedQuadsAlterations])
+    // }
+  }
+
+  hasQuad(quad: Quad) {
+    return this.quads.has(quad);
+  }
+
+  //Note: cannot name this getQuads, because NamedNode already uses that for getting all quads of all its properties
+  getContents(): QuadSet {
+    return this.quads;
+  }
+
+  setContents(quads: QuadSet) {
+    this.quads = quads;
+  }
+
+  toString() {
+    return (
+      'Graph: [' +
+      this.node.uri.toString() +
+      ' - ' +
+      this.quads.size +
+      ' quads]'
+    );
   }
 }
 
@@ -2634,40 +2853,33 @@ export class Quad extends EventEmitter {
    * The number of quads active in this system
    */
   static globalNumQuads: number = 0;
-
-  //TODO: possibly we can remove these first two, they may never be used. Only alterations are of interest?
-  private static createdQuads: QuadSet = new QuadSet();
-  private static removedQuads: QuadSet = new QuadSet();
-
-  private static removedQuadsAltered: QuadSet = new QuadSet();
-  private static createdQuadsAltered: QuadSet = new QuadSet();
-
   /**
    * @internal
    * emitted when new quads have been created
    * TODO: possibly we can remove this, it may never be used. Only alterations are of interest?
    */
   static QUADS_CREATED: string = 'QUADS_CREATED';
-
   /**
    * @internal
    * emitted by the Quad class itself when quads have been removed
    * TODO: possibly we can remove this, it may never be used. Only alterations are of interest?
    */
   static QUADS_REMOVED: string = 'QUADS_REMOVED';
-
   /**
    * emitted by a quad when that quad is being removed
    * TODO: possibly we can remove this, it may never be used. Only alterations are of interest?
    */
   static QUAD_REMOVED: string = 'QUAD_REMOVED';
-
   /**
    * emitted when quads have been altered by user interaction
    * @internal
    */
   static QUADS_ALTERED: string = 'QUADS_ALTERED';
-
+  //TODO: possibly we can remove these first two, they may never be used. Only alterations are of interest?
+  private static createdQuads: QuadSet = new QuadSet();
+  private static removedQuads: QuadSet = new QuadSet();
+  private static removedQuadsAltered: QuadSet = new QuadSet();
+  private static createdQuadsAltered: QuadSet = new QuadSet();
   private _removed: boolean;
 
   /**
@@ -2689,51 +2901,23 @@ export class Quad extends EventEmitter {
     this.setup(alteration, emitEvents);
   }
 
-  private setup(alteration: boolean = false, emitEvents: boolean = true) {
-    // if(this.predicate.uri == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" && this.object['uri'] == "http://data.dacore.org/ontologies/core/Editor")
-    // {
-    // 	debugger;
-    // }
-
-    //let nodes take note of this quad in which they occur
-    //first, we overwrite the property this.object with the result of register because a Literal may return a clone
-    this.object = this.object.registerInverseProperty(this, alteration);
-    this.subject.registerProperty(this, alteration);
-    this.predicate.registerAsPredicate(this, alteration);
-    this._graph.registerQuad(this, alteration);
-
-    if (emitEvents) {
-      //new quad events are batched together and emitted on the next tick
-      //so here we make sure the Quad class will emit its batched events on the next tick
-      eventBatcher.register(Quad);
-      //and here we save this quad to a set of newQuads which is a static property of the Quad class
-      Quad.createdQuads.add(this);
-
-      //only if it's an alteration AND it's relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
-      if (alteration && !this.implicit) {
-        Quad.createdQuadsAltered.add(this);
-      }
-    }
-    Quad.globalNumQuads++;
-  }
-
   get graph() {
     return this._graph;
   }
 
   /**
-   * Removes this quad and creates a new quad with the same subject,predicate,object, but a new graph.
-   * Returns the new quad
-   * @param newGraph
+   * Returns true if this quad still exists as an object in memory, but is no longer actively used in the graph
    */
-  moveToGraph(newGraph: Graph, alteration: boolean = true): Quad {
-    if(newGraph === this._graph)
-    {
-      return this;
-    }
-    let newQuad = Quad.getOrCreate(this.subject, this.predicate, this.object, newGraph, this.implicit, alteration);
-    this.remove(alteration);
-    return newQuad;
+  get isRemoved(): boolean {
+    return this._removed;
+  }
+
+  /**
+   * @internal
+   * Returns true if events of newly created quads or removed quads are currently batched and waiting to be emitted
+   */
+  static hasBatchedEvents() {
+    return this.createdQuads.size > 0 || this.removedQuads.size > 0;
   }
 
   /*set graph(newGraph: Graph) {
@@ -2762,14 +2946,102 @@ export class Quad extends EventEmitter {
     }
 	}*/
 
-  private mimicEventsOnUpdate(oldQuad: Quad) {
-    //manually mimic the fact the old quad was removed and the new quad was added (storage requires this to add/remove those quads to/from the right quad stores)
-    eventBatcher.register(Quad);
-    Quad.removedQuads.add(oldQuad);
-    Quad.removedQuadsAltered.add(oldQuad);
+  /**
+   * @internal
+   */
+  static emitBatchedEvents() {
+    if (this.createdQuads.size > 0) {
+      this.emitter.emit(Quad.QUADS_CREATED, this.createdQuads);
+      this.createdQuads = new QuadSet();
+    }
+    if (this.removedQuads.size > 0) {
+      this.emitter.emit(Quad.QUADS_REMOVED, this.removedQuads);
+      this.removedQuads = new QuadSet();
+    }
+    if (
+      this.createdQuadsAltered.size > 0 ||
+      this.removedQuadsAltered.size > 0
+    ) {
+      this.emitter.emit(
+        Quad.QUADS_ALTERED,
+        this.createdQuadsAltered,
+        this.removedQuadsAltered,
+      );
+      this.createdQuadsAltered = new QuadSet();
+      this.removedQuadsAltered = new QuadSet();
+    }
+  }
 
-    Quad.createdQuads.add(this);
-    Quad.createdQuadsAltered.add(this);
+  /**
+   * Get the existing quad for the given subject,predicate and object, or create it if it didn't exists yet.
+   * @param subject
+   * @param predicate
+   * @param object
+   * @param implicit
+   * @param alteration - states whether this quad has been created by a user interaction (true) or simply because of updated data has been loaded
+   */
+  static getOrCreate(
+    subject: NamedNode,
+    predicate: NamedNode,
+    object: Node,
+    graph: Graph = defaultGraph,
+    implicit: boolean = false,
+    alteration: boolean = false,
+  ) {
+    return (
+      this.get(subject, predicate, object, graph) ||
+      new Quad(subject, predicate, object, graph, implicit, alteration)
+    );
+  }
+
+  /**
+   * Gets the existing quad for the given subject,predicate and object.
+   * Will return any quad with an equivalent object. See Literal.isEquivalentTo() and NamedNode.isEquivalentTo() for more information.
+   * @param subject
+   * @param predicate
+   * @param object
+   */
+  static get(
+    subject: NamedNode,
+    predicate: NamedNode,
+    object: Node,
+    graph: Graph,
+  ): Quad | null {
+    if (!subject || !predicate || !object) return null;
+    return subject.getQuads(predicate, object).find((q) => q._graph === graph);
+  }
+
+  static moveQuadsToGraph(
+    quads: Quad[],
+    graph: Graph,
+    alteration: boolean = false,
+  ) {
+    let result = new (Object.getPrototypeOf(quads).constructor)();
+    quads.forEach((quad) => {
+      result.push(quad.moveToGraph(graph, alteration));
+    });
+    return result;
+  }
+
+  /**
+   * Removes this quad and creates a new quad with the same subject,predicate,object, but a new graph.
+   * Returns the new quad
+   * @param newGraph
+   */
+  moveToGraph(newGraph: Graph, alteration: boolean = true): Quad {
+    if (newGraph === this._graph) {
+      return this;
+    }
+    let newQuad = Quad.getOrCreate(
+      this.subject,
+      this.predicate,
+      this.object,
+      newGraph,
+      this.implicit,
+      alteration,
+    );
+    this.remove(alteration);
+    return newQuad;
   }
 
   /**
@@ -2805,74 +3077,6 @@ export class Quad extends EventEmitter {
       //re-register and make it an 'alteration' so it will be picked up by the storage
       this.setup(true);
     }
-  }
-
-  /**
-   * @internal
-   * Returns true if events of newly created quads or removed quads are currently batched and waiting to be emitted
-   */
-  static hasBatchedEvents() {
-    return this.createdQuads.size > 0 || this.removedQuads.size > 0;
-  }
-
-  /**
-   * @internal
-   */
-  static emitBatchedEvents() {
-    if (this.createdQuads.size > 0) {
-      this.emitter.emit(Quad.QUADS_CREATED, this.createdQuads);
-      this.createdQuads = new QuadSet();
-    }
-    if (this.removedQuads.size > 0) {
-      this.emitter.emit(Quad.QUADS_REMOVED, this.removedQuads);
-      this.removedQuads = new QuadSet();
-    }
-    if (this.createdQuadsAltered.size > 0 || this.removedQuadsAltered.size > 0) {
-      this.emitter.emit(Quad.QUADS_ALTERED, this.createdQuadsAltered, this.removedQuadsAltered);
-      this.createdQuadsAltered = new QuadSet();
-      this.removedQuadsAltered = new QuadSet();
-    }
-  }
-
-  /**
-   * Get the existing quad for the given subject,predicate and object, or create it if it didn't exists yet.
-   * @param subject
-   * @param predicate
-   * @param object
-   * @param implicit
-   * @param alteration - states whether this quad has been created by a user interaction (true) or simply because of updated data has been loaded
-   */
-  static getOrCreate(
-    subject: NamedNode,
-    predicate: NamedNode,
-    object: Node,
-    graph: Graph = defaultGraph,
-    implicit: boolean = false,
-    alteration: boolean = false,
-  ) {
-    return (
-      this.get(subject, predicate, object, graph) || new Quad(subject, predicate, object, graph, implicit, alteration)
-    );
-  }
-
-  /**
-   * Gets the existing quad for the given subject,predicate and object.
-   * Will return any quad with an equivalent object. See Literal.isEquivalentTo() and NamedNode.isEquivalentTo() for more information.
-   * @param subject
-   * @param predicate
-   * @param object
-   */
-  static get(subject: NamedNode, predicate: NamedNode, object: Node, graph: Graph): Quad | null {
-    if (!subject || !predicate || !object) return null;
-    return subject.getQuads(predicate, object).find((q) => q._graph === graph);
-  }
-
-  static moveQuadsToGraph(quads: Quad[], graph: Graph,alteration:boolean=false) {
-    let result = new (Object.getPrototypeOf(quads)).constructor();
-    quads.forEach((quad) => {
-      result.push(quad.moveToGraph(graph, alteration));
-    });
-    return result;
   }
 
   /**
@@ -2915,15 +3119,16 @@ export class Quad extends EventEmitter {
   }
 
   onValueChanged(oldValue: Literal) {
-    let oldQuad = new Quad(this.subject, this.predicate, oldValue, this.graph, this.implicit, false, false);
+    let oldQuad = new Quad(
+      this.subject,
+      this.predicate,
+      oldValue,
+      this.graph,
+      this.implicit,
+      false,
+      false,
+    );
     this.mimicEventsOnUpdate(oldQuad);
-  }
-
-  /**
-   * Returns true if this quad still exists as an object in memory, but is no longer actively used in the graph
-   */
-  get isRemoved(): boolean {
-    return this._removed;
   }
 
   print() {
@@ -2932,7 +3137,9 @@ export class Quad extends EventEmitter {
       ' ' +
       Prefix.toPrefixedIfPossible(this.predicate.uri) +
       ' ' +
-      (this.object instanceof NamedNode ? Prefix.toPrefixedIfPossible(this.object.uri) : this.object.toString())
+      (this.object instanceof NamedNode
+        ? Prefix.toPrefixedIfPossible(this.object.uri)
+        : this.object.toString())
     );
   }
 
@@ -2949,6 +3156,44 @@ export class Quad extends EventEmitter {
       ' ' +
       this.graph.toString()
     );
+  }
+
+  private setup(alteration: boolean = false, emitEvents: boolean = true) {
+    // if(this.predicate.uri == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" && this.object['uri'] == "http://data.dacore.org/ontologies/core/Editor")
+    // {
+    // 	debugger;
+    // }
+
+    //let nodes take note of this quad in which they occur
+    //first, we overwrite the property this.object with the result of register because a Literal may return a clone
+    this.object = this.object.registerInverseProperty(this, alteration);
+    this.subject.registerProperty(this, alteration);
+    this.predicate.registerAsPredicate(this, alteration);
+    this._graph.registerQuad(this, alteration);
+
+    if (emitEvents) {
+      //new quad events are batched together and emitted on the next tick
+      //so here we make sure the Quad class will emit its batched events on the next tick
+      eventBatcher.register(Quad);
+      //and here we save this quad to a set of newQuads which is a static property of the Quad class
+      Quad.createdQuads.add(this);
+
+      //only if it's an alteration AND it's relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
+      if (alteration && !this.implicit) {
+        Quad.createdQuadsAltered.add(this);
+      }
+    }
+    Quad.globalNumQuads++;
+  }
+
+  private mimicEventsOnUpdate(oldQuad: Quad) {
+    //manually mimic the fact the old quad was removed and the new quad was added (storage requires this to add/remove those quads to/from the right quad stores)
+    eventBatcher.register(Quad);
+    Quad.removedQuads.add(oldQuad);
+    Quad.removedQuadsAltered.add(oldQuad);
+
+    Quad.createdQuads.add(this);
+    Quad.createdQuadsAltered.add(this);
   }
 }
 

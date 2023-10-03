@@ -22,7 +22,11 @@ export class Order {
    * @param shortestPathFirst
    * @returns {NodeSet<NamedNode>}
    */
-  static byCrossPaths(nodes: NodeSet, property: NamedNode, shortestPathFirst: boolean = false): NodeSet {
+  static byCrossPaths(
+    nodes: NodeSet,
+    property: NamedNode,
+    shortestPathFirst: boolean = false,
+  ): NodeSet {
     var counts = this.getCrossPaths(nodes, property);
     if (shortestPathFirst) {
       return nodes.sort((r1, r2) => {
@@ -44,7 +48,10 @@ export class Order {
     }
   }
 
-  private static getCrossPaths(nodes: NodeSet, property: NamedNode): Map<Node, number> {
+  private static getCrossPaths(
+    nodes: NodeSet,
+    property: NamedNode,
+  ): Map<Node, number> {
     var counts: Map<Node, number> = new Map();
     nodes.forEach((node) => {
       var crossRelations = 0;

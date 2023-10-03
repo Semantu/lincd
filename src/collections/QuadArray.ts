@@ -70,6 +70,7 @@ export class QuadArray extends Array<Quad> {
     //without this the toString() would print 3 URI's for each quad followed by a ',' which looks messy and unclear
     return this.join('\n');
   }
+
   print() {
     console.log(this.toString());
   }
