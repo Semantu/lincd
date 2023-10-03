@@ -29,6 +29,7 @@ import {
   getShapeOrSubShape,
   getSubShapesClasses,
 } from '../utils/ShapeClass';
+import {LinkedQuery, QueryBuildFn} from '../utils/LinkedQuery';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -235,6 +236,11 @@ export abstract class Shape extends EventEmitter implements IShape {
     return this.shape.validateNode(node);
   }
 
+  static query<T extends Shape>(this: typeof Shape, queryFn: QueryBuildFn<T>): LinkedQuery<T> {
+    const query = new LinkedQuery<T>(queryFn);
+    query.shape = this;
+    return query;
+  }
   /**
    * Lets a LinkedComponent request specific data of a shape.
    *
