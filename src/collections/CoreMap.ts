@@ -15,7 +15,10 @@ export class CoreMap<K, V> extends Map<K, V> implements ICoreIterable<V> {
    * @param callbackfn A function that accepts up to three arguments. The every method calls the callbackfn function for each element in array1 until the callbackfn returns false, or until the end of the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  every(callbackfn: (value: V, key: K, map: CoreMap<K, V>) => boolean, thisArg?: any): boolean {
+  every(
+    callbackfn: (value: V, key: K, map: CoreMap<K, V>) => boolean,
+    thisArg?: any,
+  ): boolean {
     for (let [key, value] of this) {
       if (!callbackfn.apply(thisArg, [value, key, this])) {
         return false;
@@ -29,7 +32,10 @@ export class CoreMap<K, V> extends Map<K, V> implements ICoreIterable<V> {
    * @param callbackfn A function that accepts up to three arguments. The some method calls the callbackfn function for each element in array1 until the callbackfn returns true, or until the end of the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  some(callbackfn: (value: V, key: K, map: CoreMap<K, V>) => boolean, thisArg?: any): boolean {
+  some(
+    callbackfn: (value: V, key: K, map: CoreMap<K, V>) => boolean,
+    thisArg?: any,
+  ): boolean {
     for (let [key, value] of this) {
       if (callbackfn.apply(thisArg, [value, key, this])) {
         return true;
@@ -43,7 +49,10 @@ export class CoreMap<K, V> extends Map<K, V> implements ICoreIterable<V> {
    * @param callbackfn A function that accepts up to three arguments. The map method calls the callbackfn function one time for each element in the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  map<U>(callbackfn: (value: V, key: K, map: Map<K, V>) => U, thisArg?: any): this {
+  map<U>(
+    callbackfn: (value: V, key: K, map: Map<K, V>) => U,
+    thisArg?: any,
+  ): this {
     //create the result map, whos values will be 'mapped' into new values from the current values of this map
     //var mappedMap = new (<any> this.constructor)() as CoreMap<K,U>;
     var mappedMap = new (<any>this.constructor)(); // as CoreMap<K,U>;
@@ -59,7 +68,10 @@ export class CoreMap<K, V> extends Map<K, V> implements ICoreIterable<V> {
    * @param callbackfn A function that accepts up to three arguments. The filter method calls the callbackfn function one time for each element in the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  filter(callbackfn: (value: V, key: K, map: Map<K, V>) => any, thisArg?: any): this {
+  filter(
+    callbackfn: (value: V, key: K, map: Map<K, V>) => any,
+    thisArg?: any,
+  ): this {
     //create the result map, whos values will be 'mapped' into new values from the current values of this map
     var filteredMap = new (<any>this.constructor)(); //this.createNew();//new Map<K,V>();
     for (let [key, value] of this) {
@@ -79,7 +91,10 @@ export class CoreMap<K, V> extends Map<K, V> implements ICoreIterable<V> {
    * Returns the value of the first element in the Set where predicate is true, and undefined
    * otherwise.
    */
-  find(predicate: (value: V, index: K, obj: CoreMap<K, V>) => boolean, thisArg?: any): V | undefined {
+  find(
+    predicate: (value: V, index: K, obj: CoreMap<K, V>) => boolean,
+    thisArg?: any,
+  ): V | undefined {
     for (let [key, value] of this) {
       if (predicate.apply(thisArg, [value, key, this])) {
         return value;
@@ -105,6 +120,7 @@ export class CoreMap<K, V> extends Map<K, V> implements ICoreIterable<V> {
     }
     return res;
   }
+
   print() {
     console.log(this.toString());
   }

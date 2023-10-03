@@ -32,6 +32,7 @@ export class NodeURIMappings extends NodeMap<NamedNode> {
       return blankNode;
     }
   }
+
   getBlankNodes(): NodeSet<BlankNode> {
     return new NodeSet(this.filter((n) => n instanceof BlankNode).values());
   }
@@ -39,7 +40,10 @@ export class NodeURIMappings extends NodeMap<NamedNode> {
   getOrCreateNamedNode(uri: string): NamedNode {
     //the temp URI's in one environment may already be used in another environment
     //so we need to check for temporary URI's and convert them to a local temporary URI
-    if (uri.substring(0, NamedNode.TEMP_URI_BASE.length) == NamedNode.TEMP_URI_BASE) {
+    if (
+      uri.substring(0, NamedNode.TEMP_URI_BASE.length) ==
+      NamedNode.TEMP_URI_BASE
+    ) {
       if (!this.has(uri)) {
         //create a new temp node that has a LOCAL temp URI
         var tmpResource: NamedNode = NamedNode.create();

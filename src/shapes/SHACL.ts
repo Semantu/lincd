@@ -16,21 +16,18 @@ import {ForwardReasoning} from '../utils/ForwardReasoning';
 
 export class SHACL_Shape extends Shape {
   static targetClass: NamedNode = shacl.Shape;
-  protected _validateNode(node:NamedNode,validated:CoreMap<Node,boolean>=new CoreMap<Node,boolean>()):boolean {
+
+  protected _validateNode(
+    node: NamedNode,
+    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
+  ): boolean {
     return false;
   }
-
 }
+
 //Note: this shape is linked in Module.ts to avoid cyclical dependencies
 export class NodeShape extends SHACL_Shape {
   static targetClass: NamedNode = shacl.NodeShape;
-
-  addPropertyShape(property: PropertyShape) {
-    this.set(shacl.property, property.namedNode);
-  }
-  getPropertyShapes(): ShapeSet<PropertyShape> {
-    return PropertyShape.getSetOf(this.getAll(shacl.property));
-  }
 
   get targetNode(): NamedNode {
     return this.getOne(shacl.targetNode) as NamedNode;
@@ -57,11 +54,27 @@ export class NodeShape extends SHACL_Shape {
   }
 
   get inList(): List {
-    return this.hasProperty(shacl.in) ? List.getOf(this.getOne(shacl.in)) : null;
+    return this.hasProperty(shacl.in)
+      ? List.getOf(this.getOne(shacl.in))
+      : null;
   }
 
   set inList(value: List) {
     this.overwrite(shacl.in, value.node);
+  }
+
+  static getShapesOf(node: Node) {
+    return this.getLocalInstances().filter((shape) => {
+      return shape.validateNode(node);
+    });
+  }
+
+  addPropertyShape(property: PropertyShape) {
+    this.set(shacl.property, property.namedNode);
+  }
+
+  getPropertyShapes(): ShapeSet<PropertyShape> {
+    return PropertyShape.getSetOf(this.getAll(shacl.property));
   }
 
   /**
@@ -79,49 +92,50 @@ export class NodeShape extends SHACL_Shape {
     return entities;
   }
 
-  validateNode(node: Node): boolean
-  {
-    return this._validateNode(node)
+  validateNode(node: Node): boolean {
+    return this._validateNode(node);
   }
-  protected _validateNode(node:Node,validated:CoreMap<Node,boolean>=new CoreMap<Node,boolean|null>()):boolean {
-    if(validated.has(node))
-    {
+
+  protected _validateNode(
+    node: Node,
+    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean | null>(),
+  ): boolean {
+    if (validated.has(node)) {
       return validated.get(node);
     }
     //whilst validating, if a connected node wants to validate THIS node, we consider this node to be valid until proven otherwise below
-    validated.set(node,true);
+    validated.set(node, true);
     if (this.targetClass) {
       //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
       //this would not be needed if a Forwards reasoning engine was in place
-      if (!(node instanceof NamedNode && ForwardReasoning.hasType(node,this.targetClass))) {
-        validated.set(node,false);
+      if (
+        !(
+          node instanceof NamedNode &&
+          ForwardReasoning.hasType(node, this.targetClass)
+        )
+      ) {
+        validated.set(node, false);
         return false;
       }
     }
     let propertyShapes = this.getPropertyShapes();
     if (propertyShapes.size > 0) {
       if (node instanceof Literal) {
-        validated.set(node,false);
+        validated.set(node, false);
         return false;
       } else if (node instanceof NamedNode) {
         if (
           !this.getPropertyShapes().every((propertyShape) => {
-            return (propertyShape as any)._validateNode(node,validated);
+            return (propertyShape as any)._validateNode(node, validated);
           })
         ) {
-          validated.set(node,false);
+          validated.set(node, false);
           return false;
         }
       }
     }
     // validated.set(node,true);
     return true;
-  }
-
-  static getShapesOf(node: Node) {
-    return this.getLocalInstances().filter((shape) => {
-      return shape.validateNode(node);
-    });
   }
 }
 
@@ -146,7 +160,9 @@ export class PropertyShape extends SHACL_Shape {
    */
   //@NOTE: If the name valueShape is an issue we could always rename `get nodeShape` to `get shaclShape` in Shape.ts
   get valueShape(): NodeShape {
-    return this.hasProperty(shacl.node) ? NodeShape.getOf(this.getOne(shacl.node)) : null;
+    return this.hasProperty(shacl.node)
+      ? NodeShape.getOf(this.getOne(shacl.node))
+      : null;
   }
 
   set valueShape(value: NodeShape) {
@@ -211,55 +227,81 @@ export class PropertyShape extends SHACL_Shape {
     this.overwrite(shacl.path, value);
   }
 
+  get parentNodeShape(): NodeShape {
+    return this.hasInverseProperty(shacl.property)
+      ? new NodeShape(this.getOneInverse(shacl.property))
+      : null;
+  }
+
   /**
    * Returns all the classes and properties that are references by this shape
    */
   getOntologyEntities(): NodeSet<NamedNode> {
     //start with values of those properties that have a NamedNode as value
-    let entities = new NodeSet<NamedNode>([this.class, this.path, this.datatype].filter((value) => value && true));
+    let entities = new NodeSet<NamedNode>(
+      [this.class, this.path, this.datatype].filter((value) => value && true),
+    );
     //this caused loops!
     // if (this.nodeShape) {
-      //if a node shape is defined, also add all the entities of that node shape
-      // entities = entities.concat(this.nodeShape.getOntologyEntities());
+    //if a node shape is defined, also add all the entities of that node shape
+    // entities = entities.concat(this.nodeShape.getOntologyEntities());
     // }
     return entities;
   }
-  get parentNodeShape(): NodeShape {
-    return this.hasInverseProperty(shacl.property) ? new NodeShape(this.getOneInverse(shacl.property)) : null;
-  }
 
-  validateNode(node: NamedNode): boolean
-  {
+  validateNode(node: NamedNode): boolean {
     return this._validateNode(node);
   }
-  protected _validateNode(node:NamedNode,validated:CoreMap<Node,boolean>=new CoreMap<Node,boolean>()):boolean
-  {
+
+  resolveFor(node: NamedNode) {
+    //TODO: support more complex property paths
+    return node.getAll(this.path);
+  }
+
+  protected _validateNode(
+    node: NamedNode,
+    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
+  ): boolean {
     //TODO: make property nodes support property paths beyond a single property
     let property = this.path;
     let values = node instanceof NamedNode ? node.getAll(property) : null;
     if (this.class) {
-      if (!values.every((value) => value instanceof NamedNode && value.has(rdf.type, this.class))) {
+      if (
+        !values.every(
+          (value) =>
+            value instanceof NamedNode && value.has(rdf.type, this.class),
+        )
+      ) {
         return false;
       }
     }
     if (this.datatype) {
-      if (!values.every((value) => value instanceof Literal && value.datatype === this.datatype)) {
+      if (
+        !values.every(
+          (value) =>
+            value instanceof Literal && value.datatype === this.datatype,
+        )
+      ) {
         return false;
       }
     }
     if (this.valueShape) {
       //every value should be a valid instance of this nodeShape
       let nodeShape = this.valueShape;
-      if (!values.every((value) => {
-        //nodes referring to each other or to themselves may cause loops here
-        //this is currently avoided by keeping track of which nodes have already been validated, during the validation of the root most node
-        //TODO: perhaps at some point we may want to store validation results in the shape or even the node, and invalidate whenever the node changes any of its properties. (though for complex property paths that would mean more complex invalidation as well. i.e. back tracing property shapes on a change in node 1 to invalidate a distant node 2)
-        if(validated.has(value))
-        {
-          return validated.get(value);
-        }
-        return (value === node && this.parentNodeShape.equals(nodeShape)) || (nodeShape as any)._validateNode(value,validated)
-      })) {
+      if (
+        !values.every((value) => {
+          //nodes referring to each other or to themselves may cause loops here
+          //this is currently avoided by keeping track of which nodes have already been validated, during the validation of the root most node
+          //TODO: perhaps at some point we may want to store validation results in the shape or even the node, and invalidate whenever the node changes any of its properties. (though for complex property paths that would mean more complex invalidation as well. i.e. back tracing property shapes on a change in node 1 to invalidate a distant node 2)
+          if (validated.has(value)) {
+            return validated.get(value);
+          }
+          return (
+            (value === node && this.parentNodeShape.equals(nodeShape)) ||
+            (nodeShape as any)._validateNode(value, validated)
+          );
+        })
+      ) {
         return false;
       }
     }
@@ -274,11 +316,5 @@ export class PropertyShape extends SHACL_Shape {
       }
     }
     return true;
-  }
-
-  resolveFor(node: NamedNode)
-  {
-    //TODO: support more complex property paths
-    return node.getAll(this.path);
   }
 }

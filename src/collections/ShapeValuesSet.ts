@@ -55,6 +55,7 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
       });
     });
   }
+
   /**
    * When cloned (by .filter() or .sort()) we switch to a ShapeSet of all the values
    * And detach from the magic of PropertyValueShapeSets that automatically add and remove items
@@ -94,16 +95,27 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
    * @param callback
    * @param context
    */
-  onChange(callback: (quads?: QuadSet, property?: NamedNode) => void, context?) {
+  onChange(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?,
+  ) {
     (this.subject as NamedNode).onChange(this.property, callback, context);
   }
+
   /**
    * Remove listener for changes in the valueset for this subject + property combination
    * If you provide context (usually 'this'), removing the onChange listener will remove all listeners for this property & context, regardless of what callback you provide. (this is helpful if you dont have access to the excact same callback function)
    * @param callback
    * @param context
    */
-  removeOnChange(callback: (quads?: QuadSet, property?: NamedNode) => void, context?) {
-    (this.subject as NamedNode).removeOnChange(this.property, callback, context);
+  removeOnChange(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?,
+  ) {
+    (this.subject as NamedNode).removeOnChange(
+      this.property,
+      callback,
+      context,
+    );
   }
 }

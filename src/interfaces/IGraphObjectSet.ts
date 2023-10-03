@@ -11,7 +11,9 @@ import {ICoreIterable} from './ICoreIterable';
 /**
  * a set of objects that all have IGraphObject methods, and this set itself also has those methods so you can call them directly on the set instead of for each item
  */
-export interface IGraphObjectSet<R extends IGraphObject> extends IGraphObject, ICoreIterable<R> {
+export interface IGraphObjectSet<R extends IGraphObject>
+  extends IGraphObject,
+    ICoreIterable<R> {
   getQuads(property: NamedNode): QuadSet; //other then a single node, a set always returns a QuadSet, optionally empty
   getInverseQuads(property: NamedNode): QuadSet; //other then a single node, a set always returns a QuadSet, optionally empty
   getAll(property: NamedNode): NodeSet; //always returns a set

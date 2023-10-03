@@ -1,17 +1,23 @@
-import {NamedNode, Node} from '../models';
+import {NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
-import {CoreSet} from '../collections/CoreSet';
 
 let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
-export function addNodeShapeToShapeClass(nodeShape: NodeShape, shapeClass: typeof Shape) {
+
+export function addNodeShapeToShapeClass(
+  nodeShape: NodeShape,
+  shapeClass: typeof Shape,
+) {
   nodeShapeToShapeClass.set(nodeShape.namedNode, shapeClass);
 }
+
 export function getShapeClass(nodeShape: NamedNode): typeof Shape {
   return nodeShapeToShapeClass.get(nodeShape);
 }
 
-export function getSubShapesClasses(shape: typeof Shape | (typeof Shape)[]): (typeof Shape)[] {
+export function getSubShapesClasses(
+  shape: typeof Shape | (typeof Shape)[],
+): (typeof Shape)[] {
   //make sure we have a real class
   shape = ensureShapeConstructor(shape);
   //apply the hasSuperclass function to the shape
@@ -35,7 +41,9 @@ export function getSubShapesClasses(shape: typeof Shape | (typeof Shape)[]): (ty
   // return result;
 }
 
-export function getSuperShapesClasses(shape: typeof Shape | (typeof Shape)[]): (typeof Shape)[] {
+export function getSuperShapesClasses(
+  shape: typeof Shape | (typeof Shape)[],
+): (typeof Shape)[] {
   //make sure we have a real class
   shape = ensureShapeConstructor(shape);
   //apply the hasSuperclass function to the shape
@@ -76,9 +84,11 @@ function ensureShapeConstructor(shape: typeof Shape | (typeof Shape)[]) {
   //   return shape;
   // }
 }
+
 function hasSuperClass(a: Function, b: Function) {
   return (a as Function).prototype instanceof b;
 }
+
 function hasSubClass(a: Function, b: Function) {
   return (b as Function).prototype instanceof a;
 }
@@ -106,7 +116,9 @@ function filterShapeClasses(filterFn) {
   return result;
 }
 
-export function getMostSpecificSubShapes(shape: typeof Shape | (typeof Shape)[]): (typeof Shape)[] {
+export function getMostSpecificSubShapes(
+  shape: typeof Shape | (typeof Shape)[],
+): (typeof Shape)[] {
   if (!Array.isArray(shape)) {
     shape = [shape];
   }
@@ -131,7 +143,10 @@ function filterShapesToMostSpecific(subShapes) {
  * @param property
  * @param shape
  */
-export function getShapeOrSubShape<S extends Shape = Shape>(node, shape: typeof Shape | (typeof Shape)[]): S {
+export function getShapeOrSubShape<S extends Shape = Shape>(
+  node,
+  shape: typeof Shape | (typeof Shape)[],
+): S {
   if (!node) return null;
 
   //new:

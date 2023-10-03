@@ -16,11 +16,13 @@ Prefix.add('owl', base);
 
 var ObjectProperty: NamedNode = NamedNode.getOrCreate(base + 'ObjectProperty');
 var DataProperty: NamedNode = NamedNode.getOrCreate(base + 'DataProperty');
-var equivalentClass: NamedNode = NamedNode.getOrCreate(base + 'equivalentClass');
+var equivalentClass: NamedNode = NamedNode.getOrCreate(
+  base + 'equivalentClass',
+);
 
 export const owl = {
   _ontologyResource,
   ObjectProperty,
   DataProperty,
-  equivalentClass
+  equivalentClass,
 };

@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {CoreSet} from './CoreSet';
-import {NamedNode, Node, Literal} from '../models';
+import {Literal, NamedNode, Node} from '../models';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet';
 import {QuadSet} from './QuadSet';
 import {QuadArray} from './QuadArray';
@@ -12,9 +12,23 @@ import {ICoreIterable} from '../interfaces/ICoreIterable';
 import {Debug} from '../utils/Debug';
 import {URI} from '../utils/URI';
 
-export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraphObjectSet<Node> {
+export class NodeSet<R extends Node = Node>
+  extends CoreSet<R>
+  implements IGraphObjectSet<Node>
+{
   constructor(iterable?: Iterable<R>) {
     super(iterable);
+  }
+
+  static fromValues<T extends Node = Node>(strings: string[]): NodeSet<T> {
+    return new NodeSet<T>(
+      strings.map(
+        (s) =>
+          (URI.isURI(s)
+            ? NamedNode.getOrCreate(s)
+            : new Literal(s)) as any as T,
+      ),
+    );
   }
 
   //we cannot use NamedNodeSet here because of requirement loops
@@ -187,7 +201,10 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
     return res;
   }
 
-  getAllQuads(includeAsObject?: boolean, includeImplicit: boolean = false): QuadArray {
+  getAllQuads(
+    includeAsObject?: boolean,
+    includeImplicit: boolean = false,
+  ): QuadArray {
     var res = new QuadArray();
     for (var node of this) {
       for (var item of node.getAllQuads(includeAsObject, includeImplicit)) {
@@ -282,13 +299,17 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
     return res;
   }
 
+  //@TODO: remove generic isLoaded now that we have Shape loading functionality?
+
   //@TODO: remove promiseLoaded now that we have Shape loading functionality?
   /**
    * @deprecated
    * @param loadInverseProperties
    */
   promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
-    return Promise.all(this.map((node) => node.promiseLoaded(loadInverseProperties)))
+    return Promise.all(
+      this.map((node) => node.promiseLoaded(loadInverseProperties)),
+    )
       .then((res) => {
         return res.every((result) => result === true);
       })
@@ -296,7 +317,7 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
         return false;
       });
   }
-  //@TODO: remove generic isLoaded now that we have Shape loading functionality?
+
   // perhaps we need to add a new shapeIsLoaded() method?
   /**
    * @deprecated
@@ -307,15 +328,14 @@ export class NodeSet<R extends Node = Node> extends CoreSet<R> implements IGraph
   }
 
   toString(): string {
-    return 'NodeSet {\n' + [...this].map((node) => '\t' + node.toString()).join(',\n') + '\n}';
+    return (
+      'NodeSet {\n' +
+      [...this].map((node) => '\t' + node.toString()).join(',\n') +
+      '\n}'
+    );
   }
 
   print(includeIncomingProperties: boolean = true) {
     return Debug.print(this, includeIncomingProperties);
-  }
-
-
-  static fromValues<T extends Node = Node>(strings: string[]): NodeSet<T> {
-    return new NodeSet<T>(strings.map((s) => (URI.isURI(s) ? NamedNode.getOrCreate(s) : new Literal(s)) as any as T));
   }
 }

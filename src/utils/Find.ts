@@ -24,62 +24,42 @@ export class Find {
     let result = new QuadSet();
     let subjects: NodeSet<NamedNode>;
 
-    valuesToProperties.forEach((searchValue: string | NamedNode, properties: NamedNode | NodeSet<NamedNode> | '*') => {
-      let iterationResult = this.byPropertyValue(
-        searchValue,
-        properties,
-        targetType,
-        includeLocalResources,
-        exactMatch,
-        sanitized,
-        subjects,
-      );
-      let iterationSubjects = iterationResult.getSubjects();
+    valuesToProperties.forEach(
+      (
+        searchValue: string | NamedNode,
+        properties: NamedNode | NodeSet<NamedNode> | '*',
+      ) => {
+        let iterationResult = this.byPropertyValue(
+          searchValue,
+          properties,
+          targetType,
+          includeLocalResources,
+          exactMatch,
+          sanitized,
+          subjects,
+        );
+        let iterationSubjects = iterationResult.getSubjects();
 
-      //after added this results for this searchValue..
-      //if this was the first iteration
-      if (!subjects) {
-        //then we will use the subjects of this loop to check against next iterations
-        subjects = iterationSubjects;
-        result = iterationResult;
-      } else {
-        //else we need to check if all the subjects from the first iteration ALSO occurred in this iteration
-        subjects.forEach((subject) => {
-          if (!iterationSubjects.has(subject)) {
-            //if not, we retract results from that subject
-            result = result.filter((quad) => {
-              return quad.subject !== subject;
-            });
-          }
-        });
-      }
-    });
+        //after added this results for this searchValue..
+        //if this was the first iteration
+        if (!subjects) {
+          //then we will use the subjects of this loop to check against next iterations
+          subjects = iterationSubjects;
+          result = iterationResult;
+        } else {
+          //else we need to check if all the subjects from the first iteration ALSO occurred in this iteration
+          subjects.forEach((subject) => {
+            if (!iterationSubjects.has(subject)) {
+              //if not, we retract results from that subject
+              result = result.filter((quad) => {
+                return quad.subject !== subject;
+              });
+            }
+          });
+        }
+      },
+    );
     return result;
-  }
-
-  private static valueMatches(
-    propertyValueResource: Node,
-    value: string,
-    sanitized: boolean,
-    exactMatch: boolean,
-  ): boolean {
-    //if local nodes are allowed not allowed and the object is a local node, dont continue
-
-    if (propertyValueResource instanceof NamedNode) return false;
-
-    //get the value
-    let propertyValue = propertyValueResource.value;
-
-    if (sanitized) propertyValue = URI.sanitize(propertyValue);
-
-    //not exact match? then we only test if the value starts with the identifier we're searching for
-    if (!exactMatch) propertyValue = propertyValue.substr(0, value.length);
-
-    //	if the value matches and the target type matches
-    if (propertyValue === value) {
-      return true;
-    }
-    return false;
   }
 
   /**
@@ -105,7 +85,10 @@ export class Find {
     let propertySet: NodeSet<NamedNode>;
     if (properties instanceof NamedNode) {
       //if a propertyOrPropertyType TYPE was given (like ObjectProperty or IdProperty) then we look for ALL properties that are instances of this type
-      if (properties.has(rdf.type, rdfs.Class) && properties.has(rdfs.subClassOf, rdf.Property)) {
+      if (
+        properties.has(rdf.type, rdfs.Class) &&
+        properties.has(rdfs.subClassOf, rdf.Property)
+      ) {
         propertySet = properties.getAllInverse(rdf.type);
       } else {
         propertySet = new NodeSet([properties]);
@@ -147,11 +130,43 @@ export class Find {
           result.add(quad);
         }
         //if we find a value that matches the search string
-        else if (this.valueMatches(quad.object, searchValue as string, sanitized, exactMatch)) {
+        else if (
+          this.valueMatches(
+            quad.object,
+            searchValue as string,
+            sanitized,
+            exactMatch,
+          )
+        ) {
           result.add(quad);
         }
       });
     });
     return result;
+  }
+
+  private static valueMatches(
+    propertyValueResource: Node,
+    value: string,
+    sanitized: boolean,
+    exactMatch: boolean,
+  ): boolean {
+    //if local nodes are allowed not allowed and the object is a local node, dont continue
+
+    if (propertyValueResource instanceof NamedNode) return false;
+
+    //get the value
+    let propertyValue = propertyValueResource.value;
+
+    if (sanitized) propertyValue = URI.sanitize(propertyValue);
+
+    //not exact match? then we only test if the value starts with the identifier we're searching for
+    if (!exactMatch) propertyValue = propertyValue.substr(0, value.length);
+
+    //	if the value matches and the target type matches
+    if (propertyValue === value) {
+      return true;
+    }
+    return false;
   }
 }

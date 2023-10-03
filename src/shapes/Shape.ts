@@ -18,16 +18,24 @@ import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
 import {NodeShape} from './SHACL';
-import {LinkedDataDeclaration, LinkedDataResponse, LinkedDataSetDeclaration} from '../interfaces/Component';
+import {
+  LinkedDataDeclaration,
+  LinkedDataResponse,
+  LinkedDataSetDeclaration,
+} from '../interfaces/Component';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet';
-import {getMostSpecificShapes, getShapeOrSubShape, getSubShapesClasses} from '../utils/ShapeClass';
+import {
+  getMostSpecificShapes,
+  getShapeOrSubShape,
+  getSubShapesClasses,
+} from '../utils/ShapeClass';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
 interface IClassConstruct {
-  new (): any;
-
   prototype: any;
+
+  new (): any;
 }
 
 /**
@@ -71,8 +79,8 @@ export abstract class Shape extends EventEmitter implements IShape {
    import {foaf} from "./ontologies/foaf";
    @linkedShape
    export class Person extends Shape {
- static targetClass:NamedNode = foaf.Person;
-}
+   static targetClass:NamedNode = foaf.Person;
+   }
    ```
    */
   static targetClass: NamedNode = null;
@@ -84,9 +92,10 @@ export abstract class Shape extends EventEmitter implements IShape {
   static typesToShapes: Map<NamedNode, CoreSet<IClassConstruct>> = new Map();
   //TODO: rename to nodeShape to avoid confusing things like shape.shape
   static shape: NodeShape;
-
-  protected _node: Node;
-  protected static instancesLoaded: Map<NamedNode, {promise: Promise<NodeSet<NamedNode>>; done: boolean}> = new Map();
+  protected static instancesLoaded: Map<
+    NamedNode,
+    {promise: Promise<NodeSet<NamedNode>>; done: boolean}
+  > = new Map();
   protected loadPromise: {done: boolean; promise: Promise<boolean>};
 
   /**
@@ -99,6 +108,19 @@ export abstract class Shape extends EventEmitter implements IShape {
   constructor(node?: Node | any) {
     super();
     this.setupNode(node);
+  }
+
+  protected _node: Node;
+
+  /**
+   * Returns the node this instance represents.
+   *
+   * Since each node in RDF can have multiple types, each node can have multiple instances (multiple representations of itself reflecting the different things it 'is')
+   * But each instance always only represents a single node
+   */
+  get node(): Node {
+    //Instances of rdfs:Literal overwrite this method to return literalResource instead
+    return this._node;
   }
 
   /**
@@ -114,40 +136,44 @@ export abstract class Shape extends EventEmitter implements IShape {
   }
 
   /**
-   * Get all values of a certain property as instances of a certain shape.
-   * The returned set of shape will automatically update when the property values change in the graph.
-   * @param property
-   * @param shapeClass
+   * Returns the NamedNode that this instance represents.
+   *
+   * Since each node in RDF can have multiple types, each node can have multiple instances (multiple representations of itself reflecting the different things it 'is')
+   * But each instance always only represents a single node
+   *
+   * NOTE: the node of an instance is NOT GUARANTEED to be a NamedNode. There are also instance of Literals.
+   * Therefore only use this method if you are certain that the instance you have represents a NamedNode.
+   * In that case this method - which works exactly the same as `.node` - simply tells the compiler that the return node is certainly a NamedNode.
    */
-  getAllAs<T extends Shape>(
-    property: NamedNode,
-    shapeClass: typeof Shape,
-    allowSubShapes: boolean = false,
-  ): ShapeValuesSet<T> {
-    return new ShapeValuesSet<T>(this.namedNode, property, shapeClass as any, allowSubShapes);
+  get namedNode(): NamedNode {
+    //Instances of rdfs:Literal will return null so we can just return the node as is here, and use this method for type casting
+    return this._node as NamedNode;
   }
 
-  /**
-   * If a value exists for the given property, this returns that value as an instance of the given shape
-   * If not, returns null
-   * @param property
-   * @param shape
-   */
-  getOneAs<S extends Shape = Shape>(property, shape: typeof Shape, allowSubShapes: boolean = false): S {
-    if (this.hasProperty(property)) {
-      let value = this.getOne(property);
-      if (allowSubShapes) {
-        shape = getMostSpecificShapes(value as NamedNode, shape)[0];
-      }
-      return new (shape as any)(value) as S;
-    }
-    // return this.hasProperty(property) ? new (shape as any)(this.getOne(property)) as S : null;
+  get value(): string {
+    return this._node.value;
   }
 
-  equals(other) {
-    return (
-      other instanceof Shape && other.node === this.node && Object.getPrototypeOf(other) === Object.getPrototypeOf(this)
-    );
+  get uri(): string {
+    return this._node.value;
+  }
+
+  //TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
+  get label() {
+    return this.getValue(rdfs.label);
+  }
+
+  set label(val: string) {
+    this.overwrite(rdfs.label, new Literal(val));
+  }
+
+  //TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
+  get type() {
+    return this.getOne(rdf.type) as NamedNode;
+  }
+
+  set type(val: NamedNode) {
+    this.overwrite(rdf.type, val);
   }
 
   /**
@@ -184,7 +210,10 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param type
    * @param allowSuperClass
    */
-  static getClassesForType(type: NamedNode, allowSuperClass: boolean = false): CoreSet<typeof Shape> {
+  static getClassesForType(
+    type: NamedNode,
+    allowSuperClass: boolean = false,
+  ): CoreSet<typeof Shape> {
     let instanceClasses = this.typesToShapes.get(type);
     if (allowSuperClass) {
       let subClasses = type.getDeep(rdfs.subClassOf) as any;
@@ -192,58 +221,13 @@ export abstract class Shape extends EventEmitter implements IShape {
       subClasses.delete(type); //<-- only delete after ordering, as it will be a new set and not the original PropertySet
       subClasses.forEach((subViewType) => {
         if (this.typesToShapes.has(subViewType)) {
-          instanceClasses = instanceClasses.concat(this.typesToShapes.get(subViewType));
+          instanceClasses = instanceClasses.concat(
+            this.typesToShapes.get(subViewType),
+          );
         }
       });
     }
     return instanceClasses as any as CoreSet<typeof Shape>;
-  }
-
-  /**
-   * Makes sure that the node that this instance represents has the right rdf.type
-   * Also makes sure that this instance is destructed if the node is removed
-   * @internal
-   * @param node
-   */
-  setupNode(node: Node) {
-    if (node) {
-      if (!(node instanceof Node)) {
-        console.error('Invalid argument to constructor of shape:', node);
-        throw new Error('Invalid argument provided to constructor of shape. Please provide an instance of a node.');
-      }
-      this._node = node;
-    } else {
-      //this code gets triggered when you call new SomeShapeClass() without providing a node
-      //some classes prefer a certain term type. E.g. RdfsLiteral will create a Literal node, and NodeShape will create a BlankNode
-      //TODO: also look at inheritance chain, so that a class without preferredNodeKind that extends a class with preferredTermType still gets that inherited termType
-      let termType = this.constructor['nodeKind'] || this.constructor['preferredNodeKind'] || NamedNode;
-
-      //create a new temporary node, a Literal, NamedNode or BlankNode
-      this._node = termType.create(true);
-
-      let nodeShape = this.nodeShape;
-      if (nodeShape && nodeShape.targetClass) {
-        this._node.set(rdf.type, nodeShape.targetClass);
-      }
-    }
-
-    //@TODO: do this for RdfsLiteral as well if they implement events at some point?
-    if (this._node instanceof NamedNode) {
-      this._node.on(NamedNode.NODE_REMOVED, this.destruct.bind(this));
-    }
-  }
-
-  /**
-   * Destructs the instance. Removes event listeners etc. Overwrite in each subclass of this class that uses custom event listeners
-   */
-  destruct() {
-    if (this._node instanceof NamedNode) {
-      this._node.removeAllListeners();
-    }
-  }
-
-  validate(): boolean {
-    return this.nodeShape?.validateNode(this.node) || false;
   }
 
   static isValidNode(node: Node) {
@@ -312,36 +296,308 @@ export abstract class Shape extends EventEmitter implements IShape {
     };
   }
 
-  private static ensureLinkedShape() {
-    if (!this.shape) {
-      console.warn(this.name + ' is not a linked shape. Did you forget to use the @linkedShape decorator?');
+  static isInstanceOfTargetClass(node: Node) {
+    return node.has(rdf.type, this.targetClass);
+  }
+
+  static getInstanceByType<T extends IShape>(
+    node: Node,
+    ...shapes: {new (): T; targetClass: NamedNode; getOf(node: Node): T}[]
+  ): T {
+    let matchingShape = shapes.find((shape) => {
+      return node.has(rdf.type, shape.targetClass);
+    });
+    if (matchingShape) {
+      return matchingShape.getOf(node);
     }
   }
 
   /**
-   * Returns the node this instance represents.
-   *
-   * Since each node in RDF can have multiple types, each node can have multiple instances (multiple representations of itself reflecting the different things it 'is')
-   * But each instance always only represents a single node
+   * Searches instances with the given properties only from the local graph
+   * @param properties
+   * @param sanitized
    */
-  get node(): Node {
-    //Instances of rdfs:Literal overwrite this method to return literalResource instead
-    return this._node;
+  static searchLocal<T extends Shape>(
+    this: {new (node: Node): T; targetClass: any},
+    properties: SearchMap,
+    sanitized: boolean = false,
+  ): ShapeSet<T> {
+    let quads = Find.byPropertyValues(
+      properties,
+      this.targetClass,
+      true,
+      true,
+      sanitized,
+    );
+
+    let set = new ShapeSet<T>();
+    for (var node of quads.getSubjects()) {
+      set.add(new this(node));
+    }
+    return set;
   }
 
   /**
-   * Returns the NamedNode that this instance represents.
-   *
-   * Since each node in RDF can have multiple types, each node can have multiple instances (multiple representations of itself reflecting the different things it 'is')
-   * But each instance always only represents a single node
-   *
-   * NOTE: the node of an instance is NOT GUARANTEED to be a NamedNode. There are also instance of Literals.
-   * Therefore only use this method if you are certain that the instance you have represents a NamedNode.
-   * In that case this method - which works exactly the same as `.node` - simply tells the compiler that the return node is certainly a NamedNode.
+   * Searches instances with given properties
+   * And if results are returned, it returns an instance of the first result, else null
+   * @param properties
    */
-  get namedNode(): NamedNode {
-    //Instances of rdfs:Literal will return null so we can just return the node as is here, and use this method for type casting
-    return this._node as NamedNode;
+  static findLocal<T extends Shape>(
+    this: {new (node: Node): T; targetClass: any},
+    properties: SearchMap,
+    sanitized: boolean = false,
+  ): T {
+    let results = (this as any).searchLocal(properties, sanitized);
+    if (results.size > 0) {
+      return results.first();
+    }
+  }
+
+  static getLocalInstances<T extends Shape>(
+    this: ShapeLike<T>,
+    explicitInstancesOnly: boolean = false,
+  ): ShapeSet<T> {
+    //'this' is listed as a parameter ti be able to return a set of instances with the type of the actual class that extends Shape
+    // https://www.typescriptlang.org/docs/handbook/generics.html#using-class-types-in-generics
+    // https://stackoverflow.com/questions/34098023/typescript-self-referencing-return-type-for-static-methods-in-inheriting-classe?rq=1
+    return this.getSetOf(this.getLocalInstanceNodes());
+  }
+
+  //TODO: to find Shape instances we need to not just check type, but all the constraints of this shape class
+  static getNumLocalInstances(): number {
+    return this.getLocalInstanceNodes().size;
+  }
+
+  static getLocalInstanceNodes(
+    explicitInstancesOnly: boolean = false,
+  ): NodeSet {
+    let instanceNodes = new NodeSet();
+    //by default, look for instances of this shape class and all classes that extend it
+    let targetClasses = [this].concat(getSubShapesClasses(this));
+    targetClasses.forEach((shapeClass) => {
+      let potentialInstances = new NodeSet();
+      if (explicitInstancesOnly) {
+        potentialInstances = shapeClass.targetClass
+          .getInverseQuads(rdf.type)
+          .filter((quad) => !quad.implicit)
+          .getSubjects();
+      } else {
+        potentialInstances = shapeClass.targetClass.getAllInverse(rdf.type);
+      }
+      //return only those instance nodes that are actual valid instances of this shape
+      instanceNodes = instanceNodes.concat(
+        potentialInstances.filter((node) => shapeClass.isValidNode(node)),
+      );
+    });
+    return instanceNodes;
+  }
+
+  /**
+   * use new Shape(node) instead, where Shape can be any class that extends Shape
+   * @deprecated
+   * @param node
+   */
+  static getOf<T extends Shape>(this: ShapeLike<T>, node: Node): T {
+    return new this(node);
+  }
+
+  /**
+   * Retrieves an existing node or creates a new (temporary) node and then sets the right rdf:type
+   * Then uses that node to return an instance of the Shape that you call this method from
+   * So it works just like NamedNode.getOrCreate() but creates an instance of the right shape straight away.
+   * Note that if the URI did not yet exist, it creates a temporary node, and hence only once you SAVE that node or shape
+   * Will it (and its properties) be stored in permanent storage.
+   *
+   * @param uri
+   * @param isTemporaryNodeIfNew
+   */
+  static getFromURI<T extends Shape>(
+    this: ShapeLike<T>,
+    uri: string,
+    isTemporaryNodeIfNew: boolean = true,
+  ): T {
+    let node = NamedNode.getNamedNode(uri);
+    if (node) {
+      return new this(node);
+    } else {
+      node = NamedNode.getOrCreate(uri, isTemporaryNodeIfNew);
+      if (this.targetClass) {
+        node.set(rdf.type, this.targetClass);
+      }
+      return new this(node);
+    }
+    return new this(NamedNode.getOrCreate(uri));
+  }
+
+  /**
+   * Generates a URI from the given prefixURI + optional unique parameters
+   * Then returns an instance of this shape with that URI, either from an existing or new node
+   * This method is intended to be extended by other shapes.
+   * The base implementation in Shape.ts will generate a unique URI if no uniqueParams are given, so extending methods may use super.getFromParams() when no params are given
+   * @param prefixURI
+   * @param uniqueParams
+   */
+  static getFromParams<T extends Shape>(
+    this: ShapeLike<T>,
+    prefixURI: string,
+    ...uniqueParams: any[]
+  ): T {
+    let postfix;
+    if (uniqueParams.length) {
+      postfix = uniqueParams.join('/');
+    } else {
+      //here we expect that we'll create a new node, so the counter will be increased when we actually create it
+      postfix = NamedNode.getCounter() + 1;
+    }
+    let uri = prefixURI + this.name + '/' + postfix;
+    return this.getFromURI(uri);
+  }
+
+  static getSetOf<T extends Shape>(
+    this: ShapeLike<T>,
+    nodes: NodeValuesSet,
+    allowSubShapes?: boolean,
+  ): ShapeValuesSet<T>;
+
+  static getSetOf<T extends Shape>(
+    this: ShapeLike<T>,
+    nodes: ICoreIterable<Node>,
+    allowSubShapes?: boolean,
+  ): ShapeSet<T>;
+
+  static getSetOf<T extends Shape>(
+    this: ShapeLike<T>,
+    nodes: NodeValuesSet | ICoreIterable<Node>,
+    allowSubShapes: boolean = false,
+  ): ShapeSet<T> | ShapeValuesSet<T> {
+    if (!nodes) {
+      throw new Error('No nodes provided to create shape instances of');
+    }
+
+    if (nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode) {
+      return new ShapeValuesSet(
+        nodes.subject,
+        nodes.property,
+        this as any,
+        allowSubShapes,
+      );
+    }
+    return new ShapeSet<T>(
+      nodes.map((node) => {
+        return allowSubShapes
+          ? getShapeOrSubShape(node, this as any)
+          : new this(node);
+      }),
+    );
+  }
+
+  private static ensureLinkedShape() {
+    if (!this.shape) {
+      console.warn(
+        this.name +
+          ' is not a linked shape. Did you forget to use the @linkedShape decorator?',
+      );
+    }
+  }
+
+  /**
+   * Get all values of a certain property as instances of a certain shape.
+   * The returned set of shape will automatically update when the property values change in the graph.
+   * @param property
+   * @param shapeClass
+   */
+  getAllAs<T extends Shape>(
+    property: NamedNode,
+    shapeClass: typeof Shape,
+    allowSubShapes: boolean = false,
+  ): ShapeValuesSet<T> {
+    return new ShapeValuesSet<T>(
+      this.namedNode,
+      property,
+      shapeClass as any,
+      allowSubShapes,
+    );
+  }
+
+  /**
+   * If a value exists for the given property, this returns that value as an instance of the given shape
+   * If not, returns null
+   * @param property
+   * @param shape
+   */
+  getOneAs<S extends Shape = Shape>(
+    property,
+    shape: typeof Shape,
+    allowSubShapes: boolean = false,
+  ): S {
+    if (this.hasProperty(property)) {
+      let value = this.getOne(property);
+      if (allowSubShapes) {
+        shape = getMostSpecificShapes(value as NamedNode, shape)[0];
+      }
+      return new (shape as any)(value) as S;
+    }
+    // return this.hasProperty(property) ? new (shape as any)(this.getOne(property)) as S : null;
+  }
+
+  equals(other) {
+    return (
+      other instanceof Shape &&
+      other.node === this.node &&
+      Object.getPrototypeOf(other) === Object.getPrototypeOf(this)
+    );
+  }
+
+  /**
+   * Makes sure that the node that this instance represents has the right rdf.type
+   * Also makes sure that this instance is destructed if the node is removed
+   * @internal
+   * @param node
+   */
+  setupNode(node: Node) {
+    if (node) {
+      if (!(node instanceof Node)) {
+        console.error('Invalid argument to constructor of shape:', node);
+        throw new Error(
+          'Invalid argument provided to constructor of shape. Please provide an instance of a node.',
+        );
+      }
+      this._node = node;
+    } else {
+      //this code gets triggered when you call new SomeShapeClass() without providing a node
+      //some classes prefer a certain term type. E.g. RdfsLiteral will create a Literal node, and NodeShape will create a BlankNode
+      //TODO: also look at inheritance chain, so that a class without preferredNodeKind that extends a class with preferredTermType still gets that inherited termType
+      let termType =
+        this.constructor['nodeKind'] ||
+        this.constructor['preferredNodeKind'] ||
+        NamedNode;
+
+      //create a new temporary node, a Literal, NamedNode or BlankNode
+      this._node = termType.create(true);
+
+      let nodeShape = this.nodeShape;
+      if (nodeShape && nodeShape.targetClass) {
+        this._node.set(rdf.type, nodeShape.targetClass);
+      }
+    }
+
+    //@TODO: do this for RdfsLiteral as well if they implement events at some point?
+    if (this._node instanceof NamedNode) {
+      this._node.on(NamedNode.NODE_REMOVED, this.destruct.bind(this));
+    }
+  }
+
+  /**
+   * Destructs the instance. Removes event listeners etc. Overwrite in each subclass of this class that uses custom event listeners
+   */
+  destruct() {
+    if (this._node instanceof NamedNode) {
+      this._node.removeAllListeners();
+    }
+  }
+
+  validate(): boolean {
+    return this.nodeShape?.validateNode(this.node) || false;
   }
 
   getOne(property: NamedNode): Node | null {
@@ -428,7 +684,10 @@ export abstract class Shape extends EventEmitter implements IShape {
     return this._node.hasPathTo(properties, endPoint);
   }
 
-  hasPathToSomeInSet(properties: NamedNode[], endPoints?: ICoreIterable<Node>): boolean {
+  hasPathToSomeInSet(
+    properties: NamedNode[],
+    endPoints?: ICoreIterable<Node>,
+  ): boolean {
     return this._node.hasPathToSomeInSet(properties, endPoints);
   }
 
@@ -491,7 +750,10 @@ export abstract class Shape extends EventEmitter implements IShape {
     return this._node.getAllInverseQuads(includeImplicit);
   }
 
-  getAllQuads(includeAsObject: boolean = false, includeImplicit: boolean = false): QuadArray {
+  getAllQuads(
+    includeAsObject: boolean = false,
+    includeImplicit: boolean = false,
+  ): QuadArray {
     return this._node.getAllQuads(includeAsObject, includeImplicit);
   }
 
@@ -510,7 +772,10 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
    * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
    */
-  onChangeAny(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  onChangeAny(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.namedNode?.onChangeAny(callback, context);
   }
 
@@ -519,7 +784,10 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
    * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
    */
-  onChangeAnyInverse(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  onChangeAnyInverse(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.namedNode?.onChangeAnyInverse(callback, context);
   }
 
@@ -528,7 +796,11 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
    * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
    */
-  onChange(property: NamedNode, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  onChange(
+    property: NamedNode,
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.namedNode?.onChange(property, callback, context);
   }
 
@@ -538,7 +810,11 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param callback the method to be called when the change happens. The quads that have changed + the property that was updated are supplied as parameters
    * @param context give a context to make sure you can easily unset / clear event listeners. Usually you would provide 'this' as context
    */
-  onChangeInverse(property, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  onChangeInverse(
+    property,
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.namedNode?.onChangeInverse(property, callback, context);
   }
 
@@ -547,7 +823,10 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param callback the exact same method you supplied to onChangeAny
    * @param context the same context you supplied to onChangeAny
    */
-  removeOnChangeAny(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  removeOnChangeAny(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.namedNode?.removeOnChangeAny(callback, context);
   }
 
@@ -556,7 +835,10 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param callback the exact same method you supplied to onChangeAnyInverse
    * @param context the same context you supplied to onChangeAnyInverse
    */
-  removeOnChangeAnyInverse(callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  removeOnChangeAnyInverse(
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.namedNode?.removeOnChangeAnyInverse(callback, context);
   }
 
@@ -565,7 +847,11 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param callback the exact same method you supplied to onChange
    * @param context the same context you supplied to onChange
    */
-  removeOnChange(property: NamedNode, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  removeOnChange(
+    property: NamedNode,
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.namedNode?.removeOnChange(property, callback, context);
   }
 
@@ -574,7 +860,11 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param callback the exact same method you supplied to onChangeInverse
    * @param context the same context you supplied to onChangeInverse
    */
-  removeOnChangeInverse(property, callback: (quads?: QuadSet, property?: NamedNode) => void, context?: any) {
+  removeOnChangeInverse(
+    property,
+    callback: (quads?: QuadSet, property?: NamedNode) => void,
+    context?: any,
+  ) {
     this.namedNode?.removeOnChangeInverse(property, callback, context);
   }
 
@@ -622,32 +912,6 @@ export abstract class Shape extends EventEmitter implements IShape {
     this.namedNode?.clearOnPredicateChange(context);
   }
 
-  get value(): string {
-    return this._node.value;
-  }
-
-  get uri(): string {
-    return this._node.value;
-  }
-
-  //TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
-  get label() {
-    return this.getValue(rdfs.label);
-  }
-
-  set label(val: string) {
-    this.overwrite(rdfs.label, new Literal(val));
-  }
-
-  //TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
-  get type() {
-    return this.getOne(rdf.type) as NamedNode;
-  }
-
-  set type(val: NamedNode) {
-    this.overwrite(rdf.type, val);
-  }
-
   /**
    * Returns true if this instance has the given type as the value of rdf.type
    * Syntactic sugar for this.has(rdf.type,type)
@@ -655,22 +919,6 @@ export abstract class Shape extends EventEmitter implements IShape {
    */
   isa(type: NamedNode) {
     return this.has(rdf.type, type);
-  }
-
-  static isInstanceOfTargetClass(node: Node) {
-    return node.has(rdf.type, this.targetClass);
-  }
-
-  static getInstanceByType<T extends IShape>(
-    node: Node,
-    ...shapes: {new (): T; targetClass: NamedNode; getOf(node: Node): T}[]
-  ): T {
-    let matchingShape = shapes.find((shape) => {
-      return node.has(rdf.type, shape.targetClass);
-    });
-    if (matchingShape) {
-      return matchingShape.getOf(node);
-    }
   }
 
   /**
@@ -699,7 +947,9 @@ export abstract class Shape extends EventEmitter implements IShape {
    * NOTE: will return false if the instance has never loaded, regardless of whether the namedNode it represents is already loaded, and even if this instance would not load anything else
    */
   isLoaded(includingInverseProperties: boolean = false): boolean {
-    return this.node instanceof NamedNode ? this.namedNode.isLoaded(includingInverseProperties) : true;
+    return this.node instanceof NamedNode
+      ? this.namedNode.isLoaded(includingInverseProperties)
+      : true;
   }
 
   reload(): Promise<boolean> {
@@ -738,147 +988,6 @@ export abstract class Shape extends EventEmitter implements IShape {
     let prototype = Object.getPrototypeOf(this);
     return new prototype(this.node.clone()) as this;
   }
-
-  /**
-   * Searches instances with the given properties only from the local graph
-   * @param properties
-   * @param sanitized
-   */
-  static searchLocal<T extends Shape>(
-    this: {new (node: Node): T; targetClass: any},
-    properties: SearchMap,
-    sanitized: boolean = false,
-  ): ShapeSet<T> {
-    let quads = Find.byPropertyValues(properties, this.targetClass, true, true, sanitized);
-
-    let set = new ShapeSet<T>();
-    for (var node of quads.getSubjects()) {
-      set.add(new this(node));
-    }
-    return set;
-  }
-
-  /**
-   * Searches instances with given properties
-   * And if results are returned, it returns an instance of the first result, else null
-   * @param properties
-   */
-  static findLocal<T extends Shape>(
-    this: {new (node: Node): T; targetClass: any},
-    properties: SearchMap,
-    sanitized: boolean = false,
-  ): T {
-    let results = (this as any).searchLocal(properties, sanitized);
-    if (results.size > 0) {
-      return results.first();
-    }
-  }
-
-  static getLocalInstances<T extends Shape>(this: ShapeLike<T>, explicitInstancesOnly: boolean = false): ShapeSet<T> {
-    //'this' is listed as a parameter ti be able to return a set of instances with the type of the actual class that extends Shape
-    // https://www.typescriptlang.org/docs/handbook/generics.html#using-class-types-in-generics
-    // https://stackoverflow.com/questions/34098023/typescript-self-referencing-return-type-for-static-methods-in-inheriting-classe?rq=1
-    return this.getSetOf(this.getLocalInstanceNodes());
-  }
-
-  //TODO: to find Shape instances we need to not just check type, but all the constraints of this shape class
-  static getNumLocalInstances(): number {
-    return this.getLocalInstanceNodes().size;
-  }
-
-  static getLocalInstanceNodes(explicitInstancesOnly: boolean = false): NodeSet {
-    let instanceNodes = new NodeSet();
-    //by default, look for instances of this shape class and all classes that extend it
-    let targetClasses = [this].concat(
-      getSubShapesClasses(this)
-    );
-    targetClasses.forEach((shapeClass) => {
-      let potentialInstances = new NodeSet();
-      if (explicitInstancesOnly) {
-        potentialInstances = shapeClass.targetClass
-            .getInverseQuads(rdf.type)
-            .filter((quad) => !quad.implicit)
-            .getSubjects();
-      } else {
-        potentialInstances = shapeClass.targetClass.getAllInverse(rdf.type);
-      }
-      //return only those instance nodes that are actual valid instances of this shape
-      instanceNodes = instanceNodes.concat(potentialInstances.filter((node) => shapeClass.isValidNode(node)));
-    });
-    return instanceNodes;
-  }
-
-  /**
-   * use new Shape(node) instead, where Shape can be any class that extends Shape
-   * @deprecated
-   * @param node
-   */
-  static getOf<T extends Shape>(this: ShapeLike<T>, node: Node): T {
-    return new this(node);
-  }
-
-  /**
-   * Retrieves an existing node or creates a new (temporary) node and then sets the right rdf:type
-   * Then uses that node to return an instance of the Shape that you call this method from
-   * So it works just like NamedNode.getOrCreate() but creates an instance of the right shape straight away.
-   * Note that if the URI did not yet exist, it creates a temporary node, and hence only once you SAVE that node or shape
-   * Will it (and its properties) be stored in permanent storage.
-   *
-   * @param uri
-   * @param isTemporaryNodeIfNew
-   */
-  static getFromURI<T extends Shape>(this: ShapeLike<T>, uri: string, isTemporaryNodeIfNew: boolean = true): T {
-    let node = NamedNode.getNamedNode(uri);
-    if (node) {
-      return new this(node);
-    } else {
-      node = NamedNode.getOrCreate(uri, isTemporaryNodeIfNew);
-      if (this.targetClass) {
-        node.set(rdf.type, this.targetClass);
-      }
-      return new this(node);
-    }
-    return new this(NamedNode.getOrCreate(uri));
-  }
-
-  /**
-   * Generates a URI from the given prefixURI + optional unique parameters
-   * Then returns an instance of this shape with that URI, either from an existing or new node
-   * This method is intended to be extended by other shapes.
-   * The base implementation in Shape.ts will generate a unique URI if no uniqueParams are given, so extending methods may use super.getFromParams() when no params are given
-   * @param prefixURI
-   * @param uniqueParams
-   */
-  static getFromParams<T extends Shape>(this: ShapeLike<T>, prefixURI: string, ...uniqueParams: any[]): T {
-    let postfix;
-    if (uniqueParams.length) {
-      postfix = uniqueParams.join('/');
-    } else {
-      //here we expect that we'll create a new node, so the counter will be increased when we actually create it
-      postfix = NamedNode.getCounter() + 1;
-    }
-    let uri = prefixURI + this.name + '/' + postfix;
-    return this.getFromURI(uri);
-  }
-
-  static getSetOf<T extends Shape>(this: ShapeLike<T>, nodes: NodeValuesSet,allowSubShapes?:boolean): ShapeValuesSet<T>;
-  static getSetOf<T extends Shape>(this: ShapeLike<T>, nodes: ICoreIterable<Node>,allowSubShapes?:boolean): ShapeSet<T>;
-  static getSetOf<T extends Shape>(
-    this: ShapeLike<T>,
-    nodes: NodeValuesSet | ICoreIterable<Node>,
-    allowSubShapes:boolean=false
-  ): ShapeSet<T> | ShapeValuesSet<T> {
-    if (!nodes) {
-      throw new Error('No nodes provided to create shape instances of');
-    }
-
-    if (nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode) {
-      return new ShapeValuesSet(nodes.subject, nodes.property, this as any,allowSubShapes);
-    }
-    return new ShapeSet<T>(nodes.map((node) => {
-      return allowSubShapes ? getShapeOrSubShape(node,this as any) : new this(node)
-    }));
-  }
 }
 
 //The types below are used to create static methods that return an instance of this class it is called from.
@@ -892,9 +1001,16 @@ interface Constructor<M> {
 export interface ShapeLike<M extends Shape> extends Constructor<M> {
   targetClass: NamedNode;
 
-  getSetOf<M extends Shape>(this: ShapeLike<M>, nodes: ICoreIterable<Node>): ShapeSet<M>;
+  getSetOf<M extends Shape>(
+    this: ShapeLike<M>,
+    nodes: ICoreIterable<Node>,
+  ): ShapeSet<M>;
 
-  getFromURI<T extends Shape>(this: ShapeLike<T>, uri: string, isTemporaryNodeIfNew?: boolean): T;
+  getFromURI<T extends Shape>(
+    this: ShapeLike<T>,
+    uri: string,
+    isTemporaryNodeIfNew?: boolean,
+  ): T;
 
   getLocalInstanceNodes(explicitInstancesOnly?: boolean): NodeSet;
 }

@@ -11,7 +11,10 @@ import {QuadArray} from './QuadArray';
 import {NodeSet} from './NodeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
 
-export class NodeMap<R extends Node> extends CoreMap<string, R> implements IGraphObjectSet<R> {
+export class NodeMap<R extends Node>
+  extends CoreMap<string, R>
+  implements IGraphObjectSet<R>
+{
   constructor(iterable?: Iterable<[string, R]>) {
     super(iterable);
   }
@@ -159,7 +162,10 @@ export class NodeMap<R extends Node> extends CoreMap<string, R> implements IGrap
     }
   }
 
-  getAllQuads(includeAsObject: boolean = false, includeImplicit: boolean = false): QuadArray {
+  getAllQuads(
+    includeAsObject: boolean = false,
+    includeImplicit: boolean = false,
+  ): QuadArray {
     var res = new QuadArray();
     for (var [key, node] of this) {
       for (var item of node.getAllQuads(includeAsObject, includeImplicit)) {
@@ -254,7 +260,11 @@ export class NodeMap<R extends Node> extends CoreMap<string, R> implements IGrap
   }
 
   promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
-    return Promise.all([...this.values()].map((node) => node.promiseLoaded(loadInverseProperties)))
+    return Promise.all(
+      [...this.values()].map((node) =>
+        node.promiseLoaded(loadInverseProperties),
+      ),
+    )
       .then((res) => {
         return res.every((result) => result === true);
       })
@@ -264,6 +274,8 @@ export class NodeMap<R extends Node> extends CoreMap<string, R> implements IGrap
   }
 
   isLoaded(includingInverseProperties: boolean = false): boolean {
-    return [...this.values()].every((value) => value.isLoaded(includingInverseProperties));
+    return [...this.values()].every((value) =>
+      value.isLoaded(includingInverseProperties),
+    );
   }
 }

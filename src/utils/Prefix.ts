@@ -78,6 +78,12 @@ export class Prefix {
     if (ontologyURI) {
       return ontologyURI + rest;
     }
-    throw new Error('Unknown prefix ' + prefix + '. Could not convert ' + uri + ' to a full URI');
+    throw new Error(
+      'Unknown prefix ' +
+        prefix +
+        '. Could not convert ' +
+        uri +
+        ' to a full URI',
+    );
   }
 }

@@ -13,105 +13,15 @@ export class List extends Shape {
 
   constructor(blanknode: BlankNode = new BlankNode()) {
     super(blanknode);
-    if (!blanknode.hasProperty(rdf.first) && !blanknode.has(rdf.rest, rdf.nil)) {
+    if (
+      !blanknode.hasProperty(rdf.first) &&
+      !blanknode.has(rdf.rest, rdf.nil)
+    ) {
       //starting a NEW empty list is a bit difficult. Because officially the only empty list is rdf:nil.
       //But then how do we later add things to that list? We would need to switch out the node of this instance, which is not ideal in case the consumer of this class had saved/used that node already
       //So instead we're using a blanknode with rdf:type rdf:List
       blanknode.set(rdf.type, rdf.List);
     }
-  }
-
-  getContents() {
-    return List.getContents(this.namedNode);
-  }
-
-  isEmpty() {
-    return !this.hasProperty(rdf.first);
-  }
-
-  addItem(item: Node) {
-    //we need to check if the list is empty when adding items one by one
-    //we keep this out of _append for performance reasons
-    if (this.isEmpty()) {
-      this.set(rdf.first, item);
-      this.set(rdf.rest, rdf.nil);
-    } else {
-      List._append(item, List.getLastListItem(this.namedNode));
-    }
-  }
-
-  private static getFirstItem(items: NodeSet | Node[]) {
-    if (items instanceof NodeSet) {
-      let firstItem = items.first();
-      items.delete(firstItem);
-      return firstItem;
-    } else {
-      return items.shift();
-    }
-  }
-
-  addItems(items: NodeSet | Node[]) {
-    let endPoint;
-    if (this.isEmpty()) {
-      endPoint = this.node;
-      let firstItem = List.getFirstItem(items);
-      this.set(rdf.first, firstItem);
-    } else {
-      endPoint = List.getLastListItem(this.namedNode);
-    }
-
-    //add all items to the end of the list
-    List.appendItems(endPoint, items);
-  }
-
-  private static appendItems(endPoint, items) {
-    items.forEach((item) => {
-      let rest = List._createListEntry(item);
-      endPoint.set(rdf.rest, rest);
-      endPoint = rest;
-    });
-    //close the list
-    endPoint.set(rdf.rest, rdf.nil);
-
-    return endPoint;
-  }
-
-  //TODO: not working, needs to be fixed
-  //see example here: http://www.snee.com/bobdc.blog/2014/04/rdf-lists-and-sparql.html
-  // removeItem(item: Node): boolean {
-  // 	return this._removeItem(this.namedNode, item);
-  // }
-  // private _removeItem(list: NamedNode, item: Node): boolean {
-  // 	if (list.has(rdf.first, item)) {
-  // 		let prev = list.getOneInverse(rdf.rest);
-  // 		prev.overwrite(rdf.rest, list.getOne(rdf.rest));
-  // 		list.remove();
-  // 		return true;
-  // 	} else if (!list.has(rdf.rest, rdf.nil)) {
-  // 		return this._removeItem(list.getOne(rdf.rest) as NamedNode, item);
-  // 	}
-  // }
-
-  private static getLastListItem(list: NamedNode) {
-    let last;
-    while (list && !list.has(rdf.rest, rdf.nil)) {
-      last = list;
-      list = list.getOne(rdf.rest) as NamedNode;
-    }
-    return list || last;
-  }
-
-  private static _createListEntry(item: Node): BlankNode {
-    let list = BlankNode.create();
-    list.set(rdf.first, item);
-    list.set(rdf.rest, rdf.nil);
-    return list;
-  }
-
-  private static _append(item: Node, last: NamedNode): NamedNode {
-    let next = this._createListEntry(item);
-    last.overwrite(rdf.rest, next);
-    return next;
   }
 
   /**
@@ -153,5 +63,98 @@ export class List extends Shape {
       }
     }
     return result;
+  }
+
+  private static getFirstItem(items: NodeSet | Node[]) {
+    if (items instanceof NodeSet) {
+      let firstItem = items.first();
+      items.delete(firstItem);
+      return firstItem;
+    } else {
+      return items.shift();
+    }
+  }
+
+  private static appendItems(endPoint, items) {
+    items.forEach((item) => {
+      let rest = List._createListEntry(item);
+      endPoint.set(rdf.rest, rest);
+      endPoint = rest;
+    });
+    //close the list
+    endPoint.set(rdf.rest, rdf.nil);
+
+    return endPoint;
+  }
+
+  private static getLastListItem(list: NamedNode) {
+    let last;
+    while (list && !list.has(rdf.rest, rdf.nil)) {
+      last = list;
+      list = list.getOne(rdf.rest) as NamedNode;
+    }
+    return list || last;
+  }
+
+  private static _createListEntry(item: Node): BlankNode {
+    let list = BlankNode.create();
+    list.set(rdf.first, item);
+    list.set(rdf.rest, rdf.nil);
+    return list;
+  }
+
+  //TODO: not working, needs to be fixed
+  //see example here: http://www.snee.com/bobdc.blog/2014/04/rdf-lists-and-sparql.html
+  // removeItem(item: Node): boolean {
+  // 	return this._removeItem(this.namedNode, item);
+  // }
+  // private _removeItem(list: NamedNode, item: Node): boolean {
+  // 	if (list.has(rdf.first, item)) {
+  // 		let prev = list.getOneInverse(rdf.rest);
+  // 		prev.overwrite(rdf.rest, list.getOne(rdf.rest));
+  // 		list.remove();
+  // 		return true;
+  // 	} else if (!list.has(rdf.rest, rdf.nil)) {
+  // 		return this._removeItem(list.getOne(rdf.rest) as NamedNode, item);
+  // 	}
+  // }
+
+  private static _append(item: Node, last: NamedNode): NamedNode {
+    let next = this._createListEntry(item);
+    last.overwrite(rdf.rest, next);
+    return next;
+  }
+
+  getContents() {
+    return List.getContents(this.namedNode);
+  }
+
+  isEmpty() {
+    return !this.hasProperty(rdf.first);
+  }
+
+  addItem(item: Node) {
+    //we need to check if the list is empty when adding items one by one
+    //we keep this out of _append for performance reasons
+    if (this.isEmpty()) {
+      this.set(rdf.first, item);
+      this.set(rdf.rest, rdf.nil);
+    } else {
+      List._append(item, List.getLastListItem(this.namedNode));
+    }
+  }
+
+  addItems(items: NodeSet | Node[]) {
+    let endPoint;
+    if (this.isEmpty()) {
+      endPoint = this.node;
+      let firstItem = List.getFirstItem(items);
+      this.set(rdf.first, firstItem);
+    } else {
+      endPoint = List.getLastListItem(this.namedNode);
+    }
+
+    //add all items to the end of the list
+    List.appendItems(endPoint, items);
   }
 }

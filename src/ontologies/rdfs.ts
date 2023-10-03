@@ -10,7 +10,9 @@ var base: string = 'http://www.w3.org/2000/01/rdf-schema#';
 export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);
 Prefix.add('rdfs', base);
 
-export var subPropertyOf: NamedNode = NamedNode.getOrCreate(base + 'subPropertyOf');
+export var subPropertyOf: NamedNode = NamedNode.getOrCreate(
+  base + 'subPropertyOf',
+);
 var subClassOf: NamedNode = NamedNode.getOrCreate(base + 'subClassOf');
 var range: NamedNode = NamedNode.getOrCreate(base + 'range');
 var isDefinedBy: NamedNode = NamedNode.getOrCreate(base + 'isDefinedBy');

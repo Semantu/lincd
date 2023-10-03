@@ -21,8 +21,7 @@ export class URI {
       .toLowerCase();
   }
 
-  static isURI(uri: string)
-  {
+  static isURI(uri: string) {
     //must have a scheme followed by ://
     return /([A-Za-z][A-Za-z0-9+\-.]*)\:\/\//.test(uri);
   }

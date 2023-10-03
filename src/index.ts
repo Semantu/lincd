@@ -44,11 +44,11 @@ import * as rdf from './ontologies/rdf';
 import * as rdfs from './ontologies/rdfs';
 import * as xsd from './ontologies/xsd';
 import * as shacl from './ontologies/shacl';
-import React from "react";
+import React from 'react';
+
 export const nextTick = require('next-tick');
 
-export function initModularApp()
-{
+export function initModularApp() {
   //we don't want people to import {NamedNode} from 'lincd' for example
   //because this does not work well with tree shaking
   //therefor we do not export all the classes here from the index directly
