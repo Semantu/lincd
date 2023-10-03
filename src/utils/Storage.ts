@@ -457,7 +457,10 @@ export abstract class Storage {
           //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
           uriUpdates.forEach(([oldUri, newUri]) => {
             let currentNode = NamedNode.getNamedNode(oldUri);
-            currentNode.uri = newUri;
+            //currently, when a node is saved and removed in the same event cycle, it will not be in the store anymore
+            if (currentNode) {
+              currentNode.uri = newUri;
+            }
           });
         });
       }),
