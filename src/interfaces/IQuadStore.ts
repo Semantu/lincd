@@ -37,7 +37,12 @@ export interface IQuadStore {
 
   removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
 
-  query(queryObject: LinkedDataGenericQuery, shapeClass: Shape | typeof Shape): Promise<QuadArray>;
+  /**
+   * Added as an optional method for now, as not all Stores will support querying as of yet
+   * @param queryObject
+   * @param shapeClass
+   */
+  query?(queryObject: LinkedDataGenericQuery, shapeClass: Shape | typeof Shape): Promise<QuadArray>;
 
   loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
 
