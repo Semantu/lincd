@@ -18,7 +18,11 @@ import {SearchMap} from '../collections/SearchMap';
 import {CoreSet} from '../collections/CoreSet';
 import {QuadSet} from '../collections/QuadSet';
 import {NodeShape} from './SHACL';
-import {LinkedDataDeclaration, LinkedDataResponse, LinkedDataSetDeclaration} from '../interfaces/Component';
+import {
+  LinkedDataDeclaration,
+  LinkedDataResponse,
+  LinkedDataSetDeclaration,
+} from '../interfaces/Component';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet';
 import {
   getMostSpecificShapes,
@@ -91,7 +95,10 @@ export abstract class Shape extends EventEmitter implements IShape {
   static shape: NodeShape;
 
   protected _node: Node;
-  protected static instancesLoaded: Map<NamedNode, {promise: Promise<NodeSet<NamedNode>>; done: boolean}> = new Map();
+  protected static instancesLoaded: Map<
+    NamedNode,
+    {promise: Promise<NodeSet<NamedNode>>; done: boolean}
+  > = new Map();
   protected loadPromise: {done: boolean; promise: Promise<boolean>};
 
   /**
@@ -105,8 +112,6 @@ export abstract class Shape extends EventEmitter implements IShape {
     super();
     this.setupNode(node);
   }
-
-  protected _node: Node;
 
   /**
    * Returns the node this instance represents.
@@ -231,7 +236,10 @@ export abstract class Shape extends EventEmitter implements IShape {
     return this.shape.validateNode(node);
   }
 
-  static query<T extends Shape>(this: typeof Shape, queryFn: QueryBuildFn<T>): LinkedQuery<T> {
+  static query<T extends Shape>(
+    this: typeof Shape,
+    queryFn: QueryBuildFn<T>,
+  ): LinkedQuery<T> {
     const query = new LinkedQuery<T>(queryFn);
     query.shape = this;
     return query;
