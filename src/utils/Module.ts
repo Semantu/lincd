@@ -895,6 +895,7 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
 function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
   requiredData:
     | typeof Shape
+    | LinkedQuery<ShapeType>
     | LinkedDataDeclaration<ShapeType>
     | LinkedDataSetDeclaration<ShapeType>,
   functionalComponent:

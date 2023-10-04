@@ -7,12 +7,76 @@ import {
 } from '../interfaces/Component';
 import {createTraceShape} from './TraceShape';
 import {PropertyShape} from '../shapes/SHACL';
+import {ShapeSet} from '../collections/ShapeSet';
+
+//TODO: it also needs to extend shape or what?
+// export interface QueryShape<S> extends QueryValue<S> {
+//   where: (WhereClause) => this;
+// }
+type WhereClause<S> = boolean | ((s: ToQueryShape<S>) => boolean);
+
+export type QueryBuildFn<T extends Shape> = (
+  p: ToQueryShape<T>,
+  q: LinkedQuery<T>,
+) => QueryValue<any> | QueryValue<any>[];
+
+// type RecursiveObject<T> = T extends Date ? never : T extends object ? T : never;
+// export type StringValues<TModel> = {
+//   [Key in keyof TModel]: TModel[Key] extends RecursiveObject<TModel[Key]>
+//     ? StringValues<TModel[Key]>
+//     : string;
+// };
+export type ToQueryShape<T> = {
+  [P in keyof T]: ToQueryValue<T[P]>;
+};
+type GetShapeSetType<SS> = SS extends ShapeSet<infer ShapeType>
+  ? ShapeType
+  : never;
+export type ToQueryValue<T> = T extends ShapeSet
+  ? QueryShapeSet<GetShapeSetType<T>>
+  : T extends Shape
+  ? ToQueryShape<T>
+  : T extends string
+  ? QueryString<T>
+  : QueryValue<T>;
+
+export class QueryValue<S> {
+  // where(validation: WhereClause<S>): this {
+  //   return this;
+  // }
+  // original:Shape|ShapeValuesSet|Primitive
+}
+class QueryShapeSet<S> extends QueryValue<S> {
+  where(validation: WhereClause<S>): this {
+    return this;
+  }
+}
+// type QueryShapeType<S> = QueryShape<S> & ToQueryShape<S>;
+class QueryShape<S> extends QueryValue<S> {
+  where(validation: WhereClause<S>): this {
+    return this;
+  }
+}
+class QueryString<T> extends QueryValue<string> {
+  equals(otherString: string) {
+    return false;
+  }
+}
 
 export class LinkedQuery<T extends Shape> {
-  public shape: typeof Shape;
+  constructor(
+    private shape: typeof Shape,
+    private queryBuildFn: QueryBuildFn<T>,
+  ) {
+    //TODO: do we use createTraceShape or a variant of it .. called createQueryShape
+    // QueryShape somehow needs to inherrit all the properties of the shape, but also change the return types of the get accessors
+    let queryShape = createTraceShape<T>(shape, null, '');
+    queryBuildFn(queryShape as any, this);
+  }
 
-  constructor(private queryBuildFn: QueryBuildFn<T>) {}
-
+  where(validation: WhereClause<T>): this {
+    return this;
+  }
   toQueryObject() {
     //create a test instance of the shape
     let traceInstance = createTraceShape<T>(
@@ -40,7 +104,7 @@ export class LinkedQuery<T extends Shape> {
     // }
 
     //run the function that the component provided to see which properties it needs
-    let dataResponse = this.queryBuildFn(this, traceInstance);
+    // let dataResponse = this.queryBuildFn(this, traceInstance);
 
     //for sets, we should get a set with a single item, so we can retrieve traced properties from that single item
     // let traceInstance = traceInstanceOrSet instanceof ShapeSet ? traceInstanceOrSet.first() : traceInstanceOrSet;
@@ -113,24 +177,19 @@ export class LinkedQuery<T extends Shape> {
     };
 
     //whether the component returned an array, a function or an object, replace the values that are bound-component-factories
-    if (Array.isArray(dataResponse)) {
-      (dataResponse as any[]).forEach((value, index) => {
-        dataResponse[index] = insertSubRequestsFromBoundComponent(value);
-      });
-    } else if (typeof dataResponse === 'function') {
-      dataResponse = insertSubRequestsFromBoundComponent(dataResponse);
-    } else {
-      Object.getOwnPropertyNames(dataResponse).forEach((key) => {
-        dataResponse[key] = insertSubRequestsFromBoundComponent(
-          dataResponse[key],
-        );
-      });
-    }
-    return [dataRequest, dataResponse as any as TransformedLinkedDataResponse];
+    // if (Array.isArray(dataResponse)) {
+    //   (dataResponse as any[]).forEach((value, index) => {
+    //     dataResponse[index] = insertSubRequestsFromBoundComponent(value);
+    //   });
+    // } else if (typeof dataResponse === 'function') {
+    //   dataResponse = insertSubRequestsFromBoundComponent(dataResponse);
+    // } else {
+    //   Object.getOwnPropertyNames(dataResponse).forEach((key) => {
+    //     dataResponse[key] = insertSubRequestsFromBoundComponent(
+    //       dataResponse[key],
+    //     );
+    //   });
+    // }
+    // return [dataRequest, dataResponse as any as TransformedLinkedDataResponse];
   }
 }
-
-export type QueryBuildFn<T extends Shape> = (
-  q: LinkedQuery<T>,
-  p: T,
-) => LinkedQuery<T>;

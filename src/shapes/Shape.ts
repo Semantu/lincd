@@ -29,7 +29,7 @@ import {
   getShapeOrSubShape,
   getSubShapesClasses,
 } from '../utils/ShapeClass';
-import {LinkedQuery, QueryBuildFn} from '../utils/LinkedQuery';
+import {LinkedQuery, QueryBuildFn, QueryValue} from '../utils/LinkedQuery';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -240,18 +240,17 @@ export abstract class Shape extends EventEmitter implements IShape {
     this: typeof Shape,
     queryFn: QueryBuildFn<T>,
   ): LinkedQuery<T> {
-    const query = new LinkedQuery<T>(queryFn);
-    query.shape = this;
+    const query = new LinkedQuery<T>(this, queryFn);
     return query;
   }
 
   //Shape.select(selectFn:(p:QueryShape)=>QueryValue[])
   static select<T extends Shape>(
-    this: typeof Shape,
-    selectFn: (p: QueryShape) => QueryValue | QueryValue[],
+    this: {new (node: Node): T; targetClass: any},
+    // this: typeof Shape,
+    selectFn: QueryBuildFn<T>,
   ): LinkedQuery<T> {
-    const query = new LinkedQuery<T>(selectFn);
-    query.shape = this;
+    const query = new LinkedQuery<T>(this as any, selectFn);
     return query;
   }
 
