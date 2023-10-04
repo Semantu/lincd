@@ -1,12 +1,14 @@
-import {describe, expect, test} from '@jest/globals';
+import {describe, test} from '@jest/globals';
 import {Literal, NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
 
 let name = NamedNode.create();
+
 class Person extends Shape {
   get name() {
     return this.getValue(name);
   }
+
   set name(val: string) {
     this.overwrite(name, new Literal(val));
   }

@@ -57,7 +57,9 @@ export function createTraceShape<ShapeType extends Shape>(
       if (descriptor.configurable) {
         //if this is a get method that used a @linkedProperty decorator
         //then it should match with a propertyShape
-        let propertyShape = finger['shape'].getPropertyShapes().find((propertyShape) => propertyShape.label === key);
+        let propertyShape = finger['shape']
+          .getPropertyShapes()
+          .find((propertyShape) => propertyShape.label === key);
         //get the get method (that's the one place that we support @linkedProperty decorators for, for now)
         let g = descriptor.get != null;
         if (g) {
@@ -71,7 +73,11 @@ export function createTraceShape<ShapeType extends Shape>(
 
           if (propertyShape) {
             //create a new get function
-            newDescriptor.get = ((key: string, propertyShape: PropertyShape, descriptor: PropertyDescriptor) => {
+            newDescriptor.get = ((
+              key: string,
+              propertyShape: PropertyShape,
+              descriptor: PropertyDescriptor,
+            ) => {
               // console.log(debugName + ' requested get ' + key + ' - ' + propertyShape.path.value);
 
               //use dummyShape as 'this'
@@ -111,7 +117,9 @@ export function createTraceShape<ShapeType extends Shape>(
                 //then probably someone forgot to add a @linkedProperty decorator!
                 //or at least it won't add any data to the dataRequest of the linked component, so let's warn the developer of that
                 console.warn(
-                  `"${traceShape.nodeShape?.label}.${descriptor.get.name.replace(
+                  `"${
+                    traceShape.nodeShape?.label
+                  }.${descriptor.get.name.replace(
                     'get ',
                     '',
                   )}" was requested by a linked component. However '${

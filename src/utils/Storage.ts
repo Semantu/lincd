@@ -11,7 +11,10 @@ import nextTick from 'next-tick';
 import {QuadArray} from '../collections/QuadArray';
 import {CoreSet} from '../collections/CoreSet';
 import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest, LinkedDataGenericQuery, TransformedLinkedDataResponse} from '../interfaces/Component';
+import {
+  LinkedDataGenericQuery,
+  LinkedDataRequest,
+} from '../interfaces/Component';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass';
 
 export abstract class Storage {
@@ -328,13 +331,19 @@ export abstract class Storage {
     });
   }
 
-  static query(queryObject: LinkedDataGenericQuery, shapeClass: Shape | typeof Shape): Promise<QuadArray> {
+  static query(
+    queryObject: LinkedDataGenericQuery,
+    shapeClass: Shape | typeof Shape,
+  ): Promise<QuadArray> {
     let quadStore: IQuadStore;
     if (shapeClass instanceof Shape) {
       console.info('Getting storage by URI (Shape):', shapeClass.namedNode.uri);
       quadStore = Storage.getStoreForNode(shapeClass.namedNode);
     } else {
-      console.info('Getting storage by URI (typeof Shape):', shapeClass.targetClass.uri);
+      console.info(
+        'Getting storage by URI (typeof Shape):',
+        shapeClass.targetClass.uri,
+      );
       quadStore = Storage.getStoreForNode(shapeClass.targetClass);
     }
 

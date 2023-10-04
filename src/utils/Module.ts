@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode, Node, Quad} from '../models';
+import {NamedNode, Node} from '../models';
 import {NodeShape, PropertyShape} from '../shapes/SHACL';
 import {Shape} from '../shapes/Shape';
 import {Prefix} from './Prefix';
@@ -38,7 +38,7 @@ import {npm} from '../ontologies/npm';
 import {rdf} from '../ontologies/rdf';
 import {Storage} from './Storage';
 import {URI} from './URI';
-import {addNodeShapeToShapeClass, isClass} from './ShapeClass';
+import {addNodeShapeToShapeClass} from './ShapeClass';
 import {LinkedQuery} from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
 

@@ -254,7 +254,9 @@ export declare type SubRequest = LinkedDataRequest;
  * e.g.: [shape1,[shape2,[shape3,shape4]]] will request shape 3 & 4 of shape 2
  */
 export declare type LinkedDataRequest = SingleDataRequest[];
-export declare type SingleDataRequest = PropertyShape | [PropertyShape, SubRequest];
+export declare type SingleDataRequest =
+  | PropertyShape
+  | [PropertyShape, SubRequest];
 
 //{"?s":["rdf:type", "foaf:name"]}
 export type QuerySelectObject = {

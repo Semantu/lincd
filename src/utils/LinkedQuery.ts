@@ -3,17 +3,16 @@ import {
   BoundComponentFactory,
   BoundSetComponentFactory,
   LinkedDataRequest,
-  LinkedDataSetDeclaration,
-  LinkedFunctionalComponent,
   TransformedLinkedDataResponse,
 } from '../interfaces/Component';
-import {ShapeSet} from '../collections/ShapeSet';
 import {createTraceShape} from './TraceShape';
 import {PropertyShape} from '../shapes/SHACL';
 
 export class LinkedQuery<T extends Shape> {
   public shape: typeof Shape;
+
   constructor(private queryBuildFn: QueryBuildFn<T>) {}
+
   toQueryObject() {
     //create a test instance of the shape
     let traceInstance = createTraceShape<T>(
@@ -69,22 +68,29 @@ export class LinkedQuery<T extends Shape> {
         //if a bound component was returned
         if (evaluated && (evaluated as BoundComponentFactory)._create) {
           //retrieve and remove any propertyShape that were requested
-          let appliedPropertyShapes = traceInstance.requested.splice(previousNumPropShapes);
+          let appliedPropertyShapes = traceInstance.requested.splice(
+            previousNumPropShapes,
+          );
           //store them in the bound component factory object,
           //we will need that when we actually use the nested component
           evaluated._props = appliedPropertyShapes;
 
           //then place back an object stating which property shapes were requested
           //and which subRequest need to be made for those as defined by the bound child component
-          let subRequest: LinkedDataRequest = (evaluated as BoundComponentFactory)._comp.dataRequest;
+          let subRequest: LinkedDataRequest = (
+            evaluated as BoundComponentFactory
+          )._comp.dataRequest;
 
           if ((evaluated as BoundSetComponentFactory)._childDataRequest) {
             subRequest = subRequest.concat(
-              (evaluated as BoundSetComponentFactory<any, any>)._childDataRequest,
+              (evaluated as BoundSetComponentFactory<any, any>)
+                ._childDataRequest,
             ) as LinkedDataRequest;
           }
           if (appliedPropertyShapes.length > 1) {
-            console.warn('Using multiple property shapes for subRequests are not yet supported');
+            console.warn(
+              'Using multiple property shapes for subRequests are not yet supported',
+            );
           }
           let propertyShape = appliedPropertyShapes[0];
 
@@ -115,10 +121,16 @@ export class LinkedQuery<T extends Shape> {
       dataResponse = insertSubRequestsFromBoundComponent(dataResponse);
     } else {
       Object.getOwnPropertyNames(dataResponse).forEach((key) => {
-        dataResponse[key] = insertSubRequestsFromBoundComponent(dataResponse[key]);
+        dataResponse[key] = insertSubRequestsFromBoundComponent(
+          dataResponse[key],
+        );
       });
     }
     return [dataRequest, dataResponse as any as TransformedLinkedDataResponse];
   }
 }
-export type QueryBuildFn<T extends Shape> = (q: LinkedQuery<T>, p: T) => LinkedQuery<T>;
+
+export type QueryBuildFn<T extends Shape> = (
+  q: LinkedQuery<T>,
+  p: T,
+) => LinkedQuery<T>;

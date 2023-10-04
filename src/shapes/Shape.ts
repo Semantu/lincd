@@ -34,9 +34,9 @@ import {LinkedQuery, QueryBuildFn} from '../utils/LinkedQuery';
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
 interface IClassConstruct {
-  new (): any;
-
   prototype: any;
+
+  new (): any;
 }
 
 /**
@@ -93,8 +93,6 @@ export abstract class Shape extends EventEmitter implements IShape {
   static typesToShapes: Map<NamedNode, CoreSet<IClassConstruct>> = new Map();
   //TODO: rename to nodeShape to avoid confusing things like shape.shape
   static shape: NodeShape;
-
-  protected _node: Node;
   protected static instancesLoaded: Map<
     NamedNode,
     {promise: Promise<NodeSet<NamedNode>>; done: boolean}
@@ -112,6 +110,8 @@ export abstract class Shape extends EventEmitter implements IShape {
     super();
     this.setupNode(node);
   }
+
+  protected _node: Node;
 
   /**
    * Returns the node this instance represents.
@@ -254,6 +254,7 @@ export abstract class Shape extends EventEmitter implements IShape {
     query.shape = this;
     return query;
   }
+
   /**
    * Lets a LinkedComponent request specific data of a shape.
    *
