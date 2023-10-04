@@ -244,6 +244,16 @@ export abstract class Shape extends EventEmitter implements IShape {
     query.shape = this;
     return query;
   }
+
+  //Shape.select(selectFn:(p:QueryShape)=>QueryValue[])
+  static select<T extends Shape>(
+    this: typeof Shape,
+    selectFn: (p: QueryShape) => QueryValue | QueryValue[],
+  ): LinkedQuery<T> {
+    const query = new LinkedQuery<T>(selectFn);
+    query.shape = this;
+    return query;
+  }
   /**
    * Lets a LinkedComponent request specific data of a shape.
    *

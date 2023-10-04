@@ -7,7 +7,6 @@ import {NamedNode, Node, Quad} from '../models';
 import {NodeShape, PropertyShape} from '../shapes/SHACL';
 import {Shape} from '../shapes/Shape';
 import {Prefix} from './Prefix';
-// import {dataRequestToQueryObject} from 'lincd-sparql/lib/utils';
 import React, {createElement, useEffect, useState} from 'react';
 import {CoreSet} from '../collections/CoreSet';
 import {NodeSet} from '../collections/NodeSet';
@@ -373,7 +372,10 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
   //method to create a linked functional component
   function linkedComponent<ShapeType extends Shape, DeclaredProps = {}>(
-    requiredData: typeof Shape | LinkedDataDeclaration<ShapeType> | LinkedQuery<ShapeType>,
+    requiredData:
+      | typeof Shape
+      | LinkedDataDeclaration<ShapeType>
+      | LinkedQuery<ShapeType>,
     functionalComponent: LinkableFunctionalComponent<DeclaredProps, ShapeType>,
   ): LinkedFunctionalComponent<DeclaredProps, ShapeType> {
     let [shapeClass, dataRequest, dataDeclaration, tracedDataResponse] =
@@ -411,35 +413,44 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         //if we're not using any storage in this LINCD app, don't do any data loading
         let usingStorage = Storage.isInitialised();
 
-      let [isLoaded, setIsLoaded] = useState<any>(undefined);
-      useEffect(() => {
-        //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-        if (!props.isBound && usingStorage) {
-          let cachedRequest = Storage.isLoaded(linkedProps.source.node, dataRequest);
-          //if these properties were requested before and have finished loading
-          if (cachedRequest === true) {
-            //then we can set state to loaded straight away
-            setIsLoaded(true);
-          } else if (cachedRequest === false) {
-            //if we did not request all these properties before then we continue to
-            // load the required PropertyShapes from storage for this specific source
-            let queryObject = dataRequestToGenericQuery(shapeClass, dataRequest, linkedProps.source);
-            Storage.query(queryObject, shapeClass).then((quads) => setIsLoaded(true));
-            // Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
-            //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
-            //   setIsLoaded(true);
-            // });
-          } else {
-            //if some requiredProperties are still being loaded
-            //cachedResult will be a promise (there is no other return type)
-            //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
-            //wait for that loading to be completed and then update the state
-            cachedRequest.then(() => {
+        let [isLoaded, setIsLoaded] = useState<any>(undefined);
+        useEffect(() => {
+          //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
+          if (!props.isBound && usingStorage) {
+            let cachedRequest = Storage.isLoaded(
+              linkedProps.source.node,
+              dataRequest,
+            );
+            //if these properties were requested before and have finished loading
+            if (cachedRequest === true) {
+              //then we can set state to loaded straight away
               setIsLoaded(true);
-            });
+            } else if (cachedRequest === false) {
+              //if we did not request all these properties before then we continue to
+              // load the required PropertyShapes from storage for this specific source
+              let queryObject = dataRequestToGenericQuery(
+                shapeClass,
+                dataRequest,
+                linkedProps.source,
+              );
+              Storage.query(queryObject, shapeClass).then((quads) =>
+                setIsLoaded(true),
+              );
+              // Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
+              //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
+              //   setIsLoaded(true);
+              // });
+            } else {
+              //if some requiredProperties are still being loaded
+              //cachedResult will be a promise (there is no other return type)
+              //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
+              //wait for that loading to be completed and then update the state
+              cachedRequest.then(() => {
+                setIsLoaded(true);
+              });
+            }
           }
-        }
-      }, [linkedProps.source.node, props.isBound]);
+        }, [linkedProps.source.node, props.isBound]);
 
         //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
         let dataIsLoaded = props.isBound || isLoaded || !usingStorage;
@@ -564,7 +575,11 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
         if (!props.isBound && usingStorage) {
           let cachedRequest =
-            linkedProps.sources && Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest);
+            linkedProps.sources &&
+            Storage.nodesAreLoaded(
+              linkedProps.sources.getNodes(),
+              instanceDataRequest,
+            );
           //if these properties were requested before and have finished loading
           if (cachedRequest === true) {
             //we can set state to reflect that
@@ -574,9 +589,14 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             //load the required PropertyShapes from storage for this specific source
             //we bypass cache because already checked cache ourselves above
 
-            let queryObject = dataRequestToGenericQuery(shapeClass, dataRequest);
+            let queryObject = dataRequestToGenericQuery(
+              shapeClass,
+              dataRequest,
+            );
             console.log(queryObject);
-            Storage.query(queryObject, shapeClass).then((quads) => setIsLoaded(true));
+            Storage.query(queryObject, shapeClass).then((quads) =>
+              setIsLoaded(true),
+            );
             // Storage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
             //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
             //   setIsLoaded(true);
@@ -606,7 +626,11 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
         dataIsLoaded =
-          linkedProps.sources && Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest) === true;
+          linkedProps.sources &&
+          Storage.nodesAreLoaded(
+            linkedProps.sources.getNodes(),
+            instanceDataRequest,
+          ) === true;
       }
       //if the data is loaded
       if (dataIsLoaded) {
@@ -853,12 +877,18 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 }
 
 function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
-  requiredData: typeof Shape | LinkedDataDeclaration<ShapeType> | LinkedQuery<ShapeType>,
+  requiredData:
+    | typeof Shape
+    | LinkedDataDeclaration<ShapeType>
+    | LinkedQuery<ShapeType>,
   functionalComponent: LinkableFunctionalComponent<DeclaredProps, ShapeType>,
   setComponent?: boolean,
 );
 function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
-  requiredData: typeof Shape | LinkedDataSetDeclaration<ShapeType> | LinkedQuery<ShapeType>,
+  requiredData:
+    | typeof Shape
+    | LinkedDataSetDeclaration<ShapeType>
+    | LinkedQuery<ShapeType>,
   functionalComponent: LinkableFunctionalSetComponent<DeclaredProps, ShapeType>,
   setComponent?: boolean,
 );
@@ -875,7 +905,10 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
   let shapeClass: typeof Shape;
   let dataRequest: LinkedDataRequest;
   let tracedDataResponse: TransformedLinkedDataResponse;
-  let dataDeclaration: LinkedDataSetDeclaration<ShapeType> | LinkedDataDeclaration<ShapeType> | LinkedQuery<ShapeType>;
+  let dataDeclaration:
+    | LinkedDataSetDeclaration<ShapeType>
+    | LinkedDataDeclaration<ShapeType>
+    | LinkedQuery<ShapeType>;
 
   //if a Shape class was given (the actual class that extends Shape)
   if (requiredData['prototype'] instanceof Shape || requiredData === Shape) {
@@ -1169,7 +1202,12 @@ function getLinkedSetComponentProps<ShapeType extends Shape, P>(
   shapeClass,
   functionalComponent,
 ): LinkedSetComponentProps<ShapeType> & P {
-  if (props.of && !(props.of instanceof NodeSet) && !(props.of instanceof ShapeSet) && !props.of['then']) {
+  if (
+    props.of &&
+    !(props.of instanceof NodeSet) &&
+    !(props.of instanceof ShapeSet) &&
+    !props.of['then']
+  ) {
     throw Error(
       "Invalid argument 'of' provided to " +
         functionalComponent.name.replace('_implementation', '') +
