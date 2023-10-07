@@ -236,21 +236,21 @@ export abstract class Shape extends EventEmitter implements IShape {
     return this.shape.validateNode(node);
   }
 
-  static query<T extends Shape>(
+  static query<S extends Shape, R = unknown>(
     this: typeof Shape,
-    queryFn: QueryBuildFn<T>,
-  ): LinkedQuery<T> {
-    const query = new LinkedQuery<T>(this, queryFn);
+    queryFn: QueryBuildFn<S, R>,
+  ): LinkedQuery<S> {
+    const query = new LinkedQuery<S>(this as any, queryFn);
     return query;
   }
 
   //Shape.select(selectFn:(p:QueryShape)=>QueryValue[])
-  static select<T extends Shape>(
+  static select<T extends Shape, S = unknown>(
     this: {new (node: Node): T; targetClass: any},
     // this: typeof Shape,
-    selectFn: QueryBuildFn<T>,
-  ): LinkedQuery<T> {
-    const query = new LinkedQuery<T>(this as any, selectFn);
+    selectFn: QueryBuildFn<T, S>,
+  ): LinkedQuery<T, S> {
+    const query = new LinkedQuery<T, S>(this as any, selectFn);
     return query;
   }
 

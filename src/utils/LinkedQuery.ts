@@ -14,11 +14,20 @@ import {ShapeSet} from '../collections/ShapeSet';
 //   where: (WhereClause) => this;
 // }
 type WhereClause<S> = boolean | ((s: ToQueryShape<S>) => boolean);
+type OriginalValue =
+  | Shape
+  | ShapeSet
+  | string
+  | number
+  | boolean
+  | Date
+  | null
+  | undefined;
 
-export type QueryBuildFn<T extends Shape> = (
+export type QueryBuildFn<T extends typeof Shape, ResultType> = (
   p: ToQueryShape<T>,
   q: LinkedQuery<T>,
-) => QueryValue<any> | QueryValue<any>[];
+) => ResultType; //QueryValue<any> | QueryValue<any>[];
 
 // type RecursiveObject<T> = T extends Date ? never : T extends object ? T : never;
 // export type StringValues<TModel> = {
@@ -40,50 +49,165 @@ export type ToQueryValue<T> = T extends ShapeSet
   ? QueryString<T>
   : QueryValue<T>;
 
-export class QueryValue<S> {
+export type ToNormalValue<T> = T extends QueryShapeSet<GetShapeSetType<T>>
+  ? ShapeSet<GetQueryShapeSetType<T>>
+  : T extends QueryShape<any>
+  ? GetQueryShapeType<T>
+  : T extends QueryString<any>
+  ? string
+  : any;
+
+export type GetQueryShapeSetType<T> = T extends QueryShapeSet<infer ShapeType>
+  ? ShapeType
+  : never;
+
+export type GetQueryShapeType<T> = T extends QueryShape<infer ShapeType>
+  ? ShapeType
+  : never;
+
+export class QueryValue<S extends Object> {
   // where(validation: WhereClause<S>): this {
   //   return this;
   // }
   // original:Shape|ShapeValuesSet|Primitive
+
+  /**
+   * Converts an original value into a query value
+   * @param originalValue
+   * @param requestedPropertyShape the property shape that is connected to the get accessor that returned the original value
+   */
+  static convertOriginal(
+    originalValue: OriginalValue,
+    property: PropertyShape,
+    subject: QueryShape<any>,
+  ) {
+    if (originalValue instanceof Shape) {
+      return new QueryShape(originalValue, property, subject);
+    } else if (originalValue instanceof ShapeSet) {
+      return new QueryShapeSet(originalValue, property, subject);
+    } else if (typeof originalValue === 'string') {
+      return new QueryString(originalValue);
+    }
+  }
 }
 class QueryShapeSet<S> extends QueryValue<S> {
+  constructor(
+    private shape: S,
+    private property?: PropertyShape,
+    private subject?: QueryShape<any>,
+  ) {
+    super();
+  }
   where(validation: WhereClause<S>): this {
     return this;
   }
 }
 // type QueryShapeType<S> = QueryShape<S> & ToQueryShape<S>;
-class QueryShape<S> extends QueryValue<S> {
+class QueryShape<S extends Shape> extends QueryValue<S> {
+  private proxy;
+  constructor(
+    private shape: S,
+    private property?: PropertyShape,
+    private subject?: QueryShape<any>,
+  ) {
+    super();
+  }
   where(validation: WhereClause<S>): this {
     return this;
   }
+
+  static proxifyInstance<T extends Shape>(queryShape: QueryShape<T>) {
+    let originalShape = queryShape.shape;
+    queryShape.proxy = new Proxy(queryShape, {
+      get(target, key, receiver) {
+        //if the key is a string
+        if (typeof key === 'string') {
+          //if this is a get method that is implemented by the QueryShape, then use that
+          if (key in queryShape) {
+            //if it's a function, then bind it to the queryShape and return it so it can be called
+            if (typeof queryShape[key] === 'function') {
+              return target[key].bind(target);
+            }
+            //if it's a get method, then return that
+            //NOTE: we may not need this if we don't use any get methods in QueryValue classes?
+            return queryShape[key];
+          }
+
+          //if not, then a method/accessor of the original shape was called
+          //then check if we have indexed any property shapes with that name for this shapes NodeShape
+          //NOTE: this will only work with a @linkedProperty decorator
+          let propertyShape = originalShape.nodeShape
+            .getPropertyShapes()
+            .find((propertyShape) => propertyShape.label === key);
+
+          if (propertyShape) {
+            //get the value of the property from the original shape
+            let value = originalShape[key];
+            //convert the value into a query value
+            return QueryValue.convertOriginal(value, propertyShape, queryShape);
+          }
+        }
+        //otherwise return the value of the property on the original shape
+        return originalShape[key];
+      },
+    });
+    return queryShape.proxy;
+  }
 }
 class QueryString<T> extends QueryValue<string> {
+  constructor(
+    private value: string,
+    private property?: PropertyShape,
+    private subject?: QueryShape<any>,
+  ) {
+    super();
+  }
   equals(otherString: string) {
     return false;
   }
 }
 
-export class LinkedQuery<T extends Shape> {
+export class LinkedQuery<T extends typeof Shape, ResponseType = any> {
+  private request: ResponseType;
   constructor(
-    private shape: typeof Shape,
-    private queryBuildFn: QueryBuildFn<T>,
+    private shape: T,
+    private queryBuildFn: QueryBuildFn<T, ResponseType>,
   ) {
     //TODO: do we use createTraceShape or a variant of it .. called createQueryShape
     // QueryShape somehow needs to inherrit all the properties of the shape, but also change the return types of the get accessors
-    let queryShape = createTraceShape<T>(shape, null, '');
-    queryBuildFn(queryShape as any, this);
+    let queryShape = new QueryShape<T>(shape);
+    let queryShapeProxy = QueryShape.proxifyInstance<T>(queryShape);
+    // let queryShape = createTraceShape<T>(shape, null, '');
+    let queryResponse = queryBuildFn(queryShape as any, this);
+    this.request = queryResponse;
   }
 
   where(validation: WhereClause<T>): this {
     return this;
   }
+
+  /**
+   * Resolves the query locally, by searching the graph in local memory, without using stores.
+   * Returns the result immediately.
+   */
+  local(): ToNormalValue<ResponseType>[] {
+    let localInstances = (this.shape as any).getLocalInstances();
+    // let paths = this.request
+    if (Array.isArray(this.request)) {
+      return this.request.map((item) => {
+        return null; //YOU ARE HERE
+        // return this.resolveLocalInstance(item, localInstances);
+      });
+    }
+    return null;
+  }
   toQueryObject() {
     //create a test instance of the shape
-    let traceInstance = createTraceShape<T>(
-      this.shape,
-      null,
-      '', //functionalComponent.name || functionalComponent.toString().substring(0, 80) + ' ...',
-    );
+    // let traceInstance = createTraceShape<T>(
+    //   this.shape as any,
+    //   null,
+    //   '', //functionalComponent.name || functionalComponent.toString().substring(0, 80) + ' ...',
+    // );
 
     //if setComponent is true then linkedSetComponent() was used
     //if then also dataDeclaration.setRequest is defined, then the SetComponent used Shape.requestSet()
@@ -113,7 +237,7 @@ export class LinkedQuery<T extends Shape> {
     // replaceSubRequestsFromTraceShapes(traceInstance);
 
     //start with the requested properties, which is an array of PropertyShapes
-    let dataRequest: LinkedDataRequest = traceInstance.requested;
+    // let dataRequest: LinkedDataRequest = traceInstance.requested;
 
     let insertSubRequestsFromBoundComponent = (value, target?, key?) => {
       //if a shape was returned for this key
@@ -122,7 +246,7 @@ export class LinkedQuery<T extends Shape> {
       //   insertSubRequestForTraceShape(dataRequest,key,value as TraceShape);
       // }
       //if a function was returned for this key
-      if (typeof value === 'function') {
+      /*if (typeof value === 'function') {
         //count the current amount of property shapes requested so far
         let previousNumPropShapes = traceInstance.requested.length;
 
@@ -173,7 +297,7 @@ export class LinkedQuery<T extends Shape> {
         }
         return evaluated;
       }
-      return value;
+      return value;*/
     };
 
     //whether the component returned an array, a function or an object, replace the values that are bound-component-factories

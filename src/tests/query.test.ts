@@ -1,6 +1,7 @@
 import {describe, test} from '@jest/globals';
 import {Literal, NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
+import {CoreSet} from '../collections/CoreSet';
 
 let name = NamedNode.create();
 let hasFriend = NamedNode.create();
@@ -25,12 +26,22 @@ p.name = 'Moa';
 
 describe('query tests', () => {
   test('can select a property of all instances', () => {
-    Person.select((p) => {
+    let names: string[] = Person.select((p) => {
       return p.name;
-    });
-    // subject.getAll(predicate).add(value1);
-    // expect(subject.hasProperty(predicate)).toBe(true);
-    // expect(subject.getAllQuads().length).toBe(1);
+    }).local();
+
+    expect(names instanceof CoreSet).toBe(true);
+    expect(names.length).toBe(2);
+    expect(names.includes('Moa')).toBe(true);
+    expect(names.includes('Mike')).toBe(false);
+  });
+  test('can select sub properties of a first property that returns a set', () => {
+    Person.select((p) => {
+      return p.friends.where((f) => f.name.equals('Moa'));
+    }).local();
+    // subject.getAll(predicate).delete(value1);
+    // expect(subject.hasProperty(predicate)).toBe(false);
+    // expect(subject.getAllQuads().length).toBe(0);
   });
   test('can filter a string in a ShapeSet with equals', () => {
     Person.select((p) => {

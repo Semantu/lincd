@@ -42,14 +42,16 @@ export function createTraceShape<ShapeType extends Shape>(
   }
 
   //here in the constructor (now that we have a 'this')
-  //we will overwrite all the methods of the class we extend and that classes that that extends
+  //we will overwrite all the methods of the class we extend and the classes that it itself extends
+  //we start with the shape class itself
   let finger = shapeClass;
   while (finger) {
-    //check this superclass still extends Shape, otherwise break;
+    //check that this shape class or one of its superclasses still extends Shape, otherwise break;
     if (!(finger.prototype instanceof Shape) || finger === Shape) {
       break;
     }
 
+    //get all the property descriptors of the class
     let descriptors = Object.getOwnPropertyDescriptors(finger.prototype);
 
     for (var key in descriptors) {
