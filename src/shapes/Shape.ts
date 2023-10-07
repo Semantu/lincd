@@ -394,6 +394,14 @@ export abstract class Shape extends EventEmitter implements IShape {
     //by default, look for instances of this shape class and all classes that extend it
     let targetClasses = [this].concat(getSubShapesClasses(this));
     targetClasses.forEach((shapeClass) => {
+      if (!shapeClass.targetClass) {
+        console.warn(
+          'Shape class ' +
+            shapeClass.name +
+            ' does not have a targetClass. Please define a static targetClass:NamedNode',
+        );
+        return;
+      }
       let potentialInstances = new NodeSet();
       if (explicitInstancesOnly) {
         potentialInstances = shapeClass.targetClass
