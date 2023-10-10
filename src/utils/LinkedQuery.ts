@@ -1,9 +1,7 @@
-import {Shape} from '../shapes/Shape';
-import {createTraceShape, TestNode} from './TraceShape';
-import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
-import {constructor} from 'eventemitter3';
-import {property} from 'lincd-shacl/lib/ontologies/shacl';
+import {PropertyShape} from '../shapes/SHACL';
+import {Shape} from '../shapes/Shape';
+import {TestNode} from './TraceShape';
 
 //TODO: it also needs to extend shape or what?
 // export interface QueryShape<S> extends QueryValue<S> {
