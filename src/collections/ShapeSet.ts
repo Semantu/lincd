@@ -11,6 +11,7 @@ import {QuadSet} from './QuadSet';
 import {QuadArray} from './QuadArray';
 import {NodeSet} from './NodeSet';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
+import {getLeastSpecificShapeClasses} from '../utils/ShapeClass';
 
 export class ShapeSet<R extends Shape = Shape>
   extends CoreSet<R>
@@ -18,6 +19,10 @@ export class ShapeSet<R extends Shape = Shape>
 {
   constructor(iterable?: Iterable<R>) {
     super(iterable);
+  }
+
+  getLeastSpecificShape() {
+    return getLeastSpecificShapeClasses(this).shift();
   }
 
   /**

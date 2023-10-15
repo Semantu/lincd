@@ -161,10 +161,10 @@ export interface ParameterConfig {
 }
 
 export const literalProperty = (config: LiteralPropertyShapeConfig) => {
-  return linkedProperty(config);
+  return _linkedProperty(config, shacl.Literal);
 };
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
-  return linkedProperty(config);
+  return _linkedProperty(config);
 };
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
@@ -186,6 +186,12 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
  * ```
  */
 export const linkedProperty = (config: PropertyShapeConfig) => {
+  return _linkedProperty(config);
+};
+const _linkedProperty = (
+  config: PropertyShapeConfig,
+  defaultNodeKind: NamedNode = null,
+) => {
   return function (
     target: any,
     propertyKey: string,
@@ -194,6 +200,7 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
     let propertyShape = new PropertyShape();
     propertyShape.path = config.path;
     propertyShape.label = propertyKey;
+
     if (config.required) {
       propertyShape.minCount = 1;
     } else if (config.minCount) {
@@ -213,10 +220,10 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
         propertyShape.nodeKind = shacl.Literal;
       }
       if (nodeKind === NamedNode) {
-        propertyShape.nodeKind = shacl.Literal;
+        propertyShape.nodeKind = shacl.IRI;
       }
       if (nodeKind === BlankNode) {
-        propertyShape.nodeKind = shacl.Literal;
+        propertyShape.nodeKind = shacl.BlankNode;
       }
       if (Array.isArray(nodeKind)) {
         if (nodeKind.includes(BlankNode) && nodeKind.includes(NamedNode)) {
@@ -228,6 +235,11 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
         if (nodeKind.includes(Literal) && nodeKind.includes(BlankNode)) {
           propertyShape.nodeKind = shacl.BlankNodeOrLiteral;
         }
+      }
+    } else {
+      //if no nodeKind was provided, use the default, if given
+      if (defaultNodeKind) {
+        propertyShape.nodeKind = defaultNodeKind;
       }
     }
     //we accept a shape configuration, which translates to a sh:nodeShape

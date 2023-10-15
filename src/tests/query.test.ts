@@ -31,11 +31,19 @@ class Person extends Shape {
   }
 }
 
-let p = new Person();
-p.name = 'Semmy';
+let p1 = new Person();
+p1.name = 'Semmy';
 let p2 = new Person();
 p2.name = 'Moa';
-p2.friends.add(p);
+let p3 = new Person();
+p3.name = 'Jinx';
+let p4 = new Person();
+p4.name = 'Quinn';
+
+p1.friends.add(p2);
+p1.friends.add(p3);
+p2.friends.add(p3);
+p2.friends.add(p4);
 
 describe('query tests', () => {
   test('can select a property of all instances', () => {
@@ -44,7 +52,7 @@ describe('query tests', () => {
     }).local();
 
     expect(Array.isArray(names)).toBe(true);
-    expect(names.length).toBe(2);
+    expect(names.length).toBe(4);
     expect(names.includes('Moa')).toBe(true);
     expect(names.includes('Mike')).toBe(false);
   });
@@ -55,9 +63,30 @@ describe('query tests', () => {
     }).local();
 
     expect(Array.isArray(namesOfFriends)).toBe(true);
-    expect(namesOfFriends.length).toBe(1);
-    expect(namesOfFriends.includes('Semmy')).toBe(true);
+    expect(namesOfFriends.length).toBe(3);
+    expect(namesOfFriends.includes('Semmy')).toBe(false);
+    expect(namesOfFriends.includes('Moa')).toBe(true);
   });
+
+  test('can select multiple property paths', () => {
+    let result = Person.select((p) => {
+      return [p.name, p.friends.name];
+    }).local();
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+
+    let [names, namesOfFriends] = result;
+    expect(Array.isArray(names)).toBe(true);
+    expect(names.length).toBe(4);
+    expect(names.includes('Moa')).toBe(true);
+    expect(names.includes('Mike')).toBe(false);
+    expect(Array.isArray(namesOfFriends)).toBe(true);
+    expect(namesOfFriends.length).toBe(3);
+    expect(namesOfFriends.includes('Semmy')).toBe(false);
+    expect(namesOfFriends.includes('Moa')).toBe(true);
+  });
+
   // test('can filter a string in a ShapeSet with equals', () => {
   // let friendsCalledMoa = Person.select((p) => {
   //   return p.friends.where((f) => f.name.equals('Moa'));

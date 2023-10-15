@@ -1,6 +1,7 @@
 import {NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
+import {ICoreIterable} from '../interfaces/ICoreIterable';
 
 let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
 
@@ -116,6 +117,12 @@ function filterShapeClasses(filterFn) {
   return result;
 }
 
+export function getLeastSpecificShapeClasses(shapes: ICoreIterable<Shape>) {
+  let shapeClasses = shapes.map((shape) =>
+    getShapeClass(shape.nodeShape.namedNode),
+  );
+  return filterShapesToLeastSpecific(shapeClasses);
+}
 export function getMostSpecificSubShapes(
   shape: typeof Shape | (typeof Shape)[],
 ): (typeof Shape)[] {
@@ -128,10 +135,29 @@ export function getMostSpecificSubShapes(
   return filterShapesToMostSpecific(subShapes);
 }
 
+/**
+ * Filters out all shapes that are extended by any other shape in the given set/array
+ * @param subShapes
+ */
 function filterShapesToMostSpecific(subShapes) {
   return subShapes.filter((subShape) => {
     return !subShapes.some((otherSubShape) => {
       return otherSubShape.prototype instanceof subShape;
+    });
+  });
+}
+
+/**
+ * Filters out all shapes that extend any other shape in the given set/array
+ * @param shapeClasses
+ */
+function filterShapesToLeastSpecific(shapeClasses) {
+  return shapeClasses.filter((shapeClass) => {
+    return !shapeClasses.some((otherShapeClass) => {
+      return (
+        otherShapeClass !== shapeClass &&
+        shapeClass.prototype instanceof otherShapeClass
+      );
     });
   });
 }
