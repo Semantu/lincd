@@ -4,13 +4,14 @@ import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
 import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
-import {add} from 'husky';
 
 //TODO: it also needs to extend shape or what?
 // export interface QueryShape<S> extends QueryValue<S> {
 //   where: (WhereClause) => this;
 // }
-type WhereClause<S> = boolean | ((s: ToQueryShape<S>) => boolean);
+type WhereClause<S> =
+  | QueryValueEvaluation
+  | ((s: ToQueryShape<S>) => QueryValueEvaluation);
 type OriginalValue =
   | Shape
   | ShapeSet
@@ -46,18 +47,26 @@ export type ToQueryValue<T> = T extends ShapeSet
   ? ToQueryShape<T>
   : T extends string
   ? QueryString
+  : T extends boolean
+  ? QueryBoolean
   : QueryValue<T>;
 
-export type ToNormalValue<T> = T extends QueryShapeSet<GetShapeSetType<T>>
+export type ToNormalValue<T> = T extends QueryShapeSet<any>
   ? ShapeSet<GetQueryShapeSetType<T>>
   : T extends QueryShape<any>
   ? GetQueryShapeType<T>
   : T extends QueryString
   ? string
-  : any;
+  : T extends Array<any>
+  ? Array<ToNormalValue<GetArrayType<T>>>
+  : T;
 
 export type GetQueryShapeSetType<T> = T extends QueryShapeSet<infer ShapeType>
   ? ShapeType
+  : never;
+
+export type GetArrayType<T> = T extends Array<infer ArrayType>
+  ? ArrayType
   : never;
 
 export type GetQueryShapeType<T> = T extends QueryShape<infer ShapeType>
@@ -67,16 +76,22 @@ export type GetQueryShapeType<T> = T extends QueryShape<infer ShapeType>
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
 export class QueryValue<S extends Object = any> {
+  protected whereTraceResult: QueryValueEvaluation;
+  protected whereQuery: LinkedWhereQuery<any>;
+
   constructor(
-    public property: PropertyShape,
-    public subject: QueryShape<any> | QueryShapeSet<any>,
+    public property?: PropertyShape,
+    public subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {}
 
   getPropertyPath(): QueryPath {
     let path: QueryPath = [];
     let current: QueryValue = this;
     while (current.property) {
-      path.unshift({property: current.property, where: null}); //current.where});
+      path.unshift({
+        property: current.property,
+        where: current.whereQuery?.getWhereQueryPaths(),
+      }); //current.where});
       current = current.subject;
     }
     return path;
@@ -94,7 +109,7 @@ export class QueryValue<S extends Object = any> {
   static convertOriginal(
     originalValue: OriginalValue,
     property: PropertyShape,
-    subject: QueryShape<any> | QueryShapeSet<any>,
+    subject: QueryShape<any> | QueryShapeSet<any> | QueryShape<any>,
   ) {
     if (originalValue instanceof Shape) {
       return QueryShape.create(originalValue, property, subject);
@@ -104,19 +119,103 @@ export class QueryValue<S extends Object = any> {
       return new QueryString(originalValue, property, subject);
     }
   }
+
+  static toOriginal(
+    endValue:
+      | ShapeSet<Shape>
+      | Shape[]
+      | Shape
+      | string[]
+      | QueryValue<any>
+      | QueryPrimitiveSet,
+  ) {
+    if (endValue instanceof QueryPrimitiveSet) {
+      return endValue.map((endValue) => this.toOriginal(endValue));
+    }
+    if (endValue instanceof QueryString) {
+      return this.toOriginal(endValue.subject);
+    }
+    if (endValue instanceof QueryShape) {
+      if (endValue.subject) {
+        return this.toOriginal(endValue.subject);
+      }
+      return endValue.originalShape;
+    } else if (endValue instanceof Shape) {
+      return endValue;
+    } else {
+      throw new Error('Unimplemented. Return as is?');
+    }
+  }
 }
 class QueryShapeSet<S extends Shape> extends QueryValue<S> {
   private proxy;
 
   constructor(
-    protected originalValue: ShapeSet<S>,
+    public originalValue: ShapeSet<S>,
     property?: PropertyShape,
     subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
     super(property, subject);
   }
+  callPropertyShapeAccessor(propertyShape: PropertyShape) {
+    //call the get method for that property shape on each item in the shape set
+    //and return the result as a new shape set
+    let result: QueryPrimitiveSet | ShapeSet<any>;
+
+    //if we expect the accessor to return a Primitive (string,number,boolean,Date)
+    if (propertyShape.nodeKind === shacl.Literal) {
+      //then return a Set of QueryPrimitives
+      result = new QueryPrimitiveSet(propertyShape, this);
+    } else {
+      //TODO: should this be a QueryShapeSet
+      // can we avoid setting the subj/prop on each value and instead set it once in the container?
+      result = new ShapeSet();
+    }
+    let expectSingleValues =
+      propertyShape.hasProperty(shacl.maxCount) && propertyShape.maxCount <= 1;
+
+    this.originalValue.forEach((shape) => {
+      // let shapeValue = shape[propertyShape.label];
+      //convert the returned value for this individual shape into a query value
+      // let shapeQueryValue = QueryValue.convertOriginal(
+      //   shapeValue,
+      //   propertyShape,
+      //   shape as any as QueryShape<any>,
+      // );
+      let shapeQueryValue = shape[propertyShape.label];
+
+      if (expectSingleValues) {
+        result.add(shapeQueryValue);
+      } else {
+        //if each of the shapes in a set return a new shapeset for the request accessor
+        //then we merge all the returned values into a single shapeset
+        result = result.concat(shapeQueryValue);
+      }
+    });
+    return result;
+  }
+
+  // get testItem() {}
   where(validation: WhereClause<S>): this {
-    return this;
+    if (validation instanceof Function) {
+      let dummyNode = new TestNode();
+      let leastSpecificShape = this.originalValue.getLeastSpecificShape();
+      //create an instance of the shape with the dummy node as node
+      let dummyShape = new (leastSpecificShape as any)(dummyNode);
+      //convert it to a root query shape
+      let queryShape = QueryShape.create(dummyShape);
+      // queryShape = QueryShape.create(this.originalValue.first());
+
+      //YOU ARE HERE
+      //see what comes back, think through what we need to do with it to track the path
+      this.whereQuery = new LinkedWhereQuery(leastSpecificShape, validation);
+      // this.whereTraceResult = validation(queryShape);
+      return this;
+    } else {
+      //TODO: add support for where clauses that return a boolean from already available variables,
+      // like .where(p.name.eq('Semmy'))
+      // for this WhereClause definition may need to be updated to use QueryBoolean instead of boolean
+    }
   }
 
   static create<S extends Shape = Shape>(
@@ -124,11 +223,24 @@ class QueryShapeSet<S extends Shape> extends QueryValue<S> {
     property: PropertyShape,
     subject: QueryShape<any> | QueryShapeSet<any>,
   ) {
-    let instance = new QueryShapeSet<S>(originalValue, property, subject);
-    let proxy = this.proxifyInstance(instance);
+    let instance = new QueryShapeSet<S>(
+      //also convert all instances in the shapeset to QueryShapes
+      //NOTE: if this gets done on large data sets and is performance heavy, perhaps we should introduce a flag and only do this subQueries (whereClause)
+      // because that may be the only place it is needed. (the proxifyInstance method below already handles get/set methods directly called ont he shape during usual queries)
+      new ShapeSet(
+        originalValue.map((shape) =>
+          QueryShape.create(shape, property, subject),
+        ),
+      ),
+      // originalValue,
+      property,
+      subject,
+    );
+
+    let proxy = this.proxifyShapeSet<S>(instance);
     return proxy;
   }
-  static proxifyInstance<T extends Shape = Shape>(
+  static proxifyShapeSet<T extends Shape = Shape>(
     queryShapeSet: QueryShapeSet<T>,
   ) {
     let originalShapeSet = queryShapeSet.originalValue;
@@ -148,51 +260,32 @@ class QueryShapeSet<S extends Shape> extends QueryValue<S> {
             return queryShapeSet[key];
           }
 
+          if (queryShapeSet.originalValue.size === 0) {
+            //in this case we're not sure if it should be a QueryPrimitiveSet or a ShapeSet, so we return an empty CoreSet
+            return new CoreSet();
+          }
           //if not, then a method/accessor was called that likely fits with the methods of the original SHAPE of the items in the shape set
           //As in person.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Persons
           //So here we find back the shape that all items have in common, and then find the property shape that matches the key
           //NOTE: this will only work if the key corresponds with an accessor in the shape that uses a @linkedProperty decorator
           let leastSpecificShape =
             queryShapeSet.originalValue.getLeastSpecificShape();
-          let propertyShape: PropertyShape = leastSpecificShape.shape
+          let propertyShape: PropertyShape = leastSpecificShape?.shape
             .getPropertyShapes()
             .find((propertyShape) => propertyShape.label === key);
 
           //if the property shape is found
           if (propertyShape) {
-            //call the get method for that property shape on each item in the shape set
-            //and return the result as a new shape set
-            let result: QueryPrimitiveSet | ShapeSet<any>;
-
-            //if we expect the accessor to return a Primitive (string,number,boolean,Date)
-            if (propertyShape.nodeKind === shacl.Literal) {
-              //then return a Set of QueryPrimitives
-              result = new QueryPrimitiveSet();
-            } else {
-              result = new ShapeSet();
-            }
-            let expectSingleValues =
-              propertyShape.hasProperty(shacl.maxCount) &&
-              propertyShape.maxCount <= 1;
-
-            queryShapeSet.originalValue.forEach((shape) => {
-              let shapeValue = shape[key];
-              //convert the returned value for this individual shape into a query value
-              let shapeQueryValue = QueryValue.convertOriginal(
-                shapeValue,
-                propertyShape,
-                queryShapeSet,
-              );
-
-              if (expectSingleValues) {
-                result.add(shapeQueryValue);
-              } else {
-                //if each of the shapes in a set return a new shapeset for the request accessor
-                //then we merge all the returned values into a single shapeset
-                result = result.concat(shapeQueryValue);
-              }
-            });
-            return result;
+            return queryShapeSet.callPropertyShapeAccessor(propertyShape);
+          } else if (
+            //else if a method of the original shape is called, like .forEach() or similar
+            queryShapeSet.originalValue[key] &&
+            typeof queryShapeSet.originalValue[key] === 'function'
+          ) {
+            //then return that method and bind the original value as 'this'
+            return queryShapeSet.originalValue[key].bind(
+              queryShapeSet.originalValue,
+            );
           } else {
             console.warn(
               'Could not find property shape for key ' +
@@ -214,7 +307,7 @@ class QueryShapeSet<S extends Shape> extends QueryValue<S> {
 class QueryShape<S extends Shape> extends QueryValue<S> {
   private proxy;
   constructor(
-    private shape: S,
+    public originalShape: S,
     property?: PropertyShape,
     subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
@@ -234,7 +327,7 @@ class QueryShape<S extends Shape> extends QueryValue<S> {
   }
 
   static proxifyInstance<T extends Shape>(queryShape: QueryShape<T>) {
-    let originalShape = queryShape.shape;
+    let originalShape = queryShape.originalShape;
     queryShape.proxy = new Proxy(queryShape, {
       get(target, key, receiver) {
         //if the key is a string
@@ -271,19 +364,56 @@ class QueryShape<S extends Shape> extends QueryValue<S> {
     return queryShape.proxy;
   }
 }
-class QueryString extends QueryValue<string> {
+class QueryValueEvaluation {
   constructor(
-    private value: string,
+    private value: QueryValue,
+    private method: WhereEvaluationMethod,
+    private args: any[],
+    private evaluation: any,
+  ) {}
+  getPropertyPath(): QueryPath {
+    return this.value.getPropertyPath();
+  }
+  getMethod() {
+    return this.method;
+  }
+  getArgs() {
+    return this.args;
+  }
+}
+class QueryBoolean extends QueryValue<boolean> {
+  constructor(
+    private value: boolean,
     property?: PropertyShape,
     subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
     super(property, subject);
   }
+}
+class QueryString extends QueryValue<string> {
+  constructor(
+    public value: string,
+    public property?: PropertyShape,
+    public subject?: QueryShape<any> | QueryShapeSet<any>,
+  ) {
+    super(property, subject);
+  }
   equals(otherString: string) {
-    return false;
+    return new QueryValueEvaluation(
+      this,
+      WhereEvaluation.STRING_EQUALS,
+      [otherString],
+      this.value === otherString,
+    );
   }
 }
 class QueryPrimitiveSet extends CoreSet<QueryPrimitive> {
+  constructor(
+    public property: PropertyShape,
+    public subject: QueryShapeSet<any> | QueryShape<any>,
+  ) {
+    super();
+  }
   getPropertyPath(): QueryPath {
     if (this.size > 1) {
       throw new Error(
@@ -306,7 +436,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
    * Will likely be an array or object or query values that can be used to trace back which methods/accessors were used in the query.
    * @private
    */
-  private traceResponse: ResponseType;
+  protected traceResponse: ResponseType;
 
   constructor(
     private shape: T,
@@ -331,7 +461,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
    * Resolves the query locally, by searching the graph in local memory, without using stores.
    * Returns the result immediately.
    */
-  local(): ToNormalValue<ResponseType>[] {
+  local(): ToNormalValue<ResponseType> {
     let queryPaths = this.getQueryPaths();
     let localInstances = (this.shape as any).getLocalInstances();
     let results = [];
@@ -355,13 +485,13 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
       //});
     } else if (Array.isArray(this.traceResponse)) {
       //nothing to convert if an array was requested
-      return results;
+      return results as any;
     } else if (this.traceResponse instanceof QueryPrimitiveSet) {
       //TODO: see how traceResponse is made for QueryValue. Here we need to return an array of the first item in the results?
       //does that also work if there is multiple values?
       //do we need to check the size of the traceresponse
       //why is a CoreSet created? start there
-      return [...results[0]];
+      return [...results[0]] as any;
     } else if (typeof this.traceResponse === 'object') {
       throw new Error('Objects are not yet supported');
     }
@@ -373,15 +503,32 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
     });
     return shapeResult;
   }
-  private resolveQueryPath(localInstances: ShapeSet, queryPath: QueryPath) {
+  private resolveWherePath(subject: ShapeSet | Shape, queryPath: QueryPath) {
     //start with the local instance as the subject
-    let result: ShapeSet | Shape[] = localInstances;
+    let result: ShapeSet | Shape[] | Shape | QueryValue = subject;
+    queryPath.forEach((queryStep) => {
+      //then resolve each of the query steps and use the result as the new subject for the next step
+      result = this.resolveWhereStep(result, queryStep);
+    });
+    //return the final value at the end of the path
+    //TODO: review return types
+    return result as
+      | ShapeSet
+      | Shape[]
+      | Shape
+      | string[]
+      | QueryValue
+      | QueryPrimitiveSet;
+  }
+  private resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
+    //start with the local instance as the subject
+    let result: ShapeSet | Shape[] | Shape = subject;
     queryPath.forEach((queryStep) => {
       //then resolve each of the query steps and use the result as the new subject for the next step
       result = this.resolveQueryStep(result, queryStep);
     });
     //return the final value at the end of the path
-    return result;
+    return result as ShapeSet | Shape[] | Shape;
   }
   // private resolveQueryPath(localInstance, queryPath: QueryPath) {
   //   //start with the local instance as the subject
@@ -393,7 +540,42 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
   //   //return the final value at the end of the path
   //   return result;
   // }
-  private resolveQueryStep(subject: ShapeSet | Shape[], queryStep: QueryStep) {
+
+  /**
+   * Filters down the given subjects to only those what match the where clause
+   * @param subject
+   * @param where
+   * @private
+   */
+  private resolveWhere(
+    subject: Shape | ShapeSet,
+    where: {paths; method; args},
+  ): OriginalValue | OriginalValue[] {
+    //TODO: you are here. In the where query, we need to make sure it resolves to a query value. Probably by changing around the subject that we put in?
+    // must be a query shape? Then we get QueryValueStrings back, we see which ones match the where function
+    // and only return those who match, so return type of this function will be a ShapeSet or similar
+
+    //TODO 2: we're getting a shapevaluesset, but the values are named nodes. Why?
+    // should we change something so that these are QueryShapes?
+    let convertedSubjects = QueryValue.convertOriginal(subject, null, null);
+
+    let queryEndValues = this.resolveWherePath(convertedSubjects, where.paths);
+    if (where.method === WhereEvaluation.STRING_EQUALS) {
+      if (queryEndValues instanceof QueryPrimitiveSet) {
+        queryEndValues = queryEndValues.filter(
+          this.resolveWhereEquals.bind(this, where.args),
+        ) as any;
+        return QueryValue.toOriginal(queryEndValues);
+      }
+    }
+  }
+  private resolveWhereEquals(args: any[], queryEndValue: QueryPrimitive) {
+    return queryEndValue.value === args[0];
+  }
+  private resolveQueryStep(
+    subject: ShapeSet | Shape[] | Shape,
+    queryStep: QueryStep,
+  ) {
     // if (subject instanceof Shape) {
     //   return subject[queryStep.property.label];
     // }
@@ -401,18 +583,25 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
       //if the propertyshape holds literal values in the graph, then the actual return values will be primitives (strings,numbers,Dates, etc) which we store in an Array
       let result =
         queryStep.property.nodeKind === shacl.Literal ? [] : new ShapeSet();
-      subject.forEach((singleShape) => {
-        let singleResult = singleShape[queryStep.property.label];
-        if (singleResult instanceof ShapeSet) {
-          result = result.concat(singleResult);
-        } else if (singleResult instanceof Shape) {
-          (result as ShapeSet).add(singleResult);
-        } else if (primitiveTypes.includes(typeof singleResult)) {
-          (result as any[]).push(singleResult);
+      (subject as ShapeSet).forEach((singleShape) => {
+        let stepResult = singleShape[queryStep.property.label];
+        if (queryStep.where) {
+          let whereResult = this.resolveWhere(stepResult, queryStep.where);
+          //overwrite the single result with the filtered where result
+          stepResult = whereResult;
+        }
+        if (stepResult instanceof ShapeSet) {
+          result = result.concat(stepResult);
+        } else if (Array.isArray(stepResult)) {
+          result = result.concat(stepResult);
+        } else if (stepResult instanceof Shape) {
+          (result as ShapeSet).add(stepResult);
+        } else if (primitiveTypes.includes(typeof stepResult)) {
+          (result as any[]).push(stepResult);
         } else {
           throw Error(
             'Unknown result type: ' +
-              typeof singleResult +
+              typeof stepResult +
               ' for property ' +
               queryStep.property.label +
               ' on shape ' +
@@ -422,6 +611,57 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
         }
       });
       return result;
+    } else {
+      throw new Error('Unknown subject type: ' + typeof subject);
+    }
+  }
+  private resolveWhereStep(
+    subject: ShapeSet | Shape[] | Shape | QueryValue,
+    queryStep: QueryStep,
+  ): QueryValue {
+    if (
+      subject instanceof QueryShapeSet &&
+      (subject as QueryShapeSet<any>).originalValue instanceof ShapeSet
+    ) {
+      //if the propertyshape holds literal values in the graph, then the actual return values will be primitives (strings,numbers,Dates, etc) which we store in an Array
+      // let result =
+      //   queryStep.property.nodeKind === shacl.Literal ? [] : new ShapeSet();
+
+      //access path directly from QueryShapeSet (see its proxy implementation)
+      // let stepResult = subject[queryStep.property.label];
+      let stepResult = subject.callPropertyShapeAccessor(queryStep.property);
+
+      // (subject as ShapeSet).forEach((singleShape) => {
+      //   let stepResult = singleShape[queryStep.property.label];
+      //   if (queryStep.where) {
+      //     let whereResult = this.resolveWhere(stepResult, queryStep.where);
+      //     // if (whereResult === false) {
+      //     //   return;
+      //     // }
+      //     // else
+      //     // {
+      //     //overwrite the single result with the filtered where result
+      //     stepResult = whereResult;
+      //     // }
+      //   }
+      return stepResult as any;
+      // if (stepResult instanceof ShapeSet) {
+      //   result = result.concat(stepResult);
+      // } else if (stepResult instanceof Shape) {
+      //   (result as ShapeSet).add(stepResult);
+      // } else if (primitiveTypes.includes(typeof stepResult)) {
+      //   (result as any[]).push(stepResult);
+      // } else {
+      //   throw Error(
+      //     'Unknown result type: ' +
+      //       typeof stepResult +
+      //       ' for property ' +
+      //       queryStep.property.label +
+      //       ')',
+      //   );
+      // }
+      // });
+      // return result;
     } else {
       throw new Error('Unknown subject type: ' + typeof subject);
     }
@@ -594,6 +834,30 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
     //     );
     //   });
     // }
-    // return [dataRequest, dataResponse as any as TransformedLinkedDataResponse];
+    // return [dataRequest, dataReLinkedWhereQuerysponse as any as TransformedLinkedDataResponse];
   }
+}
+
+// class LinkedWhereQuery<S extends Shape, ResponseType = any> {
+//   private query: LinkedQuery<S, ResponseType>;
+//   constructor(shape, whereFn) {
+//     this.query = new LinkedQuery<S, ResponseType>(shape, whereFn);
+//   }
+// }
+class LinkedWhereQuery<S extends Shape, ResponseType = any> extends LinkedQuery<
+  S,
+  ResponseType
+> {
+  getWhereQueryPaths() {
+    //TODO: return the query value evaluation instead of this in between step?
+    return {
+      paths: (this.traceResponse as QueryValueEvaluation).getPropertyPath(),
+      method: (this.traceResponse as QueryValueEvaluation).getMethod(),
+      args: (this.traceResponse as QueryValueEvaluation).getArgs(),
+    };
+  }
+}
+type WhereEvaluationMethod = 'steq';
+class WhereEvaluation {
+  static STRING_EQUALS: 'steq' = 'steq';
 }

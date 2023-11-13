@@ -3,6 +3,7 @@ import {Literal, NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
 import {literalProperty, objectProperty} from '../utils/ShapeDecorators';
 import {linkedShape} from '../package';
+import {ShapeSet} from '../collections/ShapeSet';
 
 let personClass = NamedNode.create();
 let name = NamedNode.create();
@@ -58,7 +59,6 @@ describe('query tests', () => {
   });
   test('can select sub properties of a first property that returns a set', () => {
     let namesOfFriends = Person.select((p) => {
-      //TODO: implement this with a proxy for queryshapeset
       return p.friends.name;
     }).local();
 
@@ -86,14 +86,19 @@ describe('query tests', () => {
     expect(namesOfFriends.includes('Semmy')).toBe(false);
     expect(namesOfFriends.includes('Moa')).toBe(true);
   });
+  test('can filter a string in a set of Literals with equals', () => {
+    //we select the friends of all persons, but only those friends whose name is moa
+    //this will return an array, where each entry represents the results for a single person.
+    // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+    let friendsCalledMoa = Person.select((p) => {
+      return p.friends.where((f) => f.name.equals('Moa'));
+    }).local();
 
-  // test('can filter a string in a ShapeSet with equals', () => {
-  // let friendsCalledMoa = Person.select((p) => {
-  //   return p.friends.where((f) => f.name.equals('Moa'));
-  // }).local();
-  //
-  // expect(Array.isArray(friendsCalledMoa)).toBe(true);
-  // expect(friendsCalledMoa.length).toBe(1);
-  // expect(friendsCalledMoa.includes(p2)).toBe(true);
-  // });
+    // expect(Array.isArray(friendsCalledMoa)).toBe(true);
+    // expect(friendsCalledMoa[0] instanceof ShapeSet).toBe(true);
+    // expect((friendsCalledMoa[0] as ShapeSet).has(p2)).toBe(true);
+    expect(friendsCalledMoa instanceof ShapeSet).toBe(true);
+    expect(friendsCalledMoa.size).toBe(1);
+    expect(friendsCalledMoa.first().namedNode).toBe(p2.namedNode);
+  });
 });
