@@ -40,9 +40,23 @@ export type ToQueryShape<T> = {
 type GetShapeSetType<SS> = SS extends ShapeSet<infer ShapeType>
   ? ShapeType
   : never;
-export type ToQueryValue<T> = T extends ShapeSet
+
+// export type WrappedQueryShape<T> = ToQueryShapeArrayWrapped<T>;
+// export type Wrapped<R> = R;
+// export type ToShapeSetProxiedValue<T> = T extends Shape
+//   ? ToQueryShapeArrayWrapped<T>
+//   : never;
+
+// export type ToQueryShapeArrayWrapped<T> = {
+//   [P in keyof T]: ShapeSetArray<ToQueryValue<T[P]>>;
+// };
+// export type ShapeSetArray<T> = Array<T> & {
+//   [P in keyof T]: ToQueryValue<T[P]>;
+// };
+
+export type ToQueryValue<T, I = 0> = T extends ShapeSet
   ? //a shape set turns into a query-shape set but also inherits all the properties of the shape that each item in the set has
-    QueryShapeSet<GetShapeSetType<T>> & ToQueryValue<GetShapeSetType<T>>
+    QueryShapeSet<GetShapeSetType<T>> & ToQueryShape<GetShapeSetType<T>>
   : T extends Shape
   ? ToQueryShape<T>
   : T extends string
@@ -56,7 +70,7 @@ export type ToNormalValue<T> = T extends QueryShapeSet<any>
   : T extends QueryShape<any>
   ? GetQueryShapeType<T>
   : T extends QueryString
-  ? string
+  ? string[]
   : T extends Array<any>
   ? Array<ToNormalValue<GetArrayType<T>>>
   : T;
@@ -445,8 +459,9 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
   /**
    * Resolves the query locally, by searching the graph in local memory, without using stores.
    * Returns the result immediately.
+   * The results will be the end point reached by the query
    */
-  local(): ToNormalValue<ResponseType> {
+  localResults(): ToNormalValue<ResponseType> {
     let queryPaths = this.getQueryPaths();
     let localInstances = (this.shape as any).getLocalInstances();
     let results = [];
