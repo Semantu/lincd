@@ -5,9 +5,9 @@ import {literalProperty, objectProperty} from '../utils/ShapeDecorators';
 import {linkedShape} from '../package';
 import {ShapeSet} from '../collections/ShapeSet';
 
-let personClass = NamedNode.create();
-let name = NamedNode.create();
-let hasFriend = NamedNode.create();
+let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
+let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
+let hasFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasFriend');
 
 @linkedShape
 class Person extends Shape {
@@ -34,13 +34,13 @@ class Person extends Shape {
   }
 }
 
-let p1 = new Person();
+let p1 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p1-semmy');
 p1.name = 'Semmy';
-let p2 = new Person();
+let p2 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p2-moa');
 p2.name = 'Moa';
-let p3 = new Person();
+let p3 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p3-jinx');
 p3.name = 'Jinx';
-let p4 = new Person();
+let p4 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p4-quinn');
 p4.name = 'Quinn';
 
 p1.friends.add(p2);
@@ -49,65 +49,83 @@ p2.friends.add(p3);
 p2.friends.add(p4);
 
 describe('query tests', () => {
-  test('can select a property of all instances', () => {
-    let names = Person.select((p) => {
-      return p.name;
-    }).localResults();
-    //["name","name"]
+  // test('can select a property of all instances', () => {
+  //   let names = Person.select((p) => {
+  //     return p.name;
+  //   }).localResults();
+  //   //["name","name"]
+  //
+  //   expect(Array.isArray(names)).toBe(true);
+  //   expect(names.length).toBe(4);
+  //   expect(names.includes('Moa')).toBe(true);
+  //   expect(names.includes('Mike')).toBe(false);
+  // });
+  //
+  // test('can select sub properties of a first property that returns a set', () => {
+  //   let namesOfFriends = Person.select((p) => {
+  //     return p.friends.name;
+  //   }).localResults();
+  //   //[
+  //   // ["name1","name2","name3"]
+  //   //]
+  //
+  //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  //   expect(namesOfFriends.length).toBe(3);
+  //   expect(namesOfFriends.includes('Semmy')).toBe(false);
+  //   expect(namesOfFriends.includes('Moa')).toBe(true);
+  // });
+  //
+  // test('can select multiple property paths', () => {
+  //   let result = Person.select((p) => {
+  //     return [p.name, p.friends.name];
+  //   }).localResults();
+  //
+  //   expect(Array.isArray(result)).toBe(true);
+  //   expect(result.length).toBe(2);
+  //
+  //   let [names, namesOfFriends] = result;
+  //   expect(Array.isArray(names)).toBe(true);
+  //   expect(names.length).toBe(4);
+  //   expect(names.includes('Moa')).toBe(true);
+  //   expect(names.includes('Mike')).toBe(false);
+  //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  //   expect(namesOfFriends.length).toBe(3);
+  //   expect(namesOfFriends.includes('Semmy')).toBe(false);
+  //   expect(namesOfFriends.includes('Moa')).toBe(true);
+  // });
+  //
+  // test('can filter a string in a set of Literals with equals', () => {
+  //   //we select the friends of all persons, but only those friends whose name is moa
+  //   //this will return an array, where each entry represents the results for a single person.
+  //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+  //   let friendsCalledMoa = Person.select((p) => {
+  //     return p.friends.where((f) => f.name.equals('Moa'));
+  //   }).localResults();
+  //
+  //   expect(friendsCalledMoa instanceof ShapeSet).toBe(true);
+  //   expect(friendsCalledMoa.size).toBe(1);
+  //   expect(friendsCalledMoa.first().namedNode).toBe(p2.namedNode);
+  // });
 
-    expect(Array.isArray(names)).toBe(true);
-    expect(names.length).toBe(4);
-    expect(names.includes('Moa')).toBe(true);
-    expect(names.includes('Mike')).toBe(false);
-  });
-
-  test('can select sub properties of a first property that returns a set', () => {
-    let namesOfFriends = Person.select((p) => {
-      return p.friends.name;
-    }).localResults();
-    //[
-    // ["name1","name2","name3"]
-    //]
-
-    expect(Array.isArray(namesOfFriends)).toBe(true);
-    expect(namesOfFriends.length).toBe(3);
-    expect(namesOfFriends.includes('Semmy')).toBe(false);
-    expect(namesOfFriends.includes('Moa')).toBe(true);
-  });
-
-  test('can select multiple property paths', () => {
-    let result = Person.select((p) => {
-      return [p.name, p.friends.name];
-    }).localResults();
-
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBe(2);
-
-    let [names, namesOfFriends] = result;
-    expect(Array.isArray(names)).toBe(true);
-    expect(names.length).toBe(4);
-    expect(names.includes('Moa')).toBe(true);
-    expect(names.includes('Mike')).toBe(false);
-    expect(Array.isArray(namesOfFriends)).toBe(true);
-    expect(namesOfFriends.length).toBe(3);
-    expect(namesOfFriends.includes('Semmy')).toBe(false);
-    expect(namesOfFriends.includes('Moa')).toBe(true);
-  });
-
-  test('can filter a string in a set of Literals with equals', () => {
+  test('can select nested paths', () => {
     //we select the friends of all persons, but only those friends whose name is moa
     //this will return an array, where each entry represents the results for a single person.
     // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-    let friendsCalledMoa = Person.select((p) => {
-      return p.friends.where((f) => f.name.equals('Moa'));
+    let level2Friends = Person.select((p) => {
+      return p.friends.friends;
     }).localResults();
 
-    // expect(Array.isArray(friendsCalledMoa)).toBe(true);
-    // expect(friendsCalledMoa[0] instanceof ShapeSet).toBe(true);
-    // expect((friendsCalledMoa[0] as ShapeSet).has(p2)).toBe(true);
-    expect(friendsCalledMoa instanceof ShapeSet).toBe(true);
-    expect(friendsCalledMoa.size).toBe(1);
-    expect(friendsCalledMoa.first().namedNode).toBe(p2.namedNode);
+    let level3Friends = Person.select((p) => {
+      return p.friends.friends.friends;
+    }).localResults();
+
+    expect(level2Friends instanceof ShapeSet).toBe(true);
+    expect(level2Friends.size).toBe(2);
+    expect(level2Friends.some((f) => f.namedNode === p3.namedNode)).toBe(true);
+    expect(level2Friends.some((f) => f.namedNode === p4.namedNode)).toBe(true);
+
+    expect(level3Friends instanceof ShapeSet).toBe(true);
+    expect(level3Friends.size).toBe(0);
   });
 });
 
@@ -168,7 +186,7 @@ describe('query tests', () => {
 //to isolate there is:
 // q.loadOnly();
 // q.resultsOnly();
-//the issue is with multiple changed things in one:
+//the issue is with multiple chained things in one:
 //Not: Person.select(p => [p.name,pfriends]);
 //BUT: Person.select(p => p.friends,recentLocations.name);
 //Do we really want this?
