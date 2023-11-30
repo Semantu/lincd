@@ -4,9 +4,12 @@ import {Shape} from '../shapes/Shape';
 import {literalProperty, objectProperty} from '../utils/ShapeDecorators';
 import {linkedShape} from '../package';
 import {ShapeSet} from '../collections/ShapeSet';
+import {resolveLocal} from '../utils/LocalQueryResolver';
+import {resolve} from 'eslint-import-resolver-typescript';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
+let hobby = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hobby');
 let hasFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasFriend');
 
 @linkedShape
@@ -25,6 +28,18 @@ class Person extends Shape {
     this.overwrite(name, new Literal(val));
   }
 
+  @literalProperty({
+    path: hobby,
+    maxCount: 1,
+  })
+  get hobby(): string {
+    return this.getValue(hobby);
+  }
+
+  set hobby(val: string) {
+    this.overwrite(hobby, new Literal(val));
+  }
+
   @objectProperty({
     path: hasFriend,
     shape: Person,
@@ -36,10 +51,14 @@ class Person extends Shape {
 
 let p1 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p1-semmy');
 p1.name = 'Semmy';
+
 let p2 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p2-moa');
 p2.name = 'Moa';
+p2.hobby = 'Jogging';
+
 let p3 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p3-jinx');
 p3.name = 'Jinx';
+
 let p4 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p4-quinn');
 p4.name = 'Quinn';
 
@@ -50,9 +69,11 @@ p2.friends.add(p4);
 
 describe('query tests', () => {
   // test('can select a property of all instances', () => {
-  //   let names = Person.select((p) => {
-  //     return p.name;
-  //   }).localResults();
+  //   let names = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.name;
+  //     }),
+  //   );
   //   //["name","name"]
   //
   //   expect(Array.isArray(names)).toBe(true);
@@ -62,9 +83,10 @@ describe('query tests', () => {
   // });
   //
   // test('can select sub properties of a first property that returns a set', () => {
-  //   let namesOfFriends = Person.select((p) => {
+  //   let q = Person.select((p) => {
   //     return p.friends.name;
-  //   }).localResults();
+  //   });
+  //   let namesOfFriends = resolveLocal(q);
   //   //[
   //   // ["name1","name2","name3"]
   //   //]
@@ -76,9 +98,11 @@ describe('query tests', () => {
   // });
   //
   // test('can select multiple property paths', () => {
-  //   let result = Person.select((p) => {
-  //     return [p.name, p.friends.name];
-  //   }).localResults();
+  //   let result = resolveLocal(
+  //     Person.select((p) => {
+  //       return [p.name, p.friends.name];
+  //     }),
+  //   );
   //
   //   expect(Array.isArray(result)).toBe(true);
   //   expect(result.length).toBe(2);
@@ -94,38 +118,62 @@ describe('query tests', () => {
   //   expect(namesOfFriends.includes('Moa')).toBe(true);
   // });
   //
-  // test('can filter a string in a set of Literals with equals', () => {
+  // test('can use where() to filter a string in a set of Literals with equals', () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
   //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let friendsCalledMoa = Person.select((p) => {
-  //     return p.friends.where((f) => f.name.equals('Moa'));
-  //   }).localResults();
+  //   let friendsCalledMoa = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.where((f) => f.name.equals('Moa'));
+  //     }),
+  //   );
   //
   //   expect(friendsCalledMoa instanceof ShapeSet).toBe(true);
   //   expect(friendsCalledMoa.size).toBe(1);
   //   expect(friendsCalledMoa.first().namedNode).toBe(p2.namedNode);
   // });
+  //
+  // test('can select nested paths', () => {
+  //   //we select the friends of all persons, but only those friends whose name is moa
+  //   //this will return an array, where each entry represents the results for a single person.
+  //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+  //   let level2Friends = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.friends;
+  //     }),
+  //   );
+  //
+  //   let level3Friends = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.friends.friends;
+  //     }),
+  //   );
+  //
+  //   expect(level2Friends instanceof ShapeSet).toBe(true);
+  //   expect(level2Friends.size).toBe(2);
+  //   expect(level2Friends.some((f) => f.namedNode === p3.namedNode)).toBe(true);
+  //   expect(level2Friends.some((f) => f.namedNode === p4.namedNode)).toBe(true);
+  //
+  //   expect(level3Friends instanceof ShapeSet).toBe(true);
+  //   expect(level3Friends.size).toBe(0);
+  // });
+  //next, AND, OR, NOT
 
-  test('can select nested paths', () => {
+  test('where and', () => {
     //we select the friends of all persons, but only those friends whose name is moa
     //this will return an array, where each entry represents the results for a single person.
     // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-    let level2Friends = Person.select((p) => {
-      return p.friends.friends;
-    }).localResults();
+    let friendsCalledMoaThatJog = resolveLocal(
+      Person.select((p) => {
+        return p.friends.where((f) =>
+          f.name.equals('Moa').and(f.hobby.equals('Jogging')),
+        );
+      }),
+    );
 
-    let level3Friends = Person.select((p) => {
-      return p.friends.friends.friends;
-    }).localResults();
-
-    expect(level2Friends instanceof ShapeSet).toBe(true);
-    expect(level2Friends.size).toBe(2);
-    expect(level2Friends.some((f) => f.namedNode === p3.namedNode)).toBe(true);
-    expect(level2Friends.some((f) => f.namedNode === p4.namedNode)).toBe(true);
-
-    expect(level3Friends instanceof ShapeSet).toBe(true);
-    expect(level3Friends.size).toBe(0);
+    expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
+    expect(friendsCalledMoaThatJog.size).toBe(1);
+    expect(friendsCalledMoaThatJog.first().namedNode).toBe(p2.namedNode);
   });
 });
 
