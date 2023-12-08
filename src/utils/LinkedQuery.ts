@@ -125,6 +125,13 @@ export class QueryValue<S extends Object = any> {
   }
 
   static getOriginalSource(
+    endValue: ShapeSet<Shape> | Shape[] | QueryPrimitiveSet,
+  ): Shape[];
+  static getOriginalSource(endValue: Shape): Shape;
+  static getOriginalSource(
+    endValue: string[] | QueryValue<any>,
+  ): Shape | Shape[];
+  static getOriginalSource(
     endValue:
       | ShapeSet<Shape>
       | Shape[]
@@ -132,9 +139,11 @@ export class QueryValue<S extends Object = any> {
       | string[]
       | QueryValue<any>
       | QueryPrimitiveSet,
-  ) {
+  ): Shape | Shape[] {
     if (endValue instanceof QueryPrimitiveSet) {
-      return endValue.map((endValue) => this.getOriginalSource(endValue));
+      return endValue.map((endValue) =>
+        this.getOriginalSource(endValue),
+      ) as Shape[];
     }
     if (endValue instanceof QueryString) {
       return this.getOriginalSource(endValue.subject);
@@ -204,12 +213,15 @@ export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
       // since the shape should be converted to a QueryShape, the result is a QueryValue also
       let shapeQueryValue = shape[propertyShape.label];
 
-      if (expectSingleValues) {
-        (result as any).add(shapeQueryValue);
-      } else {
-        //if each of the shapes in a set return a new shapeset for the request accessor
-        //then we merge all the returned values into a single shapeset
-        result = (result as any).concat(shapeQueryValue);
+      //only add results if something was actually returned, if the property is not defined for this shape the result can be undefined
+      if (shapeQueryValue) {
+        if (expectSingleValues) {
+          (result as any).add(shapeQueryValue);
+        } else {
+          //if each of the shapes in a set return a new shapeset for the request accessor
+          //then we merge all the returned values into a single shapeset
+          result = (result as any).concat(shapeQueryValue);
+        }
       }
     });
     if (result instanceof ShapeSet) {

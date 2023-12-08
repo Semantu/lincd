@@ -107,13 +107,9 @@ function resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
  * @param where
  * @private
  */
-function resolveWhere(
-  subject: Shape | ShapeSet,
-  where: WherePath,
-): OriginalValue | OriginalValue[] {
-  let convertedSubjects = QueryValue.convertOriginal(subject, null, null);
-
+function resolveWhere(subject: Shape | ShapeSet, where: WherePath): Shape[] {
   if ((where as WhereEvaluationPath).path) {
+    let convertedSubjects = QueryValue.convertOriginal(subject, null, null);
     let queryEndValues = resolveWherePath(
       convertedSubjects,
       (where as WhereEvaluationPath).path,
@@ -134,21 +130,28 @@ function resolveWhere(
     //for example Person.select(p => p.friends.where(f => f.name.equals('Semmy')))
     //the result of the where clause is an array of names (strings),
     //but we need to return the filtered result of p.friends (which is a ShapeSet of Persons)
-    return QueryValue.getOriginalSource(queryEndValues);
+    return QueryValue.getOriginalSource(queryEndValues) as Shape[];
     // return null;
     // }
   } else if ((where as WhereAnd).and) {
-    //YOU ARE HERE
-    // let queryEndValues = resolveWhere(convertedSubjects, (where as WhereAnd).and);
-    // if (queryEndValues instanceof QueryPrimitiveSet) {
-    //   queryEndValues = queryEndValues.filter(
-    //     resolveWhereEquals.bind(null, (where as WhereAnd).args),
-    //   ) as any;
-    // }
-    // return QueryValue.getOriginalSource(queryEndValues);
+    let combinedResults: Shape[];
+    (where as WhereAnd).and.forEach((wherePath) => {
+      let andResult = resolveWhere(subject, wherePath);
+      if (!combinedResults) {
+        combinedResults = Array.isArray(andResult) ? andResult : [andResult];
+      } else {
+        //only keep the results that are in both arrays
+        combinedResults = combinedResults.filter((result) => {
+          return Array.isArray(andResult)
+            ? andResult.includes(result)
+            : andResult === result;
+        });
+      }
+    });
+    return combinedResults;
   }
 
-  //YOU ARE HERE, where will resolve itself. instead of resolveWherePath
+  //TODO: where can resolve itself. instead of resolveWherePath
   // return where.resolve(convertedSubjects);
 }
 
