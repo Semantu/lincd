@@ -10,6 +10,7 @@ import {
   QueryValue,
   ToNormalValue,
   WhereAnd,
+  WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
   WherePath,
@@ -133,19 +134,31 @@ function resolveWhere(subject: Shape | ShapeSet, where: WherePath): Shape[] {
     return QueryValue.getOriginalSource(queryEndValues) as Shape[];
     // return null;
     // }
-  } else if ((where as WhereAnd).and) {
-    let combinedResults: Shape[];
-    (where as WhereAnd).and.forEach((wherePath) => {
-      let andResult = resolveWhere(subject, wherePath);
-      if (!combinedResults) {
-        combinedResults = Array.isArray(andResult) ? andResult : [andResult];
-      } else {
+  } else if ((where as WhereAndOr).andOr) {
+    //the first run we simply take the result as the combined result
+    let combinedResults: Shape[] = resolveWhere(
+      subject,
+      (where as WhereAndOr).firstPath,
+    );
+    (where as WhereAndOr).andOr.forEach((andOr) => {
+      if (andOr.and) {
+        let andResult = resolveWhere(subject, andOr.and);
         //only keep the results that are in both arrays
         combinedResults = combinedResults.filter((result) => {
           return Array.isArray(andResult)
             ? andResult.includes(result)
             : andResult === result;
         });
+      } else if (andOr.or) {
+        let orResult = resolveWhere(subject, andOr.or);
+        //keep the results that are in either of the arrays, so simply combine them
+        //but don't add duplicates
+        //YOU ARE HERE. TEST THIS
+        combinedResults = combinedResults.concat(
+          orResult.filter((result) => {
+            return !combinedResults.includes(result);
+          }),
+        );
       }
     });
     return combinedResults;

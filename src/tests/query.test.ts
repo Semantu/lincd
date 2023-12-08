@@ -175,6 +175,28 @@ describe('query tests', () => {
     expect(friendsCalledMoaThatJog.size).toBe(1);
     expect(friendsCalledMoaThatJog.first().namedNode).toBe(p2.namedNode);
   });
+
+  test('where or', () => {
+    //we select the friends of all persons, but only those friends whose name is moa
+    //this will return an array, where each entry represents the results for a single person.
+    // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+    let friendsCalledMoaThatJog = resolveLocal(
+      Person.select((p) => {
+        return p.friends.where((f) =>
+          f.name.equals('Jinx').or(f.hobby.equals('Jogging')),
+        );
+      }),
+    );
+
+    expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
+    expect(friendsCalledMoaThatJog.size).toBe(2);
+    expect(
+      friendsCalledMoaThatJog.some((f) => f.namedNode === p2.namedNode),
+    ).toBe(true);
+    expect(
+      friendsCalledMoaThatJog.some((f) => f.namedNode === p3.namedNode),
+    ).toBe(true);
+  });
 });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something

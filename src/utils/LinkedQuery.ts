@@ -394,7 +394,7 @@ class QueryShape<S extends Shape> extends QueryValue<S> {
   }
 }
 
-export type WherePath = WhereEvaluationPath | WhereAnd | WhereOr;
+export type WherePath = WhereEvaluationPath | WhereAndOr;
 
 export type WhereEvaluationPath = {
   path: QueryPath;
@@ -407,8 +407,9 @@ class Evaluation {
     public method: WhereEvaluationMethod,
     public args: any[],
   ) {}
-  private _and: (LinkedWhereQuery<any> | Evaluation)[] = [];
-  private _or: (LinkedWhereQuery<any> | Evaluation)[] = [];
+  // private _andOr: (LinkedWhereQuery<any> | Evaluation)[] = [];
+  private _andOr: AndOrQueryToken[] = [];
+  // private _or: (LinkedWhereQuery<any> | Evaluation)[] = [];
   // resolve() {
   //   let queryEndValues = this.resolveWherePath(
   //     convertedSubjects,
@@ -450,15 +451,24 @@ class Evaluation {
     //     };
     //   }
     // }
-    if (this._and.length > 0) {
+    if (this._andOr.length > 0) {
       return {
-        and: [evalPath, ...this._and.map((and) => and.getWherePath())],
+        firstPath: evalPath,
+        andOr: this._andOr,
       };
     }
     return evalPath;
   }
   and(subQuery: WhereClause<any>) {
-    this._and.push(processWhereClause(subQuery) as LinkedWhereQuery<any>);
+    this._andOr.push({
+      and: processWhereClause(subQuery).getWherePath(),
+    });
+    return this;
+  }
+  or(subQuery: WhereClause<any>) {
+    this._andOr.push({
+      or: processWhereClause(subQuery).getWherePath(),
+    });
     return this;
   }
 }
@@ -522,6 +532,10 @@ export type WhereAnd = {
 
 export type WhereOr = {
   or: WherePath[];
+};
+export type WhereAndOr = {
+  firstPath: WherePath;
+  andOr: AndOrQueryToken[];
 };
 // export class WhereAnd extends WhereNode {
 //   and: WhereNode[];
@@ -597,6 +611,12 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
  * A WhereQuery is a (sub)query that is used to filter down the results of its parent query
  * Hence it extends LinkedQuery and can do anything a normal query can
  */
+export type AndOrQueryToken = {
+  and?: WherePath;
+  or?: WherePath;
+  // and?: LinkedWhereQuery<any> | Evaluation;
+  // or?: LinkedWhereQuery<any> | Evaluation;
+};
 export class LinkedWhereQuery<
   S extends Shape,
   ResponseType = any,
