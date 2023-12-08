@@ -5,6 +5,7 @@ import {
   QueryPath,
   QueryPrimitive,
   QueryPrimitiveSet,
+  QueryShape,
   QueryShapeSet,
   QueryStep,
   QueryValue,
@@ -18,7 +19,6 @@ import {
 import {ShapeSet} from '../collections/ShapeSet';
 import {Shape} from '../shapes/Shape';
 import {shacl} from '../ontologies/shacl';
-import {resolve} from 'eslint-import-resolver-typescript';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -38,6 +38,15 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   let localInstances = (query.shape as any).getLocalInstances();
   let results = [];
 
+  if (
+    query.traceResponse.whereQuery &&
+    query.traceResponse instanceof QueryShape
+  ) {
+    localInstances = resolveWhere(
+      localInstances,
+      query.traceResponse.whereQuery.getWherePath(),
+    );
+  }
   queryPaths.forEach((queryPath) => {
     results.push(resolveQueryPath(localInstances, queryPath));
   });
@@ -108,7 +117,7 @@ function resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
  * @param where
  * @private
  */
-function resolveWhere(subject: Shape | ShapeSet, where: WherePath): Shape[] {
+function resolveWhere(subject: Shape | ShapeSet, where: WherePath): ShapeSet {
   if ((where as WhereEvaluationPath).path) {
     let convertedSubjects = QueryValue.convertOriginal(subject, null, null);
     let queryEndValues = resolveWherePath(
@@ -131,37 +140,128 @@ function resolveWhere(subject: Shape | ShapeSet, where: WherePath): Shape[] {
     //for example Person.select(p => p.friends.where(f => f.name.equals('Semmy')))
     //the result of the where clause is an array of names (strings),
     //but we need to return the filtered result of p.friends (which is a ShapeSet of Persons)
-    return QueryValue.getOriginalSource(queryEndValues) as Shape[];
+    return QueryValue.getOriginalSource(queryEndValues) as ShapeSet;
     // return null;
     // }
   } else if ((where as WhereAndOr).andOr) {
     //the first run we simply take the result as the combined result
-    let combinedResults: Shape[] = resolveWhere(
+    let initialResult: ShapeSet = resolveWhere(
       subject,
       (where as WhereAndOr).firstPath,
     );
+
+    //Next we process the AND clauses. To do this, we combine the results of any AND clause with the previous WherePath
+    //For example p.friends.where(f => f.name.equals('Semmy')).and.where(f => f.age.equals(30))
+    //Then the results of f.name.equals is the initial path, which gets combined with the results of f.age.equals
+
+    //TODO: prepare this once, before resolveWhere is called. Currently we do this for every results moving through the where clause
+    //first we make a new array that tracks the intermediate results.
+    //so we resolve all the where paths and add them to an array
+    type AndSet = {and: ShapeSet};
+    type OrSet = {or: ShapeSet};
+    let booleanPaths: (ShapeSet | AndSet | OrSet)[] = [initialResult];
     (where as WhereAndOr).andOr.forEach((andOr) => {
       if (andOr.and) {
-        let andResult = resolveWhere(subject, andOr.and);
-        //only keep the results that are in both arrays
-        combinedResults = combinedResults.filter((result) => {
-          return Array.isArray(andResult)
-            ? andResult.includes(result)
-            : andResult === result;
-        });
+        //if there is an and, we add the result of that and to the array
+        booleanPaths.push({and: resolveWhere(subject, andOr.and)});
       } else if (andOr.or) {
-        let orResult = resolveWhere(subject, andOr.or);
-        //keep the results that are in either of the arrays, so simply combine them
-        //but don't add duplicates
-        //YOU ARE HERE. TEST THIS
-        combinedResults = combinedResults.concat(
-          orResult.filter((result) => {
-            return !combinedResults.includes(result);
-          }),
-        );
+        //if there is an or, we add the result of that or to the array
+        booleanPaths.push({or: resolveWhere(subject, andOr.or)});
       }
     });
-    return combinedResults;
+
+    //Say that we have: booleanPaths = [ShapeSet,{and:ShapeSet},{or:ShapeSet},{and:ShapeSet}]
+    //We should first process the AND: by combining the results of 0 & 1 and also 2 & 3
+    //So that it becomes: booleanPaths = [ShapeSet,{or:ShapeSet}]
+    // let previous:any;
+    var i = booleanPaths.length;
+    while (i--) {
+      let previous = booleanPaths[i - 1];
+      let current = booleanPaths[i];
+
+      if (!previous) break;
+      //if the previous is a ShapeSet and the current is a ShapeSet, we combine them
+      if ((current as AndSet).and) {
+        let filterFn = (result) => {
+          return (current as AndSet).and.has(result);
+        };
+        if (previous instanceof ShapeSet) {
+          booleanPaths[i - 1] = previous.filter(filterFn);
+        } else if ((previous as OrSet).or) {
+          (previous as OrSet).or = (previous as OrSet).or.filter(filterFn);
+        } else if ((previous as AndSet).and) {
+          (previous as AndSet).and = (previous as AndSet).and.filter(filterFn);
+        }
+        //remove the current item from the array now that its processed
+        booleanPaths.splice(i, 1);
+      }
+    }
+
+    //next we process the OR clauses
+    var i = booleanPaths.length;
+    while (i--) {
+      let previous = booleanPaths[i - 1];
+      let current = booleanPaths[i];
+
+      if (!previous) break;
+
+      //for all or clauses, keep the results that are in either of the sets, so simply combine them
+      if ((current as OrSet).or) {
+        if (previous instanceof ShapeSet) {
+          booleanPaths[i - 1] = previous.concat((current as OrSet).or);
+        } else if ((previous as OrSet).or) {
+          (previous as OrSet).or.concat((previous as OrSet).or);
+        } else if ((previous as AndSet).and) {
+          (previous as AndSet).and.concat((previous as OrSet).or);
+        }
+        //remove the current item from the array now that its processed
+        booleanPaths.splice(i, 1);
+      }
+    }
+    if (booleanPaths.length > 1) {
+      throw new Error(
+        'booleanPaths should only have one item left: ' + booleanPaths.length,
+      );
+    }
+    return booleanPaths[0] as ShapeSet;
+
+    //so in both cases, the WherePath of the previous one is replaced with the combination
+
+    //go over the array of ands & ors
+    //and first process the ands, by combining the current and the previous and/or
+    // for (let key in (where as WhereAndOr).andOr) {
+    //   let andOr = (where as WhereAndOr).andOr[key];
+    //   if (andOr.and) {
+    //     let andResult = resolveWhere(subject, andOr.and);
+    //     //only keep the results that are in both arrays
+    //     combinedResults = combinedResults.filter((result) => {
+    //       return andResult.has(result);
+    //     });
+    //   }
+    // }
+    //
+    // //then process the or's by combining the current and the previous and/or
+    //
+    // (where as WhereAndOr).andOr.forEach((andOr) => {
+    //   if (andOr.and) {
+    //     let andResult = resolveWhere(subject, andOr.and);
+    //     //only keep the results that are in both arrays
+    //     combinedResults = combinedResults.filter((result) => {
+    //       return andResult.has(result);
+    //     });
+    //   } else if (andOr.or) {
+    //     let orResult = resolveWhere(subject, andOr.or);
+    //     //keep the results that are in either of the arrays, so simply combine them
+    //     //but don't add duplicates
+    //     //YOU ARE HERE. TEST THIS
+    //     combinedResults = combinedResults.concat(
+    //       orResult.filter((result) => {
+    //         return !combinedResults.has(result);
+    //       }),
+    //     );
+    //   }
+    // });
+    // return combinedResults;
   }
 
   //TODO: where can resolve itself. instead of resolveWherePath

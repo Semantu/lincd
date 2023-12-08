@@ -157,7 +157,6 @@ describe('query tests', () => {
   //   expect(level3Friends instanceof ShapeSet).toBe(true);
   //   expect(level3Friends.size).toBe(0);
   // });
-  //next, AND, OR, NOT
 
   test('where and', () => {
     //we select the friends of all persons, but only those friends whose name is moa
@@ -197,6 +196,62 @@ describe('query tests', () => {
       friendsCalledMoaThatJog.some((f) => f.namedNode === p3.namedNode),
     ).toBe(true);
   });
+
+  test('where directly on the shape instance ', () => {
+    let personsCalledMoa = resolveLocal(
+      Person.select((p) => {
+        return p.where(p.name.equals('Moa'));
+      }),
+    );
+
+    expect(personsCalledMoa instanceof ShapeSet).toBe(true);
+    expect(personsCalledMoa.size).toBe(1);
+    expect(personsCalledMoa.some((f) => f.namedNode === p2.namedNode)).toBe(
+      true,
+    );
+  });
+
+  // test('where a property of a set of values equals.. ', () => {
+  //   let friendsCalledMoaThatJog = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.where(p.friends.name.equals('Moa'))
+  //       return p.whereSome(p.friends.name.equals('Moa'))
+  //       return p.where(p.friends.some().name.equals('Moa'))
+  //       return p.where(p.friends.some(f => f.name.equals('Moa')))
+  //       return p.where(p.friends.name.some().equals('Moa'))
+  //     }),
+  //   );
+  //
+  //   expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
+  //   expect(friendsCalledMoaThatJog.size).toBe(2);
+  //   expect(
+  //     friendsCalledMoaThatJog.some((f) => f.namedNode === p2.namedNode),
+  //   ).toBe(true);
+  //   expect(
+  //     friendsCalledMoaThatJog.some((f) => f.namedNode === p3.namedNode),
+  //   ).toBe(true);
+  // });
+  // test('where and or and', () => {
+  //   //we select the friends of all persons, but only those friends whose name is moa
+  //   //this will return an array, where each entry represents the results for a single person.
+  //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+  //   let friendsCalledMoaThatJog = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.where((f) =>
+  //         f.name.equals('Jinx').or(f.hobby.equals('Jogging')).and(f.friends.name.equals('Quinn')),
+  //       );
+  //     }),
+  //   );
+  //
+  //   expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
+  //   expect(friendsCalledMoaThatJog.size).toBe(2);
+  //   expect(
+  //     friendsCalledMoaThatJog.some((f) => f.namedNode === p2.namedNode),
+  //   ).toBe(true);
+  //   expect(
+  //     friendsCalledMoaThatJog.some((f) => f.namedNode === p3.namedNode),
+  //   ).toBe(true);
+  // });
 });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something

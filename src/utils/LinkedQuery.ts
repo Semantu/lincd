@@ -5,7 +5,9 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
 
-export type WhereClause<S> = Evaluation | ((s: ToQueryShape<S>) => Evaluation);
+export type WhereClause<S extends Shape> =
+  | Evaluation
+  | ((s: ToQueryValue<S>) => Evaluation);
 export type OriginalValue =
   | Shape
   | ShapeSet
@@ -18,7 +20,7 @@ export type OriginalValue =
 
 export type QueryPrimitive = QueryString;
 export type QueryBuildFn<T extends Shape, ResultType> = (
-  p: ToQueryShape<T>,
+  p: ToQueryValue<T>,
   q: LinkedQuery<T>,
 ) => ResultType;
 
@@ -52,7 +54,7 @@ export type ToQueryValue<T, I = 0> = T extends ShapeSet
   ? //a shape set turns into a query-shape set but also inherits all the properties of the shape that each item in the set has
     QueryShapeSet<GetShapeSetType<T>> & ToQueryShape<GetShapeSetType<T>>
   : T extends Shape
-  ? ToQueryShape<T>
+  ? ToQueryShape<T> & QueryShape<T>
   : T extends string
   ? QueryString
   : T extends boolean
@@ -82,7 +84,7 @@ export type GetQueryShapeType<T> = T extends QueryShape<infer ShapeType>
   : never;
 
 export class QueryValue<S extends Object = any> {
-  protected whereQuery?: LinkedWhereQuery<any> | Evaluation;
+  whereQuery?: LinkedWhereQuery<any> | Evaluation;
 
   constructor(
     public property?: PropertyShape,
@@ -126,11 +128,11 @@ export class QueryValue<S extends Object = any> {
 
   static getOriginalSource(
     endValue: ShapeSet<Shape> | Shape[] | QueryPrimitiveSet,
-  ): Shape[];
+  ): ShapeSet;
   static getOriginalSource(endValue: Shape): Shape;
   static getOriginalSource(
     endValue: string[] | QueryValue<any>,
-  ): Shape | Shape[];
+  ): Shape | ShapeSet;
   static getOriginalSource(
     endValue:
       | ShapeSet<Shape>
@@ -139,11 +141,11 @@ export class QueryValue<S extends Object = any> {
       | string[]
       | QueryValue<any>
       | QueryPrimitiveSet,
-  ): Shape | Shape[] {
+  ): Shape | ShapeSet {
     if (endValue instanceof QueryPrimitiveSet) {
-      return endValue.map((endValue) =>
-        this.getOriginalSource(endValue),
-      ) as Shape[];
+      return new ShapeSet(
+        endValue.map((endValue) => this.getOriginalSource(endValue) as Shape),
+      ) as ShapeSet;
     }
     if (endValue instanceof QueryString) {
       return this.getOriginalSource(endValue.subject);
@@ -332,7 +334,7 @@ export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
   }
 }
 // type QueryShapeType<S> = QueryShape<S> & ToQueryShape<S>;
-class QueryShape<S extends Shape> extends QueryValue<S> {
+export class QueryShape<S extends Shape> extends QueryValue<S> {
   private proxy;
   constructor(
     public originalShape: S,
@@ -341,10 +343,17 @@ class QueryShape<S extends Shape> extends QueryValue<S> {
   ) {
     super(property, subject);
   }
-  where(validation: WhereClause<S>): this {
-    throw new Error('Unimplemented');
-    return this;
+
+  where(validation: WhereClause<S>): QueryShapeSet<S> {
+    let nodeShape = this.originalShape.nodeShape;
+    this.whereQuery = processWhereClause(
+      validation,
+      nodeShape,
+    ) as LinkedWhereQuery<any>;
+    //return this because after person.friends.where() we can call other methods of person.friends
+    return this as any;
   }
+
   static create(
     original: Shape,
     property?: PropertyShape,
