@@ -39,12 +39,12 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   let results = [];
 
   if (
-    query.traceResponse.whereQuery &&
+    query.traceResponse.wherePath &&
     query.traceResponse instanceof QueryShape
   ) {
     localInstances = resolveWhere(
       localInstances,
-      query.traceResponse.whereQuery.getWherePath(),
+      query.traceResponse.wherePath,
     );
   }
   queryPaths.forEach((queryPath) => {

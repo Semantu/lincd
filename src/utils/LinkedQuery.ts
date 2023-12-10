@@ -84,7 +84,9 @@ export type GetQueryShapeType<T> = T extends QueryShape<infer ShapeType>
   : never;
 
 export class QueryValue<S extends Object = any> {
-  whereQuery?: LinkedWhereQuery<any> | Evaluation;
+  // whereQuery?: LinkedWhereQuery<any> | Evaluation;
+  wherePath?: WherePath;
+  whereEvery?: WherePath;
 
   constructor(
     public property?: PropertyShape,
@@ -100,7 +102,8 @@ export class QueryValue<S extends Object = any> {
     while (current.property) {
       path.unshift({
         property: current.property,
-        where: current.whereQuery?.getWherePath(),
+        where: current.wherePath,
+        whereEvery: current.whereEvery,
       });
       current = current.subject;
     }
@@ -165,24 +168,14 @@ export class QueryValue<S extends Object = any> {
 const processWhereClause = (
   validation: WhereClause<any>,
   shape?,
-): LinkedWhereQuery<any> | Evaluation => {
+): WherePath => {
   if (validation instanceof Function) {
-    // let dummyNode = new TestNode();
-    // let leastSpecificShape = this.originalValue.getLeastSpecificShape();
-    //create an instance of the shape with the dummy node as node
-    // let dummyShape = new (leastSpecificShape as any)(dummyNode);
-    //convert it to a root query shape
-    // let queryShape = QueryShape.create(dummyShape);
-    // queryShape = QueryShape.create(this.originalValue.first());
-
-    //YOU ARE HERE
-    //see what comes back, think through what we need to do with it to track the path
     if (!shape) {
       throw new Error('Cannot process where clause without shape');
     }
-    return new LinkedWhereQuery(shape, validation);
+    return new LinkedWhereQuery(shape, validation).getWherePath();
   } else {
-    return validation as Evaluation;
+    return (validation as Evaluation).getWherePath();
   }
 };
 export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
@@ -234,13 +227,23 @@ export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
     return result;
   }
 
+  some(validation: WhereClause<S>): Evaluation {
+    let leastSpecificShape = this.originalValue.getLeastSpecificShape();
+    //do we need to store this here? or are we accessing the evaluation and then going backwards?
+    //in that case just pass it to the evaluation and dont use this.wherePath
+    this.wherePath = processWhereClause(validation, leastSpecificShape);
+    return new Evaluation(this, WhereMethods.SOME, [this.wherePath]);
+  }
+
   // get testItem() {}
   where(validation: WhereClause<S>): this {
+    if (this.getPropertyPath().some((step) => step.where)) {
+      throw new Error(
+        'You cannot call where() from within a where() clause. Consider using some() or every() instead',
+      );
+    }
     let leastSpecificShape = this.originalValue.getLeastSpecificShape();
-    this.whereQuery = processWhereClause(
-      validation,
-      leastSpecificShape,
-    ) as LinkedWhereQuery<any>;
+    this.wherePath = processWhereClause(validation, leastSpecificShape);
     //return this because after person.friends.where() we can call other methods of person.friends
     return this;
   }
@@ -292,7 +295,11 @@ export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
 
           if (queryShapeSet.originalValue.size === 0) {
             //in this case we're not sure if it should be a QueryPrimitiveSet or a ShapeSet, so we return an empty CoreSet
-            return new CoreSet();
+
+            //Not sure why we needed this. It was causing issues with forEach in other cases
+            debugger;
+
+            // return new CoreSet();
           }
           //if not, then a method/accessor was called that likely fits with the methods of the original SHAPE of the items in the shape set
           //As in person.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Persons
@@ -346,10 +353,7 @@ export class QueryShape<S extends Shape> extends QueryValue<S> {
 
   where(validation: WhereClause<S>): QueryShapeSet<S> {
     let nodeShape = this.originalShape.nodeShape;
-    this.whereQuery = processWhereClause(
-      validation,
-      nodeShape,
-    ) as LinkedWhereQuery<any>;
+    this.wherePath = processWhereClause(validation, nodeShape);
     //return this because after person.friends.where() we can call other methods of person.friends
     return this as any;
   }
@@ -407,13 +411,13 @@ export type WherePath = WhereEvaluationPath | WhereAndOr;
 
 export type WhereEvaluationPath = {
   path: QueryPath;
-  method: WhereEvaluationMethod;
+  method: WhereMethods;
   args: any[];
 };
 class Evaluation {
   constructor(
     public value: QueryValue,
-    public method: WhereEvaluationMethod,
+    public method: WhereMethods,
     public args: any[],
   ) {}
   // private _andOr: (LinkedWhereQuery<any> | Evaluation)[] = [];
@@ -470,13 +474,13 @@ class Evaluation {
   }
   and(subQuery: WhereClause<any>) {
     this._andOr.push({
-      and: processWhereClause(subQuery).getWherePath(),
+      and: processWhereClause(subQuery),
     });
     return this;
   }
   or(subQuery: WhereClause<any>) {
     this._andOr.push({
-      or: processWhereClause(subQuery).getWherePath(),
+      or: processWhereClause(subQuery),
     });
     return this;
   }
@@ -510,6 +514,11 @@ export class QueryPrimitiveSet extends CoreSet<QueryPrimitive> {
   ) {
     super();
   }
+  //TODO: see if we can merge these methods of QueryString and QueryPrimitiveSet and soon other things like QueryNumber
+  // so that they're only defined once
+  equals(otherString: string) {
+    return new Evaluation(this, WhereMethods.STRING_EQUALS, [otherString]);
+  }
   getPropertyPath(): QueryPath {
     if (this.size > 1) {
       throw new Error(
@@ -532,6 +541,7 @@ export type QueryPath = QueryStep[];
 export type QueryStep = {
   property: PropertyShape;
   where?: WherePath;
+  whereEvery?: WherePath;
 };
 type ShapeClass = typeof Shape & {new (node?: any): Shape};
 
@@ -623,8 +633,6 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
 export type AndOrQueryToken = {
   and?: WherePath;
   or?: WherePath;
-  // and?: LinkedWhereQuery<any> | Evaluation;
-  // or?: LinkedWhereQuery<any> | Evaluation;
 };
 export class LinkedWhereQuery<
   S extends Shape,
@@ -637,7 +645,8 @@ export class LinkedWhereQuery<
     return (this.traceResponse as Evaluation).getWherePath();
   }
 }
-type WhereEvaluationMethod = 'steq';
-export class WhereMethods {
-  static STRING_EQUALS: 'steq' = 'steq';
+
+export enum WhereMethods {
+  STRING_EQUALS = 'steq',
+  SOME = 'some',
 }
