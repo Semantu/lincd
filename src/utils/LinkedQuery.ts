@@ -84,6 +84,7 @@ export type GetQueryShapeType<T> = T extends QueryShape<infer ShapeType>
   : never;
 
 export class QueryValue<S extends Object = any> {
+  protected originalValue: any;
   // whereQuery?: LinkedWhereQuery<any> | Evaluation;
   wherePath?: WherePath;
   whereEvery?: WherePath;
@@ -93,6 +94,9 @@ export class QueryValue<S extends Object = any> {
     public subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {}
 
+  getOriginalValue() {
+    return this.originalValue;
+  }
   /**
    * Returns the path of properties that were requested to reach this value
    */
@@ -154,12 +158,17 @@ export class QueryValue<S extends Object = any> {
       return this.getOriginalSource(endValue.subject);
     }
     if (endValue instanceof QueryShape) {
-      if (endValue.subject) {
+      if (endValue.subject && !endValue.isSource) {
         return this.getOriginalSource(endValue.subject);
       }
-      return endValue.originalShape;
+      return endValue.originalValue;
     } else if (endValue instanceof Shape) {
       return endValue;
+    } else if (endValue instanceof ShapeSet) {
+      //TODO: remove this once we refactor ShapeSet / QueryShapeSet, then just handle queryshapeset
+      return new ShapeSet(
+        endValue.map((shape) => this.getOriginalSource(shape)),
+      );
     } else {
       throw new Error('Unimplemented. Return as is?');
     }
@@ -178,9 +187,9 @@ const processWhereClause = (
     return (validation as Evaluation).getWherePath();
   }
 };
-export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
-  private proxy;
 
+export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
+  private proxy;
   constructor(
     public originalValue: ShapeSet<S>,
     property?: PropertyShape,
@@ -188,7 +197,22 @@ export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
   ) {
     super(property, subject);
   }
-  callPropertyShapeAccessor(propertyShape: PropertyShape): QueryValue {
+
+  getOriginalValue() {
+    return new ShapeSet(
+      this.originalValue.map((shape) => {
+        if (shape instanceof QueryShape) {
+          return (shape as unknown as QueryShape<any>).originalValue;
+        }
+        //TODO: check if this is ever called
+        return shape;
+      }),
+    );
+  }
+
+  callPropertyShapeAccessor(
+    propertyShape: PropertyShape,
+  ): QueryValue | QueryPrimitiveSet {
     //call the get method for that property shape on each item in the shape set
     //and return the result as a new shape set
     let result: QueryPrimitiveSet | ShapeSet<any>;
@@ -273,6 +297,7 @@ export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
     let proxy = this.proxifyShapeSet<S>(instance);
     return proxy;
   }
+
   static proxifyShapeSet<T extends Shape = Shape>(
     queryShapeSet: QueryShapeSet<T>,
   ) {
@@ -293,14 +318,15 @@ export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
             return queryShapeSet[key];
           }
 
-          if (queryShapeSet.originalValue.size === 0) {
-            //in this case we're not sure if it should be a QueryPrimitiveSet or a ShapeSet, so we return an empty CoreSet
+          // if (queryShapeSet.originalValue.size === 0) {
+          //in this case we're not sure if it should be a QueryPrimitiveSet or a ShapeSet, so we return an empty CoreSet
 
-            //Not sure why we needed this. It was causing issues with forEach in other cases
-            debugger;
+          //Not sure why we needed this. It was causing issues with forEach in other cases
+          // debugger;
 
-            // return new CoreSet();
-          }
+          // return new CoreSet();
+          // }
+
           //if not, then a method/accessor was called that likely fits with the methods of the original SHAPE of the items in the shape set
           //As in person.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Persons
           //So here we find back the shape that all items have in common, and then find the property shape that matches the key
@@ -341,10 +367,11 @@ export class QueryShapeSet<S extends Shape> extends QueryValue<S> {
   }
 }
 // type QueryShapeType<S> = QueryShape<S> & ToQueryShape<S>;
-export class QueryShape<S extends Shape> extends QueryValue<S> {
+export class QueryShape<S extends Shape = Shape> extends QueryValue<S> {
   private proxy;
+  public isSource: boolean;
   constructor(
-    public originalShape: S,
+    public originalValue: S,
     property?: PropertyShape,
     subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
@@ -352,7 +379,7 @@ export class QueryShape<S extends Shape> extends QueryValue<S> {
   }
 
   where(validation: WhereClause<S>): QueryShapeSet<S> {
-    let nodeShape = this.originalShape.nodeShape;
+    let nodeShape = this.originalValue.nodeShape;
     this.wherePath = processWhereClause(validation, nodeShape);
     //return this because after person.friends.where() we can call other methods of person.friends
     return this as any;
@@ -369,7 +396,7 @@ export class QueryShape<S extends Shape> extends QueryValue<S> {
   }
 
   static proxifyQueryShape<T extends Shape>(queryShape: QueryShape<T>) {
-    let originalShape = queryShape.originalShape;
+    let originalShape = queryShape.originalValue;
     queryShape.proxy = new Proxy(queryShape, {
       get(target, key, receiver) {
         //if the key is a string
@@ -416,7 +443,7 @@ export type WhereEvaluationPath = {
 };
 class Evaluation {
   constructor(
-    public value: QueryValue,
+    public value: QueryValue | QueryPrimitiveSet,
     public method: WhereMethods,
     public args: any[],
   ) {}
@@ -497,7 +524,7 @@ class QueryBoolean extends QueryValue<boolean> {
 }
 class QueryString extends QueryValue<string> {
   constructor(
-    public value: string,
+    public originalValue: string,
     public property?: PropertyShape,
     public subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {

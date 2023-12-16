@@ -82,7 +82,7 @@ export function resolveLocal<S extends LinkedQuery<any>>(
 
 function resolveWherePath(subject: QueryValue, queryPath: QueryPath) {
   //start with the subject as the current "end result"
-  let result: QueryValue = subject;
+  let result: QueryValue | QueryPrimitiveSet = subject;
   queryPath.forEach((queryStep) => {
     //then resolve each of the query steps and use the result as the new subject for the next step
     result = resolveWhereStep(result, queryStep);
@@ -117,23 +117,43 @@ function resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
  * @param where
  * @private
  */
-function resolveWhere(subject: Shape | ShapeSet, where: WherePath): ShapeSet {
+function resolveWhere(
+  subject: Shape | ShapeSet | QueryValue,
+  where: WherePath,
+): ShapeSet {
   if ((where as WhereEvaluationPath).path) {
-    let convertedSubjects = QueryValue.convertOriginal(subject, null, null);
+    //for nested where clauses the subject will already be a QueryValue
+    let convertedSubjects =
+      subject instanceof Shape || subject instanceof ShapeSet
+        ? QueryValue.convertOriginal(subject, null, null)
+        : subject;
     let queryEndValues = resolveWherePath(
       convertedSubjects,
       (where as WhereEvaluationPath).path,
     );
 
+    let filterMethod: Function;
     if ((where as WhereEvaluationPath).method === WhereMethods.STRING_EQUALS) {
-      if (queryEndValues instanceof QueryPrimitiveSet) {
-        queryEndValues = queryEndValues.filter(
-          resolveWhereEquals.bind(null, (where as WhereEvaluationPath).args),
-        ) as any;
-      }
+      filterMethod = resolveWhereEquals;
+    } else if ((where as WhereEvaluationPath).method === WhereMethods.SOME) {
+      filterMethod = resolveWhereSome;
     } else {
       throw new Error(
         'Unimplemented where method: ' + (where as WhereEvaluationPath).method,
+      );
+    }
+
+    if (
+      queryEndValues instanceof QueryPrimitiveSet ||
+      queryEndValues instanceof QueryShapeSet
+    ) {
+      queryEndValues = filterMethod.apply(null, [
+        queryEndValues,
+        ...(where as WhereEvaluationPath).args,
+      ]);
+    } else {
+      throw new Error(
+        'Unimplemented type of subject: ' + queryEndValues.toString(),
       );
     }
     //once the filtering of the where clause is done, we need to convert the result back to the original shape
@@ -268,8 +288,39 @@ function resolveWhere(subject: Shape | ShapeSet, where: WherePath): ShapeSet {
   // return where.resolve(convertedSubjects);
 }
 
-function resolveWhereEquals(args: any[], queryEndValue: QueryPrimitive) {
-  return queryEndValue.value === args[0];
+function resolveWhereEquals(queryEndValues, otherValue: string) {
+  return queryEndValues.filter((queryEndValue: QueryValue) => {
+    return queryEndValue.getOriginalValue() === otherValue;
+  });
+}
+function resolveWhereSome(queryEndValues, evaluation: WhereEvaluationPath) {
+  //YOU ARE HERE, can also be a query? / where path?
+  console.log(queryEndValues, evaluation);
+
+  //TODO: this converts a QueryShapeSet into a ShapeSet and then back into a QueryShapeSet again, but without subject and property
+  // can we A) just remove subject&property or do we need it later. or B) make a clone of the QueryShapeSet without subject&property
+  //maybe we dont convert but we insert a temporary "end" next to original value and then remove it again after resolveWhere
+  if (queryEndValues instanceof QueryValue) {
+    // queryEndValues = queryEndValues.getOriginalValue();
+    (queryEndValues as QueryShapeSet).originalValue.forEach((shape) => {
+      (shape as unknown as QueryShape).isSource = true;
+    });
+  }
+  let matchingSubjects = resolveWhere(queryEndValues, evaluation);
+
+  (queryEndValues as QueryShapeSet).originalValue.forEach((shape) => {
+    (shape as unknown as QueryShape).isSource = false;
+  });
+  let res = queryEndValues.filter((queryEndValue) => {
+    return matchingSubjects.has(queryEndValue.getOriginalValue());
+  });
+  return res;
+
+  //TODO: you are here
+  //we need to convert it back somehow to the original query value so that we can retrace the origins
+  //right now we get moa, but who's friend was she?
+  //Try out the STOP / END flag
+  //or somehow the retracing of original value should not go past the subject
 }
 
 function resolveQueryStep(
@@ -317,9 +368,9 @@ function resolveQueryStep(
   }
 }
 function resolveWhereStep(
-  subject: QueryValue,
+  subject: QueryValue | QueryPrimitiveSet,
   queryStep: QueryStep,
-): QueryValue {
+): QueryValue | QueryPrimitiveSet {
   if (
     subject instanceof QueryShapeSet
     //&&
