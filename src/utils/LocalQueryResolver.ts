@@ -72,13 +72,6 @@ export function resolveLocal<S extends LinkedQuery<any>>(
     throw new Error('Objects are not yet supported');
   }
 }
-// private resolveQueryPaths(localInstance, queryPaths: QueryPath[]) {
-//   let shapeResult = [];
-//   queryPaths.forEach((queryPath) => {
-//     shapeResult.push(query.resolveQueryPath(localInstance, queryPath));
-//   });
-//   return shapeResult;
-// }
 
 function resolveWherePath(subject: QueryValue, queryPath: QueryPath) {
   //start with the subject as the current "end result"
@@ -100,16 +93,6 @@ function resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
   //return the final value at the end of the path
   return result as ShapeSet | Shape[] | Shape;
 }
-// private resolveQueryPath(localInstance, queryPath: QueryPath) {
-//   //start with the local instance as the subject
-//   let result = localInstance;
-//   queryPath.forEach((queryStep) => {
-//     //then resolve each of the query steps and use the result as the new subject for the next step
-//     result = this.resolveQueryStep(result, queryStep);
-//   });
-//   //return the final value at the end of the path
-//   return result;
-// }
 
 /**
  * Filters down the given subjects to only those what match the where clause
@@ -244,48 +227,7 @@ function resolveWhere(
       );
     }
     return booleanPaths[0] as ShapeSet;
-
-    //so in both cases, the WherePath of the previous one is replaced with the combination
-
-    //go over the array of ands & ors
-    //and first process the ands, by combining the current and the previous and/or
-    // for (let key in (where as WhereAndOr).andOr) {
-    //   let andOr = (where as WhereAndOr).andOr[key];
-    //   if (andOr.and) {
-    //     let andResult = resolveWhere(subject, andOr.and);
-    //     //only keep the results that are in both arrays
-    //     combinedResults = combinedResults.filter((result) => {
-    //       return andResult.has(result);
-    //     });
-    //   }
-    // }
-    //
-    // //then process the or's by combining the current and the previous and/or
-    //
-    // (where as WhereAndOr).andOr.forEach((andOr) => {
-    //   if (andOr.and) {
-    //     let andResult = resolveWhere(subject, andOr.and);
-    //     //only keep the results that are in both arrays
-    //     combinedResults = combinedResults.filter((result) => {
-    //       return andResult.has(result);
-    //     });
-    //   } else if (andOr.or) {
-    //     let orResult = resolveWhere(subject, andOr.or);
-    //     //keep the results that are in either of the arrays, so simply combine them
-    //     //but don't add duplicates
-    //     //YOU ARE HERE. TEST THIS
-    //     combinedResults = combinedResults.concat(
-    //       orResult.filter((result) => {
-    //         return !combinedResults.has(result);
-    //       }),
-    //     );
-    //   }
-    // });
-    // return combinedResults;
   }
-
-  //TODO: where can resolve itself. instead of resolveWherePath
-  // return where.resolve(convertedSubjects);
 }
 
 function resolveWhereEquals(queryEndValues, otherValue: string) {
@@ -294,42 +236,31 @@ function resolveWhereEquals(queryEndValues, otherValue: string) {
   });
 }
 function resolveWhereSome(queryEndValues, evaluation: WhereEvaluationPath) {
-  //YOU ARE HERE, can also be a query? / where path?
-  console.log(queryEndValues, evaluation);
-
-  //TODO: this converts a QueryShapeSet into a ShapeSet and then back into a QueryShapeSet again, but without subject and property
-  // can we A) just remove subject&property or do we need it later. or B) make a clone of the QueryShapeSet without subject&property
-  //maybe we dont convert but we insert a temporary "end" next to original value and then remove it again after resolveWhere
-  if (queryEndValues instanceof QueryValue) {
-    // queryEndValues = queryEndValues.getOriginalValue();
-    (queryEndValues as QueryShapeSet).originalValue.forEach((shape) => {
-      (shape as unknown as QueryShape).isSource = true;
-    });
+  //because the intermediate end results of the where clause are the subjects of the some clause
+  //we need to mark those intermediate end results as the source (root) of the some clause
+  //so that it doesn't retrace the source until the very source of the where clause
+  //for example p.where(p.friends.some((f) => { return f.name.equals('Moa');}));
+  //the result of p.friends will be the intermediate "queryEndResult", which is where the result of f.name.equals should be traced back to and compared with
+  // instead of retracting it all the way back to p
+  if (queryEndValues instanceof QueryShapeSet) {
+    (queryEndValues as QueryShapeSet).setSource(true);
   }
   let matchingSubjects = resolveWhere(queryEndValues, evaluation);
 
-  (queryEndValues as QueryShapeSet).originalValue.forEach((shape) => {
-    (shape as unknown as QueryShape).isSource = false;
-  });
+  if (queryEndValues instanceof QueryShapeSet) {
+    (queryEndValues as QueryShapeSet).setSource(false);
+  }
+
   let res = queryEndValues.filter((queryEndValue) => {
     return matchingSubjects.has(queryEndValue.getOriginalValue());
   });
   return res;
-
-  //TODO: you are here
-  //we need to convert it back somehow to the original query value so that we can retrace the origins
-  //right now we get moa, but who's friend was she?
-  //Try out the STOP / END flag
-  //or somehow the retracing of original value should not go past the subject
 }
 
 function resolveQueryStep(
   subject: ShapeSet | Shape[] | Shape,
   queryStep: QueryStep,
 ) {
-  // if (subject instanceof Shape) {
-  //   return subject[queryStep.property.label];
-  // }
   if (subject instanceof ShapeSet) {
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
@@ -371,11 +302,7 @@ function resolveWhereStep(
   subject: QueryValue | QueryPrimitiveSet,
   queryStep: QueryStep,
 ): QueryValue | QueryPrimitiveSet {
-  if (
-    subject instanceof QueryShapeSet
-    //&&
-    // (subject as QueryShapeSet<any>).originalValue instanceof ShapeSet
-  ) {
+  if (subject instanceof QueryShapeSet) {
     return subject.callPropertyShapeAccessor(queryStep.property);
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);
