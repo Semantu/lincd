@@ -122,7 +122,11 @@ export class QueryValue<S extends Object = any> {
   }
 
   static getOriginalSource(
-    endValue: ShapeSet<Shape> | Shape[] | QueryPrimitiveSet,
+    endValue:
+      | ShapeSet<Shape>
+      | Shape[]
+      | QueryPrimitiveSet
+      | QueryShapeSet<any>[],
   ): ShapeSet;
   static getOriginalSource(endValue: Shape): Shape;
   static getOriginalSource(
@@ -135,6 +139,7 @@ export class QueryValue<S extends Object = any> {
       | Shape
       | string[]
       | QueryValue<any>
+      | QueryShapeSet<any>[]
       | QueryPrimitiveSet,
   ): Shape | ShapeSet {
     if (endValue instanceof QueryPrimitiveSet) {
@@ -152,6 +157,15 @@ export class QueryValue<S extends Object = any> {
       return endValue.originalValue;
     } else if (endValue instanceof Shape) {
       return endValue;
+    } else if (Array.isArray(endValue)) {
+      return this.getOriginalSource(
+        (endValue as QueryShapeSet[]).reduce(
+          (previous: QueryShapeSet, current: QueryShapeSet) => {
+            return previous.concat(current);
+          },
+          new QueryShapeSet(),
+        ),
+      );
     } else if (endValue instanceof QueryShapeSet) {
       return new ShapeSet(
         (endValue as QueryShapeSet).queryShapes.map(
@@ -182,7 +196,7 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
   private proxy;
   public queryShapes: CoreSet<QueryShape>;
   constructor(
-    _originalValue: ShapeSet<S>,
+    _originalValue?: ShapeSet<S>,
     property?: PropertyShape,
     subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
@@ -221,17 +235,17 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
 
   callPropertyShapeAccessor(
     propertyShape: PropertyShape,
-  ): QueryValue | QueryPrimitiveSet {
+  ): QueryShapeSet<any>[] | QueryPrimitiveSet {
     //call the get method for that property shape on each item in the shape set
     //and return the result as a new shape set
-    let result: QueryPrimitiveSet | QueryShapeSet<any>;
+    let result: QueryPrimitiveSet | QueryShapeSet<any>[];
 
     //if we expect the accessor to return a Primitive (string,number,boolean,Date)
     if (propertyShape.nodeKind === shacl.Literal) {
       //then return a Set of QueryPrimitives
       result = new QueryPrimitiveSet(propertyShape, this);
     } else {
-      result = QueryShapeSet.create(null, propertyShape, this);
+      result = []; //QueryShapeSet.create(null, propertyShape, this);
     }
     let expectSingleValues =
       propertyShape.hasProperty(shacl.maxCount) && propertyShape.maxCount <= 1;
@@ -248,22 +262,29 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
         } else {
           //if each of the shapes in a set return a new shapeset for the request accessor
           //then we merge all the returned values into a single shapeset
-          (result as QueryShapeSet).concat(shapeQueryValue);
+          // (result as QueryShapeSet).concat(shapeQueryValue);
+          (result as QueryShapeSet[]).push(shapeQueryValue);
         }
       }
     });
-    if (result instanceof ShapeSet) {
-      return QueryShapeSet.create(result, propertyShape, this);
-    }
+    // if (result instanceof ShapeSet) {
+    //   return QueryShapeSet.create(result, propertyShape, this);
+    // }
     return result;
   }
 
   some(validation: WhereClause<S>): Evaluation {
+    return this.someOrEvery(validation, WhereMethods.SOME);
+  }
+  every(validation: WhereClause<S>): Evaluation {
+    return this.someOrEvery(validation, WhereMethods.EVERY);
+  }
+  private someOrEvery(validation: WhereClause<S>, method: WhereMethods) {
     let leastSpecificShape = this.getOriginalValue().getLeastSpecificShape();
     //do we need to store this here? or are we accessing the evaluation and then going backwards?
-    //in that case just pass it to the evaluation and dont use this.wherePath
+    //in that case just pass it to the evaluation and don't use this.wherePath
     this.wherePath = processWhereClause(validation, leastSpecificShape);
-    return new Evaluation(this, WhereMethods.SOME, [this.wherePath]);
+    return new Evaluation(this, method, [this.wherePath]);
   }
 
   // get testItem() {}
@@ -616,4 +637,5 @@ export class LinkedWhereQuery<
 export enum WhereMethods {
   STRING_EQUALS = 'steq',
   SOME = 'some',
+  EVERY = 'every',
 }

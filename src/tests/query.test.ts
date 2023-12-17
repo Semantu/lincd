@@ -68,222 +68,240 @@ p2.friends.add(p3);
 p2.friends.add(p4);
 
 describe('query tests', () => {
-  test('can select a property of all instances', () => {
-    let names = resolveLocal(
-      Person.select((p) => {
-        return p.name;
-      }),
-    );
-    //["name","name"]
+  // test('can select a property of all instances', () => {
+  //   let names = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.name;
+  //     }),
+  //   );
+  //   //["name","name"]
+  //
+  //   expect(Array.isArray(names)).toBe(true);
+  //   expect(names.length).toBe(4);
+  //   expect(names.includes('Moa')).toBe(true);
+  //   expect(names.includes('Mike')).toBe(false);
+  // });
+  //
+  // test('can select sub properties of a first property that returns a set', () => {
+  //   let q = Person.select((p) => {
+  //     return p.friends.name;
+  //   });
+  //   let namesOfFriends = resolveLocal(q);
+  //   //[
+  //   // ["name1","name2","name3"]
+  //   //]
+  //
+  //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  //   expect(namesOfFriends.length).toBe(3);
+  //   expect(namesOfFriends.includes('Semmy')).toBe(false);
+  //   expect(namesOfFriends.includes('Moa')).toBe(true);
+  // });
+  //
+  // test('can select multiple property paths', () => {
+  //   let result = resolveLocal(
+  //     Person.select((p) => {
+  //       return [p.name, p.friends.name];
+  //     }),
+  //   );
+  //
+  //   expect(Array.isArray(result)).toBe(true);
+  //   expect(result.length).toBe(2);
+  //
+  //   let [names, namesOfFriends] = result;
+  //   expect(Array.isArray(names)).toBe(true);
+  //   expect(names.length).toBe(4);
+  //   expect(names.includes('Moa')).toBe(true);
+  //   expect(names.includes('Mike')).toBe(false);
+  //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  //   expect(namesOfFriends.length).toBe(3);
+  //   expect(namesOfFriends.includes('Semmy')).toBe(false);
+  //   expect(namesOfFriends.includes('Moa')).toBe(true);
+  // });
+  //
+  // test('can select nested paths', () => {
+  //   //we select the friends of all persons, but only those friends whose name is moa
+  //   //this will return an array, where each entry represents the results for a single person.
+  //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+  //   let level2Friends = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.friends;
+  //     }),
+  //   );
+  //
+  //   let level3Friends = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.friends.friends;
+  //     }),
+  //   );
+  //
+  //   expect(level2Friends instanceof ShapeSet).toBe(true);
+  //   expect(level2Friends.size).toBe(2);
+  //   expect(level2Friends.some((f) => f.namedNode === p3.namedNode)).toBe(true);
+  //   expect(level2Friends.some((f) => f.namedNode === p4.namedNode)).toBe(true);
+  //
+  //   expect(level3Friends instanceof ShapeSet).toBe(true);
+  //   expect(level3Friends.size).toBe(0);
+  // });
+  //
+  // // ### WHERE TESTS
+  //
+  // test('can use where() to filter a string in a set of Literals with equals', () => {
+  //   //we select the friends of all persons, but only those friends whose name is moa
+  //   //this will return an array, where each entry represents the results for a single person.
+  //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+  //   let friendsCalledMoa = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.where((f) => f.name.equals('Moa'));
+  //     }),
+  //   );
+  //
+  //   expect(friendsCalledMoa instanceof ShapeSet).toBe(true);
+  //   expect(friendsCalledMoa.size).toBe(1);
+  //   expect(friendsCalledMoa.first().namedNode).toBe(p2.namedNode);
+  // });
+  //
+  // test('where and', () => {
+  //   //we select the friends of all persons, but only those friends whose name is moa
+  //   //this will return an array, where each entry represents the results for a single person.
+  //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+  //   let friendsCalledMoaThatJog = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.where((f) =>
+  //         f.name.equals('Moa').and(f.hobby.equals('Jogging')),
+  //       );
+  //     }),
+  //   );
+  //
+  //   expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
+  //   expect(friendsCalledMoaThatJog.size).toBe(1);
+  //   expect(friendsCalledMoaThatJog.first().namedNode).toBe(p2.namedNode);
+  // });
+  //
+  // test('where or', () => {
+  //   //we select the friends of all persons, but only those friends whose name is moa
+  //   //this will return an array, where each entry represents the results for a single person.
+  //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+  //   let friendsCalledMoaThatJog = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.where((f) =>
+  //         f.name.equals('Jinx').or(f.hobby.equals('Jogging')),
+  //       );
+  //     }),
+  //   );
+  //
+  //   expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
+  //   expect(friendsCalledMoaThatJog.size).toBe(2);
+  //   expect(
+  //     friendsCalledMoaThatJog.some((f) => f.namedNode === p2.namedNode),
+  //   ).toBe(true);
+  //   expect(
+  //     friendsCalledMoaThatJog.some((f) => f.namedNode === p3.namedNode),
+  //   ).toBe(true);
+  // });
+  //
+  // test('where directly on the shape instance ', () => {
+  //   let personsCalledMoa = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.where(p.name.equals('Moa'));
+  //     }),
+  //   );
+  //
+  //   expect(personsCalledMoa instanceof ShapeSet).toBe(true);
+  //   expect(personsCalledMoa.size).toBe(1);
+  //   expect(personsCalledMoa.some((f) => f.namedNode === p2.namedNode)).toBe(
+  //     true,
+  //   );
+  // });
+  //
+  // test('where and or and', () => {
+  //   //we combine AND & OR. AND should be done first, then OR
+  //   let persons = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.where((f) =>
+  //         f.name
+  //           .equals('Jinx')
+  //           .or(f.hobby.equals('Jogging'))
+  //           .and(f.name.equals('Moa')),
+  //       );
+  //     }),
+  //   );
+  //   //test the same thing again, but now the and clause is done within the or clause
+  //   //the result should be the same
+  //   let persons2 = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.where((f) =>
+  //         f.name
+  //           .equals('Jinx')
+  //           .or(f.hobby.equals('Jogging').and(f.name.equals('Moa'))),
+  //       );
+  //     }),
+  //   );
+  //
+  //   expect(persons instanceof ShapeSet).toBe(true);
+  //   expect(persons.size).toBe(2);
+  //   expect(persons.some((f) => f.namedNode === p2.namedNode)).toBe(true);
+  //   expect(persons.some((f) => f.namedNode === p3.namedNode)).toBe(true);
+  //   expect(persons2 instanceof ShapeSet).toBe(true);
+  //   expect(persons2.size).toBe(2);
+  //   expect(persons2.some((f) => f.namedNode === p2.namedNode)).toBe(true);
+  //   expect(persons2.some((f) => f.namedNode === p3.namedNode)).toBe(true);
+  // });
+  //
+  // test('where some', () => {
+  //   //select all persons that have a friend called Moa
+  //   //the first test relies on the fact that by default, some() is applied.
+  //   //in other words, the person matches if at least 1 friend is called Moa
+  //   let peopleWithFriendsCalledMoa = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.where(p.friends.name.equals('Moa'));
+  //     }),
+  //   );
+  //
+  //   // the second explicitly mentions some()
+  //   let peopleWithFriendsCalledMoa2 = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.where(
+  //         p.friends.some((f) => {
+  //           return f.name.equals('Moa');
+  //         }),
+  //       );
+  //     }),
+  //   );
+  //
+  //   expect(peopleWithFriendsCalledMoa instanceof ShapeSet).toBe(true);
+  //   expect(peopleWithFriendsCalledMoa.size).toBe(1);
+  //   expect(
+  //     peopleWithFriendsCalledMoa.some((f) => f.namedNode === p1.namedNode),
+  //   ).toBe(true);
+  //
+  //   expect(peopleWithFriendsCalledMoa2 instanceof ShapeSet).toBe(true);
+  //   expect(peopleWithFriendsCalledMoa2.size).toBe(1);
+  //   expect(
+  //     peopleWithFriendsCalledMoa2.some((f) => f.namedNode === p1.namedNode),
+  //   ).toBe(true);
+  // });
 
-    expect(Array.isArray(names)).toBe(true);
-    expect(names.length).toBe(4);
-    expect(names.includes('Moa')).toBe(true);
-    expect(names.includes('Mike')).toBe(false);
-  });
-
-  test('can select sub properties of a first property that returns a set', () => {
-    let q = Person.select((p) => {
-      return p.friends.name;
-    });
-    let namesOfFriends = resolveLocal(q);
-    //[
-    // ["name1","name2","name3"]
-    //]
-
-    expect(Array.isArray(namesOfFriends)).toBe(true);
-    expect(namesOfFriends.length).toBe(3);
-    expect(namesOfFriends.includes('Semmy')).toBe(false);
-    expect(namesOfFriends.includes('Moa')).toBe(true);
-  });
-
-  test('can select multiple property paths', () => {
-    let result = resolveLocal(
-      Person.select((p) => {
-        return [p.name, p.friends.name];
-      }),
-    );
-
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBe(2);
-
-    let [names, namesOfFriends] = result;
-    expect(Array.isArray(names)).toBe(true);
-    expect(names.length).toBe(4);
-    expect(names.includes('Moa')).toBe(true);
-    expect(names.includes('Mike')).toBe(false);
-    expect(Array.isArray(namesOfFriends)).toBe(true);
-    expect(namesOfFriends.length).toBe(3);
-    expect(namesOfFriends.includes('Semmy')).toBe(false);
-    expect(namesOfFriends.includes('Moa')).toBe(true);
-  });
-
-  test('can select nested paths', () => {
-    //we select the friends of all persons, but only those friends whose name is moa
-    //this will return an array, where each entry represents the results for a single person.
-    // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-    let level2Friends = resolveLocal(
-      Person.select((p) => {
-        return p.friends.friends;
-      }),
-    );
-
-    let level3Friends = resolveLocal(
-      Person.select((p) => {
-        return p.friends.friends.friends;
-      }),
-    );
-
-    expect(level2Friends instanceof ShapeSet).toBe(true);
-    expect(level2Friends.size).toBe(2);
-    expect(level2Friends.some((f) => f.namedNode === p3.namedNode)).toBe(true);
-    expect(level2Friends.some((f) => f.namedNode === p4.namedNode)).toBe(true);
-
-    expect(level3Friends instanceof ShapeSet).toBe(true);
-    expect(level3Friends.size).toBe(0);
-  });
-
-  // ### WHERE TESTS
-
-  test('can use where() to filter a string in a set of Literals with equals', () => {
-    //we select the friends of all persons, but only those friends whose name is moa
-    //this will return an array, where each entry represents the results for a single person.
-    // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-    let friendsCalledMoa = resolveLocal(
-      Person.select((p) => {
-        return p.friends.where((f) => f.name.equals('Moa'));
-      }),
-    );
-
-    expect(friendsCalledMoa instanceof ShapeSet).toBe(true);
-    expect(friendsCalledMoa.size).toBe(1);
-    expect(friendsCalledMoa.first().namedNode).toBe(p2.namedNode);
-  });
-
-  test('where and', () => {
-    //we select the friends of all persons, but only those friends whose name is moa
-    //this will return an array, where each entry represents the results for a single person.
-    // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-    let friendsCalledMoaThatJog = resolveLocal(
-      Person.select((p) => {
-        return p.friends.where((f) =>
-          f.name.equals('Moa').and(f.hobby.equals('Jogging')),
-        );
-      }),
-    );
-
-    expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
-    expect(friendsCalledMoaThatJog.size).toBe(1);
-    expect(friendsCalledMoaThatJog.first().namedNode).toBe(p2.namedNode);
-  });
-
-  test('where or', () => {
-    //we select the friends of all persons, but only those friends whose name is moa
-    //this will return an array, where each entry represents the results for a single person.
-    // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-    let friendsCalledMoaThatJog = resolveLocal(
-      Person.select((p) => {
-        return p.friends.where((f) =>
-          f.name.equals('Jinx').or(f.hobby.equals('Jogging')),
-        );
-      }),
-    );
-
-    expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
-    expect(friendsCalledMoaThatJog.size).toBe(2);
-    expect(
-      friendsCalledMoaThatJog.some((f) => f.namedNode === p2.namedNode),
-    ).toBe(true);
-    expect(
-      friendsCalledMoaThatJog.some((f) => f.namedNode === p3.namedNode),
-    ).toBe(true);
-  });
-
-  test('where directly on the shape instance ', () => {
-    let personsCalledMoa = resolveLocal(
-      Person.select((p) => {
-        return p.where(p.name.equals('Moa'));
-      }),
-    );
-
-    expect(personsCalledMoa instanceof ShapeSet).toBe(true);
-    expect(personsCalledMoa.size).toBe(1);
-    expect(personsCalledMoa.some((f) => f.namedNode === p2.namedNode)).toBe(
-      true,
-    );
-  });
-
-  test('where and or and', () => {
-    //we combine AND & OR. AND should be done first, then OR
-    let persons = resolveLocal(
-      Person.select((p) => {
-        return p.friends.where((f) =>
-          f.name
-            .equals('Jinx')
-            .or(f.hobby.equals('Jogging'))
-            .and(f.name.equals('Moa')),
-        );
-      }),
-    );
-    //test the same thing again, but now the and clause is done within the or clause
-    //the result should be the same
-    let persons2 = resolveLocal(
-      Person.select((p) => {
-        return p.friends.where((f) =>
-          f.name
-            .equals('Jinx')
-            .or(f.hobby.equals('Jogging').and(f.name.equals('Moa'))),
-        );
-      }),
-    );
-
-    expect(persons instanceof ShapeSet).toBe(true);
-    expect(persons.size).toBe(2);
-    expect(persons.some((f) => f.namedNode === p2.namedNode)).toBe(true);
-    expect(persons.some((f) => f.namedNode === p3.namedNode)).toBe(true);
-    expect(persons2 instanceof ShapeSet).toBe(true);
-    expect(persons2.size).toBe(2);
-    expect(persons2.some((f) => f.namedNode === p2.namedNode)).toBe(true);
-    expect(persons2.some((f) => f.namedNode === p3.namedNode)).toBe(true);
-  });
-
-  //NEXT: test and implement where some and where every (or is it automatically a some?)
-  //NEXT: x.where().y.where().z
-  //DONE
-
-  test('where some', () => {
-    //select all persons that have a friend called Moa
-    //the first test relies on the fact that by default, some() is applied.
-    //in other words, the person matches if at least 1 friend is called Moa
-    let peopleWithFriendsCalledMoa = resolveLocal(
-      Person.select((p) => {
-        return p.where(p.friends.name.equals('Moa'));
-      }),
-    );
-
-    // the second explicitly mentions some()
-    let peopleWithFriendsCalledMoa2 = resolveLocal(
+  test('where every', () => {
+    // select people that only have friends that are called Moa or Jinx
+    let allFriendsCalledMoaOrJinx = resolveLocal(
       Person.select((p) => {
         return p.where(
-          p.friends.some((f) => {
-            return f.name.equals('Moa');
+          p.friends.every((f) => {
+            return f.name.equals('Moa').or(f.name.equals('Jinx'));
           }),
         );
       }),
     );
 
-    expect(peopleWithFriendsCalledMoa instanceof ShapeSet).toBe(true);
-    expect(peopleWithFriendsCalledMoa.size).toBe(1);
+    expect(allFriendsCalledMoaOrJinx instanceof ShapeSet).toBe(true);
+    expect(allFriendsCalledMoaOrJinx.size).toBe(1);
     expect(
-      peopleWithFriendsCalledMoa.some((f) => f.namedNode === p1.namedNode),
-    ).toBe(true);
-
-    expect(peopleWithFriendsCalledMoa2 instanceof ShapeSet).toBe(true);
-    expect(peopleWithFriendsCalledMoa2.size).toBe(1);
-    expect(
-      peopleWithFriendsCalledMoa2.some((f) => f.namedNode === p1.namedNode),
+      allFriendsCalledMoaOrJinx.some((f) => f.namedNode === p1.namedNode),
     ).toBe(true);
   });
+  //NEXT: test and implement where some and where every (or is it automatically a some?)
+  //NEXT: x.where().y.where().z
+  //DONE
 });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something

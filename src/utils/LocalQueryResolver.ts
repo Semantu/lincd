@@ -73,9 +73,14 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   }
 }
 
-function resolveWherePath(subject: QueryValue, queryPath: QueryPath) {
+// return this.getOriginalSource(endValue);
+function resolveWherePath(
+  subject: QueryValue | QueryShapeSet<any>[],
+  queryPath: QueryPath,
+) {
+  //TODO: check overlap with resolveQueryPath, maybe this one can be removed?
   //start with the subject as the current "end result"
-  let result: QueryValue | QueryPrimitiveSet = subject;
+  let result: QueryValue | QueryShapeSet<any>[] | QueryPrimitiveSet = subject;
   queryPath.forEach((queryStep) => {
     //then resolve each of the query steps and use the result as the new subject for the next step
     result = resolveWhereStep(result, queryStep);
@@ -120,6 +125,8 @@ function resolveWhere(
       filterMethod = resolveWhereEquals;
     } else if ((where as WhereEvaluationPath).method === WhereMethods.SOME) {
       filterMethod = resolveWhereSome;
+    } else if ((where as WhereEvaluationPath).method === WhereMethods.EVERY) {
+      filterMethod = resolveWhereEvery;
     } else {
       throw new Error(
         'Unimplemented where method: ' + (where as WhereEvaluationPath).method,
@@ -134,6 +141,13 @@ function resolveWhere(
         queryEndValues,
         ...(where as WhereEvaluationPath).args,
       ]);
+    } else if (Array.isArray(queryEndValues)) {
+      queryEndValues = queryEndValues.map((queryEndValue) =>
+        filterMethod.apply(null, [
+          queryEndValue,
+          ...(where as WhereEvaluationPath).args,
+        ]),
+      );
     } else {
       throw new Error(
         'Unimplemented type of subject: ' + queryEndValues.toString(),
@@ -143,7 +157,10 @@ function resolveWhere(
     //for example Person.select(p => p.friends.where(f => f.name.equals('Semmy')))
     //the result of the where clause is an array of names (strings),
     //but we need to return the filtered result of p.friends (which is a ShapeSet of Persons)
-    return QueryValue.getOriginalSource(queryEndValues) as ShapeSet;
+    //TODO: check types
+    return QueryValue.getOriginalSource(
+      queryEndValues as QueryShapeSet<any>[],
+    ) as ShapeSet;
     // return null;
     // }
   } else if ((where as WhereAndOr).andOr) {
@@ -235,7 +252,7 @@ function resolveWhereEquals(queryEndValues, otherValue: string) {
     return queryEndValue.getOriginalValue() === otherValue;
   });
 }
-function resolveWhereSome(queryEndValues, evaluation: WhereEvaluationPath) {
+function resolveSubWhere(queryEndValues, evaluation: WhereEvaluationPath) {
   //because the intermediate end results of the where clause are the subjects of the some clause
   //we need to mark those intermediate end results as the source (root) of the some clause
   //so that it doesn't retrace the source until the very source of the where clause
@@ -250,11 +267,35 @@ function resolveWhereSome(queryEndValues, evaluation: WhereEvaluationPath) {
   if (queryEndValues instanceof QueryShapeSet) {
     (queryEndValues as QueryShapeSet).setSource(false);
   }
-
+  return matchingSubjects;
+}
+function resolveWhereSome(queryEndValues, evaluation: WhereEvaluationPath) {
+  let matchingSubjects = resolveSubWhere(queryEndValues, evaluation);
   let res = queryEndValues.filter((queryEndValue) => {
     return matchingSubjects.has(queryEndValue.getOriginalValue());
   });
   return res;
+}
+function resolveWhereEvery(queryEndValues, evaluation: WhereEvaluationPath) {
+  let matchingSubjects = resolveSubWhere(queryEndValues, evaluation);
+
+  //for some() we filter down the queryEndValues, and if any result is left then the source of that result is traced back
+  //this means that for every() we should only allow ANY result if all the queryEndValues are in the matchingSubjects
+
+  //so we filter down the queryEndValues to only those that are in the matchingSubjects
+  return queryEndValues.queryShapes.every((queryEndValue) => {
+    return matchingSubjects.has(queryEndValue.getOriginalValue());
+  })
+    ? queryEndValues
+    : new QueryShapeSet();
+  // let res = queryEndValues.filter((queryEndValue) => {
+  //   return matchingSubjects.has(queryEndValue.getOriginalValue());
+  // });
+  // //if all the queryEndValues are in the matchingSubjects, then the size of the result should be equal to the size of the queryEndValues
+  // //and, then we can return the results. If not, we return an empty set so that also no source can be traced back
+  // return res.size === queryEndValues.size
+  //   ? queryEndValues
+  //   : new QueryShapeSet();
 }
 
 function resolveQueryStep(
@@ -299,10 +340,16 @@ function resolveQueryStep(
   }
 }
 function resolveWhereStep(
-  subject: QueryValue | QueryPrimitiveSet,
+  subject: QueryValue | QueryPrimitiveSet | QueryShapeSet<any>[],
   queryStep: QueryStep,
-): QueryValue | QueryPrimitiveSet {
-  if (subject instanceof QueryShapeSet) {
+): QueryShapeSet<any>[] | QueryPrimitiveSet {
+  if (Array.isArray(subject)) {
+    let res = subject.map((singleSubject: QueryShapeSet) => {
+      return singleSubject.callPropertyShapeAccessor(queryStep.property);
+    });
+    //TODO: check types
+    return res as unknown as QueryShapeSet[];
+  } else if (subject instanceof QueryShapeSet) {
     return subject.callPropertyShapeAccessor(queryStep.property);
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);
