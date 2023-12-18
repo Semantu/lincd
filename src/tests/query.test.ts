@@ -299,8 +299,30 @@ describe('query tests', () => {
       allFriendsCalledMoaOrJinx.some((f) => f.namedNode === p1.namedNode),
     ).toBe(true);
   });
-  //NEXT: x.where().y.where().z
-  //DONE
+
+  test('where sequences', () => {
+    // select people that only have friends that are called Moa or Jinx
+    let friendCalledJinxAndNameIsSemmy = resolveLocal(
+      Person.select((p) => {
+        return p
+          .where(
+            p.friends.some((f) => {
+              return f.name.equals('Jinx');
+            }),
+          )
+          .name.where((n) => {
+            return n.equals('Semmy');
+          });
+      }),
+    );
+
+    expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
+    expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
+    expect(friendCalledJinxAndNameIsSemmy.some((f) => f === 'Semmy')).toBe(
+      true,
+    );
+  });
+  //NEXT: count
 });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something

@@ -7,7 +7,7 @@ import {
   QueryPrimitiveSet,
   QueryShape,
   QueryShapeSet,
-  QueryShapeSetSet,
+  QueryValueSetOfSets,
   QueryStep,
   QueryValue,
   ToNormalValue,
@@ -40,13 +40,16 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   let results = [];
 
   if (
-    query.traceResponse instanceof QueryShape &&
+    query.traceResponse instanceof QueryValue &&
     query.traceResponse.wherePath
   ) {
-    localInstances = resolveWhere(
-      localInstances,
-      query.traceResponse.wherePath,
-    );
+    //TODO: find a way to move the traceResponse wherePath into the queryPaths
+    // because for chained where clauses handling the traceResponse here is incorrect
+    debugger;
+    // localInstances = resolveWhere(
+    //   localInstances,
+    //   query.traceResponse.wherePath,
+    // );
   }
   queryPaths.forEach((queryPath) => {
     results.push(resolveQueryPath(localInstances, queryPath));
@@ -63,7 +66,7 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   } else if (Array.isArray(query.traceResponse)) {
     //nothing to convert if an array was requested
     return results as any;
-  } else if (query.traceResponse instanceof QueryShapeSetSet) {
+  } else if (query.traceResponse instanceof QueryValueSetOfSets) {
     return results.shift();
   } else if (query.traceResponse instanceof QueryPrimitiveSet) {
     //TODO: see how traceResponse is made for QueryValue. Here we need to return an array of the first item in the results?
@@ -78,12 +81,12 @@ export function resolveLocal<S extends LinkedQuery<any>>(
 
 // return this.getOriginalSource(endValue);
 function resolveWherePath(
-  subject: QueryValue | QueryShapeSetSet,
+  subject: QueryValue | QueryValueSetOfSets,
   queryPath: QueryPath,
 ) {
   //TODO: check overlap with resolveQueryPath, maybe this one can be removed?
   //start with the subject as the current "end result"
-  let result: QueryValue | QueryShapeSetSet | QueryPrimitiveSet = subject;
+  let result: QueryValue | QueryValueSetOfSets | QueryPrimitiveSet = subject;
   queryPath.forEach((queryStep) => {
     //then resolve each of the query steps and use the result as the new subject for the next step
     result = resolveWhereStep(result, queryStep);
@@ -114,8 +117,11 @@ function resolveWhere(
 ): ShapeSet {
   if ((where as WhereEvaluationPath).path) {
     //for nested where clauses the subject will already be a QueryValue
+    //TODO: check if subject is ever not a shape, shapeset or string
     let convertedSubjects =
-      subject instanceof Shape || subject instanceof ShapeSet
+      subject instanceof Shape ||
+      subject instanceof ShapeSet ||
+      typeof subject === 'string'
         ? QueryValue.convertOriginal(subject, null, null)
         : subject;
     let queryEndValues = resolveWherePath(
@@ -144,8 +150,8 @@ function resolveWhere(
         queryEndValues,
         ...(where as WhereEvaluationPath).args,
       ]);
-    } else if (queryEndValues instanceof QueryShapeSetSet) {
-      queryEndValues = new QueryShapeSetSet(
+    } else if (queryEndValues instanceof QueryValueSetOfSets) {
+      queryEndValues = new QueryValueSetOfSets(
         queryEndValues.map((queryEndValue) =>
           filterMethod.apply(null, [
             queryEndValue,
@@ -153,9 +159,13 @@ function resolveWhere(
           ]),
         ),
       );
+    } else if (queryEndValues instanceof QueryValue) {
+      queryEndValues = filterMethod
+        .apply(null, [[queryEndValues], ...(where as WhereEvaluationPath).args])
+        .shift();
     } else {
       throw new Error(
-        'Unimplemented type of subject: ' + queryEndValues.toString(),
+        'Unimplemented type of subject: ' + (queryEndValues as any).toString(),
       );
     }
     //once the filtering of the where clause is done, we need to convert the result back to the original shape
@@ -164,7 +174,7 @@ function resolveWhere(
     //but we need to return the filtered result of p.friends (which is a ShapeSet of Persons)
     //TODO: check types
     return QueryValue.getOriginalSource(
-      queryEndValues as QueryShapeSetSet,
+      queryEndValues as QueryValueSetOfSets,
     ) as ShapeSet;
     // return null;
     // }
@@ -293,14 +303,6 @@ function resolveWhereEvery(queryEndValues, evaluation: WhereEvaluationPath) {
   })
     ? queryEndValues
     : new QueryShapeSet();
-  // let res = queryEndValues.filter((queryEndValue) => {
-  //   return matchingSubjects.has(queryEndValue.getOriginalValue());
-  // });
-  // //if all the queryEndValues are in the matchingSubjects, then the size of the result should be equal to the size of the queryEndValues
-  // //and, then we can return the results. If not, we return an empty set so that also no source can be traced back
-  // return res.size === queryEndValues.size
-  //   ? queryEndValues
-  //   : new QueryShapeSet();
 }
 
 function resolveQueryStep(
@@ -310,46 +312,58 @@ function resolveQueryStep(
   if (subject instanceof ShapeSet) {
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
-    let result =
-      queryStep.property.nodeKind === shacl.Literal ? [] : new ShapeSet();
-    (subject as ShapeSet).forEach((singleShape) => {
-      let stepResult = singleShape[queryStep.property.label];
-      if (queryStep.where) {
-        let whereResult = resolveWhere(stepResult, queryStep.where);
-        //overwrite the single result with the filtered where result
-        stepResult = whereResult;
-      }
-      if (stepResult instanceof ShapeSet) {
-        result = result.concat(stepResult);
-      } else if (Array.isArray(stepResult)) {
-        result = result.concat(stepResult);
-      } else if (stepResult instanceof Shape) {
-        (result as ShapeSet).add(stepResult);
-      } else if (primitiveTypes.includes(typeof stepResult)) {
-        (result as any[]).push(stepResult);
-      } else {
-        throw Error(
-          'Unknown result type: ' +
-            typeof stepResult +
-            ' for property ' +
-            queryStep.property.label +
-            ' on shape ' +
-            singleShape.toString() +
-            ')',
-        );
-      }
-    });
-    return result;
+    if (queryStep.property) {
+      let result =
+        queryStep.property.nodeKind === shacl.Literal ? [] : new ShapeSet();
+      (subject as ShapeSet).forEach((singleShape) => {
+        let stepResult = singleShape[queryStep.property.label];
+        if (queryStep.where) {
+          let whereResult = resolveWhere(stepResult, queryStep.where);
+          //overwrite the single result with the filtered where result
+          stepResult = whereResult;
+        }
+        if (!stepResult) {
+          return;
+        }
+        if (stepResult instanceof ShapeSet) {
+          result = result.concat(stepResult);
+        } else if (Array.isArray(stepResult)) {
+          result = result.concat(stepResult);
+        } else if (stepResult instanceof Shape) {
+          (result as ShapeSet).add(stepResult);
+        } else if (primitiveTypes.includes(typeof stepResult)) {
+          (result as any[]).push(stepResult);
+        } else {
+          throw Error(
+            'Unknown result type: ' +
+              typeof stepResult +
+              ' for property ' +
+              queryStep.property.label +
+              ' on shape ' +
+              singleShape.toString() +
+              ')',
+          );
+        }
+      });
+      return result;
+    } else {
+      //in some cases there is a query step without property but WITH where
+      //this happens when the where clause is on the root of the query
+      //like Person.select(p => p.where(...))
+      //in that case the where clause is directly applied to the given subject
+      let whereResult = resolveWhere(subject, queryStep.where);
+      return whereResult;
+    }
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);
   }
 }
 function resolveWhereStep(
-  subject: QueryValue | QueryPrimitiveSet | QueryShapeSetSet,
+  subject: QueryValue | QueryPrimitiveSet | QueryValueSetOfSets,
   queryStep: QueryStep,
-): QueryShapeSetSet | QueryPrimitiveSet {
-  if (subject instanceof QueryShapeSetSet) {
-    let res = new QueryShapeSetSet(
+): QueryValueSetOfSets | QueryPrimitiveSet {
+  if (subject instanceof QueryValueSetOfSets) {
+    let res = new QueryValueSetOfSets(
       subject.map((singleSubject: QueryShapeSet) => {
         return singleSubject.callPropertyShapeAccessor(
           queryStep.property,
@@ -357,7 +371,7 @@ function resolveWhereStep(
       }),
     );
     //TODO: check types
-    return res as unknown as QueryShapeSetSet;
+    return res as unknown as QueryValueSetOfSets;
   } else if (subject instanceof QueryShapeSet) {
     return subject.callPropertyShapeAccessor(queryStep.property);
   } else {
