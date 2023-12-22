@@ -335,6 +335,24 @@ describe('query tests', () => {
     expect(numberOfFriends.filter((count) => count === 0).length).toBe(2);
     expect(numberOfFriends.filter((count) => count === 2).length).toBe(2);
   });
+
+  test('count equals', () => {
+    // select people that only have friends that are called Moa or Jinx
+    let numberOfFriends = resolveLocal(
+      Person.select((p) => {
+        return p.where(p.friends.count().equals(2));
+      }),
+    );
+
+    expect(Array.isArray(numberOfFriends)).toBe(true);
+    expect(numberOfFriends.size).toBe(2);
+    expect(numberOfFriends.some((f) => f.namedNode === p1.namedNode)).toBe(
+      true,
+    );
+    expect(numberOfFriends.some((f) => f.namedNode === p2.namedNode)).toBe(
+      true,
+    );
+  });
   //NEXT: count
   //Refactor duplicate value in "every"
   //Refactor firstPath into an array

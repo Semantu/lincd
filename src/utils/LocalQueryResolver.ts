@@ -130,7 +130,7 @@ function resolveWhere(
     );
 
     let filterMethod: Function;
-    if ((where as WhereEvaluationPath).method === WhereMethods.STRING_EQUALS) {
+    if ((where as WhereEvaluationPath).method === WhereMethods.EQUALS) {
       filterMethod = resolveWhereEquals;
     } else if ((where as WhereEvaluationPath).method === WhereMethods.SOME) {
       filterMethod = resolveWhereSome;
@@ -383,6 +383,13 @@ function resolveWhereStep(
         ) as unknown as QueryShapeSet;
       }),
     );
+    if (queryStep.count) {
+      debugger;
+      //NOTE: we need to refactor how where clauses are done, before finishing this
+      // res = new QueryPrimitiveSet(null,null,res.map(shapeSet => {
+      //   return new QueryNumber(shapeSet as Set<any>).size
+      // }))
+    }
     //TODO: check types
     return res as unknown as QueryValueSetOfSets;
   } else if (subject instanceof QueryShapeSet) {

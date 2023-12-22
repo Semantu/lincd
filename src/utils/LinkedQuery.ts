@@ -18,7 +18,7 @@ export type OriginalValue =
   | null
   | undefined;
 
-export type QueryPrimitive = QueryString;
+// export type QueryPrimitive = QueryString;
 export type QueryBuildFn<T extends Shape, ResultType> = (
   p: ToQueryValue<T>,
   q: LinkedQuery<T>,
@@ -38,6 +38,8 @@ export type ToQueryValue<T, I = 0> = T extends ShapeSet
   ? ToQueryShape<T> & QueryShape<T>
   : T extends string
   ? QueryString
+  : T extends number
+  ? QueryNumber
   : T extends boolean
   ? QueryBoolean
   : QueryValue<T>;
@@ -107,7 +109,7 @@ export type AndOrQueryToken = {
   or?: WherePath;
 };
 export enum WhereMethods {
-  STRING_EQUALS = 'steq',
+  EQUALS = 'eq',
   SOME = 'some',
   EVERY = 'every',
 }
@@ -600,7 +602,7 @@ class QueryBoolean extends QueryValue<boolean> {
     super(property, subject);
   }
 }
-class QueryString extends QueryValue<string> {
+export class QueryPrimitive<T> extends QueryValue<T> {
   constructor(
     public originalValue: string,
     public property?: PropertyShape,
@@ -609,7 +611,7 @@ class QueryString extends QueryValue<string> {
     super(property, subject);
   }
   equals(otherString: string) {
-    return new Evaluation(this, WhereMethods.STRING_EQUALS, [otherString]);
+    return new Evaluation(this, WhereMethods.EQUALS, [otherString]);
   }
   where(validation: WhereClause<string>): QueryString {
     // let nodeShape = this.subject.getOriginalValue().nodeShape;
@@ -618,7 +620,10 @@ class QueryString extends QueryValue<string> {
     return this as any;
   }
 }
-export class QueryPrimitiveSet extends CoreSet<QueryPrimitive> {
+class QueryString extends QueryPrimitive<string> {}
+class QueryNumber extends QueryValue<string> {}
+
+export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
   constructor(
     public property?: PropertyShape,
     public subject?: QueryShapeSet<any> | QueryShape<any>,
@@ -637,8 +642,8 @@ export class QueryPrimitiveSet extends CoreSet<QueryPrimitive> {
 
   //TODO: see if we can merge these methods of QueryString and QueryPrimitiveSet and soon other things like QueryNumber
   // so that they're only defined once
-  equals(otherString: string) {
-    return new Evaluation(this, WhereMethods.STRING_EQUALS, [otherString]);
+  equals(other: P) {
+    return new Evaluation(this, WhereMethods.EQUALS, [other]);
   }
   getPropertyPath(): QueryPath {
     if (this.size > 1) {
@@ -730,7 +735,7 @@ export class LinkedWhereQuery<
     return (this.traceResponse as Evaluation).getWherePath();
   }
 }
-class Count extends QueryShapeSet {
+class Count extends QueryPrimitiveSet<number> {
   constructor(public subject: QueryShapeSet) {
     super();
   }
