@@ -42,7 +42,9 @@ export type ToQueryValue<T, I = 0> = T extends ShapeSet
   ? QueryBoolean
   : QueryValue<T>;
 
-export type ToNormalValue<T> = T extends QueryShapeSet<any>
+export type ToNormalValue<T> = T extends Count
+  ? number[]
+  : T extends QueryShapeSet<any>
   ? ShapeSet<GetQueryShapeSetType<T>>
   : T extends QueryShape<any>
   ? GetQueryShapeType<T>
@@ -84,6 +86,7 @@ export type QueryPath = QueryStep[];
 export type QueryStep = {
   property: PropertyShape;
   where?: WherePath;
+  count?: Count;
 };
 
 export type WhereAnd = {
@@ -114,6 +117,7 @@ export class QueryValue<S extends Object = any> {
 
   //is null by default to avoid warnings when trying to access wherePath when its undefined
   wherePath?: WherePath = null;
+  _count: Count;
 
   constructor(
     public property?: PropertyShape,
@@ -133,6 +137,7 @@ export class QueryValue<S extends Object = any> {
       path.unshift({
         property: current.property,
         where: current.wherePath,
+        count: current._count,
       });
       current = current.subject;
     }
@@ -377,6 +382,12 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
     //   return QueryShapeSet.create(result, propertyShape, this);
     // }
     return result;
+  }
+
+  count(): Count {
+    //when count() is called we want to count the number of items in the entire query path
+    this._count = new Count(this);
+    return this._count;
   }
 
   some(validation: WhereClause<S>): Evaluation {
@@ -717,5 +728,13 @@ export class LinkedWhereQuery<
   }
   getWherePath() {
     return (this.traceResponse as Evaluation).getWherePath();
+  }
+}
+class Count extends QueryShapeSet {
+  constructor(public subject: QueryShapeSet) {
+    super();
+  }
+  getPropertyPath(): QueryPath {
+    return this.subject.getPropertyPath();
   }
 }

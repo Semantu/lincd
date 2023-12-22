@@ -322,7 +322,23 @@ describe('query tests', () => {
       true,
     );
   });
+  test('count', () => {
+    // select people that only have friends that are called Moa or Jinx
+    let numberOfFriends = resolveLocal(
+      Person.select((p) => {
+        return p.friends.count();
+      }),
+    );
+
+    expect(Array.isArray(numberOfFriends)).toBe(true);
+    expect(numberOfFriends.length).toBe(4);
+    expect(numberOfFriends.filter((count) => count === 0).length).toBe(2);
+    expect(numberOfFriends.filter((count) => count === 2).length).toBe(2);
+  });
   //NEXT: count
+  //Refactor duplicate value in "every"
+  //Refactor firstPath into an array
+  //Remake resolveLocal, so it doesn't use QueryValue objects
 });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something

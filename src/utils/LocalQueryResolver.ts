@@ -39,18 +39,18 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   let localInstances = (query.shape as any).getLocalInstances();
   let results = [];
 
-  if (
-    query.traceResponse instanceof QueryValue &&
-    query.traceResponse.wherePath
-  ) {
-    //TODO: find a way to move the traceResponse wherePath into the queryPaths
-    // because for chained where clauses handling the traceResponse here is incorrect
-    debugger;
-    // localInstances = resolveWhere(
-    //   localInstances,
-    //   query.traceResponse.wherePath,
-    // );
-  }
+  // if (
+  //   query.traceResponse instanceof QueryValue &&
+  //   query.traceResponse.wherePath
+  // ) {
+  //TODO: find a way to move the traceResponse wherePath into the queryPaths
+  // because for chained where clauses handling the traceResponse here is incorrect
+  // debugger;
+  // localInstances = resolveWhere(
+  //   localInstances,
+  //   query.traceResponse.wherePath,
+  // );
+  // }
   queryPaths.forEach((queryPath) => {
     results.push(resolveQueryPath(localInstances, queryPath));
   });
@@ -314,7 +314,9 @@ function resolveQueryStep(
     // then the result will be an Array
     if (queryStep.property) {
       let result =
-        queryStep.property.nodeKind === shacl.Literal ? [] : new ShapeSet();
+        queryStep.property.nodeKind === shacl.Literal || queryStep.count
+          ? []
+          : new ShapeSet();
       (subject as ShapeSet).forEach((singleShape) => {
         let stepResult = singleShape[queryStep.property.label];
         if (queryStep.where) {
@@ -322,9 +324,20 @@ function resolveQueryStep(
           //overwrite the single result with the filtered where result
           stepResult = whereResult;
         }
-        if (!stepResult) {
+        if (queryStep.count) {
+          if (Array.isArray(stepResult)) {
+            stepResult = stepResult.length;
+          } else if (stepResult instanceof Set) {
+            stepResult = stepResult.size;
+          } else {
+            throw Error('Not sure how to count this: ' + stepResult.toString());
+          }
+        }
+
+        if (typeof stepResult === 'undefined' || stepResult === null) {
           return;
         }
+
         if (stepResult instanceof ShapeSet) {
           result = result.concat(stepResult);
         } else if (Array.isArray(stepResult)) {
