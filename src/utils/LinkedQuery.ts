@@ -8,15 +8,8 @@ import {CoreSet} from '../collections/CoreSet';
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
   | ((s: ToQueryValue<S>) => Evaluation);
-export type OriginalValue =
-  | Shape
-  | ShapeSet
-  | string
-  | number
-  | boolean
-  | Date
-  | null
-  | undefined;
+export type JSPrimitive = string | number | boolean | Date | null | undefined;
+export type OriginalValue = Shape | ShapeSet | JSPrimitive;
 
 // export type QueryPrimitive = QueryString;
 export type QueryBuildFn<T extends Shape, ResultType> = (
@@ -26,6 +19,9 @@ export type QueryBuildFn<T extends Shape, ResultType> = (
 
 export type ToQueryShape<T> = {
   [P in keyof T]: ToQueryValue<T[P]>;
+};
+export type ToWhereShape<T> = {
+  [P in keyof T]: ToWhereValue<T[P]>;
 };
 type GetShapeSetType<SS> = SS extends ShapeSet<infer ShapeType>
   ? ShapeType
@@ -44,6 +40,19 @@ export type ToQueryValue<T, I = 0> = T extends ShapeSet
   ? QueryBoolean
   : QueryValue<T>;
 
+export type ToWhereValue<T, I = 0> = T extends ShapeSet
+  ? //a shape set turns into a query-shape set but also inherits all the properties of the shape that each item in the set has
+    WhereShapeSet<GetShapeSetType<T>> & ToWhereShape<GetShapeSetType<T>>
+  : T extends Shape
+  ? ToWhereShape<T> & WhereShape<T>
+  : T extends string
+  ? QueryString
+  : T extends number
+  ? QueryNumber
+  : T extends boolean
+  ? QueryBoolean
+  : QueryValue<T>;
+
 export type ToNormalValue<T> = T extends Count
   ? number[]
   : T extends QueryShapeSet<any>
@@ -54,6 +63,8 @@ export type ToNormalValue<T> = T extends Count
   ? string[]
   : T extends Array<any>
   ? Array<ToNormalValue<GetArrayType<T>>>
+  : T extends Evaluation
+  ? boolean[]
   : T;
 
 export type GetQueryShapeSetType<T> = T extends QueryShapeSet<infer ShapeType>
@@ -392,20 +403,6 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
     return this._count;
   }
 
-  some(validation: WhereClause<S>): Evaluation {
-    return this.someOrEvery(validation, WhereMethods.SOME);
-  }
-  every(validation: WhereClause<S>): Evaluation {
-    return this.someOrEvery(validation, WhereMethods.EVERY);
-  }
-  private someOrEvery(validation: WhereClause<S>, method: WhereMethods) {
-    let leastSpecificShape = this.getOriginalValue().getLeastSpecificShape();
-    //do we need to store this here? or are we accessing the evaluation and then going backwards?
-    //in that case just pass it to the evaluation and don't use this.wherePath
-    this.wherePath = processWhereClause(validation, leastSpecificShape);
-    return new Evaluation(this, method, [this.wherePath]);
-  }
-
   // get testItem() {}
   where(validation: WhereClause<S>): this {
     if (this.getPropertyPath().some((step) => step.where)) {
@@ -417,6 +414,20 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
     this.wherePath = processWhereClause(validation, leastSpecificShape);
     //return this because after person.friends.where() we can call other methods of person.friends
     return this;
+  }
+
+  some(validation: WhereClause<S>): SetEvaluation {
+    return this.someOrEvery(validation, WhereMethods.SOME);
+  }
+  every(validation: WhereClause<S>): SetEvaluation {
+    return this.someOrEvery(validation, WhereMethods.EVERY);
+  }
+  private someOrEvery(validation: WhereClause<S>, method: WhereMethods) {
+    let leastSpecificShape = this.getOriginalValue().getLeastSpecificShape();
+    //do we need to store this here? or are we accessing the evaluation and then going backwards?
+    //in that case just pass it to the evaluation and don't use this.wherePath
+    let wherePath = processWhereClause(validation, leastSpecificShape);
+    return new SetEvaluation(this, method, [wherePath]);
   }
 
   static create<S extends Shape = Shape>(
@@ -592,6 +603,10 @@ class Evaluation {
     return this;
   }
 }
+class SetEvaluation extends Evaluation {}
+
+class WhereShapeSet<S extends Shape = Shape> extends QueryShapeSet<S> {}
+class WhereShape<S extends Shape = Shape> extends QueryShape<S> {}
 
 class QueryBoolean extends QueryValue<boolean> {
   constructor(

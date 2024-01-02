@@ -16,6 +16,7 @@ import {
   WhereEvaluationPath,
   WhereMethods,
   WherePath,
+  JSPrimitive,
 } from './LinkedQuery';
 import {ShapeSet} from '../collections/ShapeSet';
 import {Shape} from '../shapes/Shape';
@@ -39,18 +40,6 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   let localInstances = (query.shape as any).getLocalInstances();
   let results = [];
 
-  // if (
-  //   query.traceResponse instanceof QueryValue &&
-  //   query.traceResponse.wherePath
-  // ) {
-  //TODO: find a way to move the traceResponse wherePath into the queryPaths
-  // because for chained where clauses handling the traceResponse here is incorrect
-  // debugger;
-  // localInstances = resolveWhere(
-  //   localInstances,
-  //   query.traceResponse.wherePath,
-  // );
-  // }
   queryPaths.forEach((queryPath) => {
     results.push(resolveQueryPath(localInstances, queryPath));
   });
@@ -102,9 +91,22 @@ function resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
     result = resolveQueryStep(result, queryStep);
   });
   //return the final value at the end of the path
-  return result as ShapeSet | Shape[] | Shape;
+  return result as ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[];
 }
 
+function evaluateWhere(shape: Shape, method: string, args: any[]): boolean {
+  let filterMethod: Function;
+  if (method === WhereMethods.EQUALS) {
+    filterMethod = resolveWhereEquals;
+  } else if (method === WhereMethods.SOME) {
+    filterMethod = resolveWhereSome;
+  } else if (method === WhereMethods.EVERY) {
+    filterMethod = resolveWhereEvery;
+  } else {
+    throw new Error('Unimplemented where method: ' + method);
+  }
+  return filterMethod.apply(null, [shape, ...args]);
+}
 /**
  * Filters down the given subjects to only those what match the where clause
  * @param subject
@@ -112,76 +114,121 @@ function resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
  * @private
  */
 function resolveWhere(
-  subject: Shape | ShapeSet | QueryValue,
+  subject: ShapeSet | Shape,
   where: WherePath,
-): ShapeSet {
+): ShapeSet | Shape {
+  // if ((where as WhereEvaluationPath).path) {
+  //for nested where clauses the subject will already be a QueryValue
+  //TODO: check if subject is ever not a shape, shapeset or string
+  if (subject instanceof ShapeSet) {
+    return subject.filter((singleShape) => {
+      return evaluate(singleShape, where as WhereEvaluationPath);
+    });
+  } else if (subject instanceof Shape) {
+    return evaluate(subject, where as WhereEvaluationPath) ? subject : null;
+  } else if (typeof subject === 'string') {
+    return evaluate(subject, where as WhereEvaluationPath) ? subject : null;
+  } else {
+    throw Error('Unknown subject type: ' + subject);
+  }
+  //
+  // let convertedSubjects =
+  //   subject instanceof Shape ||
+  //   subject instanceof ShapeSet ||
+  //   typeof subject === 'string'
+  //     ? QueryValue.convertOriginal(subject, null, null)
+  //     : subject;
+  // let queryEndValues = resolveWherePath(
+  //   convertedSubjects,
+  //   (where as WhereEvaluationPath).path,
+  // );
+  //
+  // let filterMethod: Function;
+  // if ((where as WhereEvaluationPath).method === WhereMethods.EQUALS) {
+  //   filterMethod = resolveWhereEquals;
+  // } else if ((where as WhereEvaluationPath).method === WhereMethods.SOME) {
+  //   filterMethod = resolveWhereSome;
+  // } else if ((where as WhereEvaluationPath).method === WhereMethods.EVERY) {
+  //   filterMethod = resolveWhereEvery;
+  // } else {
+  //   throw new Error(
+  //     'Unimplemented where method: ' + (where as WhereEvaluationPath).method,
+  //   );
+  // }
+  //
+  // if (
+  //   queryEndValues instanceof QueryPrimitiveSet ||
+  //   queryEndValues instanceof QueryShapeSet
+  // ) {
+  //   queryEndValues = filterMethod.apply(null, [
+  //     queryEndValues,
+  //     ...(where as WhereEvaluationPath).args,
+  //   ]);
+  // } else if (queryEndValues instanceof QueryValueSetOfSets) {
+  //   queryEndValues = new QueryValueSetOfSets(
+  //     queryEndValues.map((queryEndValue) =>
+  //       filterMethod.apply(null, [
+  //         queryEndValue,
+  //         ...(where as WhereEvaluationPath).args,
+  //       ]),
+  //     ),
+  //   );
+  // } else if (queryEndValues instanceof QueryValue) {
+  //   queryEndValues = filterMethod
+  //     .apply(null, [[queryEndValues], ...(where as WhereEvaluationPath).args])
+  //     .shift();
+  // } else {
+  //   throw new Error(
+  //     'Unimplemented type of subject: ' + (queryEndValues as any).toString(),
+  //   );
+  // }
+  // //once the filtering of the where clause is done, we need to convert the result back to the original shape
+  // //for example Person.select(p => p.friends.where(f => f.name.equals('Semmy')))
+  // //the result of the where clause is an array of names (strings),
+  // //but we need to return the filtered result of p.friends (which is a ShapeSet of Persons)
+  // //TODO: check types
+  // return QueryValue.getOriginalSource(
+  //   queryEndValues as QueryValueSetOfSets,
+  // ) as ShapeSet;
+  // // return null;
+  // // }
+  // } else if ((where as WhereAndOr).andOr) {
+
+  // }
+}
+
+function evaluate(singleShape: Shape, where: WherePath): boolean {
   if ((where as WhereEvaluationPath).path) {
-    //for nested where clauses the subject will already be a QueryValue
-    //TODO: check if subject is ever not a shape, shapeset or string
-    let convertedSubjects =
-      subject instanceof Shape ||
-      subject instanceof ShapeSet ||
-      typeof subject === 'string'
-        ? QueryValue.convertOriginal(subject, null, null)
-        : subject;
-    let queryEndValues = resolveWherePath(
-      convertedSubjects,
+    let shapeEndValue = resolveQueryPath(
+      singleShape,
       (where as WhereEvaluationPath).path,
     );
-
-    let filterMethod: Function;
-    if ((where as WhereEvaluationPath).method === WhereMethods.EQUALS) {
-      filterMethod = resolveWhereEquals;
-    } else if ((where as WhereEvaluationPath).method === WhereMethods.SOME) {
-      filterMethod = resolveWhereSome;
-    } else if ((where as WhereEvaluationPath).method === WhereMethods.EVERY) {
-      filterMethod = resolveWhereEvery;
-    } else {
-      throw new Error(
-        'Unimplemented where method: ' + (where as WhereEvaluationPath).method,
-      );
-    }
-
+    //when multiple values are the subject of the evaluation
+    //and, we're NOT evaluating some() or every()
     if (
-      queryEndValues instanceof QueryPrimitiveSet ||
-      queryEndValues instanceof QueryShapeSet
+      (shapeEndValue instanceof ShapeSet || Array.isArray(shapeEndValue)) &&
+      (where as WhereEvaluationPath).method !== WhereMethods.SOME &&
+      (where as WhereEvaluationPath).method !== WhereMethods.EVERY
     ) {
-      queryEndValues = filterMethod.apply(null, [
-        queryEndValues,
-        ...(where as WhereEvaluationPath).args,
-      ]);
-    } else if (queryEndValues instanceof QueryValueSetOfSets) {
-      queryEndValues = new QueryValueSetOfSets(
-        queryEndValues.map((queryEndValue) =>
-          filterMethod.apply(null, [
-            queryEndValue,
-            ...(where as WhereEvaluationPath).args,
-          ]),
-        ),
-      );
-    } else if (queryEndValues instanceof QueryValue) {
-      queryEndValues = filterMethod
-        .apply(null, [[queryEndValues], ...(where as WhereEvaluationPath).args])
-        .shift();
-    } else {
-      throw new Error(
-        'Unimplemented type of subject: ' + (queryEndValues as any).toString(),
-      );
+      //then by default we use some()
+      //that means, if any of the results matches the where clause, then the subject shape is returned
+      return shapeEndValue.some((singleEndValue) => {
+        return evaluateWhere(
+          singleEndValue as any,
+          (where as WhereEvaluationPath).method,
+          (where as WhereEvaluationPath).args,
+        );
+      });
     }
-    //once the filtering of the where clause is done, we need to convert the result back to the original shape
-    //for example Person.select(p => p.friends.where(f => f.name.equals('Semmy')))
-    //the result of the where clause is an array of names (strings),
-    //but we need to return the filtered result of p.friends (which is a ShapeSet of Persons)
-    //TODO: check types
-    return QueryValue.getOriginalSource(
-      queryEndValues as QueryValueSetOfSets,
-    ) as ShapeSet;
-    // return null;
-    // }
+    return evaluateWhere(
+      shapeEndValue as any,
+      (where as WhereEvaluationPath).method,
+      (where as WhereEvaluationPath).args,
+    );
   } else if ((where as WhereAndOr).andOr) {
     //the first run we simply take the result as the combined result
-    let initialResult: ShapeSet = resolveWhere(
-      subject,
+    let initialResult: boolean = evaluate(
+      singleShape,
       (where as WhereAndOr).firstPath,
     );
 
@@ -192,42 +239,41 @@ function resolveWhere(
     //TODO: prepare this once, before resolveWhere is called. Currently we do this for every results moving through the where clause
     //first we make a new array that tracks the intermediate results.
     //so we resolve all the where paths and add them to an array
-    type AndSet = {and: ShapeSet};
-    type OrSet = {or: ShapeSet};
-    let booleanPaths: (ShapeSet | AndSet | OrSet)[] = [initialResult];
+    type AndSet = {and: boolean};
+    type OrSet = {or: boolean};
+    let booleanPaths: (boolean | AndSet | OrSet)[] = [initialResult];
     (where as WhereAndOr).andOr.forEach((andOr) => {
       if (andOr.and) {
         //if there is an and, we add the result of that and to the array
-        booleanPaths.push({and: resolveWhere(subject, andOr.and)});
+        booleanPaths.push({and: evaluate(singleShape, andOr.and)});
       } else if (andOr.or) {
         //if there is an or, we add the result of that or to the array
-        booleanPaths.push({or: resolveWhere(subject, andOr.or)});
+        booleanPaths.push({or: evaluate(singleShape, andOr.or)});
       }
     });
 
-    //Say that we have: booleanPaths = [ShapeSet,{and:ShapeSet},{or:ShapeSet},{and:ShapeSet}]
+    //Say that we have: booleanPaths = [boolean,{and:boolean},{or:boolean},{and:boolean}]
     //We should first process the AND: by combining the results of 0 & 1 and also 2 & 3
-    //So that it becomes: booleanPaths = [ShapeSet,{or:ShapeSet}]
-    // let previous:any;
+    //So that it becomes: booleanPaths = [boolean,{or:boolean}]
+
     var i = booleanPaths.length;
     while (i--) {
       let previous = booleanPaths[i - 1];
       let current = booleanPaths[i];
 
-      if (!previous) break;
+      if (typeof previous === 'undefined' || typeof current === 'undefined')
+        break;
       //if the previous is a ShapeSet and the current is a ShapeSet, we combine them
-      if ((current as AndSet).and) {
-        let filterFn = (result) => {
-          return (current as AndSet).and.has(result);
-        };
-        if (previous instanceof ShapeSet) {
-          booleanPaths[i - 1] = previous.filter(filterFn);
-        } else if ((previous as OrSet).or) {
-          (previous as OrSet).or = (previous as OrSet).or.filter(filterFn);
-        } else if ((previous as AndSet).and) {
-          (previous as AndSet).and = (previous as AndSet).and.filter(filterFn);
+      if ((current as AndSet).hasOwnProperty('and')) {
+        if (previous.hasOwnProperty('and')) {
+          (booleanPaths[i - 1] as AndSet).and =
+            (previous as AndSet).and && (current as AndSet).and;
+        } else if (previous.hasOwnProperty('or')) {
+          (booleanPaths[i - 1] as OrSet).or =
+            (previous as OrSet).or && (current as AndSet).and;
+        } else if (typeof previous === 'boolean') {
+          booleanPaths[i - 1] = previous && (current as AndSet).and;
         }
-        //remove the current item from the array now that its processed
         booleanPaths.splice(i, 1);
       }
     }
@@ -238,16 +284,19 @@ function resolveWhere(
       let previous = booleanPaths[i - 1];
       let current = booleanPaths[i];
 
-      if (!previous) break;
+      if (typeof previous === 'undefined' || typeof current === 'undefined')
+        break;
 
       //for all or clauses, keep the results that are in either of the sets, so simply combine them
-      if ((current as OrSet).or) {
-        if (previous instanceof ShapeSet) {
-          booleanPaths[i - 1] = previous.concat((current as OrSet).or);
-        } else if ((previous as OrSet).or) {
-          (previous as OrSet).or.concat((previous as OrSet).or);
-        } else if ((previous as AndSet).and) {
-          (previous as AndSet).and.concat((previous as OrSet).or);
+      if ((current as OrSet).hasOwnProperty('or')) {
+        if (previous.hasOwnProperty('and')) {
+          (booleanPaths[i - 1] as AndSet).and =
+            (previous as AndSet).and || (current as OrSet).or;
+        } else if (previous.hasOwnProperty('or')) {
+          (booleanPaths[i - 1] as OrSet).or =
+            (previous as OrSet).or || (current as OrSet).or;
+        } else if (typeof previous === 'boolean') {
+          booleanPaths[i - 1] = previous || (current as OrSet).or;
         }
         //remove the current item from the array now that its processed
         booleanPaths.splice(i, 1);
@@ -258,14 +307,15 @@ function resolveWhere(
         'booleanPaths should only have one item left: ' + booleanPaths.length,
       );
     }
-    return booleanPaths[0] as ShapeSet;
+    //there should only be a single boolean left
+    return booleanPaths[0] as boolean;
   }
 }
 
-function resolveWhereEquals(queryEndValues, otherValue: string) {
-  return queryEndValues.filter((queryEndValue: QueryValue) => {
-    return queryEndValue.getOriginalValue() === otherValue;
-  });
+function resolveWhereEquals(queryEndValue, otherValue: string) {
+  // return queryEndValues.filter((queryEndValue: QueryValue) => {
+  return queryEndValue === otherValue;
+  // });
 }
 function resolveSubWhere(queryEndValues, evaluation: WhereEvaluationPath) {
   //because the intermediate end results of the where clause are the subjects of the some clause
@@ -284,31 +334,52 @@ function resolveSubWhere(queryEndValues, evaluation: WhereEvaluationPath) {
   }
   return matchingSubjects;
 }
-function resolveWhereSome(queryEndValues, evaluation: WhereEvaluationPath) {
-  let matchingSubjects = resolveSubWhere(queryEndValues, evaluation);
-  let res = queryEndValues.filter((queryEndValue) => {
-    return matchingSubjects.has(queryEndValue.getOriginalValue());
+function resolveWhereSome(
+  shapes: ShapeSet<any>,
+  evaluation: WhereEvaluationPath,
+) {
+  return shapes.some((singleShape) => {
+    return evaluate(singleShape, evaluation);
   });
-  return res;
 }
-function resolveWhereEvery(queryEndValues, evaluation: WhereEvaluationPath) {
-  let matchingSubjects = resolveSubWhere(queryEndValues, evaluation);
-
-  //for some() we filter down the queryEndValues, and if any result is left then the source of that result is traced back
-  //this means that for every() we should only allow ANY result if all the queryEndValues are in the matchingSubjects
-
-  //so we filter down the queryEndValues to only those that are in the matchingSubjects
-  return queryEndValues.queryShapes.every((queryEndValue) => {
-    return matchingSubjects.has(queryEndValue.getOriginalValue());
-  })
-    ? queryEndValues
-    : new QueryShapeSet();
+function resolveWhereEvery(shapes, evaluation: WhereEvaluationPath) {
+  //there is an added check to see if there are any shapes
+  // because for example for this query where(p => p.friends.every(f => f.name.equals('Semmy')))
+  // it would be natural to expect that if there are no friends, the query would return false
+  return (
+    shapes.size > 0 &&
+    shapes.every((singleShape) => {
+      return evaluate(singleShape, evaluation);
+    })
+  );
 }
 
 function resolveQueryStep(
   subject: ShapeSet | Shape[] | Shape,
   queryStep: QueryStep,
 ) {
+  //YOU ARE HERE, add implementation for shape, do it DRY
+  if (subject instanceof Shape) {
+    if (queryStep.property) {
+      let result = subject[queryStep.property.label];
+      if (queryStep.where) {
+        //TODO: not thought through yet, we also use this function now to resolve where's itself. what do we want to do here?
+        debugger;
+        let whereResult = resolveWhere(result, queryStep.where);
+        //overwrite the single result with the filtered where result
+        result = whereResult;
+      }
+      return result;
+    } else if (queryStep.where) {
+      //in some cases there is a query step without property but WITH where
+      //this happens when the where clause is on the root of the query
+      //like Person.select(p => p.where(...))
+      //in that case the where clause is directly applied to the given subject
+      debugger;
+      // let whereResult = resolveWhere(subject as ShapeSet, queryStep.where);
+      // return whereResult;
+    }
+  }
   if (subject instanceof ShapeSet) {
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
@@ -318,6 +389,7 @@ function resolveQueryStep(
           ? []
           : new ShapeSet();
       (subject as ShapeSet).forEach((singleShape) => {
+        //directly access the get/set method of the shape
         let stepResult = singleShape[queryStep.property.label];
         if (queryStep.where) {
           let whereResult = resolveWhere(stepResult, queryStep.where);
@@ -359,7 +431,7 @@ function resolveQueryStep(
         }
       });
       return result;
-    } else {
+    } else if (queryStep.where) {
       //in some cases there is a query step without property but WITH where
       //this happens when the where clause is on the root of the query
       //like Person.select(p => p.where(...))
