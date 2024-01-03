@@ -1187,7 +1187,7 @@ function getSourceFromInputProps(props, shapeClass) {
     : //if it's a shape it needs to match the shape of the component, or extend it, if not we recreate the shape
     props.of instanceof Shape &&
       props.of.nodeShape !== shapeClass.shape.node &&
-      !hasSuperClass(getShapeClass(props.of.nodeShape), shapeClass)
+      !hasSuperClass(getShapeClass(props.of.nodeShape.namedNode), shapeClass)
     ? new shapeClass(props.of.namedNode)
     : props.of;
 }
