@@ -144,10 +144,19 @@ export abstract class Shape extends EventEmitter implements IShape {
     // return this.hasProperty(property) ? new (shape as any)(this.getOne(property)) as S : null;
   }
 
-  equals(other) {
+  equals(other,checkShapeType:boolean=false) {
     return (
-      other instanceof Shape && other.node === this.node && Object.getPrototypeOf(other) === Object.getPrototypeOf(this)
+      other instanceof Shape && other.node === this.node && (!checkShapeType || Object.getPrototypeOf(other) === Object.getPrototypeOf(this))
     );
+  }
+
+  static create<T extends Shape>(this: ShapeLike<T>, data: Partial<T>, uri?:string): T {
+    const x = uri ? this.getFromURI(uri) : new this();
+    for (const k in data) {
+      const key = k as keyof typeof this;
+      x[key] = data[key];
+    }
+    return x as T;
   }
 
   /**

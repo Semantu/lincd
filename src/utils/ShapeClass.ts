@@ -76,10 +76,10 @@ function ensureShapeConstructor(shape: typeof Shape | (typeof Shape)[]) {
   //   return shape;
   // }
 }
-function hasSuperClass(a: Function, b: Function) {
+export function hasSuperClass(a: Function, b: Function) {
   return (a as Function).prototype instanceof b;
 }
-function hasSubClass(a: Function, b: Function) {
+export function hasSubClass(a: Function, b: Function) {
   return (b as Function).prototype instanceof a;
 }
 

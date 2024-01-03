@@ -39,7 +39,7 @@ import {Storage} from './Storage';
 import {ShapeSet} from '../collections/ShapeSet';
 import {URI} from './URI';
 import {shacl} from '../ontologies/shacl';
-import {addNodeShapeToShapeClass} from './ShapeClass';
+import {addNodeShapeToShapeClass, getShapeClass, hasSuperClass} from './ShapeClass';
 
 //global tree
 declare var lincd: any;
@@ -1182,7 +1182,14 @@ function registerPackageInTree(packageName, packageExports?) {
 }
 
 function getSourceFromInputProps(props, shapeClass) {
-  return props.of instanceof Node ? new shapeClass(props.of) : props.of;
+  return props.of instanceof Node
+    ? new shapeClass(props.of)
+    : //if it's a shape it needs to match the shape of the component, or extend it, if not we recreate the shape
+    props.of instanceof Shape &&
+      props.of.nodeShape !== shapeClass.shape.node &&
+      !hasSuperClass(getShapeClass(props.of.nodeShape), shapeClass)
+    ? new shapeClass(props.of.namedNode)
+    : props.of;
 }
 
 function getLinkedComponentProps<ShapeType extends Shape, P>(
