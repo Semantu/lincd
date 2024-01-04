@@ -6,6 +6,7 @@
 //import everything from each file that we want to be bundled in the stand-alone dist/lincd.js file
 import * as Module from './utils/Module';
 import * as models from './models';
+import * as FileStorage from './utils/FileStorage';
 import * as Storage from './utils/Storage';
 import * as EventEmitter from './events/EventEmitter';
 import * as NodeURIMappings from './collections/NodeURIMappings';
@@ -67,6 +68,7 @@ export function initModularApp() {
     QuadMap,
     QuadSet,
     models,
+    FileStorage,
     Storage,
     Shape,
     ShapeSet,
