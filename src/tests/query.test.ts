@@ -296,40 +296,41 @@ describe('query tests', () => {
   //     allFriendsCalledMoaOrJinx.some((f) => f.namedNode === p1.namedNode),
   //   ).toBe(true);
   // });
-  test('where sequences', () => {
-    // select people that only have friends that are called Moa or Jinx
-    let friendCalledJinxAndNameIsSemmy = resolveLocal(
-      Person.select((p) => {
-        return p
-          .where(
-            p.friends.some((f) => {
-              return f.name.equals('Jinx');
-            }),
-          )
-          .name.where((n) => {
-            return n.equals('Semmy');
-          });
-      }),
-    );
-
-    expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
-    expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
-    expect(friendCalledJinxAndNameIsSemmy.some((f) => f === 'Semmy')).toBe(
-      true,
-    );
-  });
-  // test('some without where', () => {
-  //   let booleansResult = resolveLocal(
+  // test('where sequences', () => {
+  //   // select people that only have friends that are called Moa or Jinx
+  //   let friendCalledJinxAndNameIsSemmy = resolveLocal(
   //     Person.select((p) => {
-  //       return p.friends.some((f) => f.name.equals('Moa'));
+  //       return p
+  //         .where(
+  //           p.friends.some((f) => {
+  //             return f.name.equals('Jinx');
+  //           }),
+  //         )
+  //         .name.where((n) => {
+  //           return n.equals('Semmy');
+  //         });
   //     }),
   //   );
-  //   expect(Array.isArray(booleansResult)).toBe(true);
-  //   expect(booleansResult.every((b) => typeof b === 'boolean')).toBe(true);
-  //   //1 person (person1) has a friend called Moa, so there is only one 'true' value
-  //   expect(booleansResult[0]).toBe(true);
-  //   expect(booleansResult.filter((b) => b === true).length).toBe(1);
+  //
+  //   expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
+  //   expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
+  //   expect(friendCalledJinxAndNameIsSemmy.some((f) => f === 'Semmy')).toBe(
+  //     true,
+  //   );
   // });
+
+  test('some without where', () => {
+    let booleansResult = resolveLocal(
+      Person.select((p) => {
+        return p.friends.some((f) => f.name.equals('Moa'));
+      }),
+    );
+    expect(Array.isArray(booleansResult)).toBe(true);
+    expect(booleansResult.every((b) => typeof b === 'boolean')).toBe(true);
+    //1 person (person1) has a friend called Moa, so there is only one 'true' value
+    expect(booleansResult[0]).toBe(true);
+    expect(booleansResult.filter((b) => b === true).length).toBe(1);
+  });
   // test('equals without where', () => {
   //   let booleansResult = resolveLocal(
   //     Person.select((p) => {

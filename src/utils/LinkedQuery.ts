@@ -90,7 +90,7 @@ export type WhereEvaluationPath = {
 /**
  * A QueryPath is an array of QuerySteps, representing the path of properties that were requested to reach a certain value
  */
-export type QueryPath = QueryStep[];
+export type QueryPath = QueryStep[] | WherePath;
 
 /**
  * A QueryStep is a single step in a query path
@@ -405,7 +405,7 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
 
   // get testItem() {}
   where(validation: WhereClause<S>): this {
-    if (this.getPropertyPath().some((step) => step.where)) {
+    if ((this.getPropertyPath() as QueryStep[]).some((step) => step.where)) {
       throw new Error(
         'You cannot call where() from within a where() clause. Consider using some() or every() instead',
       );
@@ -567,7 +567,7 @@ export class QueryShape<S extends Shape = Shape> extends QueryValue<S> {
   }
 }
 
-class Evaluation {
+export class Evaluation {
   constructor(
     public value: QueryValue | QueryPrimitiveSet,
     public method: WhereMethods,
@@ -725,13 +725,17 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
     }
     //if it's an object
     else if (typeof this.traceResponse === 'object') {
-      //then loop over all the keys
-      Object.getOwnPropertyNames(this.traceResponse).forEach((key) => {
-        //and add the property paths for each key
-        queryPaths.push(
-          (this.traceResponse[key] as QueryValue).getPropertyPath(),
-        );
-      });
+      if (this.traceResponse instanceof Evaluation) {
+        queryPaths.push(this.traceResponse.getWherePath());
+      } else {
+        //then loop over all the keys
+        Object.getOwnPropertyNames(this.traceResponse).forEach((key) => {
+          //and add the property paths for each key
+          queryPaths.push(
+            (this.traceResponse[key] as QueryValue).getPropertyPath(),
+          );
+        });
+      }
     } else {
       throw Error('Unknown trace response type');
     }

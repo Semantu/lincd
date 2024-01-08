@@ -1,22 +1,18 @@
 import {
+  Evaluation,
+  JSPrimitive,
   LinkedQuery,
-  LinkedWhereQuery,
-  OriginalValue,
   QueryPath,
-  QueryPrimitive,
   QueryPrimitiveSet,
-  QueryShape,
   QueryShapeSet,
-  QueryValueSetOfSets,
   QueryStep,
   QueryValue,
+  QueryValueSetOfSets,
   ToNormalValue,
-  WhereAnd,
   WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
   WherePath,
-  JSPrimitive,
 } from './LinkedQuery';
 import {ShapeSet} from '../collections/ShapeSet';
 import {Shape} from '../shapes/Shape';
@@ -57,7 +53,10 @@ export function resolveLocal<S extends LinkedQuery<any>>(
     return results as any;
   } else if (query.traceResponse instanceof QueryValueSetOfSets) {
     return results.shift();
-  } else if (query.traceResponse instanceof QueryPrimitiveSet) {
+  } else if (
+    query.traceResponse instanceof QueryPrimitiveSet ||
+    query.traceResponse instanceof Evaluation
+  ) {
     //TODO: see how traceResponse is made for QueryValue. Here we need to return an array of the first item in the results?
     //does that also work if there is multiple values?
     //do we need to check the size of the traceresponse
@@ -69,27 +68,39 @@ export function resolveLocal<S extends LinkedQuery<any>>(
 }
 
 // return this.getOriginalSource(endValue);
-function resolveWherePath(
+/*function resolveWherePath(
   subject: QueryValue | QueryValueSetOfSets,
   queryPath: QueryPath,
 ) {
   //TODO: check overlap with resolveQueryPath, maybe this one can be removed?
   //start with the subject as the current "end result"
   let result: QueryValue | QueryValueSetOfSets | QueryPrimitiveSet = subject;
-  queryPath.forEach((queryStep) => {
-    //then resolve each of the query steps and use the result as the new subject for the next step
-    result = resolveWhereStep(result, queryStep);
-  });
+  if (Array.isArray(queryPath)) {
+    queryPath.forEach((queryStep) => {
+      //then resolve each of the query steps and use the result as the new subject for the next step
+      result = resolveWhereStep(result, queryStep as QueryStep);
+    });
+  } else {
+    result = resolveWhere(subject, queryPath as WherePath);
+  }
+
   //return the final value at the end of the path
   return result;
-}
+}*/
+
 function resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
   //start with the local instance as the subject
-  let result: ShapeSet | Shape[] | Shape = subject;
-  queryPath.forEach((queryStep) => {
-    //then resolve each of the query steps and use the result as the new subject for the next step
-    result = resolveQueryStep(result, queryStep);
-  });
+  let result: ShapeSet | Shape[] | Shape | boolean[] = subject;
+  if (Array.isArray(queryPath)) {
+    queryPath.forEach((queryStep) => {
+      //then resolve each of the query steps and use the result as the new subject for the next step
+      result = resolveQueryStep(result as ShapeSet | Shape, queryStep);
+    });
+  } else {
+    result = (subject as ShapeSet).map((singleShape) => {
+      return evaluate(singleShape, queryPath as WherePath);
+    });
+  }
   //return the final value at the end of the path
   return result as ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[];
 }
@@ -107,6 +118,7 @@ function evaluateWhere(shape: Shape, method: string, args: any[]): boolean {
   }
   return filterMethod.apply(null, [shape, ...args]);
 }
+
 /**
  * Filters down the given subjects to only those what match the where clause
  * @param subject
@@ -317,6 +329,7 @@ function resolveWhereEquals(queryEndValue, otherValue: string) {
   return queryEndValue === otherValue;
   // });
 }
+
 function resolveSubWhere(queryEndValues, evaluation: WhereEvaluationPath) {
   //because the intermediate end results of the where clause are the subjects of the some clause
   //we need to mark those intermediate end results as the source (root) of the some clause
@@ -334,6 +347,7 @@ function resolveSubWhere(queryEndValues, evaluation: WhereEvaluationPath) {
   }
   return matchingSubjects;
 }
+
 function resolveWhereSome(
   shapes: ShapeSet<any>,
   evaluation: WhereEvaluationPath,
@@ -342,6 +356,7 @@ function resolveWhereSome(
     return evaluate(singleShape, evaluation);
   });
 }
+
 function resolveWhereEvery(shapes, evaluation: WhereEvaluationPath) {
   //there is an added check to see if there are any shapes
   // because for example for this query where(p => p.friends.every(f => f.name.equals('Semmy')))
@@ -358,91 +373,118 @@ function resolveQueryStep(
   subject: ShapeSet | Shape[] | Shape,
   queryStep: QueryStep,
 ) {
-  //YOU ARE HERE, add implementation for shape, do it DRY
   if (subject instanceof Shape) {
-    if (queryStep.property) {
-      let result = subject[queryStep.property.label];
-      if (queryStep.where) {
-        //TODO: not thought through yet, we also use this function now to resolve where's itself. what do we want to do here?
-        debugger;
-        let whereResult = resolveWhere(result, queryStep.where);
-        //overwrite the single result with the filtered where result
-        result = whereResult;
-      }
-      return result;
-    } else if (queryStep.where) {
-      //in some cases there is a query step without property but WITH where
-      //this happens when the where clause is on the root of the query
-      //like Person.select(p => p.where(...))
-      //in that case the where clause is directly applied to the given subject
-      debugger;
-      // let whereResult = resolveWhere(subject as ShapeSet, queryStep.where);
-      // return whereResult;
-    }
+    // if (
+    //   (queryStep as QueryStep).property ||
+    //   (queryStep as QueryStep).where
+    // ) {
+    //TODO: review differences between shape vs shapes and make it DRY
+    return resolveQueryStepForShape(queryStep as QueryStep, subject);
+    // } else if ((queryStep as WhereEvaluationPath).method) {
+    //   debugger;
+    // } else if ((queryStep as WhereAndOr).andOr) {
+    //   debugger;
+    // }
   }
   if (subject instanceof ShapeSet) {
-    //if the propertyshape states that it only accepts literal values in the graph,
-    // then the result will be an Array
-    if (queryStep.property) {
-      let result =
-        queryStep.property.nodeKind === shacl.Literal || queryStep.count
-          ? []
-          : new ShapeSet();
-      (subject as ShapeSet).forEach((singleShape) => {
-        //directly access the get/set method of the shape
-        let stepResult = singleShape[queryStep.property.label];
-        if (queryStep.where) {
-          let whereResult = resolveWhere(stepResult, queryStep.where);
-          //overwrite the single result with the filtered where result
-          stepResult = whereResult;
-        }
-        if (queryStep.count) {
-          if (Array.isArray(stepResult)) {
-            stepResult = stepResult.length;
-          } else if (stepResult instanceof Set) {
-            stepResult = stepResult.size;
-          } else {
-            throw Error('Not sure how to count this: ' + stepResult.toString());
-          }
-        }
-
-        if (typeof stepResult === 'undefined' || stepResult === null) {
-          return;
-        }
-
-        if (stepResult instanceof ShapeSet) {
-          result = result.concat(stepResult);
-        } else if (Array.isArray(stepResult)) {
-          result = result.concat(stepResult);
-        } else if (stepResult instanceof Shape) {
-          (result as ShapeSet).add(stepResult);
-        } else if (primitiveTypes.includes(typeof stepResult)) {
-          (result as any[]).push(stepResult);
-        } else {
-          throw Error(
-            'Unknown result type: ' +
-              typeof stepResult +
-              ' for property ' +
-              queryStep.property.label +
-              ' on shape ' +
-              singleShape.toString() +
-              ')',
-          );
-        }
-      });
-      return result;
-    } else if (queryStep.where) {
-      //in some cases there is a query step without property but WITH where
-      //this happens when the where clause is on the root of the query
-      //like Person.select(p => p.where(...))
-      //in that case the where clause is directly applied to the given subject
-      let whereResult = resolveWhere(subject, queryStep.where);
-      return whereResult;
-    }
+    // if (
+    //   (queryStep as QueryStep).property ||
+    //   (queryStep as QueryStep).where
+    // ) {
+    return resolveQueryStepForShapes(queryStep as QueryStep, subject);
+    // } else if ((queryStep as WhereEvaluationPath).method) {
+    //   debugger;
+    // } else if ((queryStep as WhereAndOr).andOr) {
+    //   debugger;
+    // }
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);
   }
 }
+
+function resolveQueryStepForShape(queryStep: QueryStep, subject: Shape) {
+  if (queryStep.property) {
+    let result = subject[queryStep.property.label];
+    if (queryStep.where) {
+      //TODO: not thought through yet, we also use this function now to resolve where's itself. what do we want to do here?
+      debugger;
+      let whereResult = resolveWhere(result, queryStep.where);
+      //overwrite the single result with the filtered where result
+      result = whereResult;
+    }
+    return result;
+  } else if (queryStep.where) {
+    //in some cases there is a query step without property but WITH where
+    //this happens when the where clause is on the root of the query
+    //like Person.select(p => p.where(...))
+    //in that case the where clause is directly applied to the given subject
+    debugger;
+    // let whereResult = resolveWhere(subject as ShapeSet, queryStep.where);
+    // return whereResult;
+  }
+}
+
+function resolveQueryStepForShapes(queryStep: QueryStep, subject: ShapeSet) {
+  if (queryStep.property) {
+    //if the propertyshape states that it only accepts literal values in the graph,
+    // then the result will be an Array
+    let result;
+    queryStep.property.nodeKind === shacl.Literal || queryStep.count
+      ? []
+      : new ShapeSet();
+    (subject as ShapeSet).forEach((singleShape) => {
+      //directly access the get/set method of the shape
+      let stepResult = singleShape[queryStep.property.label];
+      if (queryStep.where) {
+        let whereResult = resolveWhere(stepResult, queryStep.where);
+        //overwrite the single result with the filtered where result
+        stepResult = whereResult;
+      }
+      if (queryStep.count) {
+        if (Array.isArray(stepResult)) {
+          stepResult = stepResult.length;
+        } else if (stepResult instanceof Set) {
+          stepResult = stepResult.size;
+        } else {
+          throw Error('Not sure how to count this: ' + stepResult.toString());
+        }
+      }
+
+      if (typeof stepResult === 'undefined' || stepResult === null) {
+        return;
+      }
+
+      if (stepResult instanceof ShapeSet) {
+        result = result.concat(stepResult);
+      } else if (Array.isArray(stepResult)) {
+        result = result.concat(stepResult);
+      } else if (stepResult instanceof Shape) {
+        (result as ShapeSet).add(stepResult);
+      } else if (primitiveTypes.includes(typeof stepResult)) {
+        (result as any[]).push(stepResult);
+      } else {
+        throw Error(
+          'Unknown result type: ' +
+            typeof stepResult +
+            ' for property ' +
+            queryStep.property.label +
+            ' on shape ' +
+            singleShape.toString() +
+            ')',
+        );
+      }
+    });
+    return result;
+  } else if (queryStep.where) {
+    //in some cases there is a query step without property but WITH where
+    //this happens when the where clause is on the root of the query
+    //like Person.select(p => p.where(...))
+    //in that case the where clause is directly applied to the given subject
+    let whereResult = resolveWhere(subject, queryStep.where);
+    return whereResult;
+  }
+}
+
 function resolveWhereStep(
   subject: QueryValue | QueryPrimitiveSet | QueryValueSetOfSets,
   queryStep: QueryStep,
