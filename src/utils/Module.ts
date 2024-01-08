@@ -35,7 +35,7 @@ import {npm} from '../ontologies/npm';
 import React, {createElement, useEffect, useState} from 'react';
 import {rdfs} from '../ontologies/rdfs';
 import {NodeSet} from '../collections/NodeSet';
-import {Storage} from './Storage';
+import {LinkedStorage} from './LinkedStorage';
 import {ShapeSet} from '../collections/ShapeSet';
 import {URI} from './URI';
 import {shacl} from '../ontologies/shacl';
@@ -356,13 +356,13 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         return null;
       }
       //if we're not using any storage in this LINCD app, don't do any data loading
-      let usingStorage = Storage.isInitialised();
+      let usingStorage = LinkedStorage.isInitialised();
 
       let [isLoaded, setIsLoaded] = useState<any>(undefined);
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
         if (!props.isBound && usingStorage) {
-          let cachedRequest = Storage.isLoaded(linkedProps.source.node, dataRequest);
+          let cachedRequest = LinkedStorage.isLoaded(linkedProps.source.node, dataRequest);
           //if these properties were requested before and have finished loading
           if (cachedRequest === true) {
             //then we can set state to loaded straight away
@@ -370,7 +370,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
           } else if (cachedRequest === false) {
             //if we did not request all these properties before then we continue to
             // load the required PropertyShapes from storage for this specific source
-            Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
+            LinkedStorage.loadShape(linkedProps.source, dataRequest).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
             });
@@ -395,7 +395,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded = Storage.isLoaded(linkedProps.source.node, dataRequest) === true;
+        dataIsLoaded = LinkedStorage.isLoaded(linkedProps.source.node, dataRequest) === true;
       }
 
       //if the data is loaded
@@ -459,7 +459,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     >(requiredData, functionalComponent, true);
 
     //if we're not using any storage in this LINCD app, don't do any data loading
-    let usingStorage = Storage.isInitialised();
+    let usingStorage = LinkedStorage.isInitialised();
 
     //create a new functional component which wraps the original
     let _wrappedComponent: LinkedFunctionalSetComponent<DeclaredProps, ShapeType> = (
@@ -486,7 +486,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
         if (!props.isBound && usingStorage) {
-          let cachedRequest = Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest);
+          let cachedRequest = LinkedStorage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest);
           //if these properties were requested before and have finished loading
           if (cachedRequest === true) {
             //we can set state to reflect that
@@ -495,7 +495,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             //if we did not request all these properties before then we continue to load them all
             //load the required PropertyShapes from storage for this specific source
             //we bypass cache because already checked cache ourselves above
-            Storage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
+            LinkedStorage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
               //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
             });
@@ -523,7 +523,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded = Storage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest) === true;
+        dataIsLoaded = LinkedStorage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest) === true;
       }
       //if the data is loaded
       if (dataIsLoaded) {

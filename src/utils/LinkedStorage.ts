@@ -14,7 +14,7 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {LinkedDataRequest, TransformedLinkedDataResponse} from '../interfaces/Component';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass';
 
-export abstract class Storage {
+export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
   private static _initialized: boolean;
   private static graphToStore: CoreMap<Graph, IQuadStore> = new CoreMap();
@@ -281,6 +281,10 @@ export abstract class Storage {
     return movedQuads;
   }
 
+  /**
+   *
+   * @returns a promise that resolves when all storage events have been processed. For example shapes that are saved() have been stored and received a permanent URI.
+   */
   static async promiseUpdated(): Promise<void> {
     if (this.defaultStore) {
       await this.defaultStore.init();
@@ -655,7 +659,7 @@ export abstract class Storage {
       return quads;
     });
     //update the cache to indicate these property shapes are being loaded for these nodes
-    Storage.setNodesLoaded(nodes, shapeOrRequest, loadPromise);
+    LinkedStorage.setNodesLoaded(nodes, shapeOrRequest, loadPromise);
     return loadPromise;
   }
 
