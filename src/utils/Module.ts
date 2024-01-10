@@ -39,8 +39,9 @@ import {rdf} from '../ontologies/rdf';
 import {Storage} from './Storage';
 import {URI} from './URI';
 import {addNodeShapeToShapeClass} from './ShapeClass';
-import {LinkedQuery} from './LinkedQuery';
+import {LinkedQuery, QueryPath} from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
+import {resolveLocal} from './LocalQueryResolver';
 
 //global tree
 declare var lincd: any;
@@ -227,7 +228,10 @@ export interface LinkedPackageObject {
    * ```
    */
   linkedComponent<ShapeType extends Shape, DeclaredProps = {}>(
-    requiredData: typeof Shape | LinkedDataDeclaration<ShapeType>,
+    requiredData:
+      | typeof Shape
+      | LinkedDataDeclaration<ShapeType>
+      | LinkedQuery<ShapeType>,
     // dataDeclarationOrComponent:FunctionalComponent<P,ShapeType>|LinkedDataDeclaration<ShapeType>,
     functionalComponent: LinkableFunctionalComponent<DeclaredProps, ShapeType>,
   ): LinkedFunctionalComponent<DeclaredProps, ShapeType>;
@@ -470,15 +474,21 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         // but really we should find a way to send the data to the frontend for initial page loads AND notify storage that that data is loaded
         // then this check can be turned off. We can possibly do this with RDFA (rdf in html), then we can probably parse the data from the html, whilst rendering it on the server in one go.
         if (dataIsLoaded && typeof window !== 'undefined') {
-          //if the component used a Shape.requestSet() data declaration function
-          if (dataDeclaration) {
-            //then use that now to get the requested linkedData for this instance
-            linkedProps.linkedData = getLinkedDataResponse(
-              dataDeclaration.request,
+          if (dataRequest) {
+            linkedProps.linkedData = resolveLinkedQuery(
+              requiredData as LinkedQuery<any>,
               linkedProps.source,
-              tracedDataResponse as TransformedLinkedDataResponse,
             );
           }
+          //if the component used a Shape.requestSet() data declaration function
+          // if (dataDeclaration) {
+          //   //then use that now to get the requested linkedData for this instance
+          //   linkedProps.linkedData = getLinkedDataResponse(
+          //     dataDeclaration.request,
+          //     linkedProps.source,
+          //     tracedDataResponse as TransformedLinkedDataResponse,
+          //   );
+          // }
 
           // //render the original components with the original + generated properties
           return React.createElement(functionalComponent, linkedProps);
@@ -904,7 +914,7 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
   setComponent: boolean = false,
 ) {
   let shapeClass: typeof Shape;
-  let dataRequest: LinkedDataRequest;
+  let dataRequest: LinkedDataRequest | QueryPath[];
   let tracedDataResponse: TransformedLinkedDataResponse;
   let dataDeclaration:
     | LinkedDataSetDeclaration<ShapeType>
@@ -921,6 +931,12 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
     // dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : [];
   } else if (requiredData instanceof LinkedQuery) {
     // [dataRequest, tracedDataResponse] = requiredData.toQueryObject();
+    dataRequest = requiredData.getQueryPaths();
+    shapeClass = requiredData.shape as any;
+    dataDeclaration = {
+      request: dataRequest as any,
+      shape: shapeClass,
+    };
   } else {
     //requiredData is a LinkedDataDeclaration or a LinkedDataSetDeclaration
     dataDeclaration = requiredData as
@@ -954,6 +970,14 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
     );
   }
   return [shapeClass, dataRequest, dataDeclaration, tracedDataResponse];
+}
+function resolveLinkedQuery(
+  linkedQuery: LinkedQuery<any>,
+  source: Shape | ShapeSet,
+) {
+  return resolveLocal(linkedQuery, source);
+  // let linkedData = Storage.query(genericQuery, source.shape);
+  // return linkedData;
 }
 
 function getLinkedDataResponse<ShapeType extends Shape>(

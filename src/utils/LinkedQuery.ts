@@ -412,8 +412,9 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
     }
     let leastSpecificShape = this.getOriginalValue().getLeastSpecificShape();
     this.wherePath = processWhereClause(validation, leastSpecificShape);
-    //return this because after person.friends.where() we can call other methods of person.friends
-    return this;
+    //return this.proxy because after person.friends.where() we can call other methods of person.friends
+    //and for that we need the proxy
+    return this.proxy;
   }
 
   some(validation: WhereClause<S>): SetEvaluation {
@@ -666,6 +667,12 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
         'This should never happen? Not implemented: get property path for a QueryPrimitiveSet with multiple values',
       );
     }
+    //here we let the first item in the set return its property path, because all items will be the same
+    //however, sometimes the path goes through the subject of this SET rather than the individual items (which have an individual shape as subject)
+    //so we pass the subject of this set so it can be used
+    let first = this.first();
+    first.subject.wherePath = first.subject.wherePath || this.subject.wherePath;
+    first.subject._count = first.subject._count || this.subject._count;
     return this.first().getPropertyPath();
   }
 }

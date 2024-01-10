@@ -16,7 +16,7 @@ import {
   LinkedDataRequest,
 } from '../interfaces/Component';
 
-class TestStore implements IQuadStore {
+export class TestStore implements IQuadStore {
   defaultGraph = Graph.create();
   contents: QuadSet = new QuadSet();
 

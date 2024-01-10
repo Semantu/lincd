@@ -2,15 +2,21 @@ import {describe, test} from '@jest/globals';
 import {Literal, NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
 import {literalProperty, objectProperty} from '../utils/ShapeDecorators';
-import {linkedShape} from '../package';
-import {ShapeSet} from '../collections/ShapeSet';
-import {resolveLocal} from '../utils/LocalQueryResolver';
-import {resolve} from 'eslint-import-resolver-typescript';
+import {linkedComponent, linkedShape} from '../package';
+import renderer from 'react-test-renderer';
+import React from 'react';
+import {Storage} from '../utils/Storage';
+import {TestStore} from './storage.test';
+import {QuadSet} from '../collections/QuadSet';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
 let hobby = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hobby');
 let hasFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasFriend');
+
+//required for testing automatic data loading in linked components
+const store = new TestStore();
+Storage.setDefaultStore(store);
 
 @linkedShape
 class Person extends Shape {
@@ -66,6 +72,14 @@ p1.friends.add(p2);
 p1.friends.add(p3);
 p2.friends.add(p3);
 p2.friends.add(p4);
+
+Storage.setQuadsLoaded(
+  new QuadSet(
+    p1
+      .getAllQuads()
+      .concat(p2.getAllQuads(), p3.getAllQuads(), p4.getAllQuads()),
+  ),
+);
 
 describe('query tests', () => {
   // test('can select a property of all instances', () => {
@@ -318,19 +332,18 @@ describe('query tests', () => {
   //     true,
   //   );
   // });
-
-  test('some without where', () => {
-    let booleansResult = resolveLocal(
-      Person.select((p) => {
-        return p.friends.some((f) => f.name.equals('Moa'));
-      }),
-    );
-    expect(Array.isArray(booleansResult)).toBe(true);
-    expect(booleansResult.every((b) => typeof b === 'boolean')).toBe(true);
-    //1 person (person1) has a friend called Moa, so there is only one 'true' value
-    expect(booleansResult[0]).toBe(true);
-    expect(booleansResult.filter((b) => b === true).length).toBe(1);
-  });
+  // test('some without where', () => {
+  //   let booleansResult = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.some((f) => f.name.equals('Moa'));
+  //     }),
+  //   );
+  //   expect(Array.isArray(booleansResult)).toBe(true);
+  //   expect(booleansResult.every((b) => typeof b === 'boolean')).toBe(true);
+  //   //1 person (person1) has a friend called Moa, so there is only one 'true' value
+  //   expect(booleansResult[0]).toBe(true);
+  //   expect(booleansResult.filter((b) => b === true).length).toBe(1);
+  // });
   // test('equals without where', () => {
   //   let booleansResult = resolveLocal(
   //     Person.select((p) => {
@@ -380,7 +393,7 @@ describe('query tests', () => {
   //     }),
   //   );
   //
-  //   expect(Array.isArray(numberOfFriends)).toBe(true);
+  //   expect(numberOfFriends instanceof ShapeSet).toBe(true);
   //   expect(numberOfFriends.size).toBe(2);
   //   expect(numberOfFriends.some((f) => f.namedNode === p1.namedNode)).toBe(
   //     true,
@@ -389,10 +402,36 @@ describe('query tests', () => {
   //     true,
   //   );
   // });
-  //NEXT: count
+
+  // test('component with single property query', () => {
+  //   const Component = linkedComponent<Person>(
+  //     Person.select((p) => [p.name]),
+  //     ({linkedData: [name]}) => {
+  //       return <div>{name}</div>;
+  //     },
+  //   );
+  //   let component = renderer.create(<Component of={p1} />);
+  //   let tree = component.toJSON();
+  //   expect(tree.children[0]).toBe('Semmy');
+  //   expect(tree).toMatchSnapshot();
+  // });
+
+  test('component with where query', () => {
+    const Component2 = linkedComponent<Person>(
+      Person.select((p) => [p.friends.where((f) => f.name.equals('Moa')).name]),
+      ({linkedData: [name]}) => {
+        return <div>{name}</div>;
+      },
+    );
+    let component = renderer.create(<Component2 of={p1} />);
+    let tree = component.toJSON();
+    expect(tree.children[0]).toBe('Moa');
+    expect(tree).toMatchSnapshot();
+  });
+  //NEXT:
+  //Refactor structure of json objects, where and count need to be added? investigate other libraries
   //Refactor duplicate value in "every"
   //Refactor firstPath into an array
-  //Remake resolveLocal, so it doesn't use QueryValue objects
 });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something

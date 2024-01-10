@@ -31,13 +31,14 @@ type GetQueryResponseType<Q> = Q extends LinkedQuery<any, infer ResponseType>
  */
 export function resolveLocal<S extends LinkedQuery<any>>(
   query: S,
+  subject?: ShapeSet | Shape,
 ): ToNormalValue<GetQueryResponseType<S>> {
   let queryPaths = query.getQueryPaths();
-  let localInstances = (query.shape as any).getLocalInstances();
+  subject = subject || (query.shape as any).getLocalInstances();
   let results = [];
 
   queryPaths.forEach((queryPath) => {
-    results.push(resolveQueryPath(localInstances, queryPath));
+    results.push(resolveQueryPath(subject, queryPath));
   });
 
   // convert the result of each instance into the shape that was requested
@@ -407,10 +408,19 @@ function resolveQueryStepForShape(queryStep: QueryStep, subject: Shape) {
     let result = subject[queryStep.property.label];
     if (queryStep.where) {
       //TODO: not thought through yet, we also use this function now to resolve where's itself. what do we want to do here?
-      debugger;
+      // debugger;
       let whereResult = resolveWhere(result, queryStep.where);
       //overwrite the single result with the filtered where result
       result = whereResult;
+    }
+    if (queryStep.count) {
+      if (Array.isArray(result)) {
+        result = result.length;
+      } else if (result instanceof Set) {
+        result = result.size;
+      } else {
+        throw Error('Not sure how to count this: ' + result.toString());
+      }
     }
     return result;
   } else if (queryStep.where) {
@@ -428,10 +438,10 @@ function resolveQueryStepForShapes(queryStep: QueryStep, subject: ShapeSet) {
   if (queryStep.property) {
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
-    let result;
-    queryStep.property.nodeKind === shacl.Literal || queryStep.count
-      ? []
-      : new ShapeSet();
+    let result =
+      queryStep.property.nodeKind === shacl.Literal || queryStep.count
+        ? []
+        : new ShapeSet();
     (subject as ShapeSet).forEach((singleShape) => {
       //directly access the get/set method of the shape
       let stepResult = singleShape[queryStep.property.label];
