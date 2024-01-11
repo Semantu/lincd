@@ -39,7 +39,7 @@ import {rdf} from '../ontologies/rdf';
 import {Storage} from './Storage';
 import {URI} from './URI';
 import {addNodeShapeToShapeClass} from './ShapeClass';
-import {LinkedQuery, QueryPath} from './LinkedQuery';
+import {LinkedQuery, QueryPath, QueryShape, QueryStep} from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
 import {resolveLocal} from './LocalQueryResolver';
 
@@ -478,6 +478,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             linkedProps.linkedData = resolveLinkedQuery(
               requiredData as LinkedQuery<any>,
               linkedProps.source,
+              dataRequest,
             );
           }
           //if the component used a Shape.requestSet() data declaration function
@@ -974,8 +975,9 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
 function resolveLinkedQuery(
   linkedQuery: LinkedQuery<any>,
   source: Shape | ShapeSet,
+  dataRequest: QueryPath[],
 ) {
-  return resolveLocal(linkedQuery, source);
+  return resolveLocal(linkedQuery, source, dataRequest);
   // let linkedData = Storage.query(genericQuery, source.shape);
   // return linkedData;
 }
@@ -1271,7 +1273,8 @@ export function initTree() {
 
 function bindComponentToData<P, ShapeType extends Shape>(
   tracedDataResponse: TransformedLinkedDataResponse,
-  source: Node | Shape,
+  // source: Node | Shape,
+  source: QueryShape,
 ): BoundComponentFactory<P, ShapeType> {
   return {
     _comp: this,
@@ -1281,7 +1284,7 @@ function bindComponentToData<P, ShapeType extends Shape>(
 
         //add this result as the source of the bound child component
         let newProps = {...props};
-        newProps['of'] = source as Node | ShapeType;
+        newProps['of'] = source.getOriginalValue(); // as Node | ShapeType;
 
         //let the LinkedComponent know that it was bound,
         //that means it can expect its data to have been loaded by its parent
@@ -1291,6 +1294,15 @@ function bindComponentToData<P, ShapeType extends Shape>(
         return React.createElement(this, newProps);
       };
       return boundComponent;
+    },
+    getPropertyPath: () => {
+      //get the path that is passed to Component.of(some.path.here)
+      let sourcePath = source.getPropertyPath() as QueryStep[];
+      //add the path steps that this component itself requires (so we are combining the data request of 2 components)
+      this.dataRequest.forEach((queryStep) => {
+        sourcePath.push(queryStep);
+      });
+      return sourcePath;
     },
   };
 }

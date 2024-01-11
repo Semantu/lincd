@@ -4,12 +4,27 @@ import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
 import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
+import {Node} from '../models';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
   | ((s: ToQueryValue<S>) => Evaluation);
 export type JSPrimitive = string | number | boolean | Date | null | undefined;
 export type OriginalValue = Shape | ShapeSet | JSPrimitive;
+
+export type GetQueryResponseType<Q> = Q extends LinkedQuery<
+  any,
+  infer ResponseType
+>
+  ? ResponseType
+  : never;
+
+export type GetQueryFnResponseType<Q> = Q extends QueryBuildFn<
+  any,
+  infer ResponseType
+>
+  ? ResponseType
+  : never;
 
 // export type QueryPrimitive = QueryString;
 export type QueryBuildFn<T extends Shape, ResultType> = (
@@ -55,6 +70,8 @@ export type ToWhereValue<T, I = 0> = T extends ShapeSet
 
 export type ToNormalValue<T> = T extends Count
   ? number[]
+  : T extends LinkedQuery<any, any>
+  ? GetQueryResponseType<T>[]
   : T extends QueryShapeSet<any>
   ? ShapeSet<GetQueryShapeSetType<T>>
   : T extends QueryShape<any>
@@ -82,15 +99,20 @@ export type GetQueryShapeType<T> = T extends QueryShape<infer ShapeType>
 export type WherePath = WhereEvaluationPath | WhereAndOr;
 
 export type WhereEvaluationPath = {
-  path: QueryPath;
+  path: QueryPropertyPath;
   method: WhereMethods;
   args: any[];
 };
 
+export type SubQueryPaths = QueryPath[];
 /**
  * A QueryPath is an array of QuerySteps, representing the path of properties that were requested to reach a certain value
  */
-export type QueryPath = QueryStep[] | WherePath;
+export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
+/**
+ * Much like a querypath, except it can only contain QuerySteps
+ */
+export type QueryPropertyPath = QueryStep[];
 
 /**
  * A QueryStep is a single step in a query path
@@ -143,15 +165,15 @@ export class QueryValue<S extends Object = any> {
   /**
    * Returns the path of properties that were requested to reach this value
    */
-  getPropertyPath(): QueryPath {
-    let path: QueryPath = [];
+  getPropertyPath(): QueryPropertyPath {
+    let path: QueryPropertyPath = [];
     let current: QueryValue = this;
     while (current && (current.property || current.wherePath)) {
       path.unshift({
         property: current.property,
         where: current.wherePath,
         count: current._count,
-      });
+      } as QueryStep);
       current = current.subject;
     }
     return path;
@@ -417,6 +439,22 @@ export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
     return this.proxy;
   }
 
+  select<QF = unknown>(subQueryFn: QueryBuildFn<S, QF>): LinkedQuery<S, QF> {
+    let leastSpecificShape = this.getOriginalValue().getLeastSpecificShape();
+    let subQuery = new LinkedQuery(leastSpecificShape, subQueryFn);
+    subQuery.parentQueryPath = this.getPropertyPath();
+    return subQuery as any;
+  }
+
+  // static select<T extends Shape, S = unknown>(
+  //   this: {new (node: Node): T; targetClass: any},
+  //   // this: typeof Shape,
+  //   selectFn: QueryBuildFn<T, S>,
+  // ): LinkedQuery<T, S> {
+  //   const query = new LinkedQuery<T, S>(this as any, selectFn);
+  //   return query;
+  // }
+
   some(validation: WhereClause<S>): SetEvaluation {
     return this.someOrEvery(validation, WhereMethods.SOME);
   }
@@ -661,7 +699,7 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
   equals(other: P) {
     return new Evaluation(this, WhereMethods.EQUALS, [other]);
   }
-  getPropertyPath(): QueryPath {
+  getPropertyPath(): QueryPropertyPath {
     if (this.size > 1) {
       throw new Error(
         'This should never happen? Not implemented: get property path for a QueryPrimitiveSet with multiple values',
@@ -684,7 +722,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
    * @private
    */
   public traceResponse: ResponseType;
-
+  public parentQueryPath: QueryPath;
   constructor(
     public shape: T,
     private queryBuildFn: QueryBuildFn<T, ResponseType>,
@@ -729,22 +767,27 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
     } else if (this.traceResponse instanceof QueryValue) {
       //if it's a single value, then only one path was requested, and we can add it directly
       queryPaths.push(this.traceResponse.getPropertyPath());
+    } else if (this.traceResponse instanceof Evaluation) {
+      queryPaths.push(this.traceResponse.getWherePath());
+    } else if (this.traceResponse instanceof LinkedQuery) {
+      queryPaths.push(
+        (this.traceResponse as LinkedQuery<any, any>).getQueryPaths() as any,
+      );
     }
     //if it's an object
     else if (typeof this.traceResponse === 'object') {
-      if (this.traceResponse instanceof Evaluation) {
-        queryPaths.push(this.traceResponse.getWherePath());
-      } else {
-        //then loop over all the keys
-        Object.getOwnPropertyNames(this.traceResponse).forEach((key) => {
-          //and add the property paths for each key
-          queryPaths.push(
-            (this.traceResponse[key] as QueryValue).getPropertyPath(),
-          );
-        });
-      }
+      //then loop over all the keys
+      Object.getOwnPropertyNames(this.traceResponse).forEach((key) => {
+        //and add the property paths for each key
+        queryPaths.push(
+          (this.traceResponse[key] as QueryValue).getPropertyPath(),
+        );
+      });
     } else {
       throw Error('Unknown trace response type');
+    }
+    if (this.parentQueryPath) {
+      queryPaths = (this.parentQueryPath as any[]).concat([queryPaths]);
     }
     return queryPaths;
   }
@@ -765,7 +808,7 @@ class Count extends QueryPrimitiveSet<number> {
   constructor(public subject: QueryShapeSet) {
     super();
   }
-  getPropertyPath(): QueryPath {
+  getPropertyPath(): QueryPropertyPath {
     return this.subject.getPropertyPath();
   }
 }

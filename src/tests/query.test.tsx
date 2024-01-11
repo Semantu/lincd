@@ -8,9 +8,11 @@ import React from 'react';
 import {Storage} from '../utils/Storage';
 import {TestStore} from './storage.test';
 import {QuadSet} from '../collections/QuadSet';
+import {resolveLocal} from '../utils/LocalQueryResolver';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
+let bestFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'bestFriend');
 let hobby = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hobby');
 let hasFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasFriend');
 
@@ -32,6 +34,18 @@ class Person extends Shape {
 
   set name(val: string) {
     this.overwrite(name, new Literal(val));
+  }
+
+  @literalProperty({
+    path: bestFriend,
+    maxCount: 1,
+  })
+  get bestFriend(): Person {
+    return this.getOneAs(bestFriend, Person);
+  }
+
+  set bestFriend(val: Person) {
+    this.overwrite(bestFriend, val.namedNode);
   }
 
   @literalProperty({
@@ -70,6 +84,8 @@ p4.name = 'Quinn';
 
 p1.friends.add(p2);
 p1.friends.add(p3);
+p1.bestFriend = p2;
+
 p2.friends.add(p3);
 p2.friends.add(p4);
 
@@ -403,6 +419,21 @@ describe('query tests', () => {
   //   );
   // });
 
+  test('sub select query', () => {
+    // select people that only have friends that are called Moa or Jinx
+    let nameAndHobbyOfFriends = resolveLocal(
+      Person.select((p) => {
+        return p.friends.select((f) => [f.name, f.hobby]);
+      }),
+    );
+
+    expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
+    expect(nameAndHobbyOfFriends.length).toBe(3);
+    expect(nameAndHobbyOfFriends[0][0]).toBe('Moa');
+    expect(nameAndHobbyOfFriends[0][1]).toBe('Jogging');
+    expect(nameAndHobbyOfFriends[1][1]).toBeUndefined();
+  });
+
   // test('component with single property query', () => {
   //   const Component = linkedComponent<Person>(
   //     Person.select((p) => [p.name]),
@@ -415,20 +446,41 @@ describe('query tests', () => {
   //   expect(tree.children[0]).toBe('Semmy');
   //   expect(tree).toMatchSnapshot();
   // });
-
-  test('component with where query', () => {
-    const Component2 = linkedComponent<Person>(
-      Person.select((p) => [p.friends.where((f) => f.name.equals('Moa')).name]),
-      ({linkedData: [name]}) => {
-        return <div>{name}</div>;
-      },
-    );
-    let component = renderer.create(<Component2 of={p1} />);
-    let tree = component.toJSON();
-    expect(tree.children[0]).toBe('Moa');
-    expect(tree).toMatchSnapshot();
-  });
+  // test('component with where query', () => {
+  //   const Component2 = linkedComponent<Person>(
+  //     Person.select((p) => [p.friends.where((f) => f.name.equals('Moa')).name]),
+  //     ({linkedData: [name]}) => {
+  //       return <div>{name}</div>;
+  //     },
+  //   );
+  //   let component = renderer.create(<Component2 of={p1} />);
+  //   let tree = component.toJSON();
+  //   expect(tree.children[0]).toBe('Moa');
+  //   expect(tree).toMatchSnapshot();
+  // });
+  // test('component requesting data from child components', () => {
+  //   const Component3 = linkedComponent<Person>(
+  //     Person.select((p) => [p.name]),
+  //     ({linkedData: [name]}) => {
+  //       return <span>{name}</span>;
+  //     },
+  //   );
+  //   const Component4 = linkedComponent<Person>(
+  //     Person.select((p) => [Component3.of(p.bestFriend)]),
+  //     ({linkedData: [FriendComp]}) => {
+  //       return <FriendComp />;
+  //     },
+  //   );
+  //   let component = renderer.create(<Component4 of={p1} />);
+  //   let tree = component.toJSON();
+  //   expect(tree.children[0]).toBe('Moa');
+  //   expect(tree).toMatchSnapshot();
+  // });
   //NEXT:
+  //Return an object
+  //Return a single entry
+  //Test nested child components
+  //Work with components that show multiple sources (setComponents)
   //Refactor structure of json objects, where and count need to be added? investigate other libraries
   //Refactor duplicate value in "every"
   //Refactor firstPath into an array

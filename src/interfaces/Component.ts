@@ -4,6 +4,7 @@ import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
 import {NodeSet} from '../collections/NodeSet';
 import {ICoreIterable} from './ICoreIterable';
+import {QueryPath, QueryShape} from '../utils/LinkedQuery';
 
 export type Component<P = any, ShapeType extends Shape = Shape> =
   | ClassComponent<P, ShapeType>
@@ -24,6 +25,7 @@ export interface BoundFunctionalComponentFactory<
   _setLoaded?: (quads) => void;
   _props?: PropertyShape[];
   _comp: LinkedFunctionalComponent<P, ShapeType>;
+  getPropertyPath?: () => QueryPath;
 }
 
 export interface BoundSetComponentFactory<
@@ -47,7 +49,8 @@ export interface LinkedFunctionalComponent<P, ShapeType extends Shape = Shape>
    * Binds a component to a source. Usually used in Shape.request() for automatic data loading.
    * @param source the node or shape that this component should visualise
    */
-  of?: (source?: Node | Shape) => BoundComponentFactory<P, ShapeType>;
+  // of?: (source?: Node | Shape) => BoundComponentFactory<P, ShapeType>;
+  of?: (source?: QueryShape) => BoundComponentFactory<P, ShapeType>;
   original?: LinkableFunctionalComponent<P, ShapeType>;
   dataRequest?: LinkedDataRequest;
   setLoaded?: (source?: Shape) => void;

@@ -1,5 +1,6 @@
 import {
   Evaluation,
+  GetQueryResponseType,
   JSPrimitive,
   LinkedQuery,
   QueryPath,
@@ -8,6 +9,7 @@ import {
   QueryStep,
   QueryValue,
   QueryValueSetOfSets,
+  SubQueryPaths,
   ToNormalValue,
   WhereAndOr,
   WhereEvaluationPath,
@@ -20,10 +22,6 @@ import {shacl} from '../ontologies/shacl';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
-type GetQueryResponseType<Q> = Q extends LinkedQuery<any, infer ResponseType>
-  ? ResponseType
-  : never;
-
 /**
  * Resolves the query locally, by searching the graph in local memory, without using stores.
  * Returns the result immediately.
@@ -32,8 +30,9 @@ type GetQueryResponseType<Q> = Q extends LinkedQuery<any, infer ResponseType>
 export function resolveLocal<S extends LinkedQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
+  queryPaths?: QueryPath[],
 ): ToNormalValue<GetQueryResponseType<S>> {
-  let queryPaths = query.getQueryPaths();
+  queryPaths = queryPaths || query.getQueryPaths();
   subject = subject || (query.shape as any).getLocalInstances();
   let results = [];
 
@@ -52,7 +51,10 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   } else if (Array.isArray(query.traceResponse)) {
     //nothing to convert if an array was requested
     return results as any;
-  } else if (query.traceResponse instanceof QueryValueSetOfSets) {
+  } else if (
+    query.traceResponse instanceof QueryValueSetOfSets ||
+    query.traceResponse instanceof LinkedQuery
+  ) {
     return results.shift();
   } else if (
     query.traceResponse instanceof QueryPrimitiveSet ||
@@ -126,7 +128,7 @@ function evaluateWhere(shape: Shape, method: string, args: any[]): boolean {
  * @param where
  * @private
  */
-function resolveWhere(
+function filterResults(
   subject: ShapeSet | Shape,
   where: WherePath,
 ): ShapeSet | Shape {
@@ -341,7 +343,7 @@ function resolveSubWhere(queryEndValues, evaluation: WhereEvaluationPath) {
   if (queryEndValues instanceof QueryShapeSet) {
     (queryEndValues as QueryShapeSet).setSource(true);
   }
-  let matchingSubjects = resolveWhere(queryEndValues, evaluation);
+  let matchingSubjects = filterResults(queryEndValues, evaluation);
 
   if (queryEndValues instanceof QueryShapeSet) {
     (queryEndValues as QueryShapeSet).setSource(false);
@@ -372,13 +374,16 @@ function resolveWhereEvery(shapes, evaluation: WhereEvaluationPath) {
 
 function resolveQueryStep(
   subject: ShapeSet | Shape[] | Shape,
-  queryStep: QueryStep,
+  queryStep: QueryStep | SubQueryPaths,
 ) {
   if (subject instanceof Shape) {
     // if (
     //   (queryStep as QueryStep).property ||
     //   (queryStep as QueryStep).where
     // ) {
+    if (Array.isArray(queryStep)) {
+      return resolveQueryPathsForShape(queryStep, subject);
+    }
     //TODO: review differences between shape vs shapes and make it DRY
     return resolveQueryStepForShape(queryStep as QueryStep, subject);
     // } else if ((queryStep as WhereEvaluationPath).method) {
@@ -392,6 +397,9 @@ function resolveQueryStep(
     //   (queryStep as QueryStep).property ||
     //   (queryStep as QueryStep).where
     // ) {
+    if (Array.isArray(queryStep)) {
+      return resolveQueryPathsForShapes(queryStep, subject);
+    }
     return resolveQueryStepForShapes(queryStep as QueryStep, subject);
     // } else if ((queryStep as WhereEvaluationPath).method) {
     //   debugger;
@@ -403,15 +411,27 @@ function resolveQueryStep(
   }
 }
 
+function resolveQueryPathsForShapes(
+  queryPaths: SubQueryPaths,
+  subjects: ShapeSet,
+) {
+  let results = [];
+  subjects.forEach((subject) => {
+    results.push(resolveQueryPathsForShape(queryPaths, subject));
+  });
+  return results;
+}
+
+function resolveQueryPathsForShape(queryPaths: SubQueryPaths, subject: Shape) {
+  return queryPaths.map((queryPath) => {
+    return resolveQueryPath(subject, queryPath);
+  });
+}
 function resolveQueryStepForShape(queryStep: QueryStep, subject: Shape) {
   if (queryStep.property) {
     let result = subject[queryStep.property.label];
     if (queryStep.where) {
-      //TODO: not thought through yet, we also use this function now to resolve where's itself. what do we want to do here?
-      // debugger;
-      let whereResult = resolveWhere(result, queryStep.where);
-      //overwrite the single result with the filtered where result
-      result = whereResult;
+      result = filterResults(result, queryStep.where);
     }
     if (queryStep.count) {
       if (Array.isArray(result)) {
@@ -446,9 +466,7 @@ function resolveQueryStepForShapes(queryStep: QueryStep, subject: ShapeSet) {
       //directly access the get/set method of the shape
       let stepResult = singleShape[queryStep.property.label];
       if (queryStep.where) {
-        let whereResult = resolveWhere(stepResult, queryStep.where);
-        //overwrite the single result with the filtered where result
-        stepResult = whereResult;
+        stepResult = filterResults(stepResult, queryStep.where);
       }
       if (queryStep.count) {
         if (Array.isArray(stepResult)) {
@@ -490,7 +508,7 @@ function resolveQueryStepForShapes(queryStep: QueryStep, subject: ShapeSet) {
     //this happens when the where clause is on the root of the query
     //like Person.select(p => p.where(...))
     //in that case the where clause is directly applied to the given subject
-    let whereResult = resolveWhere(subject, queryStep.where);
+    let whereResult = filterResults(subject, queryStep.where);
     return whereResult;
   }
 }
