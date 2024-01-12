@@ -19,6 +19,56 @@ export class EventEmitter extends EventEmitter3 {
    */
   protected _eventsCount: number;
 
+  emitPromise(evt: string | symbol, a1?, a2?, a3?, a4?, a5?): Promise<any> {
+    //BASED ON eventemitter3 implementation of emit
+    //But I removed prefix functionality and listeners.fn
+    //And then added support for promises
+
+    if (!this._events[evt]) return Promise.resolve();
+
+    var listeners = this._events[evt],
+      len = arguments.length,
+      args,
+      i;
+
+    //ignored listeners.fn
+    var length = listeners.length,
+      j;
+
+    let listenerPromises = [];
+    for (i = 0; i < length; i++) {
+      if (listeners[i].once) this.removeListener(evt, listeners[i].fn, undefined, true);
+
+      switch (len) {
+        case 1:
+          listenerPromises.push(listeners[i].fn.call(listeners[i].context));
+          break;
+        case 2:
+          listenerPromises.push(listeners[i].fn.call(listeners[i].context, a1));
+          break;
+        case 3:
+          listenerPromises.push(listeners[i].fn.call(listeners[i].context, a1, a2));
+          break;
+        case 4:
+          listenerPromises.push(listeners[i].fn.call(listeners[i].context, a1, a2, a3));
+          break;
+        default:
+          if (!args)
+            for (j = 1, args = new Array(len - 1); j < len; j++) {
+              args[j - 1] = arguments[j];
+            }
+
+          listenerPromises.push(listeners[i].fn.apply(listeners[i].context, args));
+      }
+    }
+    return Promise.all(listenerPromises).catch((err) => {
+      console.log(
+        'Error during emitPromise of event ' + evt.toString() + ' with args ' + JSON.stringify(arguments),
+        err.toString(),
+      );
+    });
+  }
+
   removeListenerByContext(event: string | symbol, context?: any, once?: boolean): this {
     //copied from source and adjusted
     var evt = prefix && typeof event === 'string' ? prefix + event : event;

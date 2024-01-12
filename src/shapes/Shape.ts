@@ -60,7 +60,7 @@ interface IClassConstruct {
  * console.log(person.friends);
  * ```
  */
-export abstract class Shape extends EventEmitter implements IShape {
+export abstract class Shape implements IShape {
   /**
    * Points to the rdfs:Class that this typescript class represents. Each class extending Shape MUST define this explicitly.
    The appointed NamedNode value must be a rdfs:Class ([value] rdf:type rdfs:Class in the graph)
@@ -97,7 +97,6 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param node
    */
   constructor(node?: Node | any) {
-    super();
     this.setupNode(node);
   }
 
@@ -144,13 +143,15 @@ export abstract class Shape extends EventEmitter implements IShape {
     // return this.hasProperty(property) ? new (shape as any)(this.getOne(property)) as S : null;
   }
 
-  equals(other,checkShapeType:boolean=false) {
+  equals(other, checkShapeType: boolean = false) {
     return (
-      other instanceof Shape && other.node === this.node && (!checkShapeType || Object.getPrototypeOf(other) === Object.getPrototypeOf(this))
+      other instanceof Shape &&
+      other.node === this.node &&
+      (!checkShapeType || Object.getPrototypeOf(other) === Object.getPrototypeOf(this))
     );
   }
 
-  static create<T extends Shape>(this: ShapeLike<T>, data: Partial<T>, uri?:string): T {
+  static create<T extends Shape>(this: ShapeLike<T>, data: Partial<T>, uri?: string): T {
     const x = uri ? this.getFromURI(uri) : new this();
     for (const k in data) {
       const key = k as keyof typeof this;
@@ -798,16 +799,14 @@ export abstract class Shape extends EventEmitter implements IShape {
   static getLocalInstanceNodes(explicitInstancesOnly: boolean = false): NodeSet {
     let instanceNodes = new NodeSet();
     //by default, look for instances of this shape class and all classes that extend it
-    let targetClasses = [this].concat(
-      getSubShapesClasses(this)
-    );
+    let targetClasses = [this].concat(getSubShapesClasses(this));
     targetClasses.forEach((shapeClass) => {
       let potentialInstances = new NodeSet();
       if (explicitInstancesOnly) {
         potentialInstances = shapeClass.targetClass
-            .getInverseQuads(rdf.type)
-            .filter((quad) => !quad.implicit)
-            .getSubjects();
+          .getInverseQuads(rdf.type)
+          .filter((quad) => !quad.implicit)
+          .getSubjects();
       } else {
         potentialInstances = shapeClass.targetClass.getAllInverse(rdf.type);
       }
@@ -870,23 +869,33 @@ export abstract class Shape extends EventEmitter implements IShape {
     return this.getFromURI(uri);
   }
 
-  static getSetOf<T extends Shape>(this: ShapeLike<T>, nodes: NodeValuesSet,allowSubShapes?:boolean): ShapeValuesSet<T>;
-  static getSetOf<T extends Shape>(this: ShapeLike<T>, nodes: ICoreIterable<Node>,allowSubShapes?:boolean): ShapeSet<T>;
+  static getSetOf<T extends Shape>(
+    this: ShapeLike<T>,
+    nodes: NodeValuesSet,
+    allowSubShapes?: boolean,
+  ): ShapeValuesSet<T>;
+  static getSetOf<T extends Shape>(
+    this: ShapeLike<T>,
+    nodes: ICoreIterable<Node>,
+    allowSubShapes?: boolean,
+  ): ShapeSet<T>;
   static getSetOf<T extends Shape>(
     this: ShapeLike<T>,
     nodes: NodeValuesSet | ICoreIterable<Node>,
-    allowSubShapes:boolean=false
+    allowSubShapes: boolean = false,
   ): ShapeSet<T> | ShapeValuesSet<T> {
     if (!nodes) {
       throw new Error('No nodes provided to create shape instances of');
     }
 
     if (nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode) {
-      return new ShapeValuesSet(nodes.subject, nodes.property, this as any,allowSubShapes);
+      return new ShapeValuesSet(nodes.subject, nodes.property, this as any, allowSubShapes);
     }
-    return new ShapeSet<T>(nodes.map((node) => {
-      return allowSubShapes ? getShapeOrSubShape(node,this as any) : new this(node)
-    }));
+    return new ShapeSet<T>(
+      nodes.map((node) => {
+        return allowSubShapes ? getShapeOrSubShape(node, this as any) : new this(node);
+      }),
+    );
   }
 }
 
