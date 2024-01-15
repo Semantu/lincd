@@ -12,7 +12,7 @@
     "esModuleInterop": true,
     "pretty": true,
     "jsx": "react",
-    "types": ["node", "react", "eventemitter3","@types/jest"],
+    "types": ["node", "react", "eventemitter3"],
     "baseUrl": "./",
     "paths": {
       "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
