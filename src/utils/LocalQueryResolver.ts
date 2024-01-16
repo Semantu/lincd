@@ -1,4 +1,6 @@
 import {
+  BoundComponentQueryStep,
+  ComponentQueryPath,
   Evaluation,
   GetQueryResponseType,
   JSPrimitive,
@@ -30,7 +32,7 @@ const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 export function resolveLocal<S extends LinkedQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
-  queryPaths?: QueryPath[],
+  queryPaths?: QueryPath[] | ComponentQueryPath[],
 ): ToNormalValue<GetQueryResponseType<S>> {
   queryPaths = queryPaths || query.getQueryPaths();
   subject = subject || (query.shape as any).getLocalInstances();
@@ -64,7 +66,7 @@ export function resolveLocal<S extends LinkedQuery<any>>(
     //does that also work if there is multiple values?
     //do we need to check the size of the traceresponse
     //why is a CoreSet created? start there
-    return [...results[0]] as any;
+    return results.length > 0 ? [...results[0]] : ([] as any);
   } else if (typeof query.traceResponse === 'object') {
     throw new Error('Objects are not yet supported');
   }
@@ -91,7 +93,10 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   return result;
 }*/
 
-function resolveQueryPath(subject: ShapeSet | Shape, queryPath: QueryPath) {
+function resolveQueryPath(
+  subject: ShapeSet | Shape,
+  queryPath: QueryPath | ComponentQueryPath,
+) {
   //start with the local instance as the subject
   let result: ShapeSet | Shape[] | Shape | boolean[] = subject;
   if (Array.isArray(queryPath)) {
@@ -385,7 +390,7 @@ function resolveQueryStep(
       return resolveQueryPathsForShape(queryStep, subject);
     }
     //TODO: review differences between shape vs shapes and make it DRY
-    return resolveQueryStepForShape(queryStep as QueryStep, subject);
+    return resolveQueryStepForShape(queryStep, subject);
     // } else if ((queryStep as WhereEvaluationPath).method) {
     //   debugger;
     // } else if ((queryStep as WhereAndOr).andOr) {
@@ -427,13 +432,16 @@ function resolveQueryPathsForShape(queryPaths: SubQueryPaths, subject: Shape) {
     return resolveQueryPath(subject, queryPath);
   });
 }
-function resolveQueryStepForShape(queryStep: QueryStep, subject: Shape) {
-  if (queryStep.property) {
-    let result = subject[queryStep.property.label];
-    if (queryStep.where) {
-      result = filterResults(result, queryStep.where);
+function resolveQueryStepForShape(
+  queryStep: QueryStep | SubQueryPaths | BoundComponentQueryStep,
+  subject: Shape,
+) {
+  if ((queryStep as QueryStep).property) {
+    let result = subject[(queryStep as QueryStep).property.label];
+    if ((queryStep as QueryStep).where) {
+      result = filterResults(result, (queryStep as QueryStep).where);
     }
-    if (queryStep.count) {
+    if ((queryStep as QueryStep).count) {
       if (Array.isArray(result)) {
         result = result.length;
       } else if (result instanceof Set) {
@@ -443,7 +451,7 @@ function resolveQueryStepForShape(queryStep: QueryStep, subject: Shape) {
       }
     }
     return result;
-  } else if (queryStep.where) {
+  } else if ((queryStep as QueryStep).where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
     //like Person.select(p => p.where(...))
@@ -451,6 +459,11 @@ function resolveQueryStepForShape(queryStep: QueryStep, subject: Shape) {
     debugger;
     // let whereResult = resolveWhere(subject as ShapeSet, queryStep.where);
     // return whereResult;
+  } else if ((queryStep as BoundComponentQueryStep).component) {
+    return (queryStep as BoundComponentQueryStep).component.create(subject);
+    debugger;
+  } else {
+    throw Error('Unknown query step: ' + queryStep.toString());
   }
 }
 

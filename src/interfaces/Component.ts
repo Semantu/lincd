@@ -4,7 +4,16 @@ import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
 import {NodeSet} from '../collections/NodeSet';
 import {ICoreIterable} from './ICoreIterable';
-import {QueryPath, QueryShape} from '../utils/LinkedQuery';
+import {
+  BoundComponentQueryStep,
+  ComponentQueryPath,
+  QueryPath,
+  QueryPropertyPath,
+  QueryShape,
+  QueryShapeSet,
+  QueryValue,
+} from '../utils/LinkedQuery';
+import React from 'react';
 
 export type Component<P = any, ShapeType extends Shape = Shape> =
   | ClassComponent<P, ShapeType>
@@ -25,7 +34,7 @@ export interface BoundFunctionalComponentFactory<
   _setLoaded?: (quads) => void;
   _props?: PropertyShape[];
   _comp: LinkedFunctionalComponent<P, ShapeType>;
-  getPropertyPath?: () => QueryPath;
+  getPropertyPath?: () => ComponentQueryPath;
 }
 
 export interface BoundSetComponentFactory<
@@ -280,3 +289,64 @@ export type LinkedDataPreparedQuery = {
 };
 
 // where: [[{method: "count", subject: propshape}, ">", 1], [...]]
+export function removeBoundComponents(
+  request: ComponentQueryPath[],
+): QueryPath[] {
+  return request.map((queryPath: ComponentQueryPath) => {
+    if (Array.isArray(queryPath)) {
+      return queryPath.filter((queryStep) => {
+        if ((queryStep as BoundComponentQueryStep).component) {
+          return false;
+        }
+        return true;
+      }) as QueryPath;
+    } else {
+      //TODO: filter out bound components for this sort of query
+      throw Error('Not implemented');
+      debugger;
+      // request as WherePath;
+    }
+  }) as QueryPath[];
+}
+
+export class BoundComponent<P, ShapeType extends Shape> extends QueryValue {
+  constructor(
+    public originalValue: any,
+    public source, // property?: PropertyShape, // subject?: QueryShape<any> | QueryShapeSet<any>,
+  ) {
+    super(null, null);
+  }
+  create(source: Shape) {
+    let boundComponent: LinkedFunctionalComponent<P, ShapeType> = (props) => {
+      //TODO: use propertyShapes for RDFa
+
+      //add this result as the source of the bound child component
+      let newProps = {...props};
+      newProps['of'] = source; // as Node | ShapeType;
+
+      //let the LinkedComponent know that it was bound,
+      //that means it can expect its data to have been loaded by its parent
+      newProps['isBound'] = true;
+
+      //render the child component (which is 'this')
+      return React.createElement(this.originalValue, newProps);
+    };
+    return boundComponent;
+  }
+  getPropertyPath() {
+    //get the path that is passed to Component.of(some.path.here)
+    let sourcePath: ComponentQueryPath = this.source.getPropertyPath();
+    //add the path steps that this component itself requires (so we are combining the data request of 2 components)
+    // let childRequests = [];
+    // this.dataRequest.forEach((queryStep) => {
+    //   childRequests.push(queryStep);
+    // });
+    if (Array.isArray(sourcePath)) {
+      sourcePath.push({
+        component: this,
+        // path: childRequests as any,
+      } as BoundComponentQueryStep);
+    }
+    return sourcePath as QueryPropertyPath;
+  }
+}

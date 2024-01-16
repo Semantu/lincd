@@ -9,6 +9,7 @@ import {Storage} from '../utils/Storage';
 import {TestStore} from './storage.test';
 import {QuadSet} from '../collections/QuadSet';
 import {resolveLocal} from '../utils/LocalQueryResolver';
+import {ShapeSet} from '../collections/ShapeSet';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -84,7 +85,7 @@ p4.name = 'Quinn';
 
 p1.friends.add(p2);
 p1.friends.add(p3);
-p1.bestFriend = p2;
+p2.bestFriend = p3;
 
 p2.friends.add(p3);
 p2.friends.add(p4);
@@ -380,14 +381,7 @@ describe('query tests', () => {
   //   // );
   //   //["name","name"]
   // });
-  //TODO: selectSome() -> always resolves to a boolean
-  // /*test('selectSome', () => {
-  //   let someBool = resolveLocal(
-  //     Person.selectSome((p) => {
-  //       return p.name.equals('Moa');
-  //     }),
-  //   );
-  // });*/
+  //
   // test('count', () => {
   //   // select people that only have friends that are called Moa or Jinx
   //   let numberOfFriends = resolveLocal(
@@ -418,22 +412,21 @@ describe('query tests', () => {
   //     true,
   //   );
   // });
-
-  test('sub select query', () => {
-    // select people that only have friends that are called Moa or Jinx
-    let nameAndHobbyOfFriends = resolveLocal(
-      Person.select((p) => {
-        return p.friends.select((f) => [f.name, f.hobby]);
-      }),
-    );
-
-    expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
-    expect(nameAndHobbyOfFriends.length).toBe(3);
-    expect(nameAndHobbyOfFriends[0][0]).toBe('Moa');
-    expect(nameAndHobbyOfFriends[0][1]).toBe('Jogging');
-    expect(nameAndHobbyOfFriends[1][1]).toBeUndefined();
-  });
-
+  //
+  // test('sub select query', () => {
+  //   // select people that only have friends that are called Moa or Jinx
+  //   let nameAndHobbyOfFriends = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.select((f) => [f.name, f.hobby]);
+  //     }),
+  //   );
+  //
+  //   expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
+  //   expect(nameAndHobbyOfFriends.length).toBe(3);
+  //   expect(nameAndHobbyOfFriends[0][0]).toBe('Moa');
+  //   expect(nameAndHobbyOfFriends[0][1]).toBe('Jogging');
+  //   expect(nameAndHobbyOfFriends[1][1]).toBeUndefined();
+  // });
   // test('component with single property query', () => {
   //   const Component = linkedComponent<Person>(
   //     Person.select((p) => [p.name]),
@@ -458,24 +451,31 @@ describe('query tests', () => {
   //   expect(tree.children[0]).toBe('Moa');
   //   expect(tree).toMatchSnapshot();
   // });
-  // test('component requesting data from child components', () => {
-  //   const Component3 = linkedComponent<Person>(
-  //     Person.select((p) => [p.name]),
-  //     ({linkedData: [name]}) => {
-  //       return <span>{name}</span>;
-  //     },
-  //   );
-  //   const Component4 = linkedComponent<Person>(
-  //     Person.select((p) => [Component3.of(p.bestFriend)]),
-  //     ({linkedData: [FriendComp]}) => {
-  //       return <FriendComp />;
-  //     },
-  //   );
-  //   let component = renderer.create(<Component4 of={p1} />);
-  //   let tree = component.toJSON();
-  //   expect(tree.children[0]).toBe('Moa');
-  //   expect(tree).toMatchSnapshot();
-  // });
+  test('component requesting data from child components', () => {
+    const Component3 = linkedComponent<Person>(
+      Person.select((p) => [p.name]),
+      ({linkedData: [name]}) => {
+        return <span>{name}</span>;
+      },
+    );
+    const Component4 = linkedComponent<Person>(
+      Person.select((p) => [p.hobby, Component3.of(p.bestFriend)]),
+      ({linkedData: [hobby, FriendComp]}) => {
+        return (
+          <>
+            <span>{hobby}</span>
+            <FriendComp />
+          </>
+        );
+      },
+    );
+    let component = renderer.create(<Component4 of={p2} />);
+    let tree = component.toJSON();
+    expect(tree[0].children[0]).toBe('Jogging');
+    expect(tree[1].children[0]).toBe('Jinx');
+    expect(tree).toMatchSnapshot();
+  });
+
   //NEXT:
   //Return an object
   //Return a single entry

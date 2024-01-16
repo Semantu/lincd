@@ -12,6 +12,7 @@ import {CoreSet} from '../collections/CoreSet';
 import {NodeSet} from '../collections/NodeSet';
 import {ShapeSet} from '../collections/ShapeSet';
 import {
+  BoundComponent,
   BoundComponentFactory,
   BoundComponentProps,
   BoundSetComponentFactory,
@@ -31,6 +32,7 @@ import {
   LinkedFunctionalSetComponent,
   LinkedSetComponentInputProps,
   LinkedSetComponentProps,
+  removeBoundComponents,
   TransformedLinkedDataResponse,
 } from '../interfaces/Component';
 import {lincd as lincdOntology} from '../ontologies/lincd';
@@ -39,7 +41,15 @@ import {rdf} from '../ontologies/rdf';
 import {Storage} from './Storage';
 import {URI} from './URI';
 import {addNodeShapeToShapeClass} from './ShapeClass';
-import {LinkedQuery, QueryPath, QueryShape, QueryStep} from './LinkedQuery';
+import {
+  BoundComponentQueryStep,
+  ComponentQueryPath,
+  LinkedQuery,
+  QueryPath,
+  QueryPropertyPath,
+  QueryShape,
+  QueryStep,
+} from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
 import {resolveLocal} from './LocalQueryResolver';
 
@@ -382,11 +392,16 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       | LinkedQuery<ShapeType>,
     functionalComponent: LinkableFunctionalComponent<DeclaredProps, ShapeType>,
   ): LinkedFunctionalComponent<DeclaredProps, ShapeType> {
-    let [shapeClass, dataRequest, dataDeclaration, tracedDataResponse] =
-      processDataDeclaration<ShapeType, DeclaredProps>(
-        requiredData,
-        functionalComponent,
-      );
+    let [
+      shapeClass,
+      dataRequest,
+      dataDeclaration,
+      tracedDataResponse,
+      pureDataRequest,
+    ] = processDataDeclaration<ShapeType, DeclaredProps>(
+      requiredData,
+      functionalComponent,
+    );
 
     //create a new functional component which wraps the original
     //also, first of all use React.forwardRef to support OPTIONAL use of forwardRef by the linked component itself
@@ -479,6 +494,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
               requiredData as LinkedQuery<any>,
               linkedProps.source,
               dataRequest,
+              pureDataRequest,
             );
           }
           //if the component used a Shape.requestSet() data declaration function
@@ -537,12 +553,17 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       ShapeType
     >,
   ): LinkedFunctionalSetComponent<DeclaredProps, ShapeType> {
-    let [shapeClass, dataRequest, dataDeclaration, tracedDataResponse] =
-      processDataDeclaration<ShapeType, DeclaredProps>(
-        requiredData,
-        functionalComponent,
-        true,
-      );
+    let [
+      shapeClass,
+      dataRequest,
+      dataDeclaration,
+      tracedDataResponse,
+      pureDataRequest,
+    ] = processDataDeclaration<ShapeType, DeclaredProps>(
+      requiredData,
+      functionalComponent,
+      true,
+    );
 
     //if we're not using any storage in this LINCD app, don't do any data loading
     let usingStorage = Storage.isInitialised();
@@ -915,12 +936,13 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
   setComponent: boolean = false,
 ) {
   let shapeClass: typeof Shape;
-  let dataRequest: LinkedDataRequest | QueryPath[];
+  let dataRequest: LinkedDataRequest | ComponentQueryPath[];
   let tracedDataResponse: TransformedLinkedDataResponse;
   let dataDeclaration:
     | LinkedDataSetDeclaration<ShapeType>
     | LinkedDataDeclaration<ShapeType>
     | LinkedQuery<ShapeType>;
+  let pureDataRequest: QueryPath[];
 
   //if a Shape class was given (the actual class that extends Shape)
   if (requiredData['prototype'] instanceof Shape || requiredData === Shape) {
@@ -938,6 +960,7 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
       request: dataRequest as any,
       shape: shapeClass,
     };
+    pureDataRequest = removeBoundComponents(dataRequest);
   } else {
     //requiredData is a LinkedDataDeclaration or a LinkedDataSetDeclaration
     dataDeclaration = requiredData as
@@ -970,12 +993,20 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
       dummySet as any,
     );
   }
-  return [shapeClass, dataRequest, dataDeclaration, tracedDataResponse];
+  return [
+    shapeClass,
+    dataRequest,
+    dataDeclaration,
+    tracedDataResponse,
+    pureDataRequest,
+  ];
 }
+
 function resolveLinkedQuery(
   linkedQuery: LinkedQuery<any>,
   source: Shape | ShapeSet,
-  dataRequest: QueryPath[],
+  dataRequest: ComponentQueryPath[],
+  pureDataRequest: QueryPath[],
 ) {
   return resolveLocal(linkedQuery, source, dataRequest);
   // let linkedData = Storage.query(genericQuery, source.shape);
@@ -1275,36 +1306,45 @@ function bindComponentToData<P, ShapeType extends Shape>(
   tracedDataResponse: TransformedLinkedDataResponse,
   // source: Node | Shape,
   source: QueryShape,
-): BoundComponentFactory<P, ShapeType> {
-  return {
-    _comp: this,
-    _create: (propertyShapes) => {
-      let boundComponent: LinkedFunctionalComponent<P, ShapeType> = (props) => {
-        //TODO: use propertyShapes for RDFa
-
-        //add this result as the source of the bound child component
-        let newProps = {...props};
-        newProps['of'] = source.getOriginalValue(); // as Node | ShapeType;
-
-        //let the LinkedComponent know that it was bound,
-        //that means it can expect its data to have been loaded by its parent
-        newProps['isBound'] = true;
-
-        //render the child component (which is 'this')
-        return React.createElement(this, newProps);
-      };
-      return boundComponent;
-    },
-    getPropertyPath: () => {
-      //get the path that is passed to Component.of(some.path.here)
-      let sourcePath = source.getPropertyPath() as QueryStep[];
-      //add the path steps that this component itself requires (so we are combining the data request of 2 components)
-      this.dataRequest.forEach((queryStep) => {
-        sourcePath.push(queryStep);
-      });
-      return sourcePath;
-    },
-  };
+  // ): BoundComponentFactory<P, ShapeType> {
+): BoundComponent<P, ShapeType> {
+  return new BoundComponent<P, ShapeType>(this, source);
+  // return {
+  //   _comp: this,
+  //   _create: (propertyShapes) => {
+  //     let boundComponent: LinkedFunctionalComponent<P, ShapeType> = (props) => {
+  //       //TODO: use propertyShapes for RDFa
+  //
+  //       //add this result as the source of the bound child component
+  //       let newProps = {...props};
+  //       newProps['of'] = source.getOriginalValue(); // as Node | ShapeType;
+  //
+  //       //let the LinkedComponent know that it was bound,
+  //       //that means it can expect its data to have been loaded by its parent
+  //       newProps['isBound'] = true;
+  //
+  //       //render the child component (which is 'this')
+  //       return React.createElement(this, newProps);
+  //     };
+  //     return boundComponent;
+  //   },
+  //   getPropertyPath: () => {
+  //     //get the path that is passed to Component.of(some.path.here)
+  //     let sourcePath: ComponentQueryPath = source.getPropertyPath();
+  //     //add the path steps that this component itself requires (so we are combining the data request of 2 components)
+  //     // let childRequests = [];
+  //     // this.dataRequest.forEach((queryStep) => {
+  //     //   childRequests.push(queryStep);
+  //     // });
+  //     if (Array.isArray(sourcePath)) {
+  //       sourcePath.push({
+  //         component: this,
+  //         // path: childRequests as any,
+  //       } as BoundComponentQueryStep);
+  //     }
+  //     return sourcePath;
+  //   },
+  // };
 }
 
 function bindSetComponentToData<P, ShapeType extends Shape>(

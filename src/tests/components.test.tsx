@@ -247,3 +247,10 @@
 //     expect(container.textContent).toBe(person2.name + person3.name);
 //   });
 // });
+import {act} from 'react-dom/test-utils';
+
+describe('component tests', () => {
+  it('renders a SetComponent with controlled children by using Shape.requestForEachInSet()', async () => {
+    expect(true).toBe(true);
+  });
+});

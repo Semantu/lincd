@@ -5,6 +5,7 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
 import {Node} from '../models';
+import {BoundComponent, Component} from '../interfaces/Component';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
@@ -103,6 +104,15 @@ export type WhereEvaluationPath = {
   method: WhereMethods;
   args: any[];
 };
+
+export type ComponentQueryPath =
+  | (QueryStep | SubQueryPaths | BoundComponentQueryStep)[]
+  | WherePath;
+
+export interface BoundComponentQueryStep {
+  component: BoundComponent<any, any>;
+  // path: QueryPath[];
+}
 
 export type SubQueryPaths = QueryPath[];
 /**
@@ -758,15 +768,18 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
     let queryPaths: QueryPath[] = [];
     //if the trace response is an array, then multiple paths were requested
     if (
+      this.traceResponse instanceof QueryValue ||
+      this.traceResponse instanceof QueryPrimitiveSet
+    ) {
+      //if it's a single value, then only one path was requested, and we can add it directly
+      queryPaths.push(this.traceResponse.getPropertyPath());
+    } else if (
       Array.isArray(this.traceResponse) ||
       this.traceResponse instanceof Set
     ) {
       this.traceResponse.forEach((endValue: QueryValue) => {
         queryPaths.push(endValue.getPropertyPath());
       });
-    } else if (this.traceResponse instanceof QueryValue) {
-      //if it's a single value, then only one path was requested, and we can add it directly
-      queryPaths.push(this.traceResponse.getPropertyPath());
     } else if (this.traceResponse instanceof Evaluation) {
       queryPaths.push(this.traceResponse.getWherePath());
     } else if (this.traceResponse instanceof LinkedQuery) {
