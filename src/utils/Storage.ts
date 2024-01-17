@@ -478,6 +478,9 @@ export abstract class Storage {
   }
 
   static nodesAreLoaded(nodes: NodeSet, dataRequest): boolean | Promise<any> {
+    //@TODO: reimplement tracking of loaded paths for queries
+    return true;
+
     let stillLoading = [];
     if (
       !nodes.every((node) => {

@@ -59,7 +59,7 @@ export interface LinkedFunctionalComponent<P, ShapeType extends Shape = Shape>
    * @param source the node or shape that this component should visualise
    */
   // of?: (source?: Node | Shape) => BoundComponentFactory<P, ShapeType>;
-  of?: (source?: QueryShape) => BoundComponentFactory<P, ShapeType>;
+  of?: (source?: QueryShape<ShapeType>) => BoundComponentFactory<P, ShapeType>;
   original?: LinkableFunctionalComponent<P, ShapeType>;
   dataRequest?: LinkedDataRequest;
   setLoaded?: (source?: Shape) => void;
@@ -75,7 +75,7 @@ export interface LinkedFunctionalSetComponent<
    * @param source the node or shape that this component should visualise
    */
   of?: (
-    sources: NodeSet | ShapeSet,
+    sources: QueryShapeSet<ShapeType>, //NodeSet | ShapeSet,
     itemRequestFn?:
       | LinkedFunctionalComponent<any, ShapeType>
       | ((shape: ShapeType) => LinkedDataResponse),

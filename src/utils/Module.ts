@@ -51,7 +51,7 @@ import {
   QueryStep,
 } from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
-import {resolveLocal} from './LocalQueryResolver';
+import {resolveLocalFlat} from './LocalQueryResolver';
 
 //global tree
 declare var lincd: any;
@@ -268,7 +268,10 @@ export interface LinkedPackageObject {
    * ```
    */
   linkedSetComponent<ShapeType extends Shape, DeclaredProps = {}>(
-    requiredData: typeof Shape | LinkedDataSetDeclaration<ShapeType>,
+    requiredData:
+      | typeof Shape
+      | LinkedDataSetDeclaration<ShapeType>
+      | LinkedQuery<ShapeType>,
     functionalComponent: LinkableFunctionalSetComponent<
       DeclaredProps,
       ShapeType
@@ -666,29 +669,38 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       }
       //if the data is loaded
       if (dataIsLoaded) {
-        //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
-        if (dataDeclaration && dataDeclaration.request) {
-          //then we provide that request as the getLinkedData prop
-          linkedProps.getLinkedData = function (source) {
-            //Note that tracedDataResponse is the results of processing dataDeclaration.request
-            //this already happened in a previous step, and just like we regard dataDeclaration.request as the childDataRequestFn
-            //we can also regard tracedDataResponse (its processed traced response) as childTracedDataResponse
-            return getLinkedDataResponse(
-              dataDeclaration.request,
-              source,
-              tracedDataResponse,
-            );
-          };
-        }
-        //if the component used a Shape.requestSet() data declaration function
-        else if (dataDeclaration) {
-          //then use that now to get the requested linkedData for this instance
-          linkedProps.linkedData = getLinkedDataResponse(
-            dataDeclaration.request || dataDeclaration.setRequest,
+        if (dataRequest) {
+          linkedProps.linkedData = resolveLinkedQuery(
+            requiredData as LinkedQuery<any>,
             linkedProps.sources,
-            tracedDataResponse,
+            dataRequest,
+            pureDataRequest,
           );
         }
+
+        //if this set component used Shape.requestForEachInSet (instead of Shape.requestSet)
+        // if (dataDeclaration && dataDeclaration.request) {
+        //   //then we provide that request as the getLinkedData prop
+        //   linkedProps.getLinkedData = function (source) {
+        //     //Note that tracedDataResponse is the results of processing dataDeclaration.request
+        //     //this already happened in a previous step, and just like we regard dataDeclaration.request as the childDataRequestFn
+        //     //we can also regard tracedDataResponse (its processed traced response) as childTracedDataResponse
+        //     return getLinkedDataResponse(
+        //       dataDeclaration.request,
+        //       source,
+        //       tracedDataResponse,
+        //     );
+        //   };
+        // }
+        // //if the component used a Shape.requestSet() data declaration function
+        // else if (dataDeclaration) {
+        //   //then use that now to get the requested linkedData for this instance
+        //   linkedProps.linkedData = getLinkedDataResponse(
+        //     dataDeclaration.request || dataDeclaration.setRequest,
+        //     linkedProps.sources,
+        //     tracedDataResponse,
+        //   );
+        // }
 
         //render the original components with the original + generated properties
         return functionalComponent(linkedProps);
@@ -1008,7 +1020,7 @@ function resolveLinkedQuery(
   dataRequest: ComponentQueryPath[],
   pureDataRequest: QueryPath[],
 ) {
-  return resolveLocal(linkedQuery, source, dataRequest);
+  return resolveLocalFlat(linkedQuery, source, dataRequest);
   // let linkedData = Storage.query(genericQuery, source.shape);
   // return linkedData;
 }

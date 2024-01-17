@@ -2,14 +2,14 @@ import {describe, test} from '@jest/globals';
 import {Literal, NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
 import {literalProperty, objectProperty} from '../utils/ShapeDecorators';
-import {linkedComponent, linkedShape} from '../package';
+import {linkedComponent, linkedSetComponent, linkedShape} from '../package';
 import renderer from 'react-test-renderer';
 import React from 'react';
 import {Storage} from '../utils/Storage';
 import {TestStore} from './storage.test';
 import {QuadSet} from '../collections/QuadSet';
-import {resolveLocal} from '../utils/LocalQueryResolver';
 import {ShapeSet} from '../collections/ShapeSet';
+import {resolveLocal, resolveLocalFlat} from '../utils/LocalQueryResolver';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -100,7 +100,7 @@ Storage.setQuadsLoaded(
 
 describe('query tests', () => {
   // test('can select a property of all instances', () => {
-  //   let names = resolveLocal(
+  //   let names = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.name;
   //     }),
@@ -117,7 +117,7 @@ describe('query tests', () => {
   //   let q = Person.select((p) => {
   //     return p.friends.name;
   //   });
-  //   let namesOfFriends = resolveLocal(q);
+  //   let namesOfFriends = resolveLocalFlat(q);
   //   //[
   //   // ["name1","name2","name3"]
   //   //]
@@ -129,7 +129,7 @@ describe('query tests', () => {
   // });
   //
   // test('can select multiple property paths', () => {
-  //   let result = resolveLocal(
+  //   let result = resolveLocalFlat(
   //     Person.select((p) => {
   //       return [p.name, p.friends.name];
   //     }),
@@ -153,13 +153,13 @@ describe('query tests', () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
   //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let level2Friends = resolveLocal(
+  //   let level2Friends = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.friends;
   //     }),
   //   );
   //
-  //   let level3Friends = resolveLocal(
+  //   let level3Friends = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.friends.friends;
   //     }),
@@ -179,7 +179,7 @@ describe('query tests', () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
   //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let friendsCalledMoa = resolveLocal(
+  //   let friendsCalledMoa = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.where((f) => f.name.equals('Moa'));
   //     }),
@@ -194,7 +194,7 @@ describe('query tests', () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
   //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let friendsCalledMoaThatJog = resolveLocal(
+  //   let friendsCalledMoaThatJog = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.where((f) =>
   //         f.name.equals('Moa').and(f.hobby.equals('Jogging')),
@@ -210,7 +210,7 @@ describe('query tests', () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
   //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let friendsCalledMoaThatJog = resolveLocal(
+  //   let friendsCalledMoaThatJog = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.where((f) =>
   //         f.name.equals('Jinx').or(f.hobby.equals('Jogging')),
@@ -229,7 +229,7 @@ describe('query tests', () => {
   // });
   //
   // test('where directly on the shape instance ', () => {
-  //   let personsCalledMoa = resolveLocal(
+  //   let personsCalledMoa = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.where(p.name.equals('Moa'));
   //     }),
@@ -244,7 +244,7 @@ describe('query tests', () => {
   //
   // test('where and or and', () => {
   //   //we combine AND & OR. AND should be done first, then OR
-  //   let persons = resolveLocal(
+  //   let persons = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.where((f) =>
   //         f.name
@@ -256,7 +256,7 @@ describe('query tests', () => {
   //   );
   //   //test the same thing again, but now the and clause is done within the or clause
   //   //the result should be the same
-  //   let persons2 = resolveLocal(
+  //   let persons2 = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.where((f) =>
   //         f.name
@@ -279,7 +279,7 @@ describe('query tests', () => {
   //   //select all persons that have a friend called Moa
   //   //the first test relies on the fact that by default, some() is applied.
   //   //in other words, the person matches if at least 1 friend is called Moa
-  //   let peopleWithFriendsCalledMoa = resolveLocal(
+  //   let peopleWithFriendsCalledMoa = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.where(p.friends.name.equals('Moa'));
   //     }),
@@ -292,7 +292,7 @@ describe('query tests', () => {
   // });
   // test('where some explicit', () => {
   //   // the second explicitly mentions some()
-  //   let peopleWithFriendsCalledMoa = resolveLocal(
+  //   let peopleWithFriendsCalledMoa = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.where(
   //         p.friends.some((f) => {
@@ -311,7 +311,7 @@ describe('query tests', () => {
   //
   // test('where every', () => {
   //   // select people that only have friends that are called Moa or Jinx
-  //   let allFriendsCalledMoaOrJinx = resolveLocal(
+  //   let allFriendsCalledMoaOrJinx = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.where(
   //         p.friends.every((f) => {
@@ -329,7 +329,7 @@ describe('query tests', () => {
   // });
   // test('where sequences', () => {
   //   // select people that only have friends that are called Moa or Jinx
-  //   let friendCalledJinxAndNameIsSemmy = resolveLocal(
+  //   let friendCalledJinxAndNameIsSemmy = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p
   //         .where(
@@ -350,7 +350,7 @@ describe('query tests', () => {
   //   );
   // });
   // test('some without where', () => {
-  //   let booleansResult = resolveLocal(
+  //   let booleansResult = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.some((f) => f.name.equals('Moa'));
   //     }),
@@ -362,7 +362,7 @@ describe('query tests', () => {
   //   expect(booleansResult.filter((b) => b === true).length).toBe(1);
   // });
   // test('equals without where', () => {
-  //   let booleansResult = resolveLocal(
+  //   let booleansResult = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.name.equals('Moa');
   //     }),
@@ -384,7 +384,7 @@ describe('query tests', () => {
   //
   // test('count', () => {
   //   // select people that only have friends that are called Moa or Jinx
-  //   let numberOfFriends = resolveLocal(
+  //   let numberOfFriends = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.friends.count();
   //     }),
@@ -397,7 +397,7 @@ describe('query tests', () => {
   // });
   // test('count equals', () => {
   //   // select people that only have friends that are called Moa or Jinx
-  //   let numberOfFriends = resolveLocal(
+  //   let numberOfFriends = resolveLocalFlat(
   //     Person.select((p) => {
   //       return p.where(p.friends.count().equals(2));
   //     }),
@@ -412,45 +412,79 @@ describe('query tests', () => {
   //     true,
   //   );
   // });
-  //
-  // test('sub select query', () => {
-  //   // select people that only have friends that are called Moa or Jinx
-  //   let nameAndHobbyOfFriends = resolveLocal(
-  //     Person.select((p) => {
-  //       return p.friends.select((f) => [f.name, f.hobby]);
-  //     }),
-  //   );
-  //
-  //   expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
-  //   expect(nameAndHobbyOfFriends.length).toBe(3);
-  //   expect(nameAndHobbyOfFriends[0][0]).toBe('Moa');
-  //   expect(nameAndHobbyOfFriends[0][1]).toBe('Jogging');
-  //   expect(nameAndHobbyOfFriends[1][1]).toBeUndefined();
-  // });
-  // test('component with single property query', () => {
-  //   const Component = linkedComponent<Person>(
-  //     Person.select((p) => [p.name]),
-  //     ({linkedData: [name]}) => {
-  //       return <div>{name}</div>;
-  //     },
-  //   );
-  //   let component = renderer.create(<Component of={p1} />);
-  //   let tree = component.toJSON();
-  //   expect(tree.children[0]).toBe('Semmy');
-  //   expect(tree).toMatchSnapshot();
-  // });
-  // test('component with where query', () => {
-  //   const Component2 = linkedComponent<Person>(
-  //     Person.select((p) => [p.friends.where((f) => f.name.equals('Moa')).name]),
-  //     ({linkedData: [name]}) => {
-  //       return <div>{name}</div>;
-  //     },
-  //   );
-  //   let component = renderer.create(<Component2 of={p1} />);
-  //   let tree = component.toJSON();
-  //   expect(tree.children[0]).toBe('Moa');
-  //   expect(tree).toMatchSnapshot();
-  // });
+
+  test('sub select query', () => {
+    // select people that only have friends that are called Moa or Jinx
+    let nameAndHobbyOfFriends = resolveLocal(
+      Person.select((p) => {
+        return p.friends.select((f) => [f.name, f.hobby]);
+      }),
+    );
+    nameAndHobbyOfFriends.forEach((person) => {
+      person.forEach((friend) => {
+        let [name, hobby] = friend;
+        console.log(name, hobby);
+      });
+    });
+
+    expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
+    expect(nameAndHobbyOfFriends.length).toBe(4);
+    expect(nameAndHobbyOfFriends[0][0][0]).toBe('Moa');
+    expect(nameAndHobbyOfFriends[0][0][1]).toBe('Jogging');
+    expect(nameAndHobbyOfFriends[1][0][1]).toBeUndefined();
+    expect(nameAndHobbyOfFriends[2].length).toBe(0);
+  });
+
+  /*test('select - object return type', () => {
+    // select people that only have friends that are called Moa or Jinx
+    let nameAndHobbyOfFriends = resolveLocal(
+      Person.select((p) => {
+        return p.friends.select((f) => {
+          return [f.name, f.hobby];
+        });
+      }),
+    );
+    // let nameAndHobbyOfFriends = resolveLocal(
+    //   Person.select((p) => ({
+    //     friends: p.friends.select((f) => ({
+    //       name: f.name,
+    //       hobby: f.hobby,
+    //     })),
+    //   })),
+    // );
+    let result: [string, string][][] = nameAndHobbyOfFriends;
+    //
+    // expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
+    // expect(nameAndHobbyOfFriends.length).toBe(3);
+    // expect(nameAndHobbyOfFriends[0][0]).toBe('Moa');
+    // expect(nameAndHobbyOfFriends[0][1]).toBe('Jogging');
+    // expect(nameAndHobbyOfFriends[1][1]).toBeUndefined();
+  });
+*/
+  /*test('component with single property query', () => {
+    const Component = linkedComponent<Person>(
+      Person.select((p) => [p.name]),
+      ({linkedData: [name]}) => {
+        return <div>{name}</div>;
+      },
+    );
+    let component = renderer.create(<Component of={p1} />);
+    let tree = component.toJSON();
+    expect(tree.children[0]).toBe('Semmy');
+    expect(tree).toMatchSnapshot();
+  });
+  test('component with where query', () => {
+    const Component2 = linkedComponent<Person>(
+      Person.select((p) => [p.friends.where((f) => f.name.equals('Moa')).name]),
+      ({linkedData: [name]}) => {
+        return <div>{name}</div>;
+      },
+    );
+    let component = renderer.create(<Component2 of={p1} />);
+    let tree = component.toJSON();
+    expect(tree.children[0]).toBe('Moa');
+    expect(tree).toMatchSnapshot();
+  });
   test('component requesting data from child components', () => {
     const Component3 = linkedComponent<Person>(
       Person.select((p) => [p.name]),
@@ -474,13 +508,247 @@ describe('query tests', () => {
     expect(tree[0].children[0]).toBe('Jogging');
     expect(tree[1].children[0]).toBe('Jinx');
     expect(tree).toMatchSnapshot();
+  });*/
+
+  /*test('linked set components', () => {
+    Person.select((p) => ({
+      title: p.name,
+      subTitle: p.hobby,
+    }));
+
+    const NameList = linkedSetComponent<Person>(
+      Person.select((person) => [person.name, person.hobby]),
+      ({linkedData, sources}) => {
+        //currently [["semmy","moa","jinx","quinn"],["jogging"]]
+        //needs to be [["semmmy","jogging"],["moa","jogging"],["jinx",""],["quinn",""]]
+        //then we could do
+        let persons = linkedData as [string, string][];
+        persons.map(([name, hobby]) => {
+          return (
+            <li>
+              <span>{name}</span>
+              <span>{hobby}</span>
+            </li>
+          );
+        });
+        //if we do graphQL likee responses, we can also do:
+        //[{friends: [{name: "moa", hobby: "jogging"}]]}]
+        let persons2 = linkedData as {name: string; hobby: string}[];
+        persons2.map((person) => {
+          return (
+            <li>
+              <span>{person.name}</span>
+              <span>{person.hobby}</span>
+            </li>
+          );
+        });
+
+        return (
+          <ul>
+            {sources.map((person) => {
+              return (
+                <li>
+                  <span>{person.name}</span>
+                  <span>{person.hobby}</span>
+                </li>
+              );
+            })}
+          </ul>
+        );
+      },
+    );
+
+    const qNew = Person.select((person) => ({
+      name: person.name,
+      hobby: person.hobby,
+    }));
+    let res = resolveLocal(qNew);
+    const NameListNew = linkedSetComponent<Person>(
+      qNew,
+      ({persons, sources}: {sources?; persons?: {name; hobby}[]}) => {
+        //currently [["semmy","moa","jinx","quinn"],["jogging"]]
+        //needs to be [["semmmy","jogging"],["moa","jogging"],["jinx",""],["quinn",""]]
+        //then we could do
+        // let persons = linkedData as [string, string][];
+        persons.map(([name, hobby]) => {
+          return (
+            <li>
+              <span>{name}</span>
+              <span>{hobby}</span>
+            </li>
+          );
+        });
+        //if we do graphQL likee responses, we can also do:
+        //[{friends: [{name: "moa", hobby: "jogging"}]]}]
+        let persons2 = linkedData as {name: string; hobby: string}[];
+        persons2.map((person) => {
+          return (
+            <li>
+              <span>{person.name}</span>
+              <span>{person.hobby}</span>
+            </li>
+          );
+        });
+
+        return (
+          <ul>
+            {sources.map((person) => {
+              return (
+                <li>
+                  <span>{person.name}</span>
+                  <span>{person.hobby}</span>
+                </li>
+              );
+            })}
+          </ul>
+        );
+      },
+    );
+
+    let persons = new ShapeSet<Person>([p1, p2, p3, p4]);
+    let component = renderer.create(<NameList of={persons} />);
+    let tree = component.toJSON();
+    expect(tree[0].children[0]).toBe('Jogging');
+    expect(tree[1].children[0]).toBe('Jinx');
+    expect(tree).toMatchSnapshot();
+  });*/
+
+  /* test('nested linked set components', () => {
+    const NameList = linkedSetComponent<Person>(
+      Person.select((person) => [person.name]),
+      ({linkedData}) => {
+        let names = linkedData.map((data) => data[0]);
+        return (
+          <ul>
+            {names.map((name) => {
+              return <li>{name}</li>;
+            })}
+          </ul>
+        );
+      },
+    );
+    const PersonOverview = linkedSetComponent<Person>(
+      Person.select((person) => [person.name, NameList.of(person.friends)]),
+      ({linkedData: [name, Names]}) => {
+        return (
+          <>
+            <span>{name}</span>
+            <Names />
+          </>
+        );
+      },
+    );
   });
+*/
+  /*
+      const Grid = linkedSetComponent(
+        Shape,
+        ({sources, children, ChildComponent}) => {
+          return (
+            <div>
+              {ChildComponent
+                ? sources.map((source) => {
+                  return (
+                    <ChildComponent of={source} key={source.node.toString()} />
+                  );
+                })
+                : children}
+            </div>
+          );
+        },
+      );
+    });
+
+    export const PersonOverview = linkedSetComponent<Person>(
+      Person.requestForEachInSet((person) => () => Card.of(person)),
+      ({sources, getLinkedData}) => {
+        return (
+          <div>
+            {sources.map((source) => {
+              let Profile = getLinkedData(source) as any;
+              return (
+                <div key={source.toString()}>
+                  <Profile />
+                </div>
+              );
+            })}
+          </div>
+        );
+      },
+    );
+
+    export const PersonOverviewWithConfigurableChildren = linkedSetComponent(
+      Person,
+      ({sources, children, ChildComponent}) => {
+        return (
+          <div>
+            {ChildComponent
+              ? sources.map((source) => {
+                return (
+                  <ChildComponent of={source} key={source.node.toString()} />
+                );
+              })
+              : children}
+          </div>
+        );
+      },
+    );
+
+    export const PersonOverviewFixedGrid = linkedSetComponent<Person>(
+      Person.requestSet((persons) => ({
+        PersonGrid: () => Grid.of(persons, Card),
+      })),
+      ({linkedData: {PersonGrid}}) => {
+        return (
+          <div>
+            <PersonGrid />
+          </div>
+        );
+      },
+    );
+
+    const PersonOverviewWithChildRenderFn = linkedSetComponent<Person>(
+      Person.requestSet((persons) => ({
+        PersonGrid: () =>
+          Grid.of(persons, (person) => ({Profile: () => Card.of(person)})),
+      })),
+      ({linkedData: {PersonGrid}}) => {
+        return (
+          <div>
+            <PersonGrid>
+              {({linkedData: {Profile}, ...props}) => {
+                //with this setup we can choose to customise our child render function, add tags/props etc.
+                return <Profile {...props} />;
+              }}
+            </PersonGrid>
+          </div>
+        );
+      },
+    );*/
+  //
+  // export const PersonNetwork = linkedComponent<Person>(
+  //   Person.request((person) => ({
+  //     Card: () => Card.of(person),
+  //     Friends: () => PersonOverview.of(person.knows),
+  //   })),
+  //   (props) => {
+  //     let {Card, Friends} = props.linkedData;
+  //     return (
+  //       <div>
+  //         <Card />
+  //         <p> knows </p>
+  //         <Friends />
+  //       </div>
+  //     );
+  //   },
+  // );
+  //
 
   //NEXT:
   //Return an object
   //Return a single entry
-  //Test nested child components
   //Work with components that show multiple sources (setComponents)
+  //clean up old linked component code
   //Refactor structure of json objects, where and count need to be added? investigate other libraries
   //Refactor duplicate value in "every"
   //Refactor firstPath into an array

@@ -4,7 +4,6 @@ import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
 import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
-import {Node} from '../models';
 import {BoundComponent, Component} from '../interfaces/Component';
 
 export type WhereClause<S extends Shape | OriginalValue> =
@@ -68,22 +67,6 @@ export type ToWhereValue<T, I = 0> = T extends ShapeSet
   : T extends boolean
   ? QueryBoolean
   : QueryValue<T>;
-
-export type ToNormalValue<T> = T extends Count
-  ? number[]
-  : T extends LinkedQuery<any, any>
-  ? GetQueryResponseType<T>[]
-  : T extends QueryShapeSet<any>
-  ? ShapeSet<GetQueryShapeSetType<T>>
-  : T extends QueryShape<any>
-  ? GetQueryShapeType<T>
-  : T extends QueryString
-  ? string[]
-  : T extends Array<any>
-  ? Array<ToNormalValue<GetArrayType<T>>>
-  : T extends Evaluation
-  ? boolean[]
-  : T;
 
 export type GetQueryShapeSetType<T> = T extends QueryShapeSet<infer ShapeType>
   ? ShapeType
@@ -684,8 +667,8 @@ export class QueryPrimitive<T> extends QueryValue<T> {
     return this as any;
   }
 }
-class QueryString extends QueryPrimitive<string> {}
-class QueryNumber extends QueryValue<string> {}
+export class QueryString extends QueryPrimitive<string> {}
+export class QueryNumber extends QueryValue<string> {}
 
 export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
   constructor(
@@ -817,7 +800,7 @@ export class LinkedWhereQuery<
     return (this.traceResponse as Evaluation).getWherePath();
   }
 }
-class Count extends QueryPrimitiveSet<number> {
+export class Count extends QueryPrimitiveSet<number> {
   constructor(public subject: QueryShapeSet) {
     super();
   }
