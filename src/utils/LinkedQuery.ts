@@ -5,12 +5,89 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
 import {BoundComponent, Component} from '../interfaces/Component';
+import {Value} from 'classnames';
+import {ToResultType} from './LocalQueryResolver';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
   | ((s: ToQueryValue<S>) => Evaluation);
 export type JSPrimitive = string | number | boolean | Date | null | undefined;
 export type OriginalValue = Shape | ShapeSet | JSPrimitive;
+
+//2: T = QueryShapeSet<Person, QueryShapeSet<Person, Person>>
+//ShapesetType = Person,
+//Source = QueryShapeSet<Person, Person>
+// export type GetValueResultType<T> = T;
+export type GetValueResultType<T> = T extends QueryString<infer Source>
+  ? ToValueResultType<string, Source>
+  : T extends QueryShapeSet<infer ShapesetType, infer Source>
+  ? [ShapesetType, Source] //ToValueResultType<ShapesetType[], Source>
+  : T extends QueryNumber<infer Source>
+  ? ToValueResultType<number, Source>
+  : any;
+
+// QueryShapeSet<Person, QueryShapeSet<Person, Person>> & ToQueryShapeSetValue<QueryShapeSet<Person, QueryShapeSet<Person, Person>>, Person>
+//example class
+interface Foo<Source> {
+  name: string;
+}
+//simplified type that maps all keys of an object to a different return type
+type FooMapped<T> = {
+  [P in keyof T]: boolean;
+};
+
+type NestedToArr<T> = T extends Foo<infer Source> ? NestedToArr<Source>[] : T;
+var AnswerNum: NestedToArr<number>;
+var Answer: NestedToArr<Foo<number>>; //number
+var Answer2: NestedToArr<Foo<Foo<number>>>; //number[]
+var Answer3: NestedToArr<Foo<Foo<number>>>; //number[][]
+
+var AnswerB: NestedToArr<number & FooMapped<number>>; //number
+var AnswerB2: NestedToArr<Foo<number> & FooMapped<Foo<number>>>; //unknown[]
+var AnswerB3: NestedToArr<Foo<Foo<number>> & FooMapped<Foo<Foo<number>>>>; //unknown[]
+
+// type GetResponseType<T> = T extends QueryShapeSet<any> ? never : never;
+// type ToResult<T> = T extends QueryShapeSet<infer ShapeType, infer Source>
+//   ? ToValueResultType<ShapeType, Source>
+//   : never;
+// function executeFn<T>(queryFn: T): ToResult<GetResponseType<T>>[] {
+//   return null;
+// }
+// let res = executeFn((p: QueryShapeSet<Person>) => p.friends.name);
+
+// QueryString<QueryShapeSet<Person, QueryShapeSet<Person, Person>>>
+//Source = QueryShapeSet<Person, QueryShapeSet<Person, Person>>
+//Value = QueryString
+//ShapeType = Person,
+//ParentSource = QueryShapeSet<Person, Person>
+
+//2: QueryShapeSet<Person, QueryShapeSet<Person, Person>>
+//Value = Person[]
+//Source = QueryShapeSet<Person, Person>
+//ShapeType = Person,
+//ParentSource = Person
+
+//-> ToValueResultType<Person[], Person>[]
+//Value = Person[]
+//Source = Person
+export type ToValueResultType<Value, Source> = Source extends QueryShapeSet<
+  infer ShapeType,
+  infer ParentSource
+>
+  ? ToQueryShapeSetSource<ShapeType, Value, ParentSource>
+  : Value;
+
+//ShapeType = Person,
+//Value = QueryString
+//ParentSource = QueryShapeSet<Person, Person>
+
+//ShapeType = Person,
+//Value = Person[]
+//ParentSource = Person
+//-> ToValueResultType<Person[], Person>[]
+
+export type ToQueryShapeSetSource<ShapeType, Value, ParentSource> =
+  ShapeType extends null ? Value : ToValueResultType<Value, ParentSource>[];
 
 export type GetQueryResponseType<Q> = Q extends LinkedQuery<
   any,
@@ -33,7 +110,10 @@ export type QueryBuildFn<T extends Shape, ResultType> = (
 ) => ResultType;
 
 export type ToQueryShape<T> = {
-  [P in keyof T]: ToQueryValue<T[P]>;
+  [P in keyof T]: ToQueryValue<T[P], T>;
+};
+export type ToQueryShapeSetValue<SourceShapeSet, Shape, Source = null> = {
+  [P in keyof Shape]: ToQueryValue<Shape[P], SourceShapeSet>;
 };
 export type ToWhereShape<T> = {
   [P in keyof T]: ToWhereValue<T[P]>;
@@ -42,13 +122,18 @@ type GetShapeSetType<SS> = SS extends ShapeSet<infer ShapeType>
   ? ShapeType
   : never;
 
-export type ToQueryValue<T, I = 0> = T extends ShapeSet
+export type SourcedValue<Source, Value> = Value;
+
+export type ToQueryValue<T, Source = null> = T extends ShapeSet<
+  infer ShapeSetType
+>
   ? //a shape set turns into a query-shape set but also inherits all the properties of the shape that each item in the set has
-    QueryShapeSet<GetShapeSetType<T>> & ToQueryShape<GetShapeSetType<T>>
+    QueryShapeSet<ShapeSetType, Source> &
+      ToQueryShapeSetValue<QueryShapeSet<ShapeSetType, Source>, ShapeSetType>
   : T extends Shape
   ? ToQueryShape<T> & QueryShape<T>
   : T extends string
-  ? QueryString
+  ? QueryString<Source>
   : T extends number
   ? QueryNumber
   : T extends boolean
@@ -140,7 +225,7 @@ export enum WhereMethods {
   EVERY = 'every',
 }
 
-export class QueryValue<S extends Object = any> {
+export class QueryValue<S extends Object = any, Source = null> {
   protected originalValue;
 
   //is null by default to avoid warnings when trying to access wherePath when its undefined
@@ -317,7 +402,10 @@ export class QueryValueSetOfSets extends CoreSet<
     return valueSets.proxy;
   }
 }
-export class QueryShapeSet<S extends Shape = Shape> extends QueryValue<S> {
+export class QueryShapeSet<
+  S extends Shape = Shape,
+  Source = null,
+> extends QueryValue<S, Source> {
   private proxy;
   public queryShapes: CoreSet<QueryShape>;
   constructor(
@@ -649,7 +737,7 @@ class QueryBoolean extends QueryValue<boolean> {
     super(property, subject);
   }
 }
-export class QueryPrimitive<T> extends QueryValue<T> {
+export class QueryPrimitive<T, Source = null> extends QueryValue<T, Source> {
   constructor(
     public originalValue: string,
     public property?: PropertyShape,
@@ -667,8 +755,11 @@ export class QueryPrimitive<T> extends QueryValue<T> {
     return this as any;
   }
 }
-export class QueryString extends QueryPrimitive<string> {}
-export class QueryNumber extends QueryValue<string> {}
+export class QueryString<Source = null> extends QueryPrimitive<
+  string,
+  Source
+> {}
+export class QueryNumber<Source = null> extends QueryValue<number, Source> {}
 
 export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
   constructor(

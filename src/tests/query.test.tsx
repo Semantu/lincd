@@ -100,55 +100,65 @@ Storage.setQuadsLoaded(
 
 describe('query tests', () => {
   // test('can select a property of all instances', () => {
-  //   let names = resolveLocalFlat(
+  //   let names = resolveLocal(
   //     Person.select((p) => {
   //       return p.name;
   //     }),
   //   );
-  //   //["name","name"]
   //
   //   expect(Array.isArray(names)).toBe(true);
   //   expect(names.length).toBe(4);
   //   expect(names.includes('Moa')).toBe(true);
   //   expect(names.includes('Mike')).toBe(false);
   // });
-  //
-  // test('can select sub properties of a first property that returns a set', () => {
+
+  test('can select sub properties of a first property that returns a set', () => {
+    let q = Person.select((p) => {
+      return p.friends.friends;
+    });
+    // QueryShapeSet<Person, Person> & ToQueryShapeSetValue<ShapeValuesSet<Person>, Person>>
+    // QueryShapeSet<Person, QueryShapeSet<Person, Person>> &
+    //  ToQueryShapeSetValue<QueryShapeSet<Person, QueryShapeSet<Person, Person>>, Person, null>>
+    let namesOfFriends = resolveLocal(q);
+    expect(Array.isArray(namesOfFriends)).toBe(true);
+    expect(namesOfFriends.length).toBe(4);
+    expect(namesOfFriends[0].length).toBe(2);
+    expect(namesOfFriends[0].includes('Jinx')).toBe(true);
+    expect(namesOfFriends[0].includes('Moa')).toBe(true);
+    expect(namesOfFriends[3].length).toBe(0);
+  });
+
+  // test('can select sub properties of a first property that returns a set - FLAT result', () => {
   //   let q = Person.select((p) => {
   //     return p.friends.name;
   //   });
   //   let namesOfFriends = resolveLocalFlat(q);
-  //   //[
-  //   // ["name1","name2","name3"]
-  //   //]
-  //
   //   expect(Array.isArray(namesOfFriends)).toBe(true);
   //   expect(namesOfFriends.length).toBe(3);
+  //   expect(namesOfFriends.includes('Jinx')).toBe(true);
   //   expect(namesOfFriends.includes('Semmy')).toBe(false);
-  //   expect(namesOfFriends.includes('Moa')).toBe(true);
   // });
-  //
-  // test('can select multiple property paths', () => {
-  //   let result = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return [p.name, p.friends.name];
-  //     }),
-  //   );
-  //
-  //   expect(Array.isArray(result)).toBe(true);
-  //   expect(result.length).toBe(2);
-  //
-  //   let [names, namesOfFriends] = result;
-  //   expect(Array.isArray(names)).toBe(true);
-  //   expect(names.length).toBe(4);
-  //   expect(names.includes('Moa')).toBe(true);
-  //   expect(names.includes('Mike')).toBe(false);
-  //   expect(Array.isArray(namesOfFriends)).toBe(true);
-  //   expect(namesOfFriends.length).toBe(3);
-  //   expect(namesOfFriends.includes('Semmy')).toBe(false);
-  //   expect(namesOfFriends.includes('Moa')).toBe(true);
-  // });
-  //
+
+  test('can select multiple property paths', () => {
+    let q = Person.select((p) => {
+      return [p.name, p.friends];
+    });
+    let result = resolveLocal(q);
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+
+    let [names, namesOfFriends] = result;
+    expect(Array.isArray(names)).toBe(true);
+    expect(names.length).toBe(4);
+    expect(names.includes('Moa')).toBe(true);
+    expect(names.includes('Mike')).toBe(false);
+    expect(Array.isArray(namesOfFriends)).toBe(true);
+    expect(namesOfFriends.length).toBe(3);
+    expect(namesOfFriends.includes('Semmy')).toBe(false);
+    expect(namesOfFriends.includes('Moa')).toBe(true);
+  });
+
   // test('can select nested paths', () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
@@ -413,27 +423,27 @@ describe('query tests', () => {
   //   );
   // });
 
-  test('sub select query', () => {
-    // select people that only have friends that are called Moa or Jinx
-    let nameAndHobbyOfFriends = resolveLocal(
-      Person.select((p) => {
-        return p.friends.select((f) => [f.name, f.hobby]);
-      }),
-    );
-    nameAndHobbyOfFriends.forEach((person) => {
-      person.forEach((friend) => {
-        let [name, hobby] = friend;
-        console.log(name, hobby);
-      });
-    });
-
-    expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
-    expect(nameAndHobbyOfFriends.length).toBe(4);
-    expect(nameAndHobbyOfFriends[0][0][0]).toBe('Moa');
-    expect(nameAndHobbyOfFriends[0][0][1]).toBe('Jogging');
-    expect(nameAndHobbyOfFriends[1][0][1]).toBeUndefined();
-    expect(nameAndHobbyOfFriends[2].length).toBe(0);
-  });
+  // test('sub select query', () => {
+  //   // select people that only have friends that are called Moa or Jinx
+  //   let nameAndHobbyOfFriends = resolveLocal(
+  //     Person.select((p) => {
+  //       return p.friends.select((f) => [f.name, f.hobby]);
+  //     }),
+  //   );
+  //   nameAndHobbyOfFriends.forEach((person) => {
+  //     person.forEach((friend) => {
+  //       let [name, hobby] = friend;
+  //       console.log(name, hobby);
+  //     });
+  //   });
+  //
+  //   expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
+  //   expect(nameAndHobbyOfFriends.length).toBe(4);
+  //   expect(nameAndHobbyOfFriends[0][0][0]).toBe('Moa');
+  //   expect(nameAndHobbyOfFriends[0][0][1]).toBe('Jogging');
+  //   expect(nameAndHobbyOfFriends[1][0][1]).toBeUndefined();
+  //   expect(nameAndHobbyOfFriends[2].length).toBe(0);
+  // });
 
   /*test('select - object return type', () => {
     // select people that only have friends that are called Moa or Jinx

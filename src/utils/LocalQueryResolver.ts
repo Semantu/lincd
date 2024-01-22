@@ -7,6 +7,7 @@ import {
   GetQueryResponseType,
   GetQueryShapeSetType,
   GetQueryShapeType,
+  GetValueResultType,
   JSPrimitive,
   LinkedQuery,
   QueryPath,
@@ -17,6 +18,7 @@ import {
   QueryString,
   QueryValue,
   QueryValueSetOfSets,
+  SourcedValue,
   SubQueryPaths,
   WhereAndOr,
   WhereEvaluationPath,
@@ -25,6 +27,7 @@ import {
 } from './LinkedQuery';
 import {ShapeSet} from '../collections/ShapeSet';
 import {Shape} from '../shapes/Shape';
+import {shacl} from '../ontologies/shacl';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -44,17 +47,19 @@ export type ToNormalValue<T> = T extends Count
   ? boolean[]
   : T;
 
-export type ToResultType<T> = T extends Count
+export type ToResultType<T> = T extends QueryValue
+  ? GetValueResultType<T>
+  : T extends Count
   ? number[]
   : T extends LinkedQuery<any, any>
   ? ToResultType<GetQueryResponseType<T>>[]
-  : T extends QueryShapeSet<any>
-  ? ShapeSet<GetQueryShapeSetType<T>>
-  : T extends QueryShape<any>
-  ? GetQueryShapeType<T>
-  : T extends QueryString
-  ? string[]
-  : T extends Array<any>
+  : // : T extends QueryShapeSet<any>
+  // ? ShapeSet<GetQueryShapeSetType<T>>
+  // : T extends QueryShape<any>
+  // ? GetQueryShapeType<T>
+  // : T extends QueryString
+  // ? GetValueResultType<T>
+  T extends Array<any>
   ? Array<ToResultType<GetArrayType<T>>>
   : T extends Evaluation
   ? boolean[]
@@ -69,7 +74,7 @@ export function resolveLocal<S extends LinkedQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
   queryPaths?: QueryPath[] | ComponentQueryPath[],
-): ToResultType<GetQueryResponseType<S>> {
+): ToResultType<GetQueryResponseType<S>>[] {
   queryPaths = queryPaths || query.getQueryPaths();
   subject = subject || (query.shape as any).getLocalInstances();
   let results = [];
@@ -488,10 +493,10 @@ function resolveQuerySteps(
 
   if (subject instanceof Shape) {
     if (Array.isArray(currentStep)) {
-      // return resolveQueryPathsForShapeFlat(queryPath, subject);
+      return resolveQueryPathsForShape(queryPath as SubQueryPaths, subject);
     }
     //TODO: review differences between shape vs shapes and make it DRY
-    // return resolveQueryStepForShapeFlat(queryPath, subject);
+    return resolveQueryStepForShape(currentStep, subject, restPath);
   }
   if (subject instanceof ShapeSet) {
     if (Array.isArray(currentStep)) {
@@ -535,7 +540,7 @@ function resolveQueryPathsForShapes(
 ) {
   let results = [];
   subjects.forEach((subject) => {
-    let subjectResult = resolveQueryPathsForShapeFlat(queryPaths, subject);
+    let subjectResult = resolveQueryPathsForShape(queryPaths, subject);
     let subResult = resolveQuerySteps(subjectResult as any, restPath);
     results.push(subResult);
   });
@@ -553,6 +558,12 @@ function resolveQueryPathsForShapesFlat(
   return results;
 }
 
+function resolveQueryPathsForShape(queryPaths: SubQueryPaths, subject: Shape) {
+  return queryPaths.map((queryPath) => {
+    return resolveQueryPath(subject, queryPath);
+  });
+}
+
 function resolveQueryPathsForShapeFlat(
   queryPaths: SubQueryPaths,
   subject: Shape,
@@ -561,6 +572,44 @@ function resolveQueryPathsForShapeFlat(
     return resolveQueryPathFlat(subject, queryPath);
   });
 }
+function resolveQueryStepForShape(
+  queryStep: QueryStep | SubQueryPaths | BoundComponentQueryStep,
+  subject: Shape,
+  restPath: (QueryStep | SubQueryPaths)[],
+) {
+  if ((queryStep as QueryStep).property) {
+    let result = subject[(queryStep as QueryStep).property.label];
+    if ((queryStep as QueryStep).where) {
+      result = filterResults(result, (queryStep as QueryStep).where);
+    }
+    if ((queryStep as QueryStep).count) {
+      if (Array.isArray(result)) {
+        result = result.length;
+      } else if (result instanceof Set) {
+        result = result.size;
+      } else {
+        throw Error('Not sure how to count this: ' + result.toString());
+      }
+    }
+    //YOU ARE HERE: make a test case that comes here and then continue with rest path
+    debugger;
+    let subResult = resolveQuerySteps(result, restPath);
+    return subResult;
+  } else if ((queryStep as QueryStep).where) {
+    //in some cases there is a query step without property but WITH where
+    //this happens when the where clause is on the root of the query
+    //like Person.select(p => p.where(...))
+    //in that case the where clause is directly applied to the given subject
+    debugger;
+    // let whereResult = resolveWhere(subject as ShapeSet, queryStep.where);
+    // return whereResult;
+  } else if ((queryStep as BoundComponentQueryStep).component) {
+    return (queryStep as BoundComponentQueryStep).component.create(subject);
+  } else {
+    throw Error('Unknown query step: ' + queryStep.toString());
+  }
+}
+
 function resolveQueryStepForShapeFlat(
   queryStep: QueryStep | SubQueryPaths | BoundComponentQueryStep,
   subject: Shape,
@@ -673,11 +722,11 @@ function resolveQueryStepForShapesFlat(
   if (queryStep.property) {
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
-    // let result =
-    //   queryStep.property.nodeKind === shacl.Literal || queryStep.count
-    //     ? []
-    //     : new ShapeSet();
-    let result = [];
+    let result =
+      queryStep.property.nodeKind === shacl.Literal || queryStep.count
+        ? []
+        : new ShapeSet();
+
     (subject as ShapeSet).forEach((singleShape) => {
       //directly access the get/set method of the shape
       let stepResult = singleShape[queryStep.property.label];
@@ -701,26 +750,26 @@ function resolveQueryStepForShapesFlat(
       if (stepResult instanceof ShapeSet) {
         stepResult = [...stepResult];
       }
-      result.push(stepResult);
-      // if (stepResult instanceof ShapeSet) {
-      //   result = result.concat(stepResult);
-      // } else if (Array.isArray(stepResult)) {
-      //   result = result.concat(stepResult);
-      // } else if (stepResult instanceof Shape) {
-      //   (result as ShapeSet).add(stepResult);
-      // } else if (primitiveTypes.includes(typeof stepResult)) {
-      //   (result as any[]).push(stepResult);
-      // } else {
-      //   throw Error(
-      //     'Unknown result type: ' +
-      //       typeof stepResult +
-      //       ' for property ' +
-      //       queryStep.property.label +
-      //       ' on shape ' +
-      //       singleShape.toString() +
-      //       ')',
-      //   );
-      // }
+
+      if (stepResult instanceof ShapeSet) {
+        result = result.concat(stepResult);
+      } else if (Array.isArray(stepResult)) {
+        result = result.concat(stepResult);
+      } else if (stepResult instanceof Shape) {
+        (result as ShapeSet).add(stepResult);
+      } else if (primitiveTypes.includes(typeof stepResult)) {
+        (result as any[]).push(stepResult);
+      } else {
+        throw Error(
+          'Unknown result type: ' +
+            typeof stepResult +
+            ' for property ' +
+            queryStep.property.label +
+            ' on shape ' +
+            singleShape.toString() +
+            ')',
+        );
+      }
     });
     return result;
   } else if (queryStep.where) {
