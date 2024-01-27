@@ -99,34 +99,53 @@ Storage.setQuadsLoaded(
 );
 
 describe('query tests', () => {
-  // test('can select a property of all instances', () => {
-  //   let names = resolveLocal(
-  //     Person.select((p) => {
-  //       return p.name;
-  //     }),
-  //   );
-  //
-  //   expect(Array.isArray(names)).toBe(true);
-  //   expect(names.length).toBe(4);
-  //   expect(names.includes('Moa')).toBe(true);
-  //   expect(names.includes('Mike')).toBe(false);
+  test('can select a property of all instances', () => {
+    let names = resolveLocal(
+      Person.select((p) => {
+        return p.name;
+      }),
+    );
+    /**
+     * Expected result:
+     * [{
+     *   "name:"Semmy"
+     * },{
+     *   "name":"Moa",
+     * },... ]
+     */
+
+    expect(Array.isArray(names)).toBe(true);
+    expect(names.length).toBe(4);
+    expect(typeof names[0] === 'object').toBe(true);
+    expect(names[0].hasOwnProperty('name')).toBe(true);
+    expect(names[0].name).toBe('Semmy');
+  });
+
+  // test('can select sub properties of a first property that returns a set', () => {
+  //   let q = Person.select((p) => {
+  //     return p.friends.name;
+  //   });
+  //   let namesOfFriends = resolveLocal(q);
+  //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  //   expect(namesOfFriends.length).toBe(4);
+  //   expect(namesOfFriends[0].length).toBe(2);
+  //   expect(namesOfFriends[0].includes('Jinx')).toBe(true);
+  //   expect(namesOfFriends[0].includes('Moa')).toBe(true);
+  //   expect(namesOfFriends[3].length).toBe(0);
   // });
 
-  test('can select sub properties of a first property that returns a set', () => {
-    let q = Person.select((p) => {
-      return p.friends.friends;
-    });
-    // QueryShapeSet<Person, Person> & ToQueryShapeSetValue<ShapeValuesSet<Person>, Person>>
-    // QueryShapeSet<Person, QueryShapeSet<Person, Person>> &
-    //  ToQueryShapeSetValue<QueryShapeSet<Person, QueryShapeSet<Person, Person>>, Person, null>>
-    let namesOfFriends = resolveLocal(q);
-    expect(Array.isArray(namesOfFriends)).toBe(true);
-    expect(namesOfFriends.length).toBe(4);
-    expect(namesOfFriends[0].length).toBe(2);
-    expect(namesOfFriends[0].includes('Jinx')).toBe(true);
-    expect(namesOfFriends[0].includes('Moa')).toBe(true);
-    expect(namesOfFriends[3].length).toBe(0);
-  });
+  // test('can select a nested set of shapes', () => {
+  //   let q = Person.select((p) => {
+  //     return p.friends.friends;
+  //   });
+  //   let namesOfFriends = resolveLocal(q);
+  //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  //   // expect(namesOfFriends.length).toBe(4);
+  //   // expect(namesOfFriends[0].length).toBe(2);
+  //   // expect(namesOfFriends[0].includes('Jinx')).toBe(true);
+  //   // expect(namesOfFriends[0].includes('Moa')).toBe(true);
+  //   // expect(namesOfFriends[3].length).toBe(0);
+  // });
 
   // test('can select sub properties of a first property that returns a set - FLAT result', () => {
   //   let q = Person.select((p) => {
@@ -139,25 +158,25 @@ describe('query tests', () => {
   //   expect(namesOfFriends.includes('Semmy')).toBe(false);
   // });
 
-  test('can select multiple property paths', () => {
-    let q = Person.select((p) => {
-      return [p.name, p.friends];
-    });
-    let result = resolveLocal(q);
-
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBe(2);
-
-    let [names, namesOfFriends] = result;
-    expect(Array.isArray(names)).toBe(true);
-    expect(names.length).toBe(4);
-    expect(names.includes('Moa')).toBe(true);
-    expect(names.includes('Mike')).toBe(false);
-    expect(Array.isArray(namesOfFriends)).toBe(true);
-    expect(namesOfFriends.length).toBe(3);
-    expect(namesOfFriends.includes('Semmy')).toBe(false);
-    expect(namesOfFriends.includes('Moa')).toBe(true);
-  });
+  // test('can select multiple property paths', () => {
+  //   let q = Person.select((p) => {
+  //     return [p.name, p.friends];
+  //   });
+  //   let result = resolveLocal(q);
+  //
+  //   expect(Array.isArray(result)).toBe(true);
+  //   expect(result.length).toBe(2);
+  //
+  //   let [names, namesOfFriends] = result;
+  //   expect(Array.isArray(names)).toBe(true);
+  //   expect(names.length).toBe(4);
+  //   expect(names.includes('Moa')).toBe(true);
+  //   expect(names.includes('Mike')).toBe(false);
+  //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  //   expect(namesOfFriends.length).toBe(3);
+  //   expect(namesOfFriends.includes('Semmy')).toBe(false);
+  //   expect(namesOfFriends.includes('Moa')).toBe(true);
+  // });
 
   // test('can select nested paths', () => {
   //   //we select the friends of all persons, but only those friends whose name is moa

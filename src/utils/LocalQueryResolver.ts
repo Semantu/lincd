@@ -28,6 +28,7 @@ import {
 import {ShapeSet} from '../collections/ShapeSet';
 import {Shape} from '../shapes/Shape';
 import {shacl} from '../ontologies/shacl';
+import {CoreMap} from '../collections/CoreMap';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -47,6 +48,7 @@ export type ToNormalValue<T> = T extends Count
   ? boolean[]
   : T;
 
+// export type ToResultType<T> = T;
 export type ToResultType<T> = T extends QueryValue
   ? GetValueResultType<T>
   : T extends Count
@@ -65,6 +67,10 @@ export type ToResultType<T> = T extends QueryValue
   ? boolean[]
   : T;
 
+type NodeResult = {
+  '@id': string;
+};
+type NodeResultMap = CoreMap<string, NodeResult>;
 /**
  * Resolves the query locally, by searching the graph in local memory, without using stores.
  * Returns the result immediately.
@@ -499,14 +505,26 @@ function resolveQuerySteps(
     return resolveQueryStepForShape(currentStep, subject, restPath);
   }
   if (subject instanceof ShapeSet) {
+    //create the start of the result JS object for each subject node
+    let resultObjects: NodeResultMap = new CoreMap();
+    subject.forEach((sub) => {
+      resultObjects.set(sub.uri, {
+        '@id': sub.uri,
+      });
+    });
+
     if (Array.isArray(currentStep)) {
-      return resolveQueryPathsForShapes(currentStep, subject, restPath);
+      resolveQueryPathsForShapes(currentStep, subject, restPath);
+    } else {
+      resolveQueryStepForShapes(
+        currentStep as QueryStep,
+        subject,
+        resultObjects,
+        restPath,
+      );
     }
-    return resolveQueryStepForShapes(
-      currentStep as QueryStep,
-      subject,
-      restPath,
-    );
+    //turn the map back to an array
+    return [...resultObjects.values()];
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);
   }
@@ -648,6 +666,7 @@ function resolveQueryStepForShapeFlat(
 function resolveQueryStepForShapes(
   queryStep: QueryStep,
   subject: ShapeSet,
+  resultObjects: NodeResultMap,
   restPath: (QueryStep | SubQueryPaths)[],
 ) {
   if (queryStep.property) {
@@ -657,7 +676,7 @@ function resolveQueryStepForShapes(
     //   queryStep.property.nodeKind === shacl.Literal || queryStep.count
     //     ? []
     //     : new ShapeSet();
-    let result = [];
+    // let result = [];
     (subject as ShapeSet).forEach((singleShape) => {
       //directly access the get/set method of the shape
       let stepResult = singleShape[queryStep.property.label];
@@ -678,12 +697,16 @@ function resolveQueryStepForShapes(
         return;
       }
 
+      //TODO: subjects or new variable needs to be a map of ID to shape
+      let nodeResult = resultObjects.get(singleShape.uri);
+      nodeResult[queryStep.property.label] = stepResult;
+
       // if (stepResult instanceof ShapeSet) {
       //   stepResult = [...stepResult];
       // }
       let subResult = resolveQuerySteps(stepResult, restPath);
 
-      result.push(subResult);
+      // result.push(subResult);
       // if (stepResult instanceof ShapeSet) {
       //   result = result.concat(stepResult);
       // } else if (Array.isArray(stepResult)) {
@@ -704,7 +727,7 @@ function resolveQueryStepForShapes(
       //   );
       // }
     });
-    return result;
+    // return result;
   } else if (queryStep.where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
