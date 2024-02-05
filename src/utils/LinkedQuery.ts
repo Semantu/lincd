@@ -20,12 +20,12 @@ export type GetValueResultType<T> = T extends QueryString<
   infer Source,
   infer Property
 >
-  ? ToValueResultType<string, Source, Property>
+  ? ToQueryResult<string, Source, Property>
   : T extends QueryShapeSet<infer ShapesetType, infer Source>
   ? // ? [ShapesetType, Source] //ToValueResultType<ShapesetType[], Source>
-    ToValueResultType<ShapesetType[], Source>
+    ToQueryResult<ShapesetType[], Source>
   : T extends QueryNumber<infer Source>
-  ? ToValueResultType<number, Source>
+  ? ToQueryResult<number, Source>
   : any;
 
 // QueryShapeSet<Person, QueryShapeSet<Person, Person>> & ToQueryShapeSetValue<QueryShapeSet<Person, QueryShapeSet<Person, Person>>, Person>
@@ -72,14 +72,25 @@ var AnswerB3: NestedToArr<Foo<Foo<number>> & FooMapped<Foo<Foo<number>>>>; //unk
 //-> ToValueResultType<Person[], Person>[]
 //Value = Person[]
 //Source = Person
-export type ToValueResultType<
+export type QResult<Source, Object = {}> = {
+  id: string;
+  shape: Source;
+} & Object;
+/**
+ * If the source is an object (it extends shape)
+ * then the result is a plain JS Object, with Property as its key, with type Value
+ */
+export type ToQueryResult<
   Value,
   Source,
   Property extends string | number | symbol = '',
 > = Source extends Shape
-  ? {
-      [P in Property]: Value;
-    }
+  ? QResult<
+      Source,
+      {
+        [P in Property]: Value;
+      }
+    >
   : Value;
 // export type ToValueResultType<Value, Source> = Source extends QueryShapeSet<
 //   infer ShapeType,
@@ -106,7 +117,7 @@ export type ToQueryShapeSource<ShapeType, Value> = ShapeType extends null
     }[];
 
 export type ToQueryShapeSetSource<ShapeType, Value, ParentSource> =
-  ShapeType extends null ? Value : ToValueResultType<Value, ParentSource>[];
+  ShapeType extends null ? Value : ToQueryResult<Value, ParentSource>[];
 
 export type GetQueryResponseType<Q> = Q extends LinkedQuery<
   any,

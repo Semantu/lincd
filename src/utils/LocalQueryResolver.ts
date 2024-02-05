@@ -10,6 +10,7 @@ import {
   GetValueResultType,
   JSPrimitive,
   LinkedQuery,
+  QResult,
   QueryPath,
   QueryPrimitiveSet,
   QueryShape,
@@ -70,7 +71,7 @@ export type ToResultType<T> = T extends QueryValue
 type NodeResult = {
   '@id': string;
 };
-type NodeResultMap = CoreMap<string, NodeResult>;
+type NodeResultMap = CoreMap<string, QResult<any, any>>;
 /**
  * Resolves the query locally, by searching the graph in local memory, without using stores.
  * Returns the result immediately.
@@ -509,7 +510,8 @@ function resolveQuerySteps(
     let resultObjects: NodeResultMap = new CoreMap();
     subject.forEach((sub) => {
       resultObjects.set(sub.uri, {
-        '@id': sub.uri,
+        id: sub.uri,
+        shape: sub,
       });
     });
 

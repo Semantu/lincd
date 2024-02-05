@@ -100,14 +100,16 @@ Storage.setQuadsLoaded(
 
 describe('query tests', () => {
   test('can select a property of all instances', () => {
-    let names = resolveLocal(
-      Person.select((p) => {
-        return p.name;
-      }),
-    );
+    //  x:LinkedQuery<Person, QueryString<Person, "name">>
+    let x = Person.select((p) => {
+      return p.name;
+    });
+    let names = resolveLocal(x);
     /**
      * Expected result:
      * [{
+     *   "id:"..."
+     *   "shape": a Person
      *   "name:"Semmy"
      * },{
      *   "name":"Moa",
