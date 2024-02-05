@@ -10,6 +10,7 @@ import {
   GetValueResultType,
   JSPrimitive,
   LinkedQuery,
+  LinkedQueryObject,
   QResult,
   QueryPath,
   QueryPrimitiveSet,
@@ -61,47 +62,63 @@ type NodeResultMap = CoreMap<string, QResult<any, any>>;
  * Returns the result immediately.
  * The results will be the end point reached by the query
  */
-export function resolveLocal<S extends LinkedQuery<any>>(
-  query: S,
-  subject?: ShapeSet | Shape,
-  queryPaths?: QueryPath[] | ComponentQueryPath[],
-): ToResultType<GetQueryResponseType<S>>[] {
-  queryPaths = queryPaths || query.getQueryPaths();
-  subject = subject || (query.shape as any).getLocalInstances();
+export function resolveLocal<ResultType>(
+  // query: S,
+  // subject?: ShapeSet | Shape,
+  // queryPaths?: QueryPath[] | ComponentQueryPath[],
+  query: LinkedQueryObject,
+  shape: typeof Shape,
+): ResultType {
+  // ): ToResultType<GetQueryResponseType<S>>[] {
+  let subject = (shape as any).getLocalInstances();
   let results = [];
 
-  queryPaths.forEach((queryPath) => {
+  query.forEach((queryPath) => {
     results.push(resolveQueryPath(subject, queryPath));
   });
 
-  // convert the result of each instance into the shape that was requested
-  if (query.traceResponse instanceof QueryValue) {
-    //even though resolveQueryPaths always returns an array, if a single value was requested
-    //we will return the first value of that array to match the request
-    return results.shift();
-    //map((result) => {
-    //return result.shift();
-    //});
-  } else if (Array.isArray(query.traceResponse)) {
-    //nothing to convert if an array was requested
-    return results as any;
-  } else if (
-    query.traceResponse instanceof QueryValueSetOfSets ||
-    query.traceResponse instanceof LinkedQuery
-  ) {
-    return results.shift();
-  } else if (
-    query.traceResponse instanceof QueryPrimitiveSet ||
-    query.traceResponse instanceof Evaluation
-  ) {
-    //TODO: see how traceResponse is made for QueryValue. Here we need to return an array of the first item in the results?
-    //does that also work if there is multiple values?
-    //do we need to check the size of the traceresponse
-    //why is a CoreSet created? start there
-    return results.length > 0 ? [...results[0]] : ([] as any);
-  } else if (typeof query.traceResponse === 'object') {
-    throw new Error('Objects are not yet supported');
+  //if only 1 path was selected, return the first result
+  if (query.length === 1) {
+    return results[0] as ResultType;
   }
+  return results as ResultType;
+
+  // queryPaths = queryPaths || query.getQueryPaths();
+  // subject = subject || (query.shape as any).getLocalInstances();
+  // let results = [];
+  //
+  // queryPaths.forEach((queryPath) => {
+  //   results.push(resolveQueryPath(subject, queryPath));
+  // });
+  //
+  // // convert the result of each instance into the shape that was requested
+  // if (query.traceResponse instanceof QueryValue) {
+  //   //even though resolveQueryPaths always returns an array, if a single value was requested
+  //   //we will return the first value of that array to match the request
+  //   return results.shift();
+  //   //map((result) => {
+  //   //return result.shift();
+  //   //});
+  // } else if (Array.isArray(query.traceResponse)) {
+  //   //nothing to convert if an array was requested
+  //   return results as any;
+  // } else if (
+  //   query.traceResponse instanceof QueryValueSetOfSets ||
+  //   query.traceResponse instanceof LinkedQuery
+  // ) {
+  //   return results.shift();
+  // } else if (
+  //   query.traceResponse instanceof QueryPrimitiveSet ||
+  //   query.traceResponse instanceof Evaluation
+  // ) {
+  //   //TODO: see how traceResponse is made for QueryValue. Here we need to return an array of the first item in the results?
+  //   //does that also work if there is multiple values?
+  //   //do we need to check the size of the traceresponse
+  //   //why is a CoreSet created? start there
+  //   return results.length > 0 ? [...results[0]] : ([] as any);
+  // } else if (typeof query.traceResponse === 'object') {
+  //   throw new Error('Objects are not yet supported');
+  // }
 }
 export function resolveLocalFlat<S extends LinkedQuery<any>>(
   query: S,

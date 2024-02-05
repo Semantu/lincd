@@ -229,10 +229,11 @@ export type ComponentQueryPath =
 
 export interface BoundComponentQueryStep {
   component: BoundComponent<any, any>;
-  // path: QueryPath[];
+  // path: LinkedQueryObject;
 }
+export type LinkedQueryObject = QueryPath[];
 
-export type SubQueryPaths = QueryPath[];
+export type SubQueryPaths = LinkedQueryObject;
 /**
  * A QueryPath is an array of QuerySteps, representing the path of properties that were requested to reach a certain value
  */
@@ -895,7 +896,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
    * Each query path is returned as array of the property paths requested, with potential where clauses (together called a QueryStep)
    */
   getQueryPaths() {
-    let queryPaths: QueryPath[] = [];
+    let queryPaths: LinkedQueryObject = [];
     //if the trace response is an array, then multiple paths were requested
     if (
       this.traceResponse instanceof QueryValue ||

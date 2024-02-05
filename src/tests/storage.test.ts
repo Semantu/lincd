@@ -1,8 +1,8 @@
 import {describe, expect, test} from '@jest/globals';
 import {IQuadStore} from '../interfaces/IQuadStore';
 import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {Storage} from '../utils/Storage';
-import {Graph, Literal, NamedNode, Quad} from '../models';
+import {LinkedStorage} from '../utils/LinkedStorage';
+import {Graph, Literal, NamedNode, Quad, defaultGraph} from '../models';
 import {QuadSet} from '../collections/QuadSet';
 import {rdfs} from '../ontologies/rdfs';
 import {rdf} from '../ontologies/rdf';
@@ -15,6 +15,269 @@ import {
   LinkedDataGenericQuery,
   LinkedDataRequest,
 } from '../interfaces/Component';
+import {PropertyShape} from '../shapes/SHACL';
+import {LinkedQueryObject} from '../utils/LinkedQuery';
+import {resolveLocal} from '../utils/LocalQueryResolver';
+
+export class InMemoryStore extends Shape implements IQuadStore {
+  protected contents: QuadSet;
+  private initPromise: Promise<any>;
+  /**
+   * You can use this to define (overwrite) which graph this store uses for its quads
+   */
+  public targetGraph: Graph;
+
+  constructor(n?) {
+    super(n);
+  }
+
+  init(): Promise<any> {
+    // console.log('Init ' + this.toString());
+    if (!this.initPromise) {
+      this.initPromise = this.loadContents();
+    }
+    return this.initPromise;
+  }
+
+  loadContents(): Promise<QuadSet> {
+    //by default an in-memory store starts empty - it has no permanent storage
+    //overwrite this method to change that
+    this.contents = new QuadSet();
+    return Promise.resolve(this.contents);
+  }
+
+  /**
+   * returns the contents of the InMemoryStore as a QuadSet
+   * do NOT modify the returned QuadSet directly. Add or remove contents to this store instead
+   */
+  getContents(): QuadSet {
+    return this.contents;
+  }
+
+  update(
+    toAdd: ICoreIterable<Quad>,
+    toRemove: ICoreIterable<Quad>,
+  ): Promise<any> {
+    return this.init().then(() => {
+      if (toAdd) {
+        this._addMultiple(toAdd);
+      }
+      if (toRemove) {
+        this._deleteMultiple(toRemove as QuadArray);
+      }
+      //this method should only get called if either toAdd or toRemove is not empty
+      return this.onContentsUpdated();
+    });
+  }
+
+  getDefaultGraph(): Graph {
+    //NOTE: we changed this from a specific graph for each store BACK null, which means things will be stored in the default graph
+    // because storing quads in multiple graphs easily becomes error-prone.
+    // Removing a triple from one store might not remove it from the main graph.
+    // for example, auth will store users serialised as JSONLD in sessions, these quads get added back to the main graph
+    // until we have a better solution for this, we aim to only use the default graph as much as possible (which means no specific graph os used, thus return null)
+    // return null;
+    // return defaultGraph;
+    return Graph.getOrCreate(this.namedNode.uri);
+  }
+
+  add(quad: Quad): Promise<any> {
+    return this.init().then(() => {
+      this.addNewContents(new QuadArray(quad));
+      this.onContentsUpdated();
+      return Promise.resolve(true);
+    });
+  }
+
+  addMultiple(quads: QuadSet): Promise<any> {
+    return this.init().then(() => {
+      this._addMultiple(quads);
+      this.onContentsUpdated();
+      return Promise.resolve(true);
+    });
+  }
+
+  private _addMultiple?(quads: ICoreIterable<Quad>): void {
+    this.addNewContents(quads as QuadArray);
+    // this.contents = this.contents.concat(quads);
+  }
+
+  delete(quad: Quad): Promise<any> {
+    return this.init().then(() => {
+      // this.contents.delete(quad);
+      this._deleteMultiple(new QuadArray(quad));
+      this.onContentsUpdated();
+      return true;
+    });
+  }
+
+  deleteMultiple(quads: QuadSet): Promise<any> {
+    return this.init().then(() => {
+      this._deleteMultiple(quads);
+      this.onContentsUpdated();
+      return true;
+    });
+  }
+
+  private _deleteMultiple(quads: QuadArray | QuadSet): void {
+    //first we add the quads to the right graph (which effectively ADDS these quads to this store)
+    //then we remove them from the contents
+
+    //get the target graph for this store, if configured
+    let graph =
+      LinkedStorage.getGraphForStore(this) || this.targetGraph || defaultGraph;
+
+    //if there is one, move the quads into that graph
+    if (graph) {
+      quads = quads.moveTo(graph, false);
+    }
+    quads.forEach((quad) => {
+      this.contents.delete(quad);
+      quad.remove(false);
+    });
+  }
+
+  clearProperties(
+    subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>,
+  ): Promise<boolean> {
+    return this.init().then(() => {
+      let toDelete = new QuadSet();
+      this.contents.forEach((q) => {
+        if (
+          subjectToPredicates.has(q.subject) &&
+          subjectToPredicates.get(q.subject).has(q.predicate)
+        ) {
+          toDelete.add(q);
+        }
+      });
+      if (toDelete.size > 0) {
+        return this.deleteMultiple(toDelete);
+      }
+      return false;
+    });
+  }
+
+  setURIs(
+    nodeToCurrentUriMap: CoreMap<NamedNode, string>,
+  ): Promise<[string, string][]> {
+    //by default an in-memory store does not support setting URIs,
+    // if it's used in a local context for in memory storage it doesn't really care about permanent storage URI's
+    // if it's used in a different context, this method should be overwritten
+    return Promise.resolve([]);
+  }
+
+  protected onContentsUpdated(): Promise<boolean> {
+    //by default in memory store does nothing here. But extending classes could choose to sync to a more permanent form of storage
+    return Promise.resolve(false);
+  }
+
+  removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any> {
+    //when storage calls removeNodes, all quads have already been removed locally
+    //and an in memory store always holds all data in memory,
+    //so there is nothing to do here
+    return Promise.resolve(true);
+  }
+
+  query<ResultType = any>(
+    query: LinkedQueryObject,
+    shapeClass: typeof Shape,
+  ): Promise<ResultType> {
+    return Promise.resolve(resolveLocal(query, shapeClass)).catch((e) => {
+      console.error('Error in query', e);
+      return new QuadArray();
+    }) as Promise<ResultType>;
+  }
+
+  loadShape(
+    shapeInstance: Shape,
+    request: LinkedDataRequest,
+  ): Promise<QuadArray> {
+    return this.init().then(() => {
+      return this.getRequestQuads(shapeInstance, request);
+      //for testing: add timer
+      // return new Promise((resolve, reject) => {
+      //   setTimeout(() => {
+      //get quads for each (nested) shape / property shape
+      // let quads = this.getRequestQuads(shapeInstance, request);
+
+      // return resolve(quads);
+      // }, 1500);
+      // });
+    });
+  }
+
+  loadShapes(
+    shapeInstances: ShapeSet,
+    request: LinkedDataRequest,
+  ): Promise<QuadArray> {
+    return this.init().then(() => {
+      let quads = new QuadArray();
+      shapeInstances.forEach((shapeInstance) => {
+        this.getRequestQuads(shapeInstance, request, quads);
+      });
+      return quads;
+
+      // return new Promise((resolve, reject) => {
+      //   setTimeout(() => {
+      //     //get quads for each (nested) shape / property shape
+      //     //TODO: update getRequestQuads to work with shape set
+      //     // possibly even merge definitions of loadShape and loadShapes? is it select? query?
+      //     // let quads = this.getRequestQuads(shapeInstances, request);
+      //     // return Promise.resolve(quads);
+      //     // return resolve(quads);
+      //     return resolve([] as any);
+      //   }, 1500);
+      // });
+    });
+  }
+
+  private getRequestQuads(
+    source: Shape | QuadSet,
+    request: LinkedDataRequest,
+    quads: QuadArray = new QuadArray(),
+  ) {
+    // let {shape, properties}: {shape: typeof Shape; properties?: (PropertyShape | BoundPropertyShapes)[]} = request;
+    request.forEach((propertyRequest) => {
+      let subRequest: LinkedDataRequest;
+      let propertyShape: PropertyShape;
+      let propertyShapeSource: QuadSet | Shape;
+
+      //if an entry is an array, then it consists of the property shape + a sub request
+      if (Array.isArray(propertyRequest)) {
+        [propertyShape, subRequest] = propertyRequest;
+      } else if (propertyRequest instanceof PropertyShape) {
+        propertyShape = propertyRequest;
+      }
+      if (propertyShape) {
+        if (source instanceof QuadSet) {
+          propertyShapeSource = (source as QuadSet)
+            .getObjects()
+            .getQuads(propertyShape.path);
+        } else if (source instanceof Shape) {
+          propertyShapeSource = (source as Shape).getQuads(propertyShape.path);
+        }
+        (propertyShapeSource as QuadSet).forEach((q) => quads.push(q));
+      }
+      if (subRequest) {
+        this.getRequestQuads(propertyShapeSource, subRequest, quads);
+      }
+    });
+    return quads;
+  }
+
+  protected addNewContents(quads: QuadArray | QuadSet) {
+    //get the target graph for this store, if configured
+    let graph =
+      LinkedStorage.getGraphForStore(this) || this.targetGraph || defaultGraph;
+
+    //if there is one, move the quads into that graph
+    if (graph) {
+      quads = quads.moveTo(graph, false);
+    }
+    this.contents.addFrom(quads);
+    return quads;
+  }
+}
 
 export class TestStore implements IQuadStore {
   defaultGraph = Graph.create();
@@ -37,14 +300,14 @@ export class TestStore implements IQuadStore {
     return null;
   }
 
-  add(quad: Quad): Promise<any> {
+  query<ResultType>(
+    query: LinkedQueryObject,
+    shapeClass: Shape | typeof Shape,
+  ): Promise<ResultType> {
     return null;
   }
 
-  query(
-    queryObject: LinkedDataGenericQuery,
-    shapeClass: Shape | typeof Shape,
-  ): Promise<QuadArray> {
+  add(quad: Quad): Promise<any> {
     return null;
   }
 
@@ -106,7 +369,7 @@ export class TestStore implements IQuadStore {
 }
 
 let store = new TestStore();
-Storage.setDefaultStore(store);
+LinkedStorage.setDefaultStore(store);
 
 describe('default store', () => {
   test('does not store temporary node', () => {
@@ -120,7 +383,7 @@ describe('default store', () => {
     node.setValue(rdfs.label, 'test2');
     node.save();
     try {
-      await Storage.promiseUpdated();
+      await LinkedStorage.promiseUpdated();
       expect(store.contents.size).toBe(1);
     } catch (e) {
       console.warn('Why err?', e);
@@ -131,7 +394,7 @@ describe('default store', () => {
     let node = NamedNode.create();
     node.isTemporaryNode = false;
     node.setValue(rdfs.label, 'test3');
-    await Storage.promiseUpdated();
+    await LinkedStorage.promiseUpdated();
     expect(store.contents.size).toBe(1);
   });
   test('unsetAll removes those properties from store', async () => {
@@ -139,9 +402,9 @@ describe('default store', () => {
     let node = NamedNode.create();
     node.isTemporaryNode = false;
     node.setValue(rdfs.label, 'test4');
-    await Storage.promiseUpdated();
+    await LinkedStorage.promiseUpdated();
     node.unsetAll(rdfs.label);
-    await Storage.promiseUpdated();
+    await LinkedStorage.promiseUpdated();
     expect(store.contents.size).toBe(0);
   });
   test('unset removes that property from store', async () => {
@@ -149,9 +412,9 @@ describe('default store', () => {
     let node = NamedNode.create();
     node.isTemporaryNode = false;
     node.setValue(rdfs.label, 'test4');
-    await Storage.promiseUpdated();
+    await LinkedStorage.promiseUpdated();
     node.unset(rdfs.label, new Literal('test4'));
-    await Storage.promiseUpdated();
+    await LinkedStorage.promiseUpdated();
     expect(store.contents.size).toBe(0);
   });
   test('remove node & properties from store', async () => {
@@ -159,9 +422,9 @@ describe('default store', () => {
     let node = NamedNode.create();
     node.isTemporaryNode = false;
     node.setValue(rdfs.label, 'test5');
-    await Storage.promiseUpdated();
+    await LinkedStorage.promiseUpdated();
     node.remove();
-    await Storage.promiseUpdated();
+    await LinkedStorage.promiseUpdated();
     expect(store.contents.size).toBe(0);
   });
   test('promiseUpdated waits for both storing nodes and altering nodes to complete', async () => {
@@ -170,7 +433,7 @@ describe('default store', () => {
     node.setValue(rdfs.label, 'test5');
     node.save();
     node.set(rdf.type, node);
-    await Storage.promiseUpdated();
+    await LinkedStorage.promiseUpdated();
     expect(store.contents.size).toBe(2);
   });
 });

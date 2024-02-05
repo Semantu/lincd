@@ -38,9 +38,9 @@ import {
 import {lincd as lincdOntology} from '../ontologies/lincd';
 import {npm} from '../ontologies/npm';
 import {rdf} from '../ontologies/rdf';
-import {Storage} from './Storage';
+import {LinkedStorage} from './LinkedStorage';
 import {URI} from './URI';
-import {addNodeShapeToShapeClass} from './ShapeClass';
+import {addNodeShapeToShapeClass, getShapeClass, hasSuperClass} from './ShapeClass';
 import {
   BoundComponentQueryStep,
   ComponentQueryPath,
@@ -426,66 +426,52 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
           linkedProps['ref'] = ref;
         }
 
-        if (!linkedProps.source) {
-          console.warn(
-            'No source provided to this component: ' + functionalComponent.name,
-          );
-          return null;
-        }
-        //if we're not using any storage in this LINCD app, don't do any data loading
-        let usingStorage = Storage.isInitialised();
+      if (!linkedProps.source) {
+        console.warn('No source provided to this component: ' + functionalComponent.name);
+        return null;
+      }
+      //if we're not using any storage in this LINCD app, don't do any data loading
+      let usingStorage = LinkedStorage.isInitialised();
 
-        let [isLoaded, setIsLoaded] = useState<any>(undefined);
-        useEffect(() => {
-          //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-          if (!props.isBound && usingStorage) {
-            let cachedRequest = Storage.isLoaded(
-              linkedProps.source.node,
-              dataRequest,
-            );
-            //if these properties were requested before and have finished loading
-            if (cachedRequest === true) {
-              //then we can set state to loaded straight away
+      let [isLoaded, setIsLoaded] = useState<any>(undefined);
+      useEffect(() => {
+        //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
+        if (!props.isBound && usingStorage) {
+          let cachedRequest = LinkedStorage.isLoaded(linkedProps.source.node, dataRequest);
+          //if these properties were requested before and have finished loading
+          if (cachedRequest === true) {
+            //then we can set state to loaded straight away
+            setIsLoaded(true);
+          } else if (cachedRequest === false) {
+            //if we did not request all these properties before then we continue to
+            // load the required PropertyShapes from storage for this specific source
+            LinkedStorage.loadShape(linkedProps.source, dataRequest).then((quads) => {
+              //set the 'isLoaded' state to true, so we don't need to even check cache again.
               setIsLoaded(true);
-            } else if (cachedRequest === false) {
-              //if we did not request all these properties before then we continue to
-              // load the required PropertyShapes from storage for this specific source
-              let queryObject = dataRequestToGenericQuery(
-                shapeClass,
-                dataRequest,
-                linkedProps.source,
-              );
-              Storage.query(queryObject, shapeClass).then((quads) =>
-                setIsLoaded(true),
-              );
-              // Storage.loadShape(linkedProps.source, dataRequest).then((quads) => {
-              //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
-              //   setIsLoaded(true);
-              // });
-            } else {
-              //if some requiredProperties are still being loaded
-              //cachedResult will be a promise (there is no other return type)
-              //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
-              //wait for that loading to be completed and then update the state
-              cachedRequest.then(() => {
-                setIsLoaded(true);
-              });
-            }
+            });
+          } else {
+            //if some requiredProperties are still being loaded
+            //cachedResult will be a promise (there is no other return type)
+            //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
+            //wait for that loading to be completed and then update the state
+            cachedRequest.then(() => {
+              setIsLoaded(true);
+            });
           }
-        }, [linkedProps.source.node, props.isBound]);
+        }
+      }, [linkedProps.source.node, props.isBound]);
 
         //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
         let dataIsLoaded = props.isBound || isLoaded || !usingStorage;
 
-        //But for the first render, when the useEffect has not run yet,
-        //and no this is not a bound component (so it's a top level linkedComponent),
-        //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-        if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
-          //only continue to render if the result is true (all required data loaded),
-          // if it's a promise we already deal with that in useEffect()
-          dataIsLoaded =
-            Storage.isLoaded(linkedProps.source.node, dataRequest) === true;
-        }
+      //But for the first render, when the useEffect has not run yet,
+      //and no this is not a bound component (so it's a top level linkedComponent),
+      //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
+      if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
+        //only continue to render if the result is true (all required data loaded),
+        // if it's a promise we already deal with that in useEffect()
+        dataIsLoaded = LinkedStorage.isLoaded(linkedProps.source.node, dataRequest) === true;
+      }
 
         //if the data is loaded
         //TODO: remove check for typeof window, this is temporary solution to fix hydration errors
@@ -569,7 +555,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     );
 
     //if we're not using any storage in this LINCD app, don't do any data loading
-    let usingStorage = Storage.isInitialised();
+    let usingStorage = LinkedStorage.isInitialised();
 
     //create a new functional component which wraps the original
     let _wrappedComponent: LinkedFunctionalSetComponent<
@@ -609,12 +595,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
         if (!props.isBound && usingStorage) {
-          let cachedRequest =
-            linkedProps.sources &&
-            Storage.nodesAreLoaded(
-              linkedProps.sources.getNodes(),
-              instanceDataRequest,
-            );
+          let cachedRequest = LinkedStorage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest);
           //if these properties were requested before and have finished loading
           if (cachedRequest === true) {
             //we can set state to reflect that
@@ -623,19 +604,10 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             //if we did not request all these properties before then we continue to load them all
             //load the required PropertyShapes from storage for this specific source
             //we bypass cache because already checked cache ourselves above
-
-            let queryObject = dataRequestToGenericQuery(
-              shapeClass,
-              dataRequest,
-            );
-            console.log(queryObject);
-            Storage.query(queryObject, shapeClass).then((quads) =>
-              setIsLoaded(true),
-            );
-            // Storage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
-            //   //set the 'isLoaded' state to true, so we don't need to even check cache again.
-            //   setIsLoaded(true);
-            // });
+            LinkedStorage.loadShapes(linkedProps.sources, instanceDataRequest, true).then((quads) => {
+              //set the 'isLoaded' state to true, so we don't need to even check cache again.
+              setIsLoaded(true);
+            });
           } else {
             //if some requiredProperties are still being loaded
             //cachedResult will be a promise (there is no other return type)
@@ -660,12 +632,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
         //only continue to render if the result is true (all required data loaded),
         // if it's a promise we already deal with that in useEffect()
-        dataIsLoaded =
-          linkedProps.sources &&
-          Storage.nodesAreLoaded(
-            linkedProps.sources.getNodes(),
-            instanceDataRequest,
-          ) === true;
+        dataIsLoaded = LinkedStorage.nodesAreLoaded(linkedProps.sources.getNodes(), instanceDataRequest) === true;
       }
       //if the data is loaded
       if (dataIsLoaded) {
@@ -1249,7 +1216,14 @@ function registerPackageInTree(packageName, packageExports?) {
 }
 
 function getSourceFromInputProps(props, shapeClass) {
-  return props.of instanceof Node ? new shapeClass(props.of) : props.of;
+  return props.of instanceof Node
+    ? new shapeClass(props.of)
+    : //if it's a shape it needs to match the shape of the component, or extend it, if not we recreate the shape
+    props.of instanceof Shape &&
+      props.of.nodeShape !== shapeClass.shape.node &&
+      !hasSuperClass(getShapeClass(props.of.nodeShape.namedNode), shapeClass)
+    ? new shapeClass(props.of.namedNode)
+    : props.of;
 }
 
 function getLinkedComponentProps<ShapeType extends Shape, P>(

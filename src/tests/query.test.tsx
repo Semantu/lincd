@@ -1,15 +1,15 @@
-import {describe, test} from '@jest/globals';
+import {describe, expect, test} from '@jest/globals';
 import {Literal, NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
 import {literalProperty, objectProperty} from '../utils/ShapeDecorators';
 import {linkedComponent, linkedSetComponent, linkedShape} from '../package';
 import renderer from 'react-test-renderer';
 import React from 'react';
-import {Storage} from '../utils/Storage';
-import {TestStore} from './storage.test';
+import {InMemoryStore, TestStore} from './storage.test';
 import {QuadSet} from '../collections/QuadSet';
 import {ShapeSet} from '../collections/ShapeSet';
 import {resolveLocal, resolveLocalFlat} from '../utils/LocalQueryResolver';
+import {LinkedStorage} from '../utils/LinkedStorage';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -18,8 +18,8 @@ let hobby = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hobby');
 let hasFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasFriend');
 
 //required for testing automatic data loading in linked components
-const store = new TestStore();
-Storage.setDefaultStore(store);
+const store = new InMemoryStore();
+LinkedStorage.setDefaultStore(store);
 
 @linkedShape
 class Person extends Shape {
@@ -90,13 +90,11 @@ p2.bestFriend = p3;
 p2.friends.add(p3);
 p2.friends.add(p4);
 
-Storage.setQuadsLoaded(
-  new QuadSet(
-    p1
-      .getAllQuads()
-      .concat(p2.getAllQuads(), p3.getAllQuads(), p4.getAllQuads()),
-  ),
+let quads = new QuadSet(
+  p1.getAllQuads().concat(p2.getAllQuads(), p3.getAllQuads(), p4.getAllQuads()),
 );
+LinkedStorage.setQuadsLoaded(quads);
+store.addMultiple(quads);
 
 describe('query tests', () => {
   test('can select a property of all instances', async () => {

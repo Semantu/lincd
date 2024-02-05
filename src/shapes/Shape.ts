@@ -33,9 +33,13 @@ import {
   GetQueryResponseType,
   LinkedQuery,
   QueryBuildFn,
-  QueryValue,
   ToResultType,
 } from '../utils/LinkedQuery';
+import {LinkedStorage} from '../utils/LinkedStorage';
+import {
+  IStorageController,
+  staticImplements,
+} from '../interfaces/IStorageController';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -75,7 +79,7 @@ interface IClassConstruct {
  * console.log(person.friends);
  * ```
  */
-export abstract class Shape extends EventEmitter implements IShape {
+export abstract class Shape implements IShape {
   /**
    * Points to the rdfs:Class that this typescript class represents. Each class extending Shape MUST define this explicitly.
    The appointed NamedNode value must be a rdfs:Class ([value] rdf:type rdfs:Class in the graph)
@@ -113,7 +117,6 @@ export abstract class Shape extends EventEmitter implements IShape {
    * @param node
    */
   constructor(node?: Node | any) {
-    super();
     this.setupNode(node);
   }
 
@@ -181,6 +184,19 @@ export abstract class Shape extends EventEmitter implements IShape {
 
   set type(val: NamedNode) {
     this.overwrite(rdf.type, val);
+  }
+
+  static create<T extends Shape>(
+    this: ShapeLike<T>,
+    data: Partial<T>,
+    uri?: string,
+  ): T {
+    const x = uri ? this.getFromURI(uri) : new this();
+    for (const k in data) {
+      const key = k as keyof typeof this;
+      x[key] = data[key];
+    }
+    return x as T;
   }
 
   /**
@@ -262,13 +278,13 @@ export abstract class Shape extends EventEmitter implements IShape {
       reject = rej;
     });
     const query = new LinkedQuery<T, S>(this as any, selectFn);
-    Storage.query(query).then((result) => {
+    type ResultType = ToResultType<GetQueryResponseType<LinkedQuery<T, S>>>[];
+    // LinkedStorage.query(query).then((result) => {
+    StorageHelper.query<ResultType>(query).then((result) => {
       resolve(result);
     });
     // return query;
-    return p as Promise<
-      ToResultType<GetQueryResponseType<LinkedQuery<T, S>>>[]
-    >;
+    return p as Promise<ResultType>;
   }
 
   /**
@@ -584,11 +600,12 @@ export abstract class Shape extends EventEmitter implements IShape {
     // return this.hasProperty(property) ? new (shape as any)(this.getOne(property)) as S : null;
   }
 
-  equals(other) {
+  equals(other, checkShapeType: boolean = false) {
     return (
       other instanceof Shape &&
       other.node === this.node &&
-      Object.getPrototypeOf(other) === Object.getPrototypeOf(this)
+      (!checkShapeType ||
+        Object.getPrototypeOf(other) === Object.getPrototypeOf(this))
     );
   }
 
@@ -1057,4 +1074,18 @@ export interface ShapeLike<M extends Shape> extends Constructor<M> {
   ): T;
 
   getLocalInstanceNodes(explicitInstancesOnly?: boolean): NodeSet;
+}
+
+@staticImplements<IStorageController>() /* this statement implements both normal interface & static interface */
+export class StorageHelper {
+  static storageController: IStorageController;
+  static query<ResultType = any>(query: LinkedQuery<any>) {
+    this.checkSetup();
+    return this.storageController.query<ResultType>(query);
+  }
+  private static checkSetup() {
+    if (!this.storageController) {
+      throw new Error('LinkedStorage is not configured.');
+    }
+  }
 }

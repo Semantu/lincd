@@ -6,7 +6,8 @@
 //import everything from each file that we want to be bundled in the stand-alone dist/lincd.js file
 import * as Module from './utils/Module';
 import * as models from './models';
-import * as Storage from './utils/Storage';
+import * as LinkedFileStorage from './utils/LinkedFileStorage';
+import * as LinkedStorage from './utils/LinkedStorage';
 import * as EventEmitter from './events/EventEmitter';
 import * as NodeURIMappings from './collections/NodeURIMappings';
 import * as CoreSet from './collections/CoreSet';
@@ -38,6 +39,7 @@ import * as List from './shapes/List';
 import * as IGraphObject from './interfaces/IGraphObject';
 import * as IGraphObjectSet from './interfaces/IGraphObjectSet';
 import * as ICoreIterable from './interfaces/ICoreIterable';
+import * as IFileStore from './interfaces/IFileStore';
 import * as IQuadStore from './interfaces/IQuadStore';
 import * as Component from './interfaces/Component';
 import * as rdf from './ontologies/rdf';
@@ -67,7 +69,8 @@ export function initModularApp() {
     QuadMap,
     QuadSet,
     models,
-    Storage,
+    LinkedFileStorage,
+    LinkedStorage,
     Shape,
     ShapeSet,
     Debug,
@@ -88,6 +91,7 @@ export function initModularApp() {
     IGraphObject,
     IGraphObjectSet,
     ICoreIterable,
+    IFileStore,
     IQuadStore,
     Component,
     LinkedComponentClass,
