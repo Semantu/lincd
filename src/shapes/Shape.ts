@@ -29,7 +29,13 @@ import {
   getShapeOrSubShape,
   getSubShapesClasses,
 } from '../utils/ShapeClass';
-import {LinkedQuery, QueryBuildFn, QueryValue} from '../utils/LinkedQuery';
+import {
+  GetQueryResponseType,
+  LinkedQuery,
+  QueryBuildFn,
+  QueryValue,
+  ToResultType,
+} from '../utils/LinkedQuery';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -249,9 +255,20 @@ export abstract class Shape extends EventEmitter implements IShape {
     this: {new (node: Node): T; targetClass: any},
     // this: typeof Shape,
     selectFn: QueryBuildFn<T, S>,
-  ): LinkedQuery<T, S> {
+  ): Promise<ToResultType<GetQueryResponseType<LinkedQuery<T, S>>>[]> {
+    let resolve, reject;
+    let p = new Promise((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
     const query = new LinkedQuery<T, S>(this as any, selectFn);
-    return query;
+    Storage.query(query).then((result) => {
+      resolve(result);
+    });
+    // return query;
+    return p as Promise<
+      ToResultType<GetQueryResponseType<LinkedQuery<T, S>>>[]
+    >;
   }
 
   /**

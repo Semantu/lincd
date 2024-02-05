@@ -119,6 +119,24 @@ export type ToQueryShapeSource<ShapeType, Value> = ShapeType extends null
 export type ToQueryShapeSetSource<ShapeType, Value, ParentSource> =
   ShapeType extends null ? Value : ToQueryResult<Value, ParentSource>[];
 
+export type ToResultType<T> = T extends QueryValue
+  ? GetValueResultType<T>
+  : T extends Count
+  ? number[]
+  : T extends LinkedQuery<any, any>
+  ? ToResultType<GetQueryResponseType<T>>[]
+  : // : T extends QueryShapeSet<any>
+  // ? ShapeSet<GetQueryShapeSetType<T>>
+  // : T extends QueryShape<any>
+  // ? GetQueryShapeType<T>
+  // : T extends QueryString
+  // ? GetValueResultType<T>
+  T extends Array<any>
+  ? Array<ToResultType<GetArrayType<T>>>
+  : T extends Evaluation
+  ? boolean[]
+  : T;
+
 export type GetQueryResponseType<Q> = Q extends LinkedQuery<
   any,
   infer ResponseType

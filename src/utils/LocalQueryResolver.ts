@@ -21,6 +21,7 @@ import {
   QueryValueSetOfSets,
   SourcedValue,
   SubQueryPaths,
+  ToResultType,
   WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
@@ -50,23 +51,6 @@ export type ToNormalValue<T> = T extends Count
   : T;
 
 // export type ToResultType<T> = T;
-export type ToResultType<T> = T extends QueryValue
-  ? GetValueResultType<T>
-  : T extends Count
-  ? number[]
-  : T extends LinkedQuery<any, any>
-  ? ToResultType<GetQueryResponseType<T>>[]
-  : // : T extends QueryShapeSet<any>
-  // ? ShapeSet<GetQueryShapeSetType<T>>
-  // : T extends QueryShape<any>
-  // ? GetQueryShapeType<T>
-  // : T extends QueryString
-  // ? GetValueResultType<T>
-  T extends Array<any>
-  ? Array<ToResultType<GetArrayType<T>>>
-  : T extends Evaluation
-  ? boolean[]
-  : T;
 
 type NodeResult = {
   '@id': string;

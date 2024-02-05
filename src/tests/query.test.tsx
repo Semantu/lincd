@@ -99,12 +99,12 @@ Storage.setQuadsLoaded(
 );
 
 describe('query tests', () => {
-  test('can select a property of all instances', () => {
+  test('can select a property of all instances', async () => {
     //  x:LinkedQuery<Person, QueryString<Person, "name">>
-    let x = Person.select((p) => {
+    let names = await Person.select((p) => {
       return p.name;
     });
-    let names = resolveLocal(x);
+    // let names = resolveLocal(x);
     /**
      * Expected result:
      * [{
