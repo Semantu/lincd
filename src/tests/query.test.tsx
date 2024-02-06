@@ -97,7 +97,7 @@ LinkedStorage.setQuadsLoaded(quads);
 store.addMultiple(quads);
 
 describe('query tests', () => {
-  test('can select a property of all instances', async () => {
+  test('can select a literal property of all instances', async () => {
     //  x:LinkedQuery<Person, QueryString<Person, "name">>
     let names = await Person.select((p) => {
       return p.name;
@@ -121,18 +121,64 @@ describe('query tests', () => {
     expect(names[0].name).toBe('Semmy');
   });
 
-  // test('can select sub properties of a first property that returns a set', () => {
-  //   let q = Person.select((p) => {
-  //     return p.friends.name;
-  //   });
-  //   let namesOfFriends = resolveLocal(q);
-  //   expect(Array.isArray(namesOfFriends)).toBe(true);
-  //   expect(namesOfFriends.length).toBe(4);
-  //   expect(namesOfFriends[0].length).toBe(2);
-  //   expect(namesOfFriends[0].includes('Jinx')).toBe(true);
-  //   expect(namesOfFriends[0].includes('Moa')).toBe(true);
-  //   expect(namesOfFriends[3].length).toBe(0);
-  // });
+  test('can select an object property of all instances', async () => {
+    //  x:LinkedQuery<Person, QueryString<Person, "name">>
+    let personFriends = await Person.select((p) => {
+      return p.friends;
+    });
+    /**
+     * Expected result:
+     * [{
+     *   "id:"..."
+     *   "shape": a Person
+     *   "friends:[{
+     *      "id"...,
+     *      "shape": a Person
+     *    },...]
+     * },... ]
+     */
+
+    let firstResult = personFriends[0];
+    expect(Array.isArray(personFriends)).toBe(true);
+    expect(personFriends.length).toBe(4);
+    expect(typeof personFriends[0] === 'object').toBe(true);
+    expect(firstResult.hasOwnProperty('id')).toBe(true);
+    expect(firstResult.id).toBe(p1.uri);
+    expect(firstResult.friends.length).toBe(2);
+    expect(firstResult.friends[0].id).toBe(p2.uri);
+    expect(firstResult.friends[1].id).toBe(p3.uri);
+  });
+
+  test('can select sub properties of a first property that returns a set', async () => {
+    let namesOfFriends = await Person.select((p) => {
+      //  QueryString<QueryShapeSet<Person, Person, "friends">, "name">
+      //step 1) --> QResult<QueryShapeSet<Person, Person, "friends">, {name: string}>[][]
+      //step 2) --> QResult<Person, {friends: QResult<Person, {name: string}>}>[][]
+      //--> QResult<Person, {friends: QResult<Person, {name:string}>}>[]
+
+      //QueryString<QueryShapeSet<Person, Person, "friends">, "name">
+      //Source : QueryShapeSet<Person, Person, "friends">
+      //Property: "name"
+
+      // QueryShapeSet<Person, Person, "friends">
+      //  ShapeType : Person
+      //  Source: Person
+      //  Property: "friends
+      // in other words. Person.friends is a set of persons
+      //which needs to be converted to QResult<Person (Source), friends: is a QResult<Person (ShapeType),{name:string}> array
+
+      let res = p.friends.name;
+      return res;
+    });
+    let first = namesOfFriends[0];
+    expect(Array.isArray(namesOfFriends)).toBe(true);
+    expect(namesOfFriends.length).toBe(4);
+    expect(first.id).toBe(p1.uri);
+    expect(first.friends.length).toBe(2);
+    expect(first.friends[0].id).toBe(p2.uri);
+    expect(first.friends[0].name).toBe('Moa');
+    expect(first.friends[0]['hobby']).toBeUndefined();
+  });
 
   // test('can select a nested set of shapes', () => {
   //   let q = Person.select((p) => {

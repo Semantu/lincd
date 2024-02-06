@@ -505,16 +505,8 @@ function resolveQuerySteps(
     }
     //TODO: review differences between shape vs shapes and make it DRY
     return resolveQueryStepForShape(currentStep, subject, restPath);
-  }
-  if (subject instanceof ShapeSet) {
-    //create the start of the result JS object for each subject node
-    let resultObjects: NodeResultMap = new CoreMap();
-    subject.forEach((sub) => {
-      resultObjects.set(sub.uri, {
-        id: sub.uri,
-        shape: sub,
-      });
-    });
+  } else if (subject instanceof ShapeSet) {
+    let resultObjects = shapeSetToResultObjects(subject);
 
     if (Array.isArray(currentStep)) {
       resolveQueryPathsForShapes(currentStep, subject, restPath);
@@ -526,11 +518,22 @@ function resolveQuerySteps(
         restPath,
       );
     }
-    //turn the map back to an array
+    //turn the map into an array of results
     return [...resultObjects.values()];
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);
   }
+}
+function shapeSetToResultObjects(subject: ShapeSet) {
+  //create the start of the result JS object for each subject node
+  let resultObjects: NodeResultMap = new CoreMap();
+  subject.forEach((sub) => {
+    resultObjects.set(sub.uri, {
+      id: sub.uri,
+      shape: sub,
+    });
+  });
+  return resultObjects;
 }
 
 function resolveQueryStepFlat(
@@ -700,14 +703,21 @@ function resolveQueryStepForShapes(
         return;
       }
 
-      //TODO: subjects or new variable needs to be a map of ID to shape
+      if (restPath.length > 0) {
+        //if there is more properties left, continue to fill the result object by resolving the next steps
+        stepResult = resolveQuerySteps(stepResult, restPath);
+      } else if (stepResult instanceof ShapeSet) {
+        stepResult = [...shapeSetToResultObjects(stepResult).values()];
+      }
+
+      //get the current result object for this shape
       let nodeResult = resultObjects.get(singleShape.uri);
+      //write the result for this property into the result object
       nodeResult[queryStep.property.label] = stepResult;
 
       // if (stepResult instanceof ShapeSet) {
       //   stepResult = [...stepResult];
       // }
-      let subResult = resolveQuerySteps(stepResult, restPath);
 
       // result.push(subResult);
       // if (stepResult instanceof ShapeSet) {
@@ -740,7 +750,12 @@ function resolveQueryStepForShapes(
     return whereResult;
   }
 }
-
+function toQueryResult(result: any) {
+  if (result instanceof ShapeSet) {
+    return shapeSetToResultObjects(result);
+  }
+  return result;
+}
 function resolveQueryStepForShapesFlat(
   queryStep: QueryStep,
   subject: ShapeSet,

@@ -20,12 +20,12 @@ export type GetValueResultType<T> = T extends QueryString<
   infer Source,
   infer Property
 >
-  ? ToQueryResult<string, Source, Property>
-  : T extends QueryShapeSet<infer ShapesetType, infer Source>
+  ? ToQueryResult<Source, string, Property>
+  : T extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
   ? // ? [ShapesetType, Source] //ToValueResultType<ShapesetType[], Source>
-    ToQueryResult<ShapesetType[], Source>
-  : T extends QueryNumber<infer Source>
-  ? ToQueryResult<number, Source>
+    ToQueryResult<Source, ShapeType, Property>
+  : T extends QueryNumber<infer Source, infer Property>
+  ? ToQueryResult<Source, number, Property>
   : any;
 
 // QueryShapeSet<Person, QueryShapeSet<Person, Person>> & ToQueryShapeSetValue<QueryShapeSet<Person, QueryShapeSet<Person, Person>>, Person>
@@ -72,26 +72,42 @@ var AnswerB3: NestedToArr<Foo<Foo<number>> & FooMapped<Foo<Foo<number>>>>; //unk
 //-> ToValueResultType<Person[], Person>[]
 //Value = Person[]
 //Source = Person
-export type QResult<Source, Object = {}> = {
+export type QResult<Source, Object = {}> = Object & {
   id: string;
   shape: Source;
-} & Object;
+};
 /**
  * If the source is an object (it extends shape)
  * then the result is a plain JS Object, with Property as its key, with type Value
  */
 export type ToQueryResult<
-  Value,
   Source,
+  Value = undefined,
   Property extends string | number | symbol = '',
 > = Source extends Shape
   ? QResult<
       Source,
       {
-        [P in Property]: Value;
+        [P in Property]: Value extends Shape ? ToQueryResult<Value>[] : Value;
       }
     >
-  : Value;
+  : Source extends QueryShapeSet<
+      infer ShapeType,
+      infer ParentSource,
+      infer SourceProperty
+    >
+  ? ToQueryResult<
+      ParentSource,
+      QResult<
+        ShapeType,
+        {
+          [P in Property]: Value;
+        }
+      >[],
+      SourceProperty
+    >
+  : Source;
+
 // export type ToValueResultType<Value, Source> = Source extends QueryShapeSet<
 //   infer ShapeType,
 //   infer ParentSource
@@ -116,8 +132,8 @@ export type ToQueryShapeSource<ShapeType, Value> = ShapeType extends null
       name: Value;
     }[];
 
-export type ToQueryShapeSetSource<ShapeType, Value, ParentSource> =
-  ShapeType extends null ? Value : ToQueryResult<Value, ParentSource>[];
+// export type ToQueryShapeSetSource<ShapeType, Value, ParentSource> =
+//   ShapeType extends null ? Value : ToQueryResult<Value, ParentSource>[];
 
 export type ToResultType<T> = T extends QueryValue
   ? GetValueResultType<T>
@@ -160,8 +176,12 @@ export type QueryBuildFn<T extends Shape, ResultType> = (
 export type ToQueryShape<T> = {
   [P in keyof T]: ToQueryValue<T[P], T, P>;
 };
-export type ToQueryShapeSetValue<SourceShapeSet, Shape, Source = null> = {
-  [P in keyof Shape]: ToQueryValue<Shape[P], SourceShapeSet>;
+export type ToQueryShapeSetValue<
+  SourceShapeSet,
+  Shape,
+  SourceProperty = null,
+> = {
+  [P in keyof Shape]: ToQueryValue<Shape[P], SourceShapeSet, P>;
 };
 export type ToWhereShape<T> = {
   [P in keyof T]: ToWhereValue<T[P]>;
@@ -178,8 +198,12 @@ export type ToQueryValue<
   Property extends string | number | symbol = '',
 > = T extends ShapeSet<infer ShapeSetType>
   ? //a shape set turns into a query-shape set but also inherits all the properties of the shape that each item in the set has
-    QueryShapeSet<ShapeSetType, Source> &
-      ToQueryShapeSetValue<QueryShapeSet<ShapeSetType, Source>, ShapeSetType>
+    QueryShapeSet<ShapeSetType, Source, Property> &
+      ToQueryShapeSetValue<
+        QueryShapeSet<ShapeSetType, Source, Property>,
+        ShapeSetType,
+        Property
+      >
   : T extends Shape
   ? ToQueryShape<T> & QueryShape<T>
   : T extends string
@@ -276,9 +300,14 @@ export enum WhereMethods {
   EVERY = 'every',
 }
 
-export class QueryValue<S = any, Source = any, Property = any> {
+export class QueryValue<
+  S = any,
+  Source = any,
+  Property extends string | number | symbol = any,
+> {
   protected originalValue: S;
   protected source: Source;
+  protected prop: Property;
 
   //is null by default to avoid warnings when trying to access wherePath when its undefined
   wherePath?: WherePath = null;
@@ -455,7 +484,8 @@ export class QueryValueSetOfSets extends CoreSet<
 export class QueryShapeSet<
   S extends Shape = Shape,
   Source = any,
-> extends QueryValue<ShapeSet<S>, Source> {
+  Property extends string | number | symbol = any,
+> extends QueryValue<ShapeSet<S>, Source, Property> {
   private proxy;
   public queryShapes: CoreSet<QueryShape>;
   constructor(
@@ -787,11 +817,11 @@ class QueryBoolean extends QueryValue<boolean> {
     super(property, subject);
   }
 }
-export class QueryPrimitive<T, Source = any, Property = any> extends QueryValue<
+export class QueryPrimitive<
   T,
-  Source,
-  Property
-> {
+  Source = any,
+  Property extends string | number | symbol = any,
+> extends QueryValue<T, Source, Property> {
   constructor(
     public originalValue: T,
     public property?: PropertyShape,
@@ -813,10 +843,10 @@ export class QueryString<
   Source = any,
   Property extends string | number | symbol = '',
 > extends QueryPrimitive<string, Source, Property> {}
-export class QueryNumber<Source extends JSPrimitive = null> extends QueryValue<
-  number,
-  Source
-> {}
+export class QueryNumber<
+  Source extends JSPrimitive = null,
+  Property extends string | number | symbol = any,
+> extends QueryValue<number, Source, Property> {}
 
 export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
   constructor(
