@@ -32,6 +32,7 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {Shape} from '../shapes/Shape';
 import {shacl} from '../ontologies/shacl';
 import {CoreMap} from '../collections/CoreMap';
+import {result} from 'lincd-shacl/lib/ontologies/shacl';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -71,17 +72,21 @@ export function resolveLocal<ResultType>(
 ): ResultType {
   // ): ToResultType<GetQueryResponseType<S>>[] {
   let subject = (shape as any).getLocalInstances();
-  let results = [];
+  // let results = [];
+
+  let resultObjects = toQueryResult(subject);
 
   query.forEach((queryPath) => {
-    results.push(resolveQueryPath(subject, queryPath));
+    resolveQueryPath(subject, queryPath, resultObjects);
   });
 
+  return [...resultObjects.values()] as ResultType;
+
   //if only 1 path was selected, return the first result
-  if (query.length === 1) {
-    return results[0] as ResultType;
-  }
-  return results as ResultType;
+  // if (query.length === 1) {
+  //   return results[0] as ResultType;
+  // }
+  // return results as ResultType;
 
   // queryPaths = queryPaths || query.getQueryPaths();
   // subject = subject || (query.shape as any).getLocalInstances();
@@ -187,22 +192,22 @@ export function resolveLocalFlat<S extends LinkedQuery<any>>(
 function resolveQueryPath(
   subject: ShapeSet | Shape,
   queryPath: QueryPath | ComponentQueryPath,
+  resultObjects?: NodeResultMap,
 ) {
   //start with the local instance as the subject
-  let result: ShapeSet | Shape[] | Shape | JSPrimitive[] | JSPrimitive =
-    subject;
   if (Array.isArray(queryPath)) {
-    // queryPath.forEach((queryStep) => {
-    //then resolve each of the query steps and use the result as the new subject for the next step
-    result = resolveQuerySteps(result as ShapeSet | Shape, queryPath as any[]);
-    // });
+    //if the queryPath is an array of query steps, then resolve the query steps and let that convert the result
+    return resolveQuerySteps(subject, queryPath as any[], resultObjects);
   } else {
+    //TODO: review if we can remove the result variable
+    let result: ShapeSet | Shape[] | Shape | JSPrimitive[] | JSPrimitive =
+      subject;
     result = (subject as ShapeSet).map((singleShape) => {
       return evaluate(singleShape, queryPath as WherePath);
     });
+    //return the final value at the end of the path
+    return result as ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[];
   }
-  //return the final value at the end of the path
-  return result as ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[];
 }
 
 function resolveQueryPathFlat(
@@ -492,6 +497,7 @@ function resolveWhereEvery(shapes, evaluation: WhereEvaluationPath) {
 function resolveQuerySteps(
   subject: ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[],
   queryPath: (QueryStep | SubQueryPaths)[],
+  resultObjects?: NodeResultMap,
 ) {
   if (queryPath.length === 0) {
     return subject;
@@ -505,21 +511,25 @@ function resolveQuerySteps(
     }
     //TODO: review differences between shape vs shapes and make it DRY
     return resolveQueryStepForShape(currentStep, subject, restPath);
+    // } else if (subject instanceof CoreMap) {
   } else if (subject instanceof ShapeSet) {
-    let resultObjects = shapeSetToResultObjects(subject);
+    // let resultObjects = shapeSetToResultObjects(subject);
 
     if (Array.isArray(currentStep)) {
+      debugger;
       resolveQueryPathsForShapes(currentStep, subject, restPath);
     } else {
       resolveQueryStepForShapes(
         currentStep as QueryStep,
-        subject,
+        subject as ShapeSet,
         resultObjects,
         restPath,
       );
     }
+    //return converted subjects
+    return subject;
     //turn the map into an array of results
-    return [...resultObjects.values()];
+    // return [...resultObjects.values()];
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);
   }
@@ -703,11 +713,16 @@ function resolveQueryStepForShapes(
         return;
       }
 
+      let subResultObjects;
+      if (stepResult instanceof ShapeSet) {
+        subResultObjects = toQueryResult(stepResult);
+      }
       if (restPath.length > 0) {
         //if there is more properties left, continue to fill the result object by resolving the next steps
-        stepResult = resolveQuerySteps(stepResult, restPath);
-      } else if (stepResult instanceof ShapeSet) {
-        stepResult = [...shapeSetToResultObjects(stepResult).values()];
+        stepResult = resolveQuerySteps(stepResult, restPath, subResultObjects);
+      }
+      if (stepResult instanceof ShapeSet) {
+        stepResult = [...subResultObjects.values()];
       }
 
       //get the current result object for this shape

@@ -2,13 +2,9 @@ import {describe, expect, test} from '@jest/globals';
 import {Literal, NamedNode} from '../models';
 import {Shape} from '../shapes/Shape';
 import {literalProperty, objectProperty} from '../utils/ShapeDecorators';
-import {linkedComponent, linkedSetComponent, linkedShape} from '../package';
-import renderer from 'react-test-renderer';
-import React from 'react';
-import {InMemoryStore, TestStore} from './storage.test';
+import {linkedShape} from '../package';
+import {InMemoryStore} from './storage.test';
 import {QuadSet} from '../collections/QuadSet';
-import {ShapeSet} from '../collections/ShapeSet';
-import {resolveLocal, resolveLocalFlat} from '../utils/LocalQueryResolver';
 import {LinkedStorage} from '../utils/LinkedStorage';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
@@ -123,6 +119,20 @@ describe('query tests', () => {
 
   test('can select an object property of all instances', async () => {
     //  x:LinkedQuery<Person, QueryString<Person, "name">>
+    // QueryShapeSet<Person, Person, "friends"> & ToQueryShapeSetValue<QueryShapeSet<Person, Person, "friends">, Person, "friends">
+    //Needs to become:
+
+    // -> QResult<Person, {friends: QResult<Person, {}>[]}>[]
+
+    //From person the property friends is requested.
+    //The results is a shapeset of persons, with source Person
+    //S / ShapeType: Person
+    //Source:Person
+    //Property: "friends"
+
+    //Shapeset turns into QResult<Person,{friends:QResult<Person,{}>[]}> ... thats just the shapeset
+    //then
+
     let personFriends = await Person.select((p) => {
       return p.friends;
     });
@@ -180,74 +190,72 @@ describe('query tests', () => {
     expect(first.friends[0]['hobby']).toBeUndefined();
   });
 
-  // test('can select a nested set of shapes', () => {
-  //   let q = Person.select((p) => {
-  //     return p.friends.friends;
-  //   });
-  //   let namesOfFriends = resolveLocal(q);
-  //   expect(Array.isArray(namesOfFriends)).toBe(true);
-  //   // expect(namesOfFriends.length).toBe(4);
-  //   // expect(namesOfFriends[0].length).toBe(2);
-  //   // expect(namesOfFriends[0].includes('Jinx')).toBe(true);
-  //   // expect(namesOfFriends[0].includes('Moa')).toBe(true);
-  //   // expect(namesOfFriends[3].length).toBe(0);
-  // });
+  test('can select a nested set of shapes', async () => {
+    // QResult<Person, {friends: QResult<Person, {friends: QResult<Person,{}>}>[]}>[]
+    let friendsOfFriends = await Person.select((p) => {
+      return p.friends.friends;
+    });
 
-  // test('can select sub properties of a first property that returns a set - FLAT result', () => {
-  //   let q = Person.select((p) => {
-  //     return p.friends.name;
-  //   });
-  //   let namesOfFriends = resolveLocalFlat(q);
-  //   expect(Array.isArray(namesOfFriends)).toBe(true);
-  //   expect(namesOfFriends.length).toBe(3);
-  //   expect(namesOfFriends.includes('Jinx')).toBe(true);
-  //   expect(namesOfFriends.includes('Semmy')).toBe(false);
-  // });
+    expect(Array.isArray(friendsOfFriends)).toBe(true);
+    let first = friendsOfFriends[0];
+    expect(friendsOfFriends.length).toBe(4);
+    expect(first.friends.length).toBe(2);
+    //p1 (first) is friends with p2 and p3. And p2 (first.friends[0]) is friends with p3 and p4
+    expect(first.friends[0].friends.some((f) => f.id == p3.uri)).toBe(true);
+    expect(first.friends[0].friends.some((f) => f.id == p4.uri)).toBe(true);
+    expect(first.friends[1].friends.length).toBe(0);
+    expect(friendsOfFriends[3].friends.length).toBe(0);
+  });
 
-  // test('can select multiple property paths', () => {
-  //   let q = Person.select((p) => {
-  //     return [p.name, p.friends];
-  //   });
-  //   let result = resolveLocal(q);
-  //
-  //   expect(Array.isArray(result)).toBe(true);
-  //   expect(result.length).toBe(2);
-  //
-  //   let [names, namesOfFriends] = result;
-  //   expect(Array.isArray(names)).toBe(true);
-  //   expect(names.length).toBe(4);
-  //   expect(names.includes('Moa')).toBe(true);
-  //   expect(names.includes('Mike')).toBe(false);
-  //   expect(Array.isArray(namesOfFriends)).toBe(true);
-  //   expect(namesOfFriends.length).toBe(3);
-  //   expect(namesOfFriends.includes('Semmy')).toBe(false);
-  //   expect(namesOfFriends.includes('Moa')).toBe(true);
-  // });
+  test('can select multiple property paths', async () => {
+    let result = await Person.select((p) => {
+      return [p.name, p.friends];
+    });
+    //expected result:
+    /**
+     * [
+     * {
+     * "id": "p1",
+     * "name": "Semmy",
+     * "friends": [{id: "p2"}, {id: "p3"}]
+     * },
+     * ...
+     * ]
+     */
 
-  // test('can select nested paths', () => {
-  //   //we select the friends of all persons, but only those friends whose name is moa
-  //   //this will return an array, where each entry represents the results for a single person.
-  //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let level2Friends = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.friends;
-  //     }),
-  //   );
-  //
-  //   let level3Friends = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.friends.friends;
-  //     }),
-  //   );
-  //
-  //   expect(level2Friends instanceof ShapeSet).toBe(true);
-  //   expect(level2Friends.size).toBe(2);
-  //   expect(level2Friends.some((f) => f.namedNode === p3.namedNode)).toBe(true);
-  //   expect(level2Friends.some((f) => f.namedNode === p4.namedNode)).toBe(true);
-  //
-  //   expect(level3Friends instanceof ShapeSet).toBe(true);
-  //   expect(level3Friends.size).toBe(0);
-  // });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(4);
+
+    let first = result[0];
+
+    expect(first.name).toBe('Semmy');
+    expect(Array.isArray(first.friends)).toBe(true);
+    expect(first.friends.length).toBe(2);
+    expect(first.friends.some((f) => f.id === p2.uri)).toBe(true);
+    expect(first.friends.some((f) => f.id === p4.uri)).toBe(false);
+  });
+
+  test('can select 3 level deep nested paths', async () => {
+    let level3Friends = await Person.select((p) => {
+      return p.friends.friends.friends;
+    });
+
+    expect(level3Friends.length).toBe(4);
+    expect(
+      level3Friends.every((p) =>
+        //level 1 is p1 has p2,p3 and p2 has p3,p4
+        p.friends.every((f) =>
+          //level 2 is p2 has p3,p4
+          f.friends.every(
+            (f2) =>
+              //level 3 is empty, because p3,p4 have no friends
+              f2.friends.length === 0,
+          ),
+        ),
+      ),
+    ).toBe(true);
+  });
+
   // // ### WHERE TESTS
   //
   // test('can use where() to filter a string in a set of Literals with equals', () => {
@@ -827,6 +835,18 @@ describe('query tests', () => {
   //Refactor structure of json objects, where and count need to be added? investigate other libraries
   //Refactor duplicate value in "every"
   //Refactor firstPath into an array
+
+  //FLAT: old, but kee
+  // // test('can select sub properties of a first property that returns a set - FLAT result', () => {
+  // //   let q = Person.select((p) => {
+  // //     return p.friends.name;
+  // //   });
+  // //   let namesOfFriends = resolveLocalFlat(q);
+  // //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  // //   expect(namesOfFriends.length).toBe(3);
+  // //   expect(namesOfFriends.includes('Jinx')).toBe(true);
+  // //   expect(namesOfFriends.includes('Semmy')).toBe(false);
+  // // });
 });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something

@@ -5,6 +5,7 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
 import {BoundComponent, Component} from '../interfaces/Component';
+import {Type} from 'typedoc';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
@@ -12,10 +13,10 @@ export type WhereClause<S extends Shape | OriginalValue> =
 export type JSPrimitive = string | number | boolean | Date | null | undefined;
 export type OriginalValue = Shape | ShapeSet | JSPrimitive;
 
-//2: T = QueryShapeSet<Person, QueryShapeSet<Person, Person>>
-//ShapesetType = Person,
-//Source = QueryShapeSet<Person, Person>
-//QueryString<Person,"name">
+//2: T = QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>
+//ShapesetType = Shape,
+//Source = QueryShapeSet<Shape, Shape>
+//QueryString<Shape,"name">
 export type GetValueResultType<T> = T extends QueryString<
   infer Source,
   infer Property
@@ -23,12 +24,12 @@ export type GetValueResultType<T> = T extends QueryString<
   ? ToQueryResult<Source, string, Property>
   : T extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
   ? // ? [ShapesetType, Source] //ToValueResultType<ShapesetType[], Source>
-    ToQueryResult<Source, ShapeType, Property>
+    ToQueryPluralResult<Source, ShapeType, Property>
   : T extends QueryNumber<infer Source, infer Property>
   ? ToQueryResult<Source, number, Property>
   : any;
 
-// QueryShapeSet<Person, QueryShapeSet<Person, Person>> & ToQueryShapeSetValue<QueryShapeSet<Person, QueryShapeSet<Person, Person>>, Person>
+// QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>> & ToQueryShapeSetValue<QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>, Shape>
 //example class
 interface Foo<Source> {
   name: string;
@@ -55,23 +56,23 @@ var AnswerB3: NestedToArr<Foo<Foo<number>> & FooMapped<Foo<Foo<number>>>>; //unk
 // function executeFn<T>(queryFn: T): ToResult<GetResponseType<T>>[] {
 //   return null;
 // }
-// let res = executeFn((p: QueryShapeSet<Person>) => p.friends.name);
+// let res = executeFn((p: QueryShapeSet<Shape>) => p.friends.name);
 
-// QueryString<QueryShapeSet<Person, QueryShapeSet<Person, Person>>>
-//Source = QueryShapeSet<Person, QueryShapeSet<Person, Person>>
+// QueryString<QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>>
+//Source = QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>
 //Value = QueryString
-//ShapeType = Person,
-//ParentSource = QueryShapeSet<Person, Person>
+//ShapeType = Shape,
+//ParentSource = QueryShapeSet<Shape, Shape>
 
-//2: QueryShapeSet<Person, QueryShapeSet<Person, Person>>
-//Value = Person[]
-//Source = QueryShapeSet<Person, Person>
-//ShapeType = Person,
-//ParentSource = Person
+//2: QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>
+//Value = Shape[]
+//Source = QueryShapeSet<Shape, Shape>
+//ShapeType = Shape,
+//ParentSource = Shape
 
-//-> ToValueResultType<Person[], Person>[]
-//Value = Person[]
-//Source = Person
+//-> ToValueResultType<Shape[], Shape>[]
+//Value = Shape[]
+//Source = Shape
 export type QResult<Source, Object = {}> = Object & {
   id: string;
   shape: Source;
@@ -88,7 +89,7 @@ export type ToQueryResult<
   ? QResult<
       Source,
       {
-        [P in Property]: Value extends Shape ? ToQueryResult<Value>[] : Value;
+        [P in Property]: ToQueryResult<Value>;
       }
     >
   : Source extends QueryShapeSet<
@@ -96,12 +97,42 @@ export type ToQueryResult<
       infer ParentSource,
       infer SourceProperty
     >
-  ? ToQueryResult<
+  ? //for a shapeset, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
+    ToQueryResult<
       ParentSource,
       QResult<
         ShapeType,
         {
-          [P in Property]: Value;
+          [P in Property]: ToQueryResult<Value>;
+        }
+      >[],
+      SourceProperty
+    >
+  : Source;
+
+export type ToQueryPluralResult<
+  Source,
+  Value = undefined,
+  Property extends string | number | symbol = '',
+> = Source extends Shape
+  ? QResult<
+      Source,
+      {
+        [P in Property]: ToQueryResult<Value>[];
+      }
+    >
+  : Source extends QueryShapeSet<
+      infer ShapeType,
+      infer ParentSource,
+      infer SourceProperty
+    >
+  ? //for a shapeset, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
+    ToQueryResult<
+      ParentSource,
+      QResult<
+        ShapeType,
+        {
+          [P in Property]: ToQueryResult<Value>[];
         }
       >[],
       SourceProperty
@@ -117,14 +148,14 @@ export type ToQueryResult<
 //   ? ToQueryShapeSource<ShapeType, Value>
 //   : Value;
 
-//ShapeType = Person,
+//ShapeType = Shape,
 //Value = QueryString
-//ParentSource = QueryShapeSet<Person, Person>
+//ParentSource = QueryShapeSet<Shape, Shape>
 
-//ShapeType = Person,
-//Value = Person[]
-//ParentSource = Person
-//-> ToValueResultType<Person[], Person>[]
+//ShapeType = Shape,
+//Value = Shape[]
+//ParentSource = Shape
+//-> ToValueResultType<Shape[], Shape>[]
 
 export type ToQueryShapeSource<ShapeType, Value> = ShapeType extends null
   ? Value
@@ -147,11 +178,35 @@ export type ToResultType<T> = T extends QueryValue
   // ? GetQueryShapeType<T>
   // : T extends QueryString
   // ? GetValueResultType<T>
-  T extends Array<any>
-  ? Array<ToResultType<GetArrayType<T>>>
-  : T extends Evaluation
+  T extends Array<infer Type>
+  ? UnionToIntersection<ToResultType<Type>>
+  : // Array<Type>
+  T extends Evaluation
   ? boolean[]
   : T;
+
+//https://stackoverflow.com/a/50375286/977206
+type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
+  x: infer I,
+) => void
+  ? I
+  : never;
+
+// type Z = UnionToIntersection<
+//   | QResult<Shape, {name: string}>
+//   | QResult<Shape, {friends: QResult<Shape, {}>[]}>
+// >;
+// type Y = UnionToIntersection<
+//   | QueryString<Shape, 'name'>
+//   | (QueryShapeSet<Shape, Shape, 'friends'> &
+//       ToQueryShapeSetValue<
+//         QueryShapeSet<Shape, Shape, 'friends'>,
+//         Shape,
+//         'friends'
+//       >)
+// >;
+//
+// type X = UnionToIntersection<{a: string; id: string} | {b: number; id: string}>;
 
 export type GetQueryResponseType<Q> = Q extends LinkedQuery<
   any,
@@ -595,7 +650,7 @@ export class QueryShapeSet<
     }
     let leastSpecificShape = this.getOriginalValue().getLeastSpecificShape();
     this.wherePath = processWhereClause(validation, leastSpecificShape);
-    //return this.proxy because after person.friends.where() we can call other methods of person.friends
+    //return this.proxy because after Shape.friends.where() we can call other methods of Shape.friends
     //and for that we need the proxy
     return this.proxy;
   }
@@ -662,7 +717,7 @@ export class QueryShapeSet<
           }
 
           //if not, then a method/accessor was called that likely fits with the methods of the original SHAPE of the items in the shape set
-          //As in person.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Persons
+          //As in Shape.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Shapes
           //So here we find back the shape that all items have in common, and then find the property shape that matches the key
           //NOTE: this will only work if the key corresponds with an accessor in the shape that uses a @linkedProperty decorator
           let leastSpecificShape = queryShapeSet
@@ -714,7 +769,7 @@ export class QueryShape<S extends Shape = Shape> extends QueryValue<S> {
   where(validation: WhereClause<S>): QueryShapeSet<S> & ToQueryShape<S> {
     let nodeShape = this.originalValue.nodeShape;
     this.wherePath = processWhereClause(validation, nodeShape);
-    //return this because after person.friends.where() we can call other methods of person.friends
+    //return this because after Shape.friends.where() we can call other methods of Shape.friends
     return this.proxy;
   }
 
@@ -835,7 +890,7 @@ export class QueryPrimitive<
   where(validation: WhereClause<string>): QueryString {
     // let nodeShape = this.subject.getOriginalValue().nodeShape;
     this.wherePath = processWhereClause(validation, new QueryString(''));
-    //return this because after person.friends.where() we can call other methods of person.friends
+    //return this because after Shape.friends.where() we can call other methods of Shape.friends
     return this as any;
   }
 }
@@ -922,7 +977,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
 
   /**
    * Returns an array of query paths
-   * A single query can request multiple things in multiple "query paths" (For example this is using 2 paths: Person.select(p => [p.name, p.friends.name]))
+   * A single query can request multiple things in multiple "query paths" (For example this is using 2 paths: Shape.select(p => [p.name, p.friends.name]))
    * Each query path is returned as array of the property paths requested, with potential where clauses (together called a QueryStep)
    */
   getQueryPaths() {
