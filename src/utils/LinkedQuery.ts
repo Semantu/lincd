@@ -6,6 +6,7 @@ import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
 import {BoundComponent, Component} from '../interfaces/Component';
 import {Type} from 'typedoc';
+import {Property} from 'lincd-rdf/lib/shapes/Property';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
@@ -23,8 +24,7 @@ export type GetValueResultType<T> = T extends QueryString<
 >
   ? ToQueryResult<Source, string, Property>
   : T extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
-  ? // ? [ShapesetType, Source] //ToValueResultType<ShapesetType[], Source>
-    ToQueryPluralResult<Source, ShapeType, Property>
+  ? ToQueryPluralResult<ShapeType, Source, Property>
   : T extends QueryNumber<infer Source, infer Property>
   ? ToQueryResult<Source, number, Property>
   : any;
@@ -110,9 +110,11 @@ export type ToQueryResult<
     >
   : Source;
 
+// type X = false extends QueryShapeSet<any, any> ? true : false;
+
 export type ToQueryPluralResult<
-  Source,
   Value = undefined,
+  Source = undefined,
   Property extends string | number | symbol = '',
 > = Source extends Shape
   ? QResult<
@@ -137,7 +139,7 @@ export type ToQueryPluralResult<
       >[],
       SourceProperty
     >
-  : Source;
+  : ToQueryResult<Value>;
 
 // export type ToValueResultType<Value, Source> = Source extends QueryShapeSet<
 //   infer ShapeType,
@@ -766,7 +768,7 @@ export class QueryShape<S extends Shape = Shape> extends QueryValue<S> {
     super(property, subject);
   }
 
-  where(validation: WhereClause<S>): QueryShapeSet<S> & ToQueryShape<S> {
+  where(validation: WhereClause<S>): QueryShapeSet<S, false> & ToQueryShape<S> {
     let nodeShape = this.originalValue.nodeShape;
     this.wherePath = processWhereClause(validation, nodeShape);
     //return this because after Shape.friends.where() we can call other methods of Shape.friends

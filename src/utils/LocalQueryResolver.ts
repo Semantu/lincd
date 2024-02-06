@@ -253,14 +253,19 @@ function evaluateWhere(shape: Shape, method: string, args: any[]): boolean {
 function filterResults(
   subject: ShapeSet | Shape,
   where: WherePath,
+  resultObjects?: NodeResultMap,
 ): ShapeSet | Shape {
   // if ((where as WhereEvaluationPath).path) {
   //for nested where clauses the subject will already be a QueryValue
   //TODO: check if subject is ever not a shape, shapeset or string
   if (subject instanceof ShapeSet) {
-    return subject.filter((singleShape) => {
-      return evaluate(singleShape, where as WhereEvaluationPath);
+    subject.forEach((singleShape) => {
+      if (!evaluate(singleShape, where as WhereEvaluationPath)) {
+        resultObjects.delete(singleShape.uri);
+        subject.delete(singleShape);
+      }
     });
+    return subject;
   } else if (subject instanceof Shape) {
     return evaluate(subject, where as WhereEvaluationPath) ? subject : null;
   } else if (typeof subject === 'string') {
@@ -696,8 +701,21 @@ function resolveQueryStepForShapes(
     (subject as ShapeSet).forEach((singleShape) => {
       //directly access the get/set method of the shape
       let stepResult = singleShape[queryStep.property.label];
+      let subResultObjects;
+      if (stepResult instanceof ShapeSet) {
+        subResultObjects = toQueryResult(stepResult);
+      }
       if (queryStep.where) {
-        stepResult = filterResults(stepResult, queryStep.where);
+        stepResult = filterResults(
+          stepResult,
+          queryStep.where,
+          subResultObjects,
+        );
+        //if the result is empty, then the shape didn't make it through the filter and needs to be removed from the results
+        if (typeof stepResult === 'undefined' || stepResult === null) {
+          resultObjects.delete(singleShape.uri);
+          return;
+        }
       }
       if (queryStep.count) {
         if (Array.isArray(stepResult)) {
@@ -709,14 +727,6 @@ function resolveQueryStepForShapes(
         }
       }
 
-      if (typeof stepResult === 'undefined' || stepResult === null) {
-        return;
-      }
-
-      let subResultObjects;
-      if (stepResult instanceof ShapeSet) {
-        subResultObjects = toQueryResult(stepResult);
-      }
       if (restPath.length > 0) {
         //if there is more properties left, continue to fill the result object by resolving the next steps
         stepResult = resolveQuerySteps(stepResult, restPath, subResultObjects);
@@ -761,8 +771,13 @@ function resolveQueryStepForShapes(
     //this happens when the where clause is on the root of the query
     //like Person.select(p => p.where(...))
     //in that case the where clause is directly applied to the given subject
-    let whereResult = filterResults(subject, queryStep.where);
-    return whereResult;
+    subject = filterResults(subject, queryStep.where, resultObjects) as any;
+
+    if (restPath.length > 0) {
+      //if there is more properties left, continue to fill the result object by resolving the next steps
+      resolveQuerySteps(subject, restPath, resultObjects);
+    }
+    // return whereResult;
   }
 }
 function toQueryResult(result: any) {

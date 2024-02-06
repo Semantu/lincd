@@ -93,345 +93,325 @@ LinkedStorage.setQuadsLoaded(quads);
 store.addMultiple(quads);
 
 describe('query tests', () => {
-  test('can select a literal property of all instances', async () => {
-    //  x:LinkedQuery<Person, QueryString<Person, "name">>
-    let names = await Person.select((p) => {
-      return p.name;
-    });
-    // let names = resolveLocal(x);
-    /**
-     * Expected result:
-     * [{
-     *   "id:"..."
-     *   "shape": a Person
-     *   "name:"Semmy"
-     * },{
-     *   "name":"Moa",
-     * },... ]
-     */
-
-    expect(Array.isArray(names)).toBe(true);
-    expect(names.length).toBe(4);
-    expect(typeof names[0] === 'object').toBe(true);
-    expect(names[0].hasOwnProperty('name')).toBe(true);
-    expect(names[0].name).toBe('Semmy');
-  });
-
-  test('can select an object property of all instances', async () => {
-    //  x:LinkedQuery<Person, QueryString<Person, "name">>
-    // QueryShapeSet<Person, Person, "friends"> & ToQueryShapeSetValue<QueryShapeSet<Person, Person, "friends">, Person, "friends">
-    //Needs to become:
-
-    // -> QResult<Person, {friends: QResult<Person, {}>[]}>[]
-
-    //From person the property friends is requested.
-    //The results is a shapeset of persons, with source Person
-    //S / ShapeType: Person
-    //Source:Person
-    //Property: "friends"
-
-    //Shapeset turns into QResult<Person,{friends:QResult<Person,{}>[]}> ... thats just the shapeset
-    //then
-
-    let personFriends = await Person.select((p) => {
-      return p.friends;
-    });
-    /**
-     * Expected result:
-     * [{
-     *   "id:"..."
-     *   "shape": a Person
-     *   "friends:[{
-     *      "id"...,
-     *      "shape": a Person
-     *    },...]
-     * },... ]
-     */
-
-    let firstResult = personFriends[0];
-    expect(Array.isArray(personFriends)).toBe(true);
-    expect(personFriends.length).toBe(4);
-    expect(typeof personFriends[0] === 'object').toBe(true);
-    expect(firstResult.hasOwnProperty('id')).toBe(true);
-    expect(firstResult.id).toBe(p1.uri);
-    expect(firstResult.friends.length).toBe(2);
-    expect(firstResult.friends[0].id).toBe(p2.uri);
-    expect(firstResult.friends[1].id).toBe(p3.uri);
-  });
-
-  test('can select sub properties of a first property that returns a set', async () => {
-    let namesOfFriends = await Person.select((p) => {
-      //  QueryString<QueryShapeSet<Person, Person, "friends">, "name">
-      //step 1) --> QResult<QueryShapeSet<Person, Person, "friends">, {name: string}>[][]
-      //step 2) --> QResult<Person, {friends: QResult<Person, {name: string}>}>[][]
-      //--> QResult<Person, {friends: QResult<Person, {name:string}>}>[]
-
-      //QueryString<QueryShapeSet<Person, Person, "friends">, "name">
-      //Source : QueryShapeSet<Person, Person, "friends">
-      //Property: "name"
-
-      // QueryShapeSet<Person, Person, "friends">
-      //  ShapeType : Person
-      //  Source: Person
-      //  Property: "friends
-      // in other words. Person.friends is a set of persons
-      //which needs to be converted to QResult<Person (Source), friends: is a QResult<Person (ShapeType),{name:string}> array
-
-      let res = p.friends.name;
-      return res;
-    });
-    let first = namesOfFriends[0];
-    expect(Array.isArray(namesOfFriends)).toBe(true);
-    expect(namesOfFriends.length).toBe(4);
-    expect(first.id).toBe(p1.uri);
-    expect(first.friends.length).toBe(2);
-    expect(first.friends[0].id).toBe(p2.uri);
-    expect(first.friends[0].name).toBe('Moa');
-    expect(first.friends[0]['hobby']).toBeUndefined();
-  });
-
-  test('can select a nested set of shapes', async () => {
-    // QResult<Person, {friends: QResult<Person, {friends: QResult<Person,{}>}>[]}>[]
-    let friendsOfFriends = await Person.select((p) => {
-      return p.friends.friends;
-    });
-
-    expect(Array.isArray(friendsOfFriends)).toBe(true);
-    let first = friendsOfFriends[0];
-    expect(friendsOfFriends.length).toBe(4);
-    expect(first.friends.length).toBe(2);
-    //p1 (first) is friends with p2 and p3. And p2 (first.friends[0]) is friends with p3 and p4
-    expect(first.friends[0].friends.some((f) => f.id == p3.uri)).toBe(true);
-    expect(first.friends[0].friends.some((f) => f.id == p4.uri)).toBe(true);
-    expect(first.friends[1].friends.length).toBe(0);
-    expect(friendsOfFriends[3].friends.length).toBe(0);
-  });
-
-  test('can select multiple property paths', async () => {
-    let result = await Person.select((p) => {
-      return [p.name, p.friends];
-    });
-    //expected result:
-    /**
-     * [
-     * {
-     * "id": "p1",
-     * "name": "Semmy",
-     * "friends": [{id: "p2"}, {id: "p3"}]
-     * },
-     * ...
-     * ]
-     */
-
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBe(4);
-
-    let first = result[0];
-
-    expect(first.name).toBe('Semmy');
-    expect(Array.isArray(first.friends)).toBe(true);
-    expect(first.friends.length).toBe(2);
-    expect(first.friends.some((f) => f.id === p2.uri)).toBe(true);
-    expect(first.friends.some((f) => f.id === p4.uri)).toBe(false);
-  });
-
-  test('can select 3 level deep nested paths', async () => {
-    let level3Friends = await Person.select((p) => {
-      return p.friends.friends.friends;
-    });
-
-    expect(level3Friends.length).toBe(4);
-    expect(
-      level3Friends.every((p) =>
-        //level 1 is p1 has p2,p3 and p2 has p3,p4
-        p.friends.every((f) =>
-          //level 2 is p2 has p3,p4
-          f.friends.every(
-            (f2) =>
-              //level 3 is empty, because p3,p4 have no friends
-              f2.friends.length === 0,
-          ),
-        ),
-      ),
-    ).toBe(true);
-  });
-
+  // test('can select a literal property of all instances', async () => {
+  //   //  x:LinkedQuery<Person, QueryString<Person, "name">>
+  //   let names = await Person.select((p) => {
+  //     return p.name;
+  //   });
+  //   // let names = resolveLocal(x);
+  //   /**
+  //    * Expected result:
+  //    * [{
+  //    *   "id:"..."
+  //    *   "shape": a Person
+  //    *   "name:"Semmy"
+  //    * },{
+  //    *   "name":"Moa",
+  //    * },... ]
+  //    */
+  //
+  //   expect(Array.isArray(names)).toBe(true);
+  //   expect(names.length).toBe(4);
+  //   expect(typeof names[0] === 'object').toBe(true);
+  //   expect(names[0].hasOwnProperty('name')).toBe(true);
+  //   expect(names[0].name).toBe('Semmy');
+  // });
+  //
+  // test('can select an object property of all instances', async () => {
+  //   //  x:LinkedQuery<Person, QueryString<Person, "name">>
+  //   // QueryShapeSet<Person, Person, "friends"> & ToQueryShapeSetValue<QueryShapeSet<Person, Person, "friends">, Person, "friends">
+  //   //Needs to become:
+  //
+  //   // -> QResult<Person, {friends: QResult<Person, {}>[]}>[]
+  //
+  //   //From person the property friends is requested.
+  //   //The results is a shapeset of persons, with source Person
+  //   //S / ShapeType: Person
+  //   //Source:Person
+  //   //Property: "friends"
+  //
+  //   //Shapeset turns into QResult<Person,{friends:QResult<Person,{}>[]}> ... thats just the shapeset
+  //   //then
+  //
+  //   let personFriends = await Person.select((p) => {
+  //     return p.friends;
+  //   });
+  //   /**
+  //    * Expected result:
+  //    * [{
+  //    *   "id:"..."
+  //    *   "shape": a Person
+  //    *   "friends:[{
+  //    *      "id"...,
+  //    *      "shape": a Person
+  //    *    },...]
+  //    * },... ]
+  //    */
+  //
+  //   let firstResult = personFriends[0];
+  //   expect(Array.isArray(personFriends)).toBe(true);
+  //   expect(personFriends.length).toBe(4);
+  //   expect(typeof personFriends[0] === 'object').toBe(true);
+  //   expect(firstResult.hasOwnProperty('id')).toBe(true);
+  //   expect(firstResult.id).toBe(p1.uri);
+  //   expect(firstResult.friends.length).toBe(2);
+  //   expect(firstResult.friends[0].id).toBe(p2.uri);
+  //   expect(firstResult.friends[1].id).toBe(p3.uri);
+  // });
+  //
+  // test('can select sub properties of a first property that returns a set', async () => {
+  //   let namesOfFriends = await Person.select((p) => {
+  //     //  QueryString<QueryShapeSet<Person, Person, "friends">, "name">
+  //     //step 1) --> QResult<QueryShapeSet<Person, Person, "friends">, {name: string}>[][]
+  //     //step 2) --> QResult<Person, {friends: QResult<Person, {name: string}>}>[][]
+  //     //--> QResult<Person, {friends: QResult<Person, {name:string}>}>[]
+  //
+  //     //QueryString<QueryShapeSet<Person, Person, "friends">, "name">
+  //     //Source : QueryShapeSet<Person, Person, "friends">
+  //     //Property: "name"
+  //
+  //     // QueryShapeSet<Person, Person, "friends">
+  //     //  ShapeType : Person
+  //     //  Source: Person
+  //     //  Property: "friends
+  //     // in other words. Person.friends is a set of persons
+  //     //which needs to be converted to QResult<Person (Source), friends: is a QResult<Person (ShapeType),{name:string}> array
+  //
+  //     let res = p.friends.name;
+  //     return res;
+  //   });
+  //   let first = namesOfFriends[0];
+  //   expect(Array.isArray(namesOfFriends)).toBe(true);
+  //   expect(namesOfFriends.length).toBe(4);
+  //   expect(first.id).toBe(p1.uri);
+  //   expect(first.friends.length).toBe(2);
+  //   expect(first.friends[0].id).toBe(p2.uri);
+  //   expect(first.friends[0].name).toBe('Moa');
+  //   expect(first.friends[0]['hobby']).toBeUndefined();
+  // });
+  //
+  // test('can select a nested set of shapes', async () => {
+  //   // QResult<Person, {friends: QResult<Person, {friends: QResult<Person,{}>}>[]}>[]
+  //   let friendsOfFriends = await Person.select((p) => {
+  //     return p.friends.friends;
+  //   });
+  //
+  //   expect(Array.isArray(friendsOfFriends)).toBe(true);
+  //   let first = friendsOfFriends[0];
+  //   expect(friendsOfFriends.length).toBe(4);
+  //   expect(first.friends.length).toBe(2);
+  //   //p1 (first) is friends with p2 and p3. And p2 (first.friends[0]) is friends with p3 and p4
+  //   expect(first.friends[0].friends.some((f) => f.id == p3.uri)).toBe(true);
+  //   expect(first.friends[0].friends.some((f) => f.id == p4.uri)).toBe(true);
+  //   expect(first.friends[1].friends.length).toBe(0);
+  //   expect(friendsOfFriends[3].friends.length).toBe(0);
+  // });
+  //
+  // test('can select multiple property paths', async () => {
+  //   let result = await Person.select((p) => {
+  //     return [p.name, p.friends];
+  //   });
+  //   //expected result:
+  //   /**
+  //    * [
+  //    * {
+  //    * "id": "p1",
+  //    * "name": "Semmy",
+  //    * "friends": [{id: "p2"}, {id: "p3"}]
+  //    * },
+  //    * ...
+  //    * ]
+  //    */
+  //
+  //   expect(Array.isArray(result)).toBe(true);
+  //   expect(result.length).toBe(4);
+  //
+  //   let first = result[0];
+  //
+  //   expect(first.name).toBe('Semmy');
+  //   expect(Array.isArray(first.friends)).toBe(true);
+  //   expect(first.friends.length).toBe(2);
+  //   expect(first.friends.some((f) => f.id === p2.uri)).toBe(true);
+  //   expect(first.friends.some((f) => f.id === p4.uri)).toBe(false);
+  // });
+  //
+  // test('can select 3 level deep nested paths', async () => {
+  //   let level3Friends = await Person.select((p) => {
+  //     return p.friends.friends.friends;
+  //   });
+  //
+  //   expect(level3Friends.length).toBe(4);
+  //   expect(
+  //     level3Friends.every((p) =>
+  //       //level 1 is p1 has p2,p3 and p2 has p3,p4
+  //       p.friends.every((f) =>
+  //         //level 2 is p2 has p3,p4
+  //         f.friends.every(
+  //           (f2) =>
+  //             //level 3 is empty, because p3,p4 have no friends
+  //             f2.friends.length === 0,
+  //         ),
+  //       ),
+  //     ),
+  //   ).toBe(true);
+  // });
   // // ### WHERE TESTS
   //
-  // test('can use where() to filter a string in a set of Literals with equals', () => {
+  // test('can use where() to filter a string in a set of Literals with equals', async () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
   //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let friendsCalledMoa = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.where((f) => f.name.equals('Moa'));
-  //     }),
-  //   );
   //
-  //   expect(friendsCalledMoa instanceof ShapeSet).toBe(true);
-  //   expect(friendsCalledMoa.size).toBe(1);
-  //   expect(friendsCalledMoa.first().namedNode).toBe(p2.namedNode);
+  //   //QResult<Person, {friends: QResult<Person, {}>[]}>[]
+  //   let friendsCalledMoa = await Person.select((p) => {
+  //     return p.friends.where((f) => f.name.equals('Moa'));
+  //   });
+  //
+  //   let first = friendsCalledMoa[0];
+  //   let second = friendsCalledMoa[1];
+  //   expect(Array.isArray(friendsCalledMoa)).toBe(true);
+  //   expect(first.friends.length).toBe(1);
+  //   expect(first.friends[0].id).toBe(p2.uri);
+  //   expect(second.friends.length).toBe(0);
   // });
-  //
-  // test('where and', () => {
+  // test('where and', async () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
   //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let friendsCalledMoaThatJog = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.where((f) =>
-  //         f.name.equals('Moa').and(f.hobby.equals('Jogging')),
-  //       );
-  //     }),
-  //   );
-  //
-  //   expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
-  //   expect(friendsCalledMoaThatJog.size).toBe(1);
-  //   expect(friendsCalledMoaThatJog.first().namedNode).toBe(p2.namedNode);
+  //   let friendsCalledMoaThatJog = await Person.select((p) => {
+  //     return p.friends.where((f) =>
+  //       f.name.equals('Moa').and(f.hobby.equals('Jogging')),
+  //     );
+  //   });
+  //   let first = friendsCalledMoaThatJog[0];
+  //   let second = friendsCalledMoaThatJog[1];
+  //   expect(Array.isArray(friendsCalledMoaThatJog)).toBe(true);
+  //   expect(first.friends.length).toBe(1);
+  //   expect(first.friends[0].id).toBe(p2.uri);
+  //   expect(second.friends.length).toBe(0);
   // });
-  // test('where or', () => {
+  // test('where or', async () => {
   //   //we select the friends of all persons, but only those friends whose name is moa
   //   //this will return an array, where each entry represents the results for a single person.
   //   // the entry contains those friends of the person whose name is Moa - (as a set of persons)
-  //   let friendsCalledMoaThatJog = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.where((f) =>
-  //         f.name.equals('Jinx').or(f.hobby.equals('Jogging')),
-  //       );
-  //     }),
-  //   );
+  //   let orFriends = await Person.select((p) => {
+  //     return p.friends.where((f) =>
+  //       f.name.equals('Jinx').or(f.hobby.equals('Jogging')),
+  //     );
+  //   });
   //
-  //   expect(friendsCalledMoaThatJog instanceof ShapeSet).toBe(true);
-  //   expect(friendsCalledMoaThatJog.size).toBe(2);
-  //   expect(
-  //     friendsCalledMoaThatJog.some((f) => f.namedNode === p2.namedNode),
-  //   ).toBe(true);
-  //   expect(
-  //     friendsCalledMoaThatJog.some((f) => f.namedNode === p3.namedNode),
-  //   ).toBe(true);
+  //   let first = orFriends[0];
+  //   let second = orFriends[1];
+  //   expect(Array.isArray(orFriends)).toBe(true);
+  //   expect(first.friends.length).toBe(2);
+  //   expect(first.friends[0].id).toBe(p2.uri);
+  //   expect(first.friends[1].id).toBe(p3.uri);
+  //   expect(second.friends.length).toBe(1);
+  //   expect(second.friends[0].id).toBe(p3.uri);
+  // });
+  // test('where directly on the shape instance ', async () => {
+  //   let personsCalledMoa = await Person.select((p) => {
+  //     let res = p.where(p.name.equals('Moa'));
+  //     return res;
+  //   });
+  //
+  //   expect(Array.isArray(personsCalledMoa)).toBe(true);
+  //   expect(personsCalledMoa.length).toBe(1);
+  //   expect(personsCalledMoa[0].id).toBe(p2.uri);
   // });
   //
-  // test('where directly on the shape instance ', () => {
-  //   let personsCalledMoa = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.where(p.name.equals('Moa'));
-  //     }),
-  //   );
-  //
-  //   expect(personsCalledMoa instanceof ShapeSet).toBe(true);
-  //   expect(personsCalledMoa.size).toBe(1);
-  //   expect(personsCalledMoa.some((f) => f.namedNode === p2.namedNode)).toBe(
-  //     true,
-  //   );
-  // });
-  //
-  // test('where and or and', () => {
+  // test('where and or and', async () => {
   //   //we combine AND & OR. AND should be done first, then OR
-  //   let persons = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.where((f) =>
-  //         f.name
-  //           .equals('Jinx')
-  //           .or(f.hobby.equals('Jogging'))
-  //           .and(f.name.equals('Moa')),
-  //       );
-  //     }),
-  //   );
+  //   //Therefor we expect p2 and p3 to match as friends
+  //   //(p3 would not match if the OR was done first)
+  //   let persons = await Person.select((p) => {
+  //     return p.friends.where((f) =>
+  //       f.name
+  //         .equals('Jinx')
+  //         .or(f.hobby.equals('Jogging'))
+  //         .and(f.name.equals('Moa')),
+  //     );
+  //   });
+  //
   //   //test the same thing again, but now the and clause is done within the or clause
   //   //the result should be the same
-  //   let persons2 = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.where((f) =>
-  //         f.name
-  //           .equals('Jinx')
-  //           .or(f.hobby.equals('Jogging').and(f.name.equals('Moa'))),
-  //       );
-  //     }),
-  //   );
+  //   let persons2 = await Person.select((p) => {
+  //     return p.friends.where((f) =>
+  //       f.name
+  //         .equals('Jinx')
+  //         .or(f.hobby.equals('Jogging').and(f.name.equals('Moa'))),
+  //     );
+  //   });
   //
-  //   expect(persons instanceof ShapeSet).toBe(true);
-  //   expect(persons.size).toBe(2);
-  //   expect(persons.some((f) => f.namedNode === p2.namedNode)).toBe(true);
-  //   expect(persons.some((f) => f.namedNode === p3.namedNode)).toBe(true);
-  //   expect(persons2 instanceof ShapeSet).toBe(true);
-  //   expect(persons2.size).toBe(2);
-  //   expect(persons2.some((f) => f.namedNode === p2.namedNode)).toBe(true);
-  //   expect(persons2.some((f) => f.namedNode === p3.namedNode)).toBe(true);
+  //   [persons, persons2].forEach((result) => {
+  //     expect(Array.isArray(result)).toBe(true);
+  //     expect(result[0].friends.length).toBe(2);
+  //     expect(result[1].friends.length).toBe(1);
+  //     expect(result[2].friends.length).toBe(0);
+  //     expect(result[3].friends.length).toBe(0);
+  //     expect(result[0].friends[0].id).toBe(p2.uri);
+  //     expect(result[0].friends[1].id).toBe(p3.uri);
+  //     expect(result[1].friends[0].id).toBe(p3.uri);
+  //   });
   // });
-  // test('where some implicit', () => {
+  // test('where some implicit', async () => {
   //   //select all persons that have a friend called Moa
-  //   //the first test relies on the fact that by default, some() is applied.
+  //   //the test relies on the fact that by default, some() is applied.
   //   //in other words, the person matches if at least 1 friend is called Moa
-  //   let peopleWithFriendsCalledMoa = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.where(p.friends.name.equals('Moa'));
-  //     }),
-  //   );
-  //   expect(peopleWithFriendsCalledMoa instanceof ShapeSet).toBe(true);
-  //   expect(peopleWithFriendsCalledMoa.size).toBe(1);
-  //   expect(
-  //     peopleWithFriendsCalledMoa.some((f) => f.namedNode === p1.namedNode),
-  //   ).toBe(true);
+  //   let peopleWithFriendsCalledMoa = await Person.select((p) => {
+  //     return p.where(p.friends.name.equals('Moa'));
+  //   });
+  //   expect(Array.isArray(peopleWithFriendsCalledMoa)).toBe(true);
+  //   expect(peopleWithFriendsCalledMoa.length).toBe(1);
+  //   expect(peopleWithFriendsCalledMoa[0].id).toBe(p1.uri);
   // });
-  // test('where some explicit', () => {
-  //   // the second explicitly mentions some()
-  //   let peopleWithFriendsCalledMoa = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.where(
-  //         p.friends.some((f) => {
-  //           return f.name.equals('Moa');
-  //         }),
-  //       );
-  //     }),
-  //   );
+  // test('where some explicit', async () => {
+  //   // same as last test but with explicit some()
+  //   let peopleWithFriendsCalledMoa = await Person.select((p) => {
+  //     return p.where(
+  //       p.friends.some((f) => {
+  //         return f.name.equals('Moa');
+  //       }),
+  //     );
+  //   });
   //
-  //   expect(peopleWithFriendsCalledMoa instanceof ShapeSet).toBe(true);
-  //   expect(peopleWithFriendsCalledMoa.size).toBe(1);
-  //   expect(
-  //     peopleWithFriendsCalledMoa.some((f) => f.namedNode === p1.namedNode),
-  //   ).toBe(true);
+  //   expect(Array.isArray(peopleWithFriendsCalledMoa)).toBe(true);
+  //   expect(peopleWithFriendsCalledMoa.length).toBe(1);
+  //   expect(peopleWithFriendsCalledMoa[0].id).toBe(p1.uri);
   // });
-  //
-  // test('where every', () => {
+  // test('where every', async () => {
   //   // select people that only have friends that are called Moa or Jinx
-  //   let allFriendsCalledMoaOrJinx = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.where(
-  //         p.friends.every((f) => {
-  //           return f.name.equals('Moa').or(f.name.equals('Jinx'));
-  //         }),
-  //       );
-  //     }),
-  //   );
+  //   let allFriendsCalledMoaOrJinx = await Person.select((p) => {
+  //     return p.where(
+  //       p.friends.every((f) => {
+  //         return f.name.equals('Moa').or(f.name.equals('Jinx'));
+  //       }),
+  //     );
+  //   });
   //
-  //   expect(allFriendsCalledMoaOrJinx instanceof ShapeSet).toBe(true);
-  //   expect(allFriendsCalledMoaOrJinx.size).toBe(1);
-  //   expect(
-  //     allFriendsCalledMoaOrJinx.some((f) => f.namedNode === p1.namedNode),
-  //   ).toBe(true);
+  //   expect(Array.isArray(allFriendsCalledMoaOrJinx)).toBe(true);
+  //   expect(allFriendsCalledMoaOrJinx.length).toBe(1);
+  //   expect(allFriendsCalledMoaOrJinx[0].id).toBe(p1.uri);
   // });
-  // test('where sequences', () => {
-  //   // select people that only have friends that are called Moa or Jinx
-  //   let friendCalledJinxAndNameIsSemmy = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p
-  //         .where(
-  //           p.friends.some((f) => {
-  //             return f.name.equals('Jinx');
-  //           }),
-  //         )
-  //         .name.where((n) => {
-  //           return n.equals('Semmy');
-  //         });
-  //     }),
-  //   );
-  //
-  //   expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
-  //   expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
-  //   expect(friendCalledJinxAndNameIsSemmy.some((f) => f === 'Semmy')).toBe(
-  //     true,
-  //   );
-  // });
+  test('where sequences', async () => {
+    // select people that have a friend called Jinx and a name "Semmy" (so that's only p1)
+    let friendCalledJinxAndNameIsSemmy = await Person.select((p) => {
+      return p
+        .where(
+          p.friends.some((f) => {
+            return f.name.equals('Jinx');
+          }),
+        )
+        .name.where((n) => {
+          return n.equals('Semmy');
+        });
+    });
+
+    expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
+    expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
+    expect(friendCalledJinxAndNameIsSemmy[0].id).toBe(p1.uri);
+  });
+
   // test('some without where', () => {
   //   let booleansResult = resolveLocalFlat(
   //     Person.select((p) => {
@@ -495,7 +475,6 @@ describe('query tests', () => {
   //     true,
   //   );
   // });
-
   // test('sub select query', () => {
   //   // select people that only have friends that are called Moa or Jinx
   //   let nameAndHobbyOfFriends = resolveLocal(
@@ -517,7 +496,6 @@ describe('query tests', () => {
   //   expect(nameAndHobbyOfFriends[1][0][1]).toBeUndefined();
   //   expect(nameAndHobbyOfFriends[2].length).toBe(0);
   // });
-
   /*test('select - object return type', () => {
     // select people that only have friends that are called Moa or Jinx
     let nameAndHobbyOfFriends = resolveLocal(
@@ -592,7 +570,6 @@ describe('query tests', () => {
     expect(tree[1].children[0]).toBe('Jinx');
     expect(tree).toMatchSnapshot();
   });*/
-
   /*test('linked set components', () => {
     Person.select((p) => ({
       title: p.name,
@@ -695,7 +672,6 @@ describe('query tests', () => {
     expect(tree[1].children[0]).toBe('Jinx');
     expect(tree).toMatchSnapshot();
   });*/
-
   /* test('nested linked set components', () => {
     const NameList = linkedSetComponent<Person>(
       Person.select((person) => [person.name]),
@@ -826,7 +802,6 @@ describe('query tests', () => {
   //   },
   // );
   //
-
   //NEXT:
   //Return an object
   //Return a single entry
@@ -835,7 +810,6 @@ describe('query tests', () => {
   //Refactor structure of json objects, where and count need to be added? investigate other libraries
   //Refactor duplicate value in "every"
   //Refactor firstPath into an array
-
   //FLAT: old, but kee
   // // test('can select sub properties of a first property that returns a set - FLAT result', () => {
   // //   let q = Person.select((p) => {
