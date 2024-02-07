@@ -7,6 +7,7 @@ import {CoreSet} from '../collections/CoreSet';
 import {BoundComponent, Component} from '../interfaces/Component';
 import {Type} from 'typedoc';
 import {Property} from 'lincd-rdf/lib/shapes/Property';
+import {key} from 'lincd-filebase/lib/ontologies/filebase';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
@@ -31,23 +32,23 @@ export type GetValueResultType<T> = T extends QueryString<
 
 // QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>> & ToQueryShapeSetValue<QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>, Shape>
 //example class
-interface Foo<Source> {
-  name: string;
-}
+// interface Foo<Source> {
+//   name: string;
+// }
 //simplified type that maps all keys of an object to a different return type
-type FooMapped<T> = {
-  [P in keyof T]: boolean;
-};
+// type FooMapped<T> = {
+//   [P in keyof T]: boolean;
+// };
 
-type NestedToArr<T> = T extends Foo<infer Source> ? NestedToArr<Source>[] : T;
-var AnswerNum: NestedToArr<number>;
-var Answer: NestedToArr<Foo<number>>; //number
-var Answer2: NestedToArr<Foo<Foo<number>>>; //number[]
-var Answer3: NestedToArr<Foo<Foo<number>>>; //number[][]
-
-var AnswerB: NestedToArr<number & FooMapped<number>>; //number
-var AnswerB2: NestedToArr<Foo<number> & FooMapped<Foo<number>>>; //unknown[]
-var AnswerB3: NestedToArr<Foo<Foo<number>> & FooMapped<Foo<Foo<number>>>>; //unknown[]
+// type NestedToArr<T> = T extends Foo<infer Source> ? NestedToArr<Source>[] : T;
+// var AnswerNum: NestedToArr<number>;
+// var Answer: NestedToArr<Foo<number>>; //number
+// var Answer2: NestedToArr<Foo<Foo<number>>>; //number[]
+// var Answer3: NestedToArr<Foo<Foo<number>>>; //number[][]
+//
+// var AnswerB: NestedToArr<number & FooMapped<number>>; //number
+// var AnswerB2: NestedToArr<Foo<number> & FooMapped<Foo<number>>>; //unknown[]
+// var AnswerB3: NestedToArr<Foo<Foo<number>> & FooMapped<Foo<Foo<number>>>>; //unknown[]
 
 // type GetResponseType<T> = T extends QueryShapeSet<any> ? never : never;
 // type ToResult<T> = T extends QueryShapeSet<infer ShapeType, infer Source>
@@ -167,8 +168,13 @@ export type ToQueryShapeSource<ShapeType, Value> = ShapeType extends null
 
 // export type ToQueryShapeSetSource<ShapeType, Value, ParentSource> =
 //   ShapeType extends null ? Value : ToQueryResult<Value, ParentSource>[];
-
-export type ToResultType<T> = T extends QueryValue
+export type ObjectToResult<T> = {
+  [P in keyof T]: ToResultType<T[P]>;
+};
+export type ToResultType<
+  T,
+  QShapeType extends Shape = null,
+> = T extends QueryValue
   ? GetValueResultType<T>
   : T extends Count
   ? number[]
@@ -184,7 +190,9 @@ export type ToResultType<T> = T extends QueryValue
   ? UnionToIntersection<ToResultType<Type>>
   : // Array<Type>
   T extends Evaluation
-  ? boolean[]
+  ? boolean
+  : T extends Object
+  ? QResult<QShapeType, ObjectToResult<T>>
   : T;
 
 //https://stackoverflow.com/a/50375286/977206
@@ -312,7 +320,8 @@ export interface BoundComponentQueryStep {
   component: BoundComponent<any, any>;
   // path: LinkedQueryObject;
 }
-export type LinkedQueryObject = QueryPath[];
+export type CustomQueryObject = {[key: string]: QueryPath};
+export type LinkedQueryObject = QueryPath[] | CustomQueryObject;
 
 export type SubQueryPaths = LinkedQueryObject;
 /**
@@ -376,6 +385,7 @@ export class QueryValue<
   ) {}
 
   getOriginalValue() {
+    //NOTE: this is a bit of a shortcut, so that
     return this.originalValue;
   }
   /**
@@ -832,6 +842,9 @@ export class Evaluation {
   ) {}
   private _andOr: AndOrQueryToken[] = [];
 
+  getPropertyPath() {
+    return this.getWherePath();
+  }
   getWherePath(): WherePath {
     let evalPath: WhereEvaluationPath = {
       path: this.value.getPropertyPath(),
@@ -983,7 +996,8 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
    * Each query path is returned as array of the property paths requested, with potential where clauses (together called a QueryStep)
    */
   getQueryPaths() {
-    let queryPaths: LinkedQueryObject = [];
+    let queryPaths: QueryPath[] = [];
+    let queryObject: CustomQueryObject;
     //if the trace response is an array, then multiple paths were requested
     if (
       this.traceResponse instanceof QueryValue ||
@@ -1007,20 +1021,32 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
     }
     //if it's an object
     else if (typeof this.traceResponse === 'object') {
+      queryObject = {};
       //then loop over all the keys
       Object.getOwnPropertyNames(this.traceResponse).forEach((key) => {
         //and add the property paths for each key
-        queryPaths.push(
-          (this.traceResponse[key] as QueryValue).getPropertyPath(),
-        );
+        const value = this.traceResponse[key];
+        //TODO: we could potentially make Evaluation extend QueryValue, and rename getPropertyPath to something more generic,
+        //that way we can simplify the code perhaps? Or would we loose type clarity? (QueryStep is the generic one for QueryValue, and Evaluation can just return WherePath right?)
+        if (value instanceof QueryValue) {
+          // queryPaths.push(value.getPropertyPath());
+          queryObject[key] = value.getPropertyPath();
+        } else if (value instanceof Evaluation) {
+          // queryPaths.push(value.getWherePath());
+          queryObject[key] = value.getWherePath();
+        } else {
+          throw Error('Unknown trace response type for key ' + key);
+        }
       });
     } else {
       throw Error('Unknown trace response type');
     }
     if (this.parentQueryPath) {
-      queryPaths = (this.parentQueryPath as any[]).concat([queryPaths]);
+      queryPaths = (this.parentQueryPath as any[]).concat([
+        queryObject || queryPaths,
+      ]);
     }
-    return queryPaths;
+    return queryObject || queryPaths;
   }
 }
 

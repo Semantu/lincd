@@ -292,21 +292,27 @@ export type LinkedDataPreparedQuery = {
 export function removeBoundComponents(
   request: ComponentQueryPath[],
 ): QueryPath[] {
-  return request.map((queryPath: ComponentQueryPath) => {
-    if (Array.isArray(queryPath)) {
-      return queryPath.filter((queryStep) => {
-        if ((queryStep as BoundComponentQueryStep).component) {
-          return false;
-        }
-        return true;
-      }) as QueryPath;
-    } else {
-      //TODO: filter out bound components for this sort of query
-      throw Error('Not implemented');
-      debugger;
-      // request as WherePath;
-    }
-  }) as QueryPath[];
+  if (Array.isArray(request)) {
+    return request.map((queryPath: ComponentQueryPath) => {
+      if (Array.isArray(queryPath)) {
+        return queryPath.filter((queryStep) => {
+          if ((queryStep as BoundComponentQueryStep).component) {
+            return false;
+          }
+          return true;
+        }) as QueryPath;
+      } else {
+        //TODO: filter out bound components for this sort of query
+        throw Error('Not implemented');
+        debugger;
+        // request as WherePath;
+      }
+    }) as QueryPath[];
+  } else {
+    throw new Error(
+      'TODO: implement support for custom query object: ' + request,
+    );
+  }
 }
 
 export class BoundComponent<P, ShapeType extends Shape> extends QueryValue {

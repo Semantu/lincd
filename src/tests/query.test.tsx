@@ -319,7 +319,7 @@ describe('query tests', () => {
   //   expect(personsCalledMoa.length).toBe(1);
   //   expect(personsCalledMoa[0].id).toBe(p2.uri);
   // });
-  //
+
   // test('where and or and', async () => {
   //   //we combine AND & OR. AND should be done first, then OR
   //   //Therefor we expect p2 and p3 to match as friends
@@ -393,57 +393,44 @@ describe('query tests', () => {
   //   expect(allFriendsCalledMoaOrJinx.length).toBe(1);
   //   expect(allFriendsCalledMoaOrJinx[0].id).toBe(p1.uri);
   // });
-  test('where sequences', async () => {
-    // select people that have a friend called Jinx and a name "Semmy" (so that's only p1)
-    let friendCalledJinxAndNameIsSemmy = await Person.select((p) => {
-      return p
-        .where(
-          p.friends.some((f) => {
-            return f.name.equals('Jinx');
-          }),
-        )
-        .name.where((n) => {
-          return n.equals('Semmy');
-        });
+  // test('where sequences', async () => {
+  //   // select people that have a friend called Jinx and a name "Semmy" (so that's only p1)
+  //   let friendCalledJinxAndNameIsSemmy = await Person.select((p) => {
+  //     return p
+  //       .where(
+  //         p.friends.some((f) => {
+  //           return f.name.equals('Jinx');
+  //         }),
+  //       )
+  //       .name.where((n) => {
+  //         return n.equals('Semmy');
+  //       });
+  //   });
+  //
+  //   expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
+  //   expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
+  //   expect(friendCalledJinxAndNameIsSemmy[0].id).toBe(p1.uri);
+  // });
+  test('custom result object - equals without where', async () => {
+    let customResult = await Person.select((p) => {
+      let res = {
+        nameIsMoa: p.name.equals('Moa'),
+      };
+      return res;
     });
 
-    expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
-    expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
-    expect(friendCalledJinxAndNameIsSemmy[0].id).toBe(p1.uri);
-  });
+    expect(Array.isArray(customResult)).toBe(true);
+    expect(customResult[0].id).toBe(p1.uri);
+    expect(customResult[0].nameIsMoa).toBe(false);
+    expect(customResult[1].id).toBe(p2.uri);
+    expect(customResult[1].nameIsMoa).toBe(true);
 
-  // test('some without where', () => {
-  //   let booleansResult = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.some((f) => f.name.equals('Moa'));
-  //     }),
-  //   );
-  //   expect(Array.isArray(booleansResult)).toBe(true);
-  //   expect(booleansResult.every((b) => typeof b === 'boolean')).toBe(true);
-  //   //1 person (person1) has a friend called Moa, so there is only one 'true' value
-  //   expect(booleansResult[0]).toBe(true);
-  //   expect(booleansResult.filter((b) => b === true).length).toBe(1);
-  // });
-  // test('equals without where', () => {
-  //   let booleansResult = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.name.equals('Moa');
-  //     }),
-  //   );
-  //   expect(Array.isArray(booleansResult)).toBe(true);
-  //   expect(booleansResult.every((b) => typeof b === 'boolean')).toBe(true);
-  //   //1 person (person2) is called Moa, so there is only one 'true' value
-  //   expect(booleansResult[1]).toBe(true);
-  //   expect(booleansResult.filter((b) => b === true).length).toBe(1);
-  //
-  //   //This is intentionally invalid syntax
-  //   // let singleBooleanResult = resolveLocal(
-  //   //   Person.select((p) => {
-  //   //     return p.some(p.name.equals('Moa'));
-  //   //   }),
-  //   // );
-  //   //["name","name"]
-  // });
+    //This is intentionally invalid syntax
+    // let singleBooleanResult = await Person.select((p) => {
+    //   return p.some(p.name.equals('Moa'));
+    // });
+    //["name","name"]
+  });
   //
   // test('count', () => {
   //   // select people that only have friends that are called Moa or Jinx
@@ -803,6 +790,8 @@ describe('query tests', () => {
   // );
   //
   //NEXT:
+  //Outer select().where()
+  //Combine queries
   //Return an object
   //Return a single entry
   //Work with components that show multiple sources (setComponents)
@@ -821,6 +810,17 @@ describe('query tests', () => {
   // //   expect(namesOfFriends.includes('Jinx')).toBe(true);
   // //   expect(namesOfFriends.includes('Semmy')).toBe(false);
   // // });
+  //OLD syntax, no longer supported because what would we return? too vague
+  // test('some without where', async () => {
+  //   let booleansResult = await Person.select((p) => {
+  //     return p.friends.some((f) => f.name.equals('Moa'));
+  //   });
+  //   expect(Array.isArray(booleansResult)).toBe(true);
+  //   expect(booleansResult.every((b) => typeof b === 'boolean')).toBe(true);
+  //   //1 person (person1) has a friend called Moa, so there is only one 'true' value
+  //   expect(booleansResult[0]).toBe(true);
+  //   // expect(booleansResult.filter((b) => b === true).length).toBe(1);
+  // });
 });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something

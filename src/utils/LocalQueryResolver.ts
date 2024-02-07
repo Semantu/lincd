@@ -2,6 +2,7 @@ import {
   BoundComponentQueryStep,
   ComponentQueryPath,
   Count,
+  CustomQueryObject,
   Evaluation,
   GetArrayType,
   GetQueryResponseType,
@@ -32,6 +33,7 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {Shape} from '../shapes/Shape';
 import {shacl} from '../ontologies/shacl';
 import {CoreMap} from '../collections/CoreMap';
+import {ShapeValuesSet} from '../collections/ShapeValuesSet';
 import {result} from 'lincd-shacl/lib/ontologies/shacl';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
@@ -76,10 +78,18 @@ export function resolveLocal<ResultType>(
 
   let resultObjects = toQueryResult(subject);
 
-  query.forEach((queryPath) => {
-    resolveQueryPath(subject, queryPath, resultObjects);
-  });
-
+  if (Array.isArray(query)) {
+    query.forEach((queryPath) => {
+      resolveQueryPath(subject, queryPath, resultObjects);
+    });
+  } else {
+    subject.forEach((singleShape) => {
+      for (let key of Object.getOwnPropertyNames(query as CustomQueryObject)) {
+        let resultObject = resultObjects.get(singleShape.uri);
+        resultObject[key] = resolveQueryPath(singleShape, query[key]);
+      }
+    });
+  }
   return [...resultObjects.values()] as ResultType;
 
   //if only 1 path was selected, return the first result
@@ -128,15 +138,21 @@ export function resolveLocal<ResultType>(
 export function resolveLocalFlat<S extends LinkedQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
-  queryPaths?: QueryPath[] | ComponentQueryPath[],
+  queryPaths?: LinkedQueryObject | ComponentQueryPath[],
 ): ToNormalValue<GetQueryResponseType<S>> {
   queryPaths = queryPaths || query.getQueryPaths();
   subject = subject || (query.shape as any).getLocalInstances();
   let results = [];
 
-  queryPaths.forEach((queryPath) => {
-    results.push(resolveQueryPathFlat(subject, queryPath));
-  });
+  if (Array.isArray(queryPaths)) {
+    queryPaths.forEach((queryPath) => {
+      results.push(resolveQueryPathFlat(subject, queryPath));
+    });
+  } else {
+    throw new Error(
+      'TODO: implement support for custom query object: ' + queryPaths,
+    );
+  }
 
   // convert the result of each instance into the shape that was requested
   if (query.traceResponse instanceof QueryValue) {
@@ -192,7 +208,7 @@ export function resolveLocalFlat<S extends LinkedQuery<any>>(
 function resolveQueryPath(
   subject: ShapeSet | Shape,
   queryPath: QueryPath | ComponentQueryPath,
-  resultObjects?: NodeResultMap,
+  resultObjects?: NodeResultMap | QResult<any, any>,
 ) {
   //start with the local instance as the subject
   if (Array.isArray(queryPath)) {
@@ -200,13 +216,17 @@ function resolveQueryPath(
     return resolveQuerySteps(subject, queryPath as any[], resultObjects);
   } else {
     //TODO: review if we can remove the result variable
-    let result: ShapeSet | Shape[] | Shape | JSPrimitive[] | JSPrimitive =
-      subject;
-    result = (subject as ShapeSet).map((singleShape) => {
+    // let result: ShapeSet | Shape[] | Shape | JSPrimitive[] | JSPrimitive =
+    //   subject;
+    if (subject instanceof Shape) {
+      return evaluate(subject, queryPath as WherePath);
+    }
+    return (subject as ShapeSet).map((singleShape) => {
+      // let resultObject = resultObjects.get(singleShape.uri);
       return evaluate(singleShape, queryPath as WherePath);
     });
     //return the final value at the end of the path
-    return result as ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[];
+    // return result as ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[];
   }
 }
 
@@ -258,11 +278,16 @@ function filterResults(
   // if ((where as WhereEvaluationPath).path) {
   //for nested where clauses the subject will already be a QueryValue
   //TODO: check if subject is ever not a shape, shapeset or string
+
+  //we're about to remove values from the subject set, so we need to clone it first so that we don't alter the graph
+  if (subject instanceof ShapeValuesSet) {
+    subject = subject.clone() as ShapeSet;
+  }
   if (subject instanceof ShapeSet) {
     subject.forEach((singleShape) => {
       if (!evaluate(singleShape, where as WhereEvaluationPath)) {
         resultObjects.delete(singleShape.uri);
-        subject.delete(singleShape);
+        (subject as ShapeSet).delete(singleShape);
       }
     });
     return subject;
@@ -502,7 +527,7 @@ function resolveWhereEvery(shapes, evaluation: WhereEvaluationPath) {
 function resolveQuerySteps(
   subject: ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[],
   queryPath: (QueryStep | SubQueryPaths)[],
-  resultObjects?: NodeResultMap,
+  resultObjects?: NodeResultMap | QResult<any, any>,
 ) {
   if (queryPath.length === 0) {
     return subject;
@@ -515,7 +540,12 @@ function resolveQuerySteps(
       return resolveQueryPathsForShape(queryPath as SubQueryPaths, subject);
     }
     //TODO: review differences between shape vs shapes and make it DRY
-    return resolveQueryStepForShape(currentStep, subject, restPath);
+    return resolveQueryStepForShape(
+      currentStep,
+      subject,
+      restPath,
+      resultObjects as QResult<any, any>,
+    );
     // } else if (subject instanceof CoreMap) {
   } else if (subject instanceof ShapeSet) {
     // let resultObjects = shapeSetToResultObjects(subject);
@@ -598,23 +628,36 @@ function resolveQueryPathsForShapesFlat(
 }
 
 function resolveQueryPathsForShape(queryPaths: SubQueryPaths, subject: Shape) {
-  return queryPaths.map((queryPath) => {
-    return resolveQueryPath(subject, queryPath);
-  });
+  if (Array.isArray(queryPaths)) {
+    return queryPaths.map((queryPath) => {
+      return resolveQueryPath(subject, queryPath);
+    });
+  } else {
+    throw new Error(
+      'TODO: implement support for custom query object: ' + queryPaths,
+    );
+  }
 }
 
 function resolveQueryPathsForShapeFlat(
   queryPaths: SubQueryPaths,
   subject: Shape,
 ) {
-  return queryPaths.map((queryPath) => {
-    return resolveQueryPathFlat(subject, queryPath);
-  });
+  if (Array.isArray(queryPaths)) {
+    return queryPaths.map((queryPath) => {
+      return resolveQueryPathFlat(subject, queryPath);
+    });
+  } else {
+    throw new Error(
+      'TODO: implement support for custom query object: ' + queryPaths,
+    );
+  }
 }
 function resolveQueryStepForShape(
   queryStep: QueryStep | SubQueryPaths | BoundComponentQueryStep,
   subject: Shape,
   restPath: (QueryStep | SubQueryPaths)[],
+  resultObject: QResult<any, any>,
 ) {
   if ((queryStep as QueryStep).property) {
     let result = subject[(queryStep as QueryStep).property.label];
@@ -631,8 +674,11 @@ function resolveQueryStepForShape(
       }
     }
     //YOU ARE HERE: make a test case that comes here and then continue with rest path
-    debugger;
-    let subResult = resolveQuerySteps(result, restPath);
+    let resultObjects = toQueryResult(result);
+    let subResult = resolveQuerySteps(result, restPath, resultObjects);
+    if (resultObjects) {
+      console.log(resultObjects);
+    }
     return subResult;
   } else if ((queryStep as QueryStep).where) {
     //in some cases there is a query step without property but WITH where

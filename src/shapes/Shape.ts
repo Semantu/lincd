@@ -271,7 +271,7 @@ export abstract class Shape implements IShape {
     this: {new (node: Node): T; targetClass: any},
     // this: typeof Shape,
     selectFn: QueryBuildFn<T, S>,
-  ): Promise<ToResultType<GetQueryResponseType<LinkedQuery<T, S>>>[]> {
+  ): Promise<ToResultType<GetQueryResponseType<LinkedQuery<T, S>>, T>[]> {
     let resolve, reject;
     let p = new Promise((res, rej) => {
       resolve = res;
