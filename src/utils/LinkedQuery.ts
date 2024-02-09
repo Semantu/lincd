@@ -8,6 +8,7 @@ import {BoundComponent, Component} from '../interfaces/Component';
 import {Type} from 'typedoc';
 import {Property} from 'lincd-rdf/lib/shapes/Property';
 import {key} from 'lincd-filebase/lib/ontologies/filebase';
+import {property} from 'lincd-shacl/lib/ontologies/shacl';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
@@ -425,12 +426,9 @@ export class QueryValue<
   }
 
   static getOriginalSource(
-    endValue:
-      | ShapeSet<Shape>
-      | Shape[]
-      | QueryPrimitiveSet
-      | QueryValueSetOfSets,
-  ): ShapeSet;
+    endValue: ShapeSet<Shape> | Shape[] | QueryPrimitiveSet,
+  ): // | QueryValueSetOfSets,
+  ShapeSet;
   static getOriginalSource(endValue: Shape): Shape;
   static getOriginalSource(endValue: QueryString): Shape | string;
   static getOriginalSource(endValue: string[] | QueryValue): Shape | ShapeSet;
@@ -441,7 +439,7 @@ export class QueryValue<
       | Shape
       | string[]
       | QueryValue
-      | QueryValueSetOfSets
+      // | QueryValueSetOfSets
       | QueryPrimitiveSet,
   ): OriginalValue {
     if (typeof endValue === 'undefined') return undefined;
@@ -462,23 +460,23 @@ export class QueryValue<
       return endValue.originalValue;
     } else if (endValue instanceof Shape) {
       return endValue;
-    } else if (endValue instanceof QueryValueSetOfSets) {
-      let first = endValue.first();
-      let res;
-      if (first instanceof QueryShapeSet) {
-        res = new QueryShapeSet();
-        endValue.forEach((queryShapeSet: QueryShapeSet) => {
-          queryShapeSet.queryShapes.forEach(
-            res.queryShapes.add.bind(res.queryShapes),
-          );
-        });
-      } else {
-        res = new QueryPrimitiveSet();
-        endValue.forEach((queryPrimitiveSet: QueryPrimitiveSet) => {
-          queryPrimitiveSet.forEach(res.add.bind(res));
-        });
-      }
-      return this.getOriginalSource(res);
+      // } else if (endValue instanceof QueryValueSetOfSets) {
+      //   let first = endValue.first();
+      //   let res;
+      //   if (first instanceof QueryShapeSet) {
+      //     res = new QueryShapeSet();
+      //     endValue.forEach((queryShapeSet: QueryShapeSet) => {
+      //       queryShapeSet.queryShapes.forEach(
+      //         res.queryShapes.add.bind(res.queryShapes),
+      //       );
+      //     });
+      //   } else {
+      //     res = new QueryPrimitiveSet();
+      //     endValue.forEach((queryPrimitiveSet: QueryPrimitiveSet) => {
+      //       queryPrimitiveSet.forEach(res.add.bind(res));
+      //     });
+      //   }
+      //   return this.getOriginalSource(res);
     } else if (endValue instanceof QueryShapeSet) {
       return new ShapeSet(
         (endValue as QueryShapeSet).queryShapes.map(
@@ -504,13 +502,27 @@ const processWhereClause = (
     return (validation as Evaluation).getWherePath();
   }
 };
-
-export class QueryValueSetOfSets extends CoreSet<
-  QueryShapeSet | QueryPrimitiveSet
-> {
+// export class QueryValueSetOfSets extends CoreSet<any> {}
+/*export class QueryValueSetOfSets<
+  Source = any,
+  Property extends string | number | symbol = any,
+> extends QueryValue<any, Source, Property> {
   public proxy;
-  static create() {
-    let instance = new QueryValueSetOfSets();
+  public set: CoreSet<QueryShapeSet | QueryPrimitiveSet>;
+
+  constructor(
+    public originalValue?: QueryShapeSet | QueryPrimitiveSet,
+    property?: PropertyShape,
+    subject?: QueryShape<any> | QueryShapeSet<any>,
+  ) {
+    super(property, subject);
+  }
+
+  static create(
+    property: PropertyShape,
+    subject: QueryShape<any> | QueryShapeSet<any>,
+  ) {
+    let instance = new QueryValueSetOfSets(null, property, subject);
     let proxy = this.proxify(instance);
     return proxy;
   }
@@ -547,7 +559,7 @@ export class QueryValueSetOfSets extends CoreSet<
     });
     return valueSets.proxy;
   }
-}
+}*/
 export class QueryShapeSet<
   S extends Shape = Shape,
   Source = any,
@@ -569,18 +581,18 @@ export class QueryShapeSet<
       ),
     );
   }
-  concat(other: QueryShapeSet | QueryValueSetOfSets): QueryShapeSet {
+  concat(other: QueryShapeSet): QueryShapeSet {
     if (other) {
       if (other instanceof QueryShapeSet) {
         (other as QueryShapeSet).queryShapes.forEach(
           this.queryShapes.add.bind(this.queryShapes),
         );
-      } else if (other instanceof QueryValueSetOfSets) {
-        (other as QueryValueSetOfSets).forEach((shapeSet) => {
-          (shapeSet as QueryShapeSet).queryShapes.forEach(
-            this.queryShapes.add.bind(this.queryShapes),
-          );
-        });
+        // } else if (other instanceof QueryValueSetOfSets) {
+        //   (other as QueryValueSetOfSets).forEach((shapeSet) => {
+        //     (shapeSet as QueryShapeSet).queryShapes.forEach(
+        //       this.queryShapes.add.bind(this.queryShapes),
+        //     );
+        //   });
       } else {
         throw new Error('Unknown type: ' + other);
       }
@@ -609,24 +621,25 @@ export class QueryShapeSet<
 
   callPropertyShapeAccessor(
     propertyShape: PropertyShape,
-  ): QueryValueSetOfSets | QueryPrimitiveSet {
+  ): QueryShapeSet | QueryPrimitiveSet {
     //call the get method for that property shape on each item in the shape set
     //and return the result as a new shape set
-    let result: QueryPrimitiveSet | QueryValueSetOfSets;
+    let result: QueryPrimitiveSet | QueryShapeSet; //QueryValueSetOfSets;
 
     //if we expect the accessor to return a Primitive (string,number,boolean,Date)
     if (propertyShape.nodeKind === shacl.Literal) {
       //then return a Set of QueryPrimitives
       result = new QueryPrimitiveSet(propertyShape, this);
     } else {
-      result = QueryValueSetOfSets.create(); //QueryShapeSet.create(null, propertyShape, this);
+      // result = QueryValueSetOfSets.create(propertyShape, this); //QueryShapeSet.create(null, propertyShape, this);
+      result = QueryShapeSet.create(null, propertyShape, this);
     }
     let expectSingleValues =
       propertyShape.hasProperty(shacl.maxCount) && propertyShape.maxCount <= 1;
 
     this.queryShapes.forEach((shape) => {
       //access the propertyShapes accessor,
-      // since the shape should be converted to a QueryShape, the result is a QueryValue also
+      // since the shape should already be converted to a QueryShape, the result is a QueryValue also
       let shapeQueryValue = shape[propertyShape.label];
 
       //only add results if something was actually returned, if the property is not defined for this shape the result can be undefined
@@ -636,8 +649,8 @@ export class QueryShapeSet<
         } else {
           //if each of the shapes in a set return a new shapeset for the request accessor
           //then we merge all the returned values into a single shapeset
-          // (result as QueryShapeSet).concat(shapeQueryValue);
-          (result as QueryValueSetOfSets).add(shapeQueryValue);
+          (result as QueryShapeSet).concat(shapeQueryValue);
+          // (result as QueryValueSetOfSets).add(shapeQueryValue);
         }
       }
     });
@@ -1028,7 +1041,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any> {
         const value = this.traceResponse[key];
         //TODO: we could potentially make Evaluation extend QueryValue, and rename getPropertyPath to something more generic,
         //that way we can simplify the code perhaps? Or would we loose type clarity? (QueryStep is the generic one for QueryValue, and Evaluation can just return WherePath right?)
-        if (value instanceof QueryValue) {
+        if (value instanceof QueryValue || value instanceof QueryPrimitiveSet) {
           // queryPaths.push(value.getPropertyPath());
           queryObject[key] = value.getPropertyPath();
         } else if (value instanceof Evaluation) {

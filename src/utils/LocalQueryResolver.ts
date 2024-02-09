@@ -20,7 +20,6 @@ import {
   QueryStep,
   QueryString,
   QueryValue,
-  QueryValueSetOfSets,
   SourcedValue,
   SubQueryPaths,
   ToResultType,
@@ -34,7 +33,6 @@ import {Shape} from '../shapes/Shape';
 import {shacl} from '../ontologies/shacl';
 import {CoreMap} from '../collections/CoreMap';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet';
-import {result} from 'lincd-shacl/lib/ontologies/shacl';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -166,7 +164,7 @@ export function resolveLocalFlat<S extends LinkedQuery<any>>(
     //nothing to convert if an array was requested
     return results as any;
   } else if (
-    query.traceResponse instanceof QueryValueSetOfSets ||
+    // query.traceResponse instanceof QueryValueSetOfSets ||
     query.traceResponse instanceof LinkedQuery
   ) {
     return results.shift();
@@ -679,7 +677,8 @@ function resolveQueryStepForShape(
     if (resultObjects) {
       console.log(resultObjects);
     }
-    return subResult;
+    //return subResult;
+    return resultObjects ? [...resultObjects.values()] : subResult;
   } else if ((queryStep as QueryStep).where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
@@ -830,7 +829,7 @@ function toQueryResult(result: any) {
   if (result instanceof ShapeSet) {
     return shapeSetToResultObjects(result);
   }
-  return result;
+  // return result;
 }
 function resolveQueryStepForShapesFlat(
   queryStep: QueryStep,
@@ -900,27 +899,30 @@ function resolveQueryStepForShapesFlat(
 }
 
 function resolveWhereStep(
-  subject: QueryValue | QueryPrimitiveSet | QueryValueSetOfSets,
+  subject: QueryValue | QueryPrimitiveSet,
   queryStep: QueryStep,
-): QueryValueSetOfSets | QueryPrimitiveSet {
-  if (subject instanceof QueryValueSetOfSets) {
-    let res = new QueryValueSetOfSets(
-      subject.map((singleSubject: QueryShapeSet) => {
-        return singleSubject.callPropertyShapeAccessor(
-          queryStep.property,
-        ) as unknown as QueryShapeSet;
-      }),
-    );
-    if (queryStep.count) {
-      debugger;
-      //NOTE: we need to refactor how where clauses are done, before finishing this
-      // res = new QueryPrimitiveSet(null,null,res.map(shapeSet => {
-      //   return new QueryNumber(shapeSet as Set<any>).size
-      // }))
-    }
-    //TODO: check types
-    return res as unknown as QueryValueSetOfSets;
-  } else if (subject instanceof QueryShapeSet) {
+): QueryShapeSet | QueryPrimitiveSet {
+  debugger;
+  //weve replaced queryvaluesetofsets... how is this used? do we need it?
+  // if (subject instanceof QueryValueSetOfSets) {
+  //   let res = new QueryValueSetOfSets(
+  //     subject.map((singleSubject: QueryShapeSet) => {
+  //       return singleSubject.callPropertyShapeAccessor(
+  //         queryStep.property,
+  //       ) as unknown as QueryShapeSet;
+  //     }),
+  //   );
+  //   if (queryStep.count) {
+  //     debugger;
+  //     //NOTE: we need to refactor how where clauses are done, before finishing this
+  //     // res = new QueryPrimitiveSet(null,null,res.map(shapeSet => {
+  //     //   return new QueryNumber(shapeSet as Set<any>).size
+  //     // }))
+  //   }
+  //   //TODO: check types
+  //   return res as unknown as QueryValueSetOfSets;
+  // } else
+  if (subject instanceof QueryShapeSet) {
     return subject.callPropertyShapeAccessor(queryStep.property);
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);

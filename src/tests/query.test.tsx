@@ -319,7 +319,7 @@ describe('query tests', () => {
   //   expect(personsCalledMoa.length).toBe(1);
   //   expect(personsCalledMoa[0].id).toBe(p2.uri);
   // });
-
+  //
   // test('where and or and', async () => {
   //   //we combine AND & OR. AND should be done first, then OR
   //   //Therefor we expect p2 and p3 to match as friends
@@ -411,10 +411,35 @@ describe('query tests', () => {
   //   expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
   //   expect(friendCalledJinxAndNameIsSemmy[0].id).toBe(p1.uri);
   // });
-  test('custom result object - equals without where', async () => {
+  // test('custom result object - equals without where', async () => {
+  //   let customResult = await Person.select((p) => {
+  //     let res = {
+  //       nameIsMoa: p.name.equals('Moa'),
+  //     };
+  //     return res;
+  //   });
+  //
+  //   expect(Array.isArray(customResult)).toBe(true);
+  //   expect(customResult[0].id).toBe(p1.uri);
+  //   expect(customResult[0].nameIsMoa).toBe(false);
+  //   expect(customResult[1].id).toBe(p2.uri);
+  //   expect(customResult[1].nameIsMoa).toBe(true);
+  //
+  //   //This is intentionally invalid syntax
+  //   // let singleBooleanResult = await Person.select((p) => {
+  //   //   return p.some(p.name.equals('Moa'));
+  //   // });
+  //   //["name","name"]
+  // });
+
+  test('custom result object 2', async () => {
     let customResult = await Person.select((p) => {
       let res = {
         nameIsMoa: p.name.equals('Moa'),
+        moaAsFriend: p.friends.some((f) => f.name.equals('Moa')),
+        numFriends: p.friends.count(),
+        friendsOfFriends: p.friends.friends,
+        //
       };
       return res;
     });
@@ -424,14 +449,16 @@ describe('query tests', () => {
     expect(customResult[0].nameIsMoa).toBe(false);
     expect(customResult[1].id).toBe(p2.uri);
     expect(customResult[1].nameIsMoa).toBe(true);
-
-    //This is intentionally invalid syntax
-    // let singleBooleanResult = await Person.select((p) => {
-    //   return p.some(p.name.equals('Moa'));
-    // });
-    //["name","name"]
+    expect(customResult[0].moaAsFriend).toBe(true);
+    expect(customResult[1].moaAsFriend).toBe(false);
+    expect(Array.isArray(customResult[0].friendsOfFriends)).toBe(true);
+    expect(Array.isArray(customResult[0].friendsOfFriends[0].friends)).toBe(
+      true,
+    );
+    expect(customResult[0].friendsOfFriends[0].id).toBe(p2.uri);
+    expect(customResult[0].friendsOfFriends[0].friends[0].id).toBe(p3.uri);
   });
-  //
+
   // test('count', () => {
   //   // select people that only have friends that are called Moa or Jinx
   //   let numberOfFriends = resolveLocalFlat(
@@ -445,6 +472,12 @@ describe('query tests', () => {
   //   expect(numberOfFriends.filter((count) => count === 0).length).toBe(2);
   //   expect(numberOfFriends.filter((count) => count === 2).length).toBe(2);
   // });
+
+  //        friendsOfFriendsCount: p.friends.friends.count(),
+  //         friendsOfFriendsCount2: p.count(p.friends.friends),
+  //         friendsOfFriendsCount2: p.friends.select(f => f.friends.count()),
+  //         friendsOfFriendsCount2: p.friends.select(f => ({numFriends:f.friends.count()})),
+
   // test('count equals', () => {
   //   // select people that only have friends that are called Moa or Jinx
   //   let numberOfFriends = resolveLocalFlat(
