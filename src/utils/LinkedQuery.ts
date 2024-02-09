@@ -25,6 +25,8 @@ export type GetValueResultType<T> = T extends QueryString<
   infer Property
 >
   ? ToQueryResult<Source, string, Property>
+  : T extends Count<infer Source>
+  ? CountToQueryResult<Source>
   : T extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
   ? ToQueryPluralResult<ShapeType, Source, Property>
   : T extends QueryNumber<infer Source, infer Property>
@@ -79,6 +81,16 @@ export type QResult<Source, Object = {}> = Object & {
   id: string;
   shape: Source;
 };
+
+export type CountToQueryResult<Source> = Source extends QueryShapeSet<
+  infer ShapeType,
+  infer ParentSource,
+  infer SourceProperty
+>
+  ? //for counted shapesets, the result is the same as the result was before count() was called
+    //hence we use parent source and sourceProperty, but the value type is now a number
+    ToQueryResult<ParentSource, number, SourceProperty>
+  : Source;
 /**
  * If the source is an object (it extends shape)
  * then the result is a plain JS Object, with Property as its key, with type Value
@@ -177,8 +189,6 @@ export type ToResultType<
   QShapeType extends Shape = null,
 > = T extends QueryValue
   ? GetValueResultType<T>
-  : T extends Count
-  ? number[]
   : T extends LinkedQuery<any, any>
   ? ToResultType<GetQueryResponseType<T>>[]
   : // : T extends QueryShapeSet<any>
@@ -344,6 +354,7 @@ export type QueryStep = {
   count?: Count;
 };
 
+export type CountObj = true | QueryPropertyPath;
 export type WhereAnd = {
   and: WherePath[];
 };
@@ -368,11 +379,11 @@ export enum WhereMethods {
 }
 
 export class QueryValue<
-  S = any,
+  OrginalValue = any,
   Source = any,
   Property extends string | number | symbol = any,
 > {
-  protected originalValue: S;
+  protected originalValue: OrginalValue;
   protected source: Source;
   protected prop: Property;
 
@@ -660,7 +671,7 @@ export class QueryShapeSet<
     return result;
   }
 
-  count(): Count {
+  count(): Count<this> {
     //when count() is called we want to count the number of items in the entire query path
     this._count = new Count(this);
     return this._count;
@@ -796,6 +807,11 @@ export class QueryShape<S extends Shape = Shape> extends QueryValue<S> {
     this.wherePath = processWhereClause(validation, nodeShape);
     //return this because after Shape.friends.where() we can call other methods of Shape.friends
     return this.proxy;
+  }
+
+  count(countable: QueryValue): Count<this> {
+    this._count = new Count(this, countable);
+    return this._count;
   }
 
   static create(
@@ -1074,8 +1090,14 @@ export class LinkedWhereQuery<
     return (this.traceResponse as Evaluation).getWherePath();
   }
 }
-export class Count extends QueryPrimitiveSet<number> {
-  constructor(public subject: QueryShapeSet) {
+export class Count<
+  Source = any,
+  // Property extends string | number | symbol = any,
+> extends QueryValue<number, Source> {
+  constructor(
+    public subject: QueryShapeSet | QueryShape,
+    public countable?: QueryValue,
+  ) {
     super();
   }
   getPropertyPath(): QueryPropertyPath {

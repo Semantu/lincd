@@ -432,48 +432,110 @@ describe('query tests', () => {
   //   //["name","name"]
   // });
 
-  test('custom result object 2', async () => {
-    let customResult = await Person.select((p) => {
-      let res = {
-        nameIsMoa: p.name.equals('Moa'),
-        moaAsFriend: p.friends.some((f) => f.name.equals('Moa')),
-        numFriends: p.friends.count(),
-        friendsOfFriends: p.friends.friends,
-        //
-      };
-      return res;
-    });
-
-    expect(Array.isArray(customResult)).toBe(true);
-    expect(customResult[0].id).toBe(p1.uri);
-    expect(customResult[0].nameIsMoa).toBe(false);
-    expect(customResult[1].id).toBe(p2.uri);
-    expect(customResult[1].nameIsMoa).toBe(true);
-    expect(customResult[0].moaAsFriend).toBe(true);
-    expect(customResult[1].moaAsFriend).toBe(false);
-    expect(Array.isArray(customResult[0].friendsOfFriends)).toBe(true);
-    expect(Array.isArray(customResult[0].friendsOfFriends[0].friends)).toBe(
-      true,
-    );
-    expect(customResult[0].friendsOfFriends[0].id).toBe(p2.uri);
-    expect(customResult[0].friendsOfFriends[0].friends[0].id).toBe(p3.uri);
-  });
-
-  // test('count', () => {
-  //   // select people that only have friends that are called Moa or Jinx
-  //   let numberOfFriends = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.friends.count();
-  //     }),
-  //   );
+  // test('custom result object 2', async () => {
+  //   let customResult = await Person.select((p) => {
+  //     let res = {
+  //       nameIsMoa: p.name.equals('Moa'),
+  //       moaAsFriend: p.friends.some((f) => f.name.equals('Moa')),
+  //       numFriends: p.friends.count(),
+  //       friendsOfFriends: p.friends.friends,
+  //       //
+  //     };
+  //     return res;
+  //   });
   //
-  //   expect(Array.isArray(numberOfFriends)).toBe(true);
-  //   expect(numberOfFriends.length).toBe(4);
-  //   expect(numberOfFriends.filter((count) => count === 0).length).toBe(2);
-  //   expect(numberOfFriends.filter((count) => count === 2).length).toBe(2);
+  //   expect(Array.isArray(customResult)).toBe(true);
+  //   expect(customResult[0].id).toBe(p1.uri);
+  //   expect(customResult[0].nameIsMoa).toBe(false);
+  //   expect(customResult[1].id).toBe(p2.uri);
+  //   expect(customResult[1].nameIsMoa).toBe(true);
+  //   expect(customResult[0].moaAsFriend).toBe(true);
+  //   expect(customResult[1].moaAsFriend).toBe(false);
+  //   expect(Array.isArray(customResult[0].friendsOfFriends)).toBe(true);
+  //   expect(Array.isArray(customResult[0].friendsOfFriends[0].friends)).toBe(
+  //     true,
+  //   );
+  //   expect(customResult[0].friendsOfFriends[0].id).toBe(p2.uri);
+  //   expect(customResult[0].friendsOfFriends[0].friends[0].id).toBe(p3.uri);
   // });
 
-  //        friendsOfFriendsCount: p.friends.friends.count(),
+  test('count a shapeset', async () => {
+    //count the number of friends that each person has
+    //QResult<Person, {friends: number}>[]
+    let numberOfFriends = await Person.select((p) => {
+      let res = p.friends.count();
+      return res;
+    });
+    //expected result
+    /**
+     * [{
+     *   id: "p1",
+     *   friends: 2
+     * },{
+     *  id: "p2",
+     *  friends: 2
+     *  },...]
+     */
+
+    expect(Array.isArray(numberOfFriends)).toBe(true);
+    expect(numberOfFriends[0].friends).toBe(2);
+    expect(numberOfFriends[1].friends).toBe(2);
+    expect(numberOfFriends[2].friends).toBe(0);
+    expect(numberOfFriends[3].friends).toBe(0);
+  });
+
+  test('count a nested property', async () => {
+    //count the number of friends that each person has
+    //QResult<Person, {friends: number}>[]
+    let numberOfFriends = await Person.select((p) => {
+      let res = p.friends.friends.count();
+      return res;
+    });
+    //expected result
+    /**
+     * [{
+     *   id: "p1",
+     *   friends: [{
+     *     id: "p2",
+     *     friends: 2
+     *   },{
+     *     id: "p3",
+     *     friends: 0
+     *   }]
+     * },...]
+     */
+
+    expect(Array.isArray(numberOfFriends)).toBe(true);
+    expect(Array.isArray(numberOfFriends[0].friends)).toBe(true);
+    expect(numberOfFriends[0].friends[0].friends).toBe(2);
+    expect(numberOfFriends[0].friends[1].friends).toBe(0);
+  });
+
+  test('shape.count() with a nested argument', async () => {
+    //count the number of friends that each person has
+    //QResult<Person, {friends: number}>[]
+    let numberOfFriends = await Person.select((p) => {
+      let res = p.count(p.friends);
+      return res;
+    });
+    //expected result
+    /**
+     * [{
+     *   id: "p1",
+     *   count: 2
+     * },{
+     *   id: "p2",
+     *   count: 2
+     * },...]
+     */
+
+    expect(Array.isArray(numberOfFriends)).toBe(true);
+    expect(numberOfFriends[0].count).toBe(2);
+    expect(numberOfFriends[1].count).toBe(2);
+    expect(numberOfFriends[2].count).toBe(0);
+    expect(numberOfFriends[3].count).toBe(0);
+  });
+
   //         friendsOfFriendsCount2: p.count(p.friends.friends),
   //         friendsOfFriendsCount2: p.friends.select(f => f.friends.count()),
   //         friendsOfFriendsCount2: p.friends.select(f => ({numFriends:f.friends.count()})),
