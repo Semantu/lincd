@@ -552,7 +552,7 @@ describe('query tests', () => {
   //   expect(numberOfFriends[2].count).toBe(0);
   //   expect(numberOfFriends[3].count).toBe(0);
   // });
-  // test('sub select', async () => {
+  // test('sub select custom', async () => {
   //   let namesAndHobbiesOfFriends = await Person.select((p) => {
   //     let res = p.friends.select((f) => {
   //       let res2 = {
@@ -640,39 +640,38 @@ describe('query tests', () => {
   // test('count equals', async () => {
   //   // select people that only have friends that are called Moa or Jinx
   //   let numberOfFriends = await Person.select((p) => {
-  //     return p.where(p.friends.count().equals(2));
+  //     let res = p.where(p.friends.count().equals(2));
+  //     return res;
   //   });
   //
-  //   expect(numberOfFriends instanceof ShapeSet).toBe(true);
-  //   expect(numberOfFriends.size).toBe(2);
-  //   expect(numberOfFriends.some((f) => f.namedNode === p1.namedNode)).toBe(
-  //     true,
-  //   );
-  //   expect(numberOfFriends.some((f) => f.namedNode === p2.namedNode)).toBe(
-  //     true,
-  //   );
+  //   expect(Array.isArray(numberOfFriends)).toBe(true);
+  //   expect(numberOfFriends.length).toBe(2);
+  //   expect(numberOfFriends[0].id).toBe(p1.uri);
+  //   expect(numberOfFriends[1].id).toBe(p2.uri);
   // });
-  // test('sub select query', () => {
-  //   // select people that only have friends that are called Moa or Jinx
-  //   let nameAndHobbyOfFriends = resolveLocal(
-  //     Person.select((p) => {
-  //       return p.friends.select((f) => [f.name, f.hobby]);
-  //     }),
-  //   );
-  //   nameAndHobbyOfFriends.forEach((person) => {
-  //     person.forEach((friend) => {
-  //       let [name, hobby] = friend;
-  //       console.log(name, hobby);
-  //     });
-  //   });
-  //
-  //   expect(Array.isArray(nameAndHobbyOfFriends)).toBe(true);
-  //   expect(nameAndHobbyOfFriends.length).toBe(4);
-  //   expect(nameAndHobbyOfFriends[0][0][0]).toBe('Moa');
-  //   expect(nameAndHobbyOfFriends[0][0][1]).toBe('Jogging');
-  //   expect(nameAndHobbyOfFriends[1][0][1]).toBeUndefined();
-  //   expect(nameAndHobbyOfFriends[2].length).toBe(0);
-  // });
+
+  test('sub select query returning an array', async () => {
+    let subResult = await Person.select((p) => {
+      let res1 = p.friends.select((f) => {
+        let res2 = [f.name, f.hobby];
+        return res2;
+      });
+      return res1;
+    });
+    let n = subResult[0].friends[0].name;
+    subResult.forEach((person) => {
+      person.friends.forEach((friend) => {
+        let {name, hobby} = friend;
+        console.log(name, hobby);
+      });
+    });
+
+    expect(Array.isArray(subResult)).toBe(true);
+    expect(subResult.length).toBe(4);
+    expect(subResult[0].friends[0].hasOwnProperty('name')).toBe(true);
+    expect(subResult[0].friends[0].hasOwnProperty('hobby')).toBe(true);
+    expect(subResult[0].friends[0].name).toBe('Semmy');
+  });
   /*test('select - object return type', () => {
     // select people that only have friends that are called Moa or Jinx
     let nameAndHobbyOfFriends = resolveLocal(

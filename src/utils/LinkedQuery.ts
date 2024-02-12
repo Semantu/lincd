@@ -7,12 +7,31 @@ import {CoreSet} from '../collections/CoreSet';
 import {BoundComponent} from '../interfaces/Component';
 import {CoreMap} from '../collections/CoreMap';
 import {Property} from 'lincd-rdf/lib/shapes/Property';
+import {Type} from 'typedoc';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
   | ((s: ToQueryValue<S>) => Evaluation);
 export type JSPrimitive = string | number | boolean | Date | null | undefined;
 export type OriginalValue = Shape | ShapeSet | JSPrimitive;
+
+type QueryValueToKey<T> = T extends QueryValue<
+  infer Original,
+  infer Source,
+  infer Property
+>
+  ? Property
+  : never;
+type QueryValueToValue<T> = T extends QueryValue<
+  infer Original,
+  infer Source,
+  infer Property
+>
+  ? Original
+  : never;
+type QueryValueIntersectionToObject<Items> = {
+  [Type in Items as QueryValueToKey<Type>]: QueryValueToValue<Type>;
+};
 
 //2: T = QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>
 //ShapesetType = Shape,
@@ -24,6 +43,12 @@ export type GetValueResultType<
   SourceOverwrite = null,
 > = T extends QueryString<infer Source, infer Property>
   ? ToQueryResult<GetSource<Source, SourceOverwrite>, string, Property>
+  : T extends QueryShape<infer ShapeType>
+  ? ToQueryResult<ShapeType>
+  : // : T extends Array<infer ArrayType extends QueryValue>
+  // ? ArrayTypeToObject<ArrayType>
+  T extends Array<infer Type>
+  ? UnionToIntersection<ToResultType<Type>>
   : T extends Count<infer Source>
   ? CountToQueryResult<GetSource<Source, SourceOverwrite>>
   : T extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
@@ -241,9 +266,10 @@ export type ToResultType<
   ? Source extends QueryValue
     ? //if the linked query originates from within another query (like with select())
       //then we turn the source into a result, and pass the selected properties as "SubProperties"
+      //regardless of whether the response type is an array or object, its gets converted into a result value object
       GetValueResultType<
         GetSource<Source, SourceOverwrite>,
-        ObjectToPlainResult<ResponseType>
+        ResponseTypeToObject<ResponseType>
       >
     : ToResultType<ResponseType>[]
   : // : T extends QueryShapeSet<any>
@@ -283,6 +309,9 @@ type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
 // >;
 //
 // type X = UnionToIntersection<{a: string; id: string} | {b: number; id: string}>;
+type ResponseTypeToObject<R> = R extends Array<infer Type extends QueryValue>
+  ? QueryValueIntersectionToObject<Type>
+  : ObjectToPlainResult<R>;
 
 export type GetQueryResponseType<Q> = Q extends LinkedQuery<
   any,
@@ -445,7 +474,7 @@ export class QueryValue<
   Source = any,
   Property extends string | number | symbol = any,
 > {
-  protected originalValue: OrginalValue;
+  protected originalValue?: OrginalValue;
   protected source: Source;
   protected prop: Property;
 
@@ -547,7 +576,7 @@ export class QueryValue<
     }
     if (endValue instanceof QueryString) {
       return endValue.subject
-        ? this.getOriginalSource(endValue.subject)
+        ? this.getOriginalSource(endValue.subject as QueryShapeSet)
         : endValue.originalValue;
     }
     if (endValue instanceof QueryShape) {
@@ -1036,15 +1065,15 @@ export class QueryPrimitive<
   Property extends string | number | symbol = any,
 > extends QueryValue<T, Source, Property> {
   constructor(
-    public originalValue: T,
+    public originalValue?: T,
     public property?: PropertyShape,
-    public subject?: QueryShape<any> | QueryShapeSet<any>,
+    public subject?: QueryShape<any> | QueryShapeSet<any> | QueryPrimitiveSet,
   ) {
     super(property, subject);
   }
 
-  equals(otherString: string) {
-    return new Evaluation(this, WhereMethods.EQUALS, [otherString]);
+  equals(otherValue: JSPrimitive) {
+    return new Evaluation(this, WhereMethods.EQUALS, [otherValue]);
   }
 
   where(validation: WhereClause<string>): this {
@@ -1061,9 +1090,9 @@ export class QueryString<
 > extends QueryPrimitive<string, Source, Property> {}
 
 export class QueryNumber<
-  Source extends JSPrimitive = null,
+  Source = any,
   Property extends string | number | symbol = any,
-> extends QueryValue<number, Source, Property> {}
+> extends QueryPrimitive<number, Source, Property> {}
 
 export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
   constructor(
@@ -1107,7 +1136,8 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
     //however, sometimes the path goes through the subject of this SET rather than the individual items (which have an individual shape as subject)
     //so we pass the subject of this set so it can be used
     let first = this.first();
-    first.subject.wherePath = first.subject.wherePath || this.subject.wherePath;
+    (first.subject as QueryShapeSet).wherePath =
+      (first.subject as QueryShapeSet).wherePath || this.subject.wherePath;
     // first.subject._count = first.subject._count || this.subject._count;
     return this.first().getPropertyPath();
   }
@@ -1212,23 +1242,10 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
   }
 }
 
-export class LinkedWhereQuery<
-  S extends Shape,
-  ResponseType = any,
-> extends LinkedQuery<S, ResponseType> {
-  getResponse() {
-    return this.traceResponse as Evaluation;
-  }
-
-  getWherePath() {
-    return (this.traceResponse as Evaluation).getWherePath();
-  }
-}
-
 export class Count<
-  Source = any,
+  Source = null,
   // Property extends string | number | symbol = any,
-> extends QueryValue<number, Source> {
+> extends QueryNumber<Source> {
   constructor(
     public subject: QueryShapeSet | QueryShape | QueryPrimitiveSet,
     public countable?: QueryValue,
@@ -1286,4 +1303,17 @@ export class Count<
   // getArgs() {
   //   return this.countable?.getPropertyPath();
   // }
+}
+
+export class LinkedWhereQuery<
+  S extends Shape,
+  ResponseType = any,
+> extends LinkedQuery<S, ResponseType> {
+  getResponse() {
+    return this.traceResponse as Evaluation;
+  }
+
+  getWherePath() {
+    return (this.traceResponse as Evaluation).getWherePath();
+  }
 }
