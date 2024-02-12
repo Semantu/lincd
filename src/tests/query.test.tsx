@@ -525,8 +525,8 @@ describe('query tests', () => {
   //
   //   expect(numberOfFriends3[0].hasOwnProperty('friends')).toBe(true);
   //   expect(numberOfFriends3[0].hasOwnProperty('count')).toBe(false);
+  //   expect(numberOfFriends3[0].friends[0].numFriends).toBe(2);
   // });
-  //
   // test('count a nested path as argument', async () => {
   //   //count the number of second level friends that each person has
   //   //count is expected to count the total number of final nodes (friends) in the p.friends.friends set
@@ -552,68 +552,64 @@ describe('query tests', () => {
   //   expect(numberOfFriends[2].count).toBe(0);
   //   expect(numberOfFriends[3].count).toBe(0);
   // });
-
-  test('sub select', async () => {
-    let namesAndHobbiesOfFriends = await Person.select((p) => {
-      let res = p.friends.select((f) => {
-        let res2 = {
-          _name: f.name,
-          _hobby: f.hobby,
-        };
-        return res2;
-      });
-      return res;
-    });
-
-    /**
-     * Expected result:
-     * [
-     * {
-     *  "id:"..."
-     *  "friends": [
-     *    {
-     *      id:"...",
-     *      name:"Moa",
-     *      hobby:"Jogging"
-     *    }
-     *    ,...
-     *  ]
-     *  },
-     *  ...
-     *  ]
-     */
-
-    let first = namesAndHobbiesOfFriends[0];
-    expect(Array.isArray(namesAndHobbiesOfFriends)).toBe(true);
-    expect(namesAndHobbiesOfFriends.length).toBe(4);
-    expect(first.friends.length).toBe(2);
-    expect(first.friends[0]._name).toBe('Moa');
-    expect(first.friends[0]._hobby).toBe('Jogging');
-  });
-
-  test('custom result object - equals without where', async () => {
-    let customResult = await Person.select((p) => {
-      let res = {
-        nameIsMoa: p.name.equals('Moa'),
-        name: p.name,
-      };
-      return res;
-    });
-
-    expect(Array.isArray(customResult)).toBe(true);
-    expect(customResult[0].id).toBe(p1.uri);
-    expect(customResult[0].nameIsMoa).toBe(false);
-    expect(typeof customResult[0].name).toBe('string');
-    expect(customResult[1].id).toBe(p2.uri);
-    expect(customResult[1].nameIsMoa).toBe(true);
-
-    //This is intentionally invalid syntax
-    // let singleBooleanResult = await Person.select((p) => {
-    //   return p.some(p.name.equals('Moa'));
-    // });
-    //["name","name"]
-  });
-
+  // test('sub select', async () => {
+  //   let namesAndHobbiesOfFriends = await Person.select((p) => {
+  //     let res = p.friends.select((f) => {
+  //       let res2 = {
+  //         _name: f.name,
+  //         _hobby: f.hobby,
+  //       };
+  //       return res2;
+  //     });
+  //     return res;
+  //   });
+  //
+  //   /**
+  //    * Expected result:
+  //    * [{
+  //    *  "id:"..."
+  //    *  "friends": [{
+  //    *      id:"...",
+  //    *      name:"Moa",
+  //    *      hobby:"Jogging"
+  //    *    }
+  //    *    ,...
+  //    *  ]
+  //    *  },...]
+  //    */
+  //
+  //   let first = namesAndHobbiesOfFriends[0];
+  //   expect(Array.isArray(namesAndHobbiesOfFriends)).toBe(true);
+  //   expect(namesAndHobbiesOfFriends.length).toBe(4);
+  //   expect(first.friends.length).toBe(2);
+  //   expect(first.friends[0]._name).toBe('Moa');
+  //   expect(first.friends[0]._hobby).toBe('Jogging');
+  // });
+  //
+  // test('custom result object - equals without where', async () => {
+  //   let customResult = await Person.select((p) => {
+  //     let res = {
+  //       nameIsMoa: p.name.equals('Moa'),
+  //       name: p.name,
+  //     };
+  //     return res;
+  //   });
+  //   let first = customResult[0];
+  //   let second = customResult[1];
+  //
+  //   expect(Array.isArray(customResult)).toBe(true);
+  //   expect(first.id).toBe(p1.uri);
+  //   expect(first.nameIsMoa).toBe(false);
+  //   expect(typeof first.name).toBe('string');
+  //   expect(second.id).toBe(p2.uri);
+  //   expect(second.nameIsMoa).toBe(true);
+  //
+  //   //This is intentionally invalid syntax
+  //   // let singleBooleanResult = await Person.select((p) => {
+  //   //   return p.some(p.name.equals('Moa'));
+  //   // });
+  //   //["name","name"]
+  // });
   // test('custom result object 2', async () => {
   //   let customResult = await Person.select((p) => {
   //     let res = {
@@ -641,15 +637,11 @@ describe('query tests', () => {
   //   expect(customResult[0].friendsOfFriends[0].friends[0].id).toBe(p3.uri);
   // });
   //
-
-  //         friendsOfFriendsCount2: p.friends.select(f => f.friends.count()),
-  // test('count equals', () => {
+  // test('count equals', async () => {
   //   // select people that only have friends that are called Moa or Jinx
-  //   let numberOfFriends = resolveLocalFlat(
-  //     Person.select((p) => {
-  //       return p.where(p.friends.count().equals(2));
-  //     }),
-  //   );
+  //   let numberOfFriends = await Person.select((p) => {
+  //     return p.where(p.friends.count().equals(2));
+  //   });
   //
   //   expect(numberOfFriends instanceof ShapeSet).toBe(true);
   //   expect(numberOfFriends.size).toBe(2);

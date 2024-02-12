@@ -78,12 +78,7 @@ export function resolveLocal<ResultType>(
       resolveQueryPath(subject, queryPath, resultObjects);
     });
   } else {
-    subject.forEach((singleShape) => {
-      for (let key of Object.getOwnPropertyNames(query as CustomQueryObject)) {
-        let resultObject = resultObjects.get(singleShape.uri);
-        resultObject[key] = resolveQueryPath(singleShape, query[key]);
-      }
-    });
+    resolveCustomObject(subject, query, resultObjects);
   }
   return [...resultObjects.values()] as ResultType;
 
@@ -129,6 +124,18 @@ export function resolveLocal<ResultType>(
   // } else if (typeof query.traceResponse === 'object') {
   //   throw new Error('Objects are not yet supported');
   // }
+}
+function resolveCustomObject(
+  subject: ShapeSet,
+  query: CustomQueryObject,
+  resultObjects: NodeResultMap,
+) {
+  subject.forEach((singleShape) => {
+    for (let key of Object.getOwnPropertyNames(query as CustomQueryObject)) {
+      let resultObject = resultObjects.get(singleShape.uri);
+      resultObject[key] = resolveQueryPath(singleShape, query[key]);
+    }
+  });
 }
 export function resolveLocalFlat<S extends LinkedQuery<any>>(
   query: S,
@@ -869,6 +876,8 @@ function resolveQueryStepForShapes(
       resolveQuerySteps(subject, restPath, resultObjects);
     }
     // return whereResult;
+  } else if (typeof queryStep === 'object') {
+    resolveCustomObject(subject, queryStep as CustomQueryObject, resultObjects);
   }
 }
 function toQueryResult(result: any) {

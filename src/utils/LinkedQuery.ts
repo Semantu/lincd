@@ -258,7 +258,7 @@ export type ToResultType<
   T extends Evaluation
   ? boolean
   : T extends Object
-  ? QResult<QShapeType, ObjectToResult<T>>
+  ? QResult<QShapeType, ObjectToPlainResult<T>>
   : T;
 
 //https://stackoverflow.com/a/50375286/977206
@@ -404,7 +404,7 @@ export type QueryPropertyPath = QueryStep[];
  * A QueryStep is a single step in a query path
  * It contains the property that was requested, and optionally a where clause
  */
-export type QueryStep = PropertyQueryStep | CountStep;
+export type QueryStep = PropertyQueryStep | CountStep | CustomQueryObject;
 export type CountStep = {
   count: QueryPropertyPath;
   label?: string;
