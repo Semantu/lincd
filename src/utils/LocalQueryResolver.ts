@@ -2,19 +2,22 @@ import {
   BoundComponentQueryStep,
   ComponentQueryPath,
   Count,
+  CountStep,
   CustomQueryObject,
   Evaluation,
   GetArrayType,
   GetQueryResponseType,
   GetQueryShapeSetType,
   GetQueryShapeType,
-  GetValueResultType,
   JSPrimitive,
   LinkedQuery,
   LinkedQueryObject,
+  NodeResultMap,
+  PropertyQueryStep,
   QResult,
   QueryPath,
   QueryPrimitiveSet,
+  QueryPropertyPath,
   QueryShape,
   QueryShapeSet,
   QueryStep,
@@ -52,12 +55,6 @@ export type ToNormalValue<T> = T extends Count
   ? boolean[]
   : T;
 
-// export type ToResultType<T> = T;
-
-type NodeResult = {
-  '@id': string;
-};
-type NodeResultMap = CoreMap<string, QResult<any, any>>;
 /**
  * Resolves the query locally, by searching the graph in local memory, without using stores.
  * Returns the result immediately.
@@ -657,29 +654,45 @@ function resolveQueryStepForShape(
   restPath: (QueryStep | SubQueryPaths)[],
   resultObject: QResult<any, any>,
 ) {
-  if ((queryStep as QueryStep).property) {
-    let result = subject[(queryStep as QueryStep).property.label];
-    if ((queryStep as QueryStep).where) {
-      result = filterResults(result, (queryStep as QueryStep).where);
+  if ((queryStep as PropertyQueryStep).property) {
+    let result = subject[(queryStep as PropertyQueryStep).property.label];
+    if ((queryStep as PropertyQueryStep).where) {
+      result = filterResults(result, (queryStep as PropertyQueryStep).where);
     }
-    if ((queryStep as QueryStep).count) {
-      if (Array.isArray(result)) {
-        result = result.length;
-      } else if (result instanceof Set) {
-        result = result.size;
-      } else {
-        throw Error('Not sure how to count this: ' + result.toString());
-      }
-    }
+    // if ((queryStep as CountStep).count) {
+    //   if (Array.isArray(result)) {
+    //     result = result.length;
+    //   } else if (result instanceof Set) {
+    //     result = result.size;
+    //   } else {
+    //     throw Error('Not sure how to count this: ' + result.toString());
+    //   }
+    // }
     //YOU ARE HERE: make a test case that comes here and then continue with rest path
     let resultObjects = toQueryResult(result);
     let subResult = resolveQuerySteps(result, restPath, resultObjects);
-    if (resultObjects) {
-      console.log(resultObjects);
-    }
+    // if (resultObjects) {
+    //   console.log(resultObjects);
+    // }
     //return subResult;
     return resultObjects ? [...resultObjects.values()] : subResult;
-  } else if ((queryStep as QueryStep).where) {
+  } else if ((queryStep as CountStep).count) {
+    //count the countable
+    let countable = resolveQuerySteps(
+      subject,
+      (queryStep as CountStep).count,
+      // resultObject,
+    );
+    let result: number;
+    if (Array.isArray(countable)) {
+      result = countable.length;
+    } else if (countable instanceof Set) {
+      result = countable.size;
+    } else {
+      throw Error('Not sure how to count this: ' + countable.toString());
+    }
+    return result;
+  } else if ((queryStep as PropertyQueryStep).where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
     //like Person.select(p => p.where(...))
@@ -698,22 +711,34 @@ function resolveQueryStepForShapeFlat(
   queryStep: QueryStep | SubQueryPaths | BoundComponentQueryStep,
   subject: Shape,
 ) {
-  if ((queryStep as QueryStep).property) {
-    let result = subject[(queryStep as QueryStep).property.label];
-    if ((queryStep as QueryStep).where) {
-      result = filterResults(result, (queryStep as QueryStep).where);
-    }
-    if ((queryStep as QueryStep).count) {
-      if (Array.isArray(result)) {
-        result = result.length;
-      } else if (result instanceof Set) {
-        result = result.size;
-      } else {
-        throw Error('Not sure how to count this: ' + result.toString());
-      }
+  if ((queryStep as PropertyQueryStep).property) {
+    let result = subject[(queryStep as PropertyQueryStep).property.label];
+    if ((queryStep as PropertyQueryStep).where) {
+      result = filterResults(result, (queryStep as PropertyQueryStep).where);
     }
     return result;
-  } else if ((queryStep as QueryStep).where) {
+  } else if ((queryStep as CountStep).count) {
+    debugger;
+    //count the countable
+    let countable = resolveQuerySteps(subject, (queryStep as CountStep).count);
+    let result: number;
+    if (Array.isArray(countable)) {
+      result = countable.length;
+    } else if (countable instanceof Set) {
+      result = countable.size;
+    } else {
+      throw Error('Not sure how to count this: ' + countable.toString());
+    }
+    return result;
+
+    // if (Array.isArray(result)) {
+    //   result = result.length;
+    // } else if (result instanceof Set) {
+    //   result = result.size;
+    // } else {
+    //   throw Error('Not sure how to count this: ' + result.toString());
+    // }
+  } else if ((queryStep as PropertyQueryStep).where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
     //like Person.select(p => p.where(...))
@@ -735,7 +760,7 @@ function resolveQueryStepForShapes(
   resultObjects: NodeResultMap,
   restPath: (QueryStep | SubQueryPaths)[],
 ) {
-  if (queryStep.property) {
+  if ((queryStep as PropertyQueryStep).property) {
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
     // let result =
@@ -745,30 +770,22 @@ function resolveQueryStepForShapes(
     // let result = [];
     (subject as ShapeSet).forEach((singleShape) => {
       //directly access the get/set method of the shape
-      let stepResult = singleShape[queryStep.property.label];
+      let stepResult =
+        singleShape[(queryStep as PropertyQueryStep).property.label];
       let subResultObjects;
       if (stepResult instanceof ShapeSet) {
         subResultObjects = toQueryResult(stepResult);
       }
-      if (queryStep.where) {
+      if ((queryStep as PropertyQueryStep).where) {
         stepResult = filterResults(
           stepResult,
-          queryStep.where,
+          (queryStep as PropertyQueryStep).where,
           subResultObjects,
         );
         //if the result is empty, then the shape didn't make it through the filter and needs to be removed from the results
         if (typeof stepResult === 'undefined' || stepResult === null) {
           resultObjects.delete(singleShape.uri);
           return;
-        }
-      }
-      if (queryStep.count) {
-        if (Array.isArray(stepResult)) {
-          stepResult = stepResult.length;
-        } else if (stepResult instanceof Set) {
-          stepResult = stepResult.size;
-        } else {
-          throw Error('Not sure how to count this: ' + stepResult.toString());
         }
       }
 
@@ -783,7 +800,7 @@ function resolveQueryStepForShapes(
       //get the current result object for this shape
       let nodeResult = resultObjects.get(singleShape.uri);
       //write the result for this property into the result object
-      nodeResult[queryStep.property.label] = stepResult;
+      nodeResult[(queryStep as PropertyQueryStep).property.label] = stepResult;
 
       // if (stepResult instanceof ShapeSet) {
       //   stepResult = [...stepResult];
@@ -811,12 +828,41 @@ function resolveQueryStepForShapes(
       // }
     });
     // return result;
-  } else if (queryStep.where) {
+  } else if ((queryStep as CountStep).count) {
+    //count the countable
+    (subject as ShapeSet).forEach((singleShape) => {
+      // let countable = resolveQuerySteps(
+      //   singleShape,
+      //   (queryStep as CountStep).count,
+      //   resultObjects,
+      // );
+      //We use the flat version of resolveQuerySteps here, because  we don't need QResult objects here
+      // we're only interested in the final results
+      let countable = resolveQueryPathFlat(
+        singleShape,
+        (queryStep as CountStep).count,
+      );
+      let result: number;
+      if (Array.isArray(countable)) {
+        result = countable.length;
+      } else if (countable instanceof Set) {
+        result = countable.size;
+      } else {
+        throw Error('Not sure how to count this: ' + countable.toString());
+      }
+      let nodeResult = resultObjects.get(singleShape.uri);
+      nodeResult[(queryStep as CountStep).label || 'count'] = result;
+    });
+  } else if ((queryStep as PropertyQueryStep).where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
     //like Person.select(p => p.where(...))
     //in that case the where clause is directly applied to the given subject
-    subject = filterResults(subject, queryStep.where, resultObjects) as any;
+    subject = filterResults(
+      subject,
+      (queryStep as PropertyQueryStep).where,
+      resultObjects,
+    ) as any;
 
     if (restPath.length > 0) {
       //if there is more properties left, continue to fill the result object by resolving the next steps
@@ -835,21 +881,26 @@ function resolveQueryStepForShapesFlat(
   queryStep: QueryStep,
   subject: ShapeSet,
 ) {
-  if (queryStep.property) {
+  if ((queryStep as PropertyQueryStep).property) {
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
     let result =
-      queryStep.property.nodeKind === shacl.Literal || queryStep.count
+      (queryStep as PropertyQueryStep).property.nodeKind === shacl.Literal ||
+      (queryStep as CountStep).count
         ? []
         : new ShapeSet();
 
     (subject as ShapeSet).forEach((singleShape) => {
       //directly access the get/set method of the shape
-      let stepResult = singleShape[queryStep.property.label];
-      if (queryStep.where) {
-        stepResult = filterResults(stepResult, queryStep.where);
+      let stepResult =
+        singleShape[(queryStep as PropertyQueryStep).property.label];
+      if ((queryStep as PropertyQueryStep).where) {
+        stepResult = filterResults(
+          stepResult,
+          (queryStep as PropertyQueryStep).where,
+        );
       }
-      if (queryStep.count) {
+      if ((queryStep as CountStep).count) {
         if (Array.isArray(stepResult)) {
           stepResult = stepResult.length;
         } else if (stepResult instanceof Set) {
@@ -880,7 +931,7 @@ function resolveQueryStepForShapesFlat(
           'Unknown result type: ' +
             typeof stepResult +
             ' for property ' +
-            queryStep.property.label +
+            (queryStep as PropertyQueryStep).property.label +
             ' on shape ' +
             singleShape.toString() +
             ')',
@@ -888,12 +939,15 @@ function resolveQueryStepForShapesFlat(
       }
     });
     return result;
-  } else if (queryStep.where) {
+  } else if ((queryStep as PropertyQueryStep).where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
     //like Person.select(p => p.where(...))
     //in that case the where clause is directly applied to the given subject
-    let whereResult = filterResults(subject, queryStep.where);
+    let whereResult = filterResults(
+      subject,
+      (queryStep as PropertyQueryStep).where,
+    );
     return whereResult;
   }
 }
@@ -923,7 +977,9 @@ function resolveWhereStep(
   //   return res as unknown as QueryValueSetOfSets;
   // } else
   if (subject instanceof QueryShapeSet) {
-    return subject.callPropertyShapeAccessor(queryStep.property);
+    return subject.callPropertyShapeAccessor(
+      (queryStep as PropertyQueryStep).property,
+    );
   } else {
     throw new Error('Unknown subject type: ' + typeof subject);
   }
