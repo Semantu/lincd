@@ -33,7 +33,7 @@ import {
   GetQueryResponseType,
   LinkedQuery,
   QueryBuildFn,
-  ToResultType,
+  QueryResponseToResultType,
 } from '../utils/LinkedQuery';
 import {LinkedStorage} from '../utils/LinkedStorage';
 import {
@@ -271,14 +271,18 @@ export abstract class Shape implements IShape {
     this: {new (node: Node): T; targetClass: any},
     // this: typeof Shape,
     selectFn: QueryBuildFn<T, S>,
-  ): Promise<ToResultType<GetQueryResponseType<LinkedQuery<T, S>>, T>[]> {
+  ): Promise<
+    QueryResponseToResultType<GetQueryResponseType<LinkedQuery<T, S>>, T>[]
+  > {
     let resolve, reject;
     let p = new Promise((res, rej) => {
       resolve = res;
       reject = rej;
     });
     const query = new LinkedQuery<T, S>(this as any, selectFn);
-    type ResultType = ToResultType<GetQueryResponseType<LinkedQuery<T, S>>>[];
+    type ResultType = QueryResponseToResultType<
+      GetQueryResponseType<LinkedQuery<T, S>>
+    >[];
     // LinkedStorage.query(query).then((result) => {
     StorageHelper.query<ResultType>(query).then((result) => {
       resolve(result);

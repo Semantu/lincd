@@ -14,9 +14,9 @@ import {
   QueryPath,
   QueryPrimitiveSet,
   QueryStep,
-  QueryValue,
+  QueryBuilderObject,
   SubQueryPaths,
-  ToResultEndValues,
+  QueryResponseToEndValues,
   WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
@@ -71,7 +71,7 @@ export function resolveLocalEndResults<S extends LinkedQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
   queryPaths?: LinkedQueryObject | ComponentQueryPath[],
-): ToResultEndValues<GetQueryResponseType<S>> {
+): QueryResponseToEndValues<GetQueryResponseType<S>> {
   queryPaths = queryPaths || query.getQueryPaths();
   subject = subject || (query.shape as any).getLocalInstances();
   let results = [];
@@ -87,7 +87,7 @@ export function resolveLocalEndResults<S extends LinkedQuery<any>>(
   }
 
   // convert the result of each instance into the shape that was requested
-  if (query.traceResponse instanceof QueryValue) {
+  if (query.traceResponse instanceof QueryBuilderObject) {
     //even though resolveQueryPaths always returns an array, if a single value was requested
     //we will return the first value of that array to match the request
     return results.shift();

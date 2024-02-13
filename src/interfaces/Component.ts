@@ -11,7 +11,7 @@ import {
   QueryPropertyPath,
   QueryShape,
   QueryShapeSet,
-  QueryValue,
+  QueryBuilderObject,
 } from '../utils/LinkedQuery';
 import React from 'react';
 
@@ -315,7 +315,10 @@ export function removeBoundComponents(
   }
 }
 
-export class BoundComponent<P, ShapeType extends Shape> extends QueryValue {
+export class BoundComponent<
+  P,
+  ShapeType extends Shape,
+> extends QueryBuilderObject {
   constructor(
     public originalValue: any,
     public source, // property?: PropertyShape, // subject?: QueryShape<any> | QueryShapeSet<any>,
