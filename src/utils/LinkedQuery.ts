@@ -7,344 +7,39 @@ import {CoreSet} from '../collections/CoreSet';
 import {BoundComponent} from '../interfaces/Component';
 import {CoreMap} from '../collections/CoreMap';
 
-export type WhereClause<S extends Shape | AccessorReturnValue> =
-  | Evaluation
-  | ((s: ToQueryBuilderObject<S>) => Evaluation);
+/**
+ * ###################################
+ * #### TYPES FOR QUERY BUILDING  ####
+ * ###################################
+ */
+
 export type JSPrimitive = string | number | boolean | Date | null | undefined;
+
 /**
  * All the possible types that a regular get/set method of a Shape can return
  */
 export type AccessorReturnValue = Shape | ShapeSet | JSPrimitive;
 
-type GetQueryObjectProperty<T> = T extends QueryBuilderObject<
-  any,
-  any,
-  infer Property
->
-  ? Property
-  : never;
-type GetQueryObjectOriginal<T> = T extends QueryBuilderObject<infer Original>
-  ? Original
-  : never;
-/**
- * Converts an intersection of QueryBuilderObjects into a plain JS object
- * i.e. QueryString<Person,"name"> | QueryString<Person,"hobby"> --> {name: string, hobby: string}
- * To do this we get the Property of each QueryBuilderObject, and use it as the key in the resulting object
- * and, we get the Original type of each QueryBuilderObject, and use it as the value in the resulting object
- */
-type QueryValueIntersectionToObject<Items> = {
-  [Type in Items as GetQueryObjectProperty<Type>]: GetQueryObjectOriginal<Type>;
-};
-
-/**
- * Turns a QueryBuilderObject into a plain JS object
- * @param QV the query value type
- * @param SubProperties to add extra properties into the result object (used to merge arrays into objects for example)
- * @param SourceOverwrite if the source of the query value should be overwritten
- */
-export type GetQueryObjectResultType<
-  QV,
-  SubProperties = {},
-  SourceOverwrite = null,
-> = QV extends QueryString<infer Source, infer Property>
-  ? ToQueryResult<GetSource<Source, SourceOverwrite>, string, Property>
-  : QV extends QueryShape<infer ShapeType>
-  ? ToQueryResult<ShapeType>
-  : QV extends Array<infer Type>
-  ? UnionToIntersection<QueryResponseToResultType<Type>>
-  : QV extends Count<infer Source>
-  ? CountToQueryResult<GetSource<Source, SourceOverwrite>>
-  : QV extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
-  ? GetQueryShapeSetResultType<
-      ShapeType,
-      GetSource<Source, SourceOverwrite>,
-      Property,
-      SubProperties
-    >
-  : QV extends QueryNumber<infer Source, infer Property>
-  ? ToQueryResult<GetSource<Source, SourceOverwrite>, number, Property>
-  : any;
-
-export type NodeResultMap = CoreMap<string, QResult<any, any>>;
-
-export type QResult<Source, Object = {}> = Object & {
-  id: string;
-  shape: Source;
-};
-
-export type CountToQueryResult<Source> = Source extends QueryShapeSet<
-  infer ShapeType,
-  infer ParentSource,
-  infer SourceProperty
->
-  ? //for counted shapesets, the result is the same as the result was before count() was called
-    //hence we use parent source and sourceProperty, but the value type is now a number
-    ToQueryResult<ParentSource, number, SourceProperty>
-  : Source;
-
-/**
- * If the source is an object (it extends shape)
- * then the result is a plain JS Object, with Property as its key, with type Value
- */
-export type ToQueryResult<
-  Source,
-  Value = undefined,
-  Property extends string | number | symbol = '',
-  SubProperties = {},
-> = Source extends Shape
-  ? QResult<
-      Source,
-      {
-        //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
-        //but for all other cases (like string, number, boolean) the value is just passed through
-        [P in Property]: ToQueryResult<Value, Value>;
-      } & SubProperties
-    >
-  : Source extends QueryShapeSet<
-      infer ShapeType,
-      infer ParentSource,
-      infer SourceProperty
-    >
-  ? //for a shapeset, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
-    ToQueryResult<
-      ParentSource,
-      QResult<
-        ShapeType,
-        {
-          //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
-          //but for all other cases (like string, number, boolean) the value is just passed through
-          [P in Property]: ToQueryResult<Value, Value>;
-        }
-      >[],
-      SourceProperty
-    >
-  : //this needs to be value amongst other things for .select({customKeys}) and ObjectToPlainResult
-    Value;
-
-export type GetQueryShapeSetResultType<
-  ShapeType = undefined,
-  Source = undefined,
-  Property extends string | number | symbol = '',
-  SubProperties = {},
-> = Source extends Shape
-  ? QResult<
-      Source,
-      {
-        [P in Property]: ToQueryResult<ShapeType, null, null, SubProperties>[];
-      }
-    >
-  : Source extends QueryShapeSet<
-      infer ShapeType,
-      infer ParentSource,
-      infer SourceProperty
-    >
-  ? //for a shapeset source, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
-    ToQueryResult<
-      ParentSource,
-      QResult<
-        ShapeType,
-        {
-          [P in Property]: ToQueryResult<ShapeType>[];
-        }
-      >[],
-      SourceProperty
-    >
-  : ToQueryResult<ShapeType>;
-
-// export type ObjectToResult<T> = {
-//   [P in keyof T]: ToResultType<T[P]>;
-// };
-
-/**
- * Ignores the source and property, and returns the converted value
- */
-export type ObjectToPlainResult<T> = {
-  [P in keyof T]: QueryResponseToResultType<T[P], null, {}, true>;
-};
-
-export type GetSource<Source, Overwrite> = Overwrite extends null
-  ? Source
-  : Overwrite;
-
-export type QueryResponseToResultType<
-  T,
-  QShapeType extends Shape = null,
-  SubProperties = null,
-  SourceOverwrite = null,
-> = T extends QueryBuilderObject
-  ? GetQueryObjectResultType<T, {}, SourceOverwrite>
-  : T extends LinkedQuery<any, infer Response, infer Source>
-  ? GetNestedQueryResultType<Response, Source, SourceOverwrite>
-  : T extends Array<infer Type>
-  ? UnionToIntersection<QueryResponseToResultType<Type>>
-  : T extends Evaluation
-  ? boolean
-  : T extends Object
-  ? QResult<QShapeType, ObjectToPlainResult<T>>
-  : T;
-
-type GetNestedQueryResultType<Response, Source, SourceOverwrite> =
-  Source extends QueryBuilderObject
-    ? //if the linked query originates from within another query (like with select())
-      //then we turn the source into a result, and pass the selected properties as "SubProperties"
-      //regardless of whether the response type is an array or object, its gets converted into a result value object
-      GetQueryObjectResultType<
-        GetSource<Source, SourceOverwrite>,
-        ResponseToObject<Response>
-      >
-    : //by default: we just convert the response type into a result value object
-      QueryResponseToResultType<Response>[];
-
-//https://stackoverflow.com/a/50375286/977206
-type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
-  x: infer I,
-) => void
-  ? I
-  : never;
-
-/**
- * Converts the response of a nested query into a QResult object
- */
-type ResponseToObject<R> = R extends Array<
-  infer Type extends QueryBuilderObject
->
-  ? QueryValueIntersectionToObject<Type>
-  : ObjectToPlainResult<R>;
-
-export type GetQueryResponseType<Q> = Q extends LinkedQuery<
-  any,
-  infer ResponseType
->
-  ? ResponseType
-  : never;
+export type WhereClause<S extends Shape | AccessorReturnValue> =
+  | Evaluation
+  | ((s: ToQueryBuilderObject<S>) => Evaluation);
 
 export type QueryBuildFn<T extends Shape, ResponseType> = (
   p: ToQueryBuilderObject<T>,
   q: LinkedQuery<T>,
 ) => ResponseType;
 
-/**
- * Maps all the return types of get/set methods of a Shape and maps their return types to QueryBuilderObjects
- */
-export type QueryShapeProps<T> = {
-  [P in keyof T]: ToQueryBuilderObject<T[P], T, P>;
-};
-/**
- * This type states that the ShapeSet has access to the same methods as the shape of all the items in the set
- * (this is enabled with the QueryShapeSet.proxifyShapeSet method)
- * Each value of the shape is converted to a QueryBuilderObject
- */
-export type QueryShapeSetProps<SourceShapeSet, Shape> = {
-  [P in keyof Shape]: ToQueryBuilderObject<Shape[P], SourceShapeSet, P>;
-};
-// export type ToWhereShape<T> = {
-//   [P in keyof T]: ToWhereValue<T[P]>;
-// };
-type GetShapeSetType<SS> = SS extends ShapeSet<infer ShapeType>
-  ? ShapeType
-  : never;
-
-/**
- * ShapeSets are converted to QueryShapeSets, but also inherit all the properties of the shape that each item in the set has (with converted result types)
- */
-export type QShapeSet<
-  ShapeSetType extends Shape,
-  Source,
-  Property extends string | number | symbol,
-> = QueryShapeSet<ShapeSetType, Source, Property> &
-  QueryShapeSetProps<
-    QueryShapeSet<ShapeSetType, Source, Property>,
-    ShapeSetType
-  >;
-
-/**
- * Shapes are converted to QueryShapes, but also inherit all the properties of the shape (with converted result types)
- */
-export type QShape<T extends Shape> = QueryShape<T> & QueryShapeProps<T>;
-
-export type ToQueryBuilderObject<
-  T,
-  Source = any,
-  Property extends string | number | symbol = '',
-> = T extends ShapeSet<infer ShapeSetType>
-  ? QShapeSet<ShapeSetType, Source, Property>
-  : T extends Shape
-  ? QShape<T>
-  : T extends string
-  ? QueryString<Source, Property>
-  : T extends number
-  ? QueryNumber
-  : T extends boolean
-  ? QueryBoolean
-  : QueryBuilderObject<T>;
-
-// export type ToWhereValue<T> = T extends ShapeSet
-//   ? //a shape set turns into a query-shape set but also inherits all the properties of the shape that each item in the set has
-//     WhereShapeSet<GetShapeSetType<T>> & ToWhereShape<GetShapeSetType<T>>
-//   : T extends Shape
-//   ? ToWhereShape<T> & WhereShape<T>
-//   : T extends string
-//   ? QueryString
-//   : T extends number
-//   ? QueryNumber
-//   : T extends boolean
-//   ? QueryBoolean
-//   : QueryBuilderObject<T>;
-
-export type GetQueryShapeSetType<T> = T extends QueryShapeSet<infer ShapeType>
-  ? ShapeType
-  : never;
-
-export type GetArrayType<T> = T extends Array<infer ArrayType>
-  ? ArrayType
-  : never;
-
-export type GetQueryShapeType<T> = T extends QueryShape<infer ShapeType>
-  ? ShapeType
-  : never;
-
-export type WherePath = WhereEvaluationPath | WhereAndOr;
-
-export type WhereEvaluationPath = {
-  path: QueryPropertyPath;
-  method: WhereMethods;
-  args: any[];
-};
-
-export type ComponentQueryPath =
-  | (QueryStep | SubQueryPaths | BoundComponentQueryStep)[]
-  | WherePath;
-
-export interface BoundComponentQueryStep {
-  component: BoundComponent<any, any>;
-  // path: LinkedQueryObject;
-}
-
-export type QueryResponseToEndValues<T> = T extends Count
-  ? number[]
-  : T extends LinkedQuery<any, infer Response>
-  ? QueryResponseToEndValues<Response>[]
-  : T extends QueryShapeSet<any>
-  ? ShapeSet<GetQueryShapeSetType<T>>
-  : T extends QueryShape<any>
-  ? GetQueryShapeType<T>
-  : T extends QueryString
-  ? string[]
-  : T extends Array<any>
-  ? Array<QueryResponseToEndValues<GetArrayType<T>>>
-  : T extends Evaluation
-  ? boolean[]
-  : T;
-
 export type CustomQueryObject = {[key: string]: QueryPath};
 
 export type LinkedQueryObject = QueryPath[] | CustomQueryObject;
 
 export type SubQueryPaths = LinkedQueryObject;
+
 /**
  * A QueryPath is an array of QuerySteps, representing the path of properties that were requested to reach a certain value
  */
 export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
+
 /**
  * Much like a querypath, except it can only contain QuerySteps
  */
@@ -383,6 +78,307 @@ export enum WhereMethods {
   SOME = 'some',
   EVERY = 'every',
 }
+
+/**
+ * Maps all the return types of get/set methods of a Shape and maps their return types to QueryBuilderObjects
+ */
+export type QueryShapeProps<T> = {
+  [P in keyof T]: ToQueryBuilderObject<T[P], T, P>;
+};
+
+/**
+ * This type states that the ShapeSet has access to the same methods as the shape of all the items in the set
+ * (this is enabled with the QueryShapeSet.proxifyShapeSet method)
+ * Each value of the shape is converted to a QueryBuilderObject
+ */
+export type QueryShapeSetProps<SourceShapeSet, Shape> = {
+  [P in keyof Shape]: ToQueryBuilderObject<Shape[P], SourceShapeSet, P>;
+};
+
+/**
+ * ShapeSets are converted to QueryShapeSets, but also inherit all the properties of the shape that each item in the set has (with converted result types)
+ */
+export type QShapeSet<
+  ShapeSetType extends Shape,
+  Source,
+  Property extends string | number | symbol,
+> = QueryShapeSet<ShapeSetType, Source, Property> &
+  QueryShapeSetProps<
+    QueryShapeSet<ShapeSetType, Source, Property>,
+    ShapeSetType
+  >;
+
+/**
+ * Shapes are converted to QueryShapes, but also inherit all the properties of the shape (with converted result types)
+ */
+export type QShape<T extends Shape> = QueryShape<T> & QueryShapeProps<T>;
+
+export type ToQueryBuilderObject<
+  T,
+  Source = any,
+  Property extends string | number | symbol = '',
+> = T extends ShapeSet<infer ShapeSetType>
+  ? QShapeSet<ShapeSetType, Source, Property>
+  : T extends Shape
+  ? QShape<T>
+  : T extends string
+  ? QueryString<Source, Property>
+  : T extends number
+  ? QueryNumber
+  : T extends boolean
+  ? QueryBoolean
+  : QueryBuilderObject<T>;
+
+export type WherePath = WhereEvaluationPath | WhereAndOr;
+
+export type WhereEvaluationPath = {
+  path: QueryPropertyPath;
+  method: WhereMethods;
+  args: any[];
+};
+
+export type ComponentQueryPath =
+  | (QueryStep | SubQueryPaths | BoundComponentQueryStep)[]
+  | WherePath;
+
+export interface BoundComponentQueryStep {
+  component: BoundComponent<any, any>;
+  // path: LinkedQueryObject;
+}
+
+/**
+ * ###################################
+ * ####    QUERY RESULT TYPES     ####
+ * ###################################
+ */
+
+export type NodeResultMap = CoreMap<string, QResult<any, any>>;
+
+export type QResult<Source, Object = {}> = Object & {
+  id: string;
+  shape: Source;
+};
+
+/**
+ * MAIN ENTRY to convert the response of a query into a result object
+ */
+export type QueryResponseToResultType<
+  T,
+  QShapeType extends Shape = null,
+  SubProperties = null,
+  SourceOverwrite = null,
+> = T extends QueryBuilderObject
+  ? GetQueryObjectResultType<T, {}, SourceOverwrite>
+  : T extends LinkedQuery<any, infer Response, infer Source>
+  ? GetNestedQueryResultType<Response, Source, SourceOverwrite>
+  : T extends Array<infer Type>
+  ? UnionToIntersection<QueryResponseToResultType<Type>>
+  : T extends Evaluation
+  ? boolean
+  : T extends Object
+  ? QResult<QShapeType, ObjectToPlainResult<T>>
+  : T;
+
+/**
+ * Turns a QueryBuilderObject into a plain JS object
+ * @param QV the query value type
+ * @param SubProperties to add extra properties into the result object (used to merge arrays into objects for example)
+ * @param SourceOverwrite if the source of the query value should be overwritten
+ */
+export type GetQueryObjectResultType<
+  QV,
+  SubProperties = {},
+  SourceOverwrite = null,
+> = QV extends QueryString<infer Source, infer Property>
+  ? CreateQResult<GetSource<Source, SourceOverwrite>, string, Property>
+  : //note: count needs to be above number
+  QV extends Count<infer Source>
+  ? CountToQueryResult<GetSource<Source, SourceOverwrite>>
+  : QV extends QueryNumber<infer Source, infer Property>
+  ? CreateQResult<GetSource<Source, SourceOverwrite>, number, Property>
+  : QV extends QueryShape<infer ShapeType>
+  ? CreateQResult<ShapeType>
+  : QV extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
+  ? CreateShapeSetQResult<
+      ShapeType,
+      GetSource<Source, SourceOverwrite>,
+      Property,
+      SubProperties
+    >
+  : QV extends Array<infer Type>
+  ? UnionToIntersection<QueryResponseToResultType<Type>>
+  : any;
+
+type GetQueryObjectProperty<T> = T extends QueryBuilderObject<
+  any,
+  any,
+  infer Property
+>
+  ? Property
+  : never;
+type GetQueryObjectOriginal<T> = T extends QueryBuilderObject<infer Original>
+  ? Original
+  : never;
+/**
+ * Converts an intersection of QueryBuilderObjects into a plain JS object
+ * i.e. QueryString<Person,"name"> | QueryString<Person,"hobby"> --> {name: string, hobby: string}
+ * To do this we get the Property of each QueryBuilderObject, and use it as the key in the resulting object
+ * and, we get the Original type of each QueryBuilderObject, and use it as the value in the resulting object
+ */
+type QueryValueIntersectionToObject<Items> = {
+  [Type in Items as GetQueryObjectProperty<Type>]: GetQueryObjectOriginal<Type>;
+};
+
+export type CountToQueryResult<Source> = Source extends QueryShapeSet<
+  infer ShapeType,
+  infer ParentSource,
+  infer SourceProperty
+>
+  ? //for counted shapesets, the result is the same as the result was before count() was called
+    //hence we use parent source and sourceProperty, but the value type is now a number
+    CreateQResult<ParentSource, number, SourceProperty>
+  : Source;
+
+/**
+ * If the source is an object (it extends shape)
+ * then the result is a plain JS Object, with Property as its key, with type Value
+ */
+export type CreateQResult<
+  Source,
+  Value = undefined,
+  Property extends string | number | symbol = '',
+  SubProperties = {},
+> = Source extends Shape
+  ? QResult<
+      Source,
+      {
+        //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
+        //but for all other cases (like string, number, boolean) the value is just passed through
+        [P in Property]: CreateQResult<Value, Value>;
+      } & SubProperties
+    >
+  : Source extends QueryShapeSet<
+      infer ShapeType,
+      infer ParentSource,
+      infer SourceProperty
+    >
+  ? //for a shapeset, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
+    CreateQResult<
+      ParentSource,
+      QResult<
+        ShapeType,
+        {
+          //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
+          //but for all other cases (like string, number, boolean) the value is just passed through
+          [P in Property]: CreateQResult<Value, Value>;
+        }
+      >[],
+      SourceProperty
+    >
+  : //this needs to be value amongst other things for .select({customKeys}) and ObjectToPlainResult
+    Value;
+
+export type CreateShapeSetQResult<
+  ShapeType = undefined,
+  Source = undefined,
+  Property extends string | number | symbol = '',
+  SubProperties = {},
+> = Source extends Shape
+  ? QResult<
+      Source,
+      {
+        [P in Property]: CreateQResult<ShapeType, null, null, SubProperties>[];
+      }
+    >
+  : Source extends QueryShapeSet<
+      infer ShapeType,
+      infer ParentSource,
+      infer SourceProperty
+    >
+  ? //for a shapeset source, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
+    CreateQResult<
+      ParentSource,
+      QResult<
+        ShapeType,
+        {
+          [P in Property]: CreateQResult<ShapeType>[];
+        }
+      >[],
+      SourceProperty
+    >
+  : CreateQResult<ShapeType>;
+
+// export type ObjectToResult<T> = {
+//   [P in keyof T]: ToResultType<T[P]>;
+// };
+
+/**
+ * Ignores the source and property, and returns the converted value
+ */
+export type ObjectToPlainResult<T> = {
+  [P in keyof T]: QueryResponseToResultType<T[P], null, {}, true>;
+};
+
+export type GetSource<Source, Overwrite> = Overwrite extends null
+  ? Source
+  : Overwrite;
+
+type GetNestedQueryResultType<Response, Source, SourceOverwrite> =
+  Source extends QueryBuilderObject
+    ? //if the linked query originates from within another query (like with select())
+      //then we turn the source into a result, and pass the selected properties as "SubProperties"
+      //regardless of whether the response type is an array or object, its gets converted into a result value object
+      GetQueryObjectResultType<
+        GetSource<Source, SourceOverwrite>,
+        ResponseToObject<Response>
+      >
+    : //by default: we just convert the response type into a result value object
+      QueryResponseToResultType<Response>[];
+
+//https://stackoverflow.com/a/50375286/977206
+type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
+  x: infer I,
+) => void
+  ? I
+  : never;
+
+/**
+ * Converts the response of a nested query into a QResult object
+ */
+type ResponseToObject<R> = R extends Array<
+  infer Type extends QueryBuilderObject
+>
+  ? QueryValueIntersectionToObject<Type>
+  : ObjectToPlainResult<R>;
+
+export type GetQueryResponseType<Q> = Q extends LinkedQuery<
+  any,
+  infer ResponseType
+>
+  ? ResponseType
+  : never;
+
+export type QueryResponseToEndValues<T> = T extends Count
+  ? number[]
+  : T extends LinkedQuery<any, infer Response>
+  ? QueryResponseToEndValues<Response>[]
+  : T extends QueryShapeSet<infer ShapeType>
+  ? ShapeSet<ShapeType>
+  : T extends QueryShape<infer ShapeType>
+  ? ShapeType
+  : T extends QueryString
+  ? string[]
+  : T extends Array<infer ArrType>
+  ? Array<QueryResponseToEndValues<ArrType>>
+  : T extends Evaluation
+  ? boolean[]
+  : T;
+
+/**
+ * ###################################
+ * ####  QUERY BUILDING CLASSES   ####
+ * ###################################
+ */
 
 export class QueryBuilderObject<
   OriginalValue = any,
@@ -726,7 +722,6 @@ export class QueryShapeSet<
   }
 }
 
-// type QueryShapeType<S> = QueryShape<S> & ToQueryShape<S>;
 export class QueryShape<S extends Shape = Shape> extends QueryBuilderObject<S> {
   private proxy;
   public isSource: boolean;
@@ -739,7 +734,6 @@ export class QueryShape<S extends Shape = Shape> extends QueryBuilderObject<S> {
     super(property, subject);
   }
 
-  // where(validation: WhereClause<S>): QueryShapeSet<S, false> & ToQueryShape<S> {
   where(validation: WhereClause<S>): this {
     let nodeShape = this.originalValue.nodeShape;
     this.wherePath = processWhereClause(validation, nodeShape);
@@ -850,10 +844,6 @@ export class Evaluation {
 }
 
 class SetEvaluation extends Evaluation {}
-
-class WhereShapeSet<S extends Shape = Shape> extends QueryShapeSet<S> {}
-
-class WhereShape<S extends Shape = Shape> extends QueryShape<S> {}
 
 class QueryBoolean extends QueryBuilderObject<boolean> {
   constructor(
@@ -1030,10 +1020,8 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
           value instanceof QueryBuilderObject ||
           value instanceof QueryPrimitiveSet
         ) {
-          // queryPaths.push(value.getPropertyPath());
           queryObject[key] = value.getPropertyPath();
         } else if (value instanceof Evaluation) {
-          // queryPaths.push(value.getWherePath());
           queryObject[key] = value.getWherePath();
         } else {
           throw Error('Unknown trace response type for key ' + key);
