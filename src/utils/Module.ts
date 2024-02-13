@@ -55,7 +55,7 @@ import {
   QueryStep,
 } from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
-import {resolveLocalFlat} from './LocalQueryResolver';
+import {resolveLocalEndResults} from './LocalQueryResolver';
 
 //global tree
 declare var lincd: any;
@@ -1012,7 +1012,7 @@ function resolveLinkedQuery(
   dataRequest: ComponentQueryPath[],
   pureDataRequest: QueryPath[],
 ) {
-  return resolveLocalFlat(linkedQuery, source, dataRequest);
+  return resolveLocalEndResults(linkedQuery, source, dataRequest);
   // let linkedData = Storage.query(genericQuery, source.shape);
   // return linkedData;
 }

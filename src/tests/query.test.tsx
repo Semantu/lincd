@@ -397,6 +397,23 @@ describe('query tests', () => {
     // select people that have a friend called Jinx and a name "Semmy" (so that's only p1)
     //Should be QResult<Person, {name:string}>[]
     let friendCalledJinxAndNameIsSemmy = await Person.select((p) => {
+      let res = p.where(
+        p.friends
+          .some((f) => {
+            return f.name.equals('Jinx');
+          })
+          .and(p.name.equals('Semmy')),
+      );
+      return res;
+    });
+
+    expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
+    expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
+    expect(friendCalledJinxAndNameIsSemmy[0].id).toBe(p1.uri);
+
+    // select people that have a friend called Jinx, BUT ONLY SELECT THEIR NAME if their name is "Semmy"
+    //so we should get p1 and p2, but only the name of p1
+    let friendCalledJinxAndNameIsSemmy2 = await Person.select((p) => {
       let res = p
         .where(
           p.friends.some((f) => {
@@ -409,11 +426,14 @@ describe('query tests', () => {
       return res;
     });
 
-    expect(Array.isArray(friendCalledJinxAndNameIsSemmy)).toBe(true);
-    expect(friendCalledJinxAndNameIsSemmy.length).toBe(1);
-    expect(friendCalledJinxAndNameIsSemmy[0].id).toBe(p1.uri);
+    //make sure type is undefined. Then make everything with single shapes work only with QResult
+    expect(Array.isArray(friendCalledJinxAndNameIsSemmy2)).toBe(true);
+    expect(friendCalledJinxAndNameIsSemmy2.length).toBe(2);
+    expect(friendCalledJinxAndNameIsSemmy2[0].id).toBe(p1.uri);
+    expect(friendCalledJinxAndNameIsSemmy2[1].id).toBe(p2.uri);
+    expect(friendCalledJinxAndNameIsSemmy2[0].name).toBe('Semmy');
+    expect(typeof friendCalledJinxAndNameIsSemmy2[1].name).toBe('undefined');
   });
-
   test('count a shapeset', async () => {
     //count the number of friends that each person has
     //QResult<Person, {friends: number}>[]

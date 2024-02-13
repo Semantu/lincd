@@ -6,8 +6,6 @@ import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
 import {BoundComponent} from '../interfaces/Component';
 import {CoreMap} from '../collections/CoreMap';
-import {Property} from 'lincd-rdf/lib/shapes/Property';
-import {Type} from 'typedoc';
 
 export type WhereClause<S extends Shape | OriginalValue> =
   | Evaluation
@@ -33,10 +31,6 @@ type QueryValueIntersectionToObject<Items> = {
   [Type in Items as QueryValueToKey<Type>]: QueryValueToValue<Type>;
 };
 
-//2: T = QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>
-//ShapesetType = Shape,
-//Source = QueryShapeSet<Shape, Shape>
-//QueryString<Shape,"name">
 export type GetValueResultType<
   T,
   SubProperties = {},
@@ -45,9 +39,7 @@ export type GetValueResultType<
   ? ToQueryResult<GetSource<Source, SourceOverwrite>, string, Property>
   : T extends QueryShape<infer ShapeType>
   ? ToQueryResult<ShapeType>
-  : // : T extends Array<infer ArrayType extends QueryValue>
-  // ? ArrayTypeToObject<ArrayType>
-  T extends Array<infer Type>
+  : T extends Array<infer Type>
   ? UnionToIntersection<ToResultType<Type>>
   : T extends Count<infer Source>
   ? CountToQueryResult<GetSource<Source, SourceOverwrite>>
@@ -62,55 +54,8 @@ export type GetValueResultType<
   ? ToQueryResult<GetSource<Source, SourceOverwrite>, number, Property>
   : any;
 
-// type X<S, T extends string | number | symbol | object = {name: boolean}> = {
-//   [P in keyof T]: T[P];
-// };
 export type NodeResultMap = CoreMap<string, QResult<any, any>>;
 
-// QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>> & ToQueryShapeSetValue<QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>, Shape>
-//example class
-// interface Foo<Source> {
-//   name: string;
-// }
-//simplified type that maps all keys of an object to a different return type
-// type FooMapped<T> = {
-//   [P in keyof T]: boolean;
-// };
-
-// type NestedToArr<T> = T extends Foo<infer Source> ? NestedToArr<Source>[] : T;
-// var AnswerNum: NestedToArr<number>;
-// var Answer: NestedToArr<Foo<number>>; //number
-// var Answer2: NestedToArr<Foo<Foo<number>>>; //number[]
-// var Answer3: NestedToArr<Foo<Foo<number>>>; //number[][]
-//
-// var AnswerB: NestedToArr<number & FooMapped<number>>; //number
-// var AnswerB2: NestedToArr<Foo<number> & FooMapped<Foo<number>>>; //unknown[]
-// var AnswerB3: NestedToArr<Foo<Foo<number>> & FooMapped<Foo<Foo<number>>>>; //unknown[]
-
-// type GetResponseType<T> = T extends QueryShapeSet<any> ? never : never;
-// type ToResult<T> = T extends QueryShapeSet<infer ShapeType, infer Source>
-//   ? ToValueResultType<ShapeType, Source>
-//   : never;
-// function executeFn<T>(queryFn: T): ToResult<GetResponseType<T>>[] {
-//   return null;
-// }
-// let res = executeFn((p: QueryShapeSet<Shape>) => p.friends.name);
-
-// QueryString<QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>>
-//Source = QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>
-//Value = QueryString
-//ShapeType = Shape,
-//ParentSource = QueryShapeSet<Shape, Shape>
-
-//2: QueryShapeSet<Shape, QueryShapeSet<Shape, Shape>>
-//Value = Shape[]
-//Source = QueryShapeSet<Shape, Shape>
-//ShapeType = Shape,
-//ParentSource = Shape
-
-//-> ToValueResultType<Shape[], Shape>[]
-//Value = Shape[]
-//Source = Shape
 export type QResult<Source, Object = {}> = Object & {
   id: string;
   shape: Source;
@@ -125,11 +70,11 @@ export type CountToQueryResult<Source> = Source extends QueryShapeSet<
     //hence we use parent source and sourceProperty, but the value type is now a number
     ToQueryResult<ParentSource, number, SourceProperty>
   : Source;
+
 /**
  * If the source is an object (it extends shape)
  * then the result is a plain JS Object, with Property as its key, with type Value
  */
-//QueryString<Person, "name"> --> Person, string, 'name'
 export type ToQueryResult<
   Source,
   Value = undefined,
@@ -176,10 +121,6 @@ export type ToQueryPluralResult<
       {
         [P in Property]: ToQueryResult<Value, null, null, SubProperties>[];
       }
-      // & {
-      //   [P in keyof SubProperties]: ToQueryResult<Value>[];
-      // }
-      // & SubProperties
     >
   : Source extends QueryShapeSet<
       infer ShapeType,
@@ -199,44 +140,17 @@ export type ToQueryPluralResult<
     >
   : ToQueryResult<Value>;
 
-// export type ToValueResultType<Value, Source> = Source extends QueryShapeSet<
-//   infer ShapeType,
-//   infer ParentSource
-// >
-//   ? ToQueryShapeSetSource<ShapeType, Value, ParentSource>
-//   : Source extends QueryShape<infer ShapeType>
-//   ? ToQueryShapeSource<ShapeType, Value>
-//   : Value;
+// export type ObjectToResult<T> = {
+//   [P in keyof T]: ToResultType<T[P]>;
+// };
 
-//ShapeType = Shape,
-//Value = QueryString
-//ParentSource = QueryShapeSet<Shape, Shape>
-
-//ShapeType = Shape,
-//Value = Shape[]
-//ParentSource = Shape
-//-> ToValueResultType<Shape[], Shape>[]
-
-export type ToQueryShapeSource<ShapeType, Value> = ShapeType extends null
-  ? Value
-  : {
-      name: Value;
-    }[];
-
-// export type ToQueryShapeSetSource<ShapeType, Value, ParentSource> =
-//   ShapeType extends null ? Value : ToQueryResult<Value, ParentSource>[];
-// QResult<null, ObjectToResult<QueryString<Person, "hobby">>>
-export type ObjectToResult<T> = {
-  [P in keyof T]: ToResultType<T[P]>;
-};
 /**
  * Ignores the source and property, and returns the converted value
  */
 export type ObjectToPlainResult<T> = {
   [P in keyof T]: ToResultType<T[P], null, {}, true>;
 };
-// QueryString<Person, "name">
-// export type ToResultType<T,QueryShape> = T;
+
 export type GetSource<Source, Overwrite> = Overwrite extends null
   ? Source
   : Overwrite;
@@ -272,16 +186,9 @@ export type ToResultType<
         ResponseTypeToObject<ResponseType>
       >
     : ToResultType<ResponseType>[]
-  : // : T extends QueryShapeSet<any>
-  // ? ShapeSet<GetQueryShapeSetType<T>>
-  // : T extends QueryShape<any>
-  // ? GetQueryShapeType<T>
-  // : T extends QueryString
-  // ? GetValueResultType<T>
-  T extends Array<infer Type>
+  : T extends Array<infer Type>
   ? UnionToIntersection<ToResultType<Type>>
-  : // Array<Type>
-  T extends Evaluation
+  : T extends Evaluation
   ? boolean
   : T extends Object
   ? QResult<QShapeType, ObjectToPlainResult<T>>
@@ -294,21 +201,6 @@ type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
   ? I
   : never;
 
-// type Z = UnionToIntersection<
-//   | QResult<Shape, {name: string}>
-//   | QResult<Shape, {friends: QResult<Shape, {}>[]}>
-// >;
-// type Y = UnionToIntersection<
-//   | QueryString<Shape, 'name'>
-//   | (QueryShapeSet<Shape, Shape, 'friends'> &
-//       ToQueryShapeSetValue<
-//         QueryShapeSet<Shape, Shape, 'friends'>,
-//         Shape,
-//         'friends'
-//       >)
-// >;
-//
-// type X = UnionToIntersection<{a: string; id: string} | {b: number; id: string}>;
 type ResponseTypeToObject<R> = R extends Array<infer Type extends QueryValue>
   ? QueryValueIntersectionToObject<Type>
   : ObjectToPlainResult<R>;
@@ -320,14 +212,6 @@ export type GetQueryResponseType<Q> = Q extends LinkedQuery<
   ? ResponseType
   : never;
 
-export type GetQueryFnResponseType<Q> = Q extends QueryBuildFn<
-  any,
-  infer ResponseType
->
-  ? ResponseType
-  : never;
-
-// export type QueryPrimitive = QueryString;
 export type QueryBuildFn<T extends Shape, ResultType> = (
   p: ToQueryValue<T>,
   q: LinkedQuery<T>,
@@ -349,8 +233,6 @@ export type ToWhereShape<T> = {
 type GetShapeSetType<SS> = SS extends ShapeSet<infer ShapeType>
   ? ShapeType
   : never;
-
-export type SourcedValue<Source, Value> = Value;
 
 export type ToQueryValue<
   T,
@@ -416,6 +298,22 @@ export interface BoundComponentQueryStep {
   // path: LinkedQueryObject;
 }
 
+export type ToResultEndValues<T> = T extends Count
+  ? number[]
+  : T extends LinkedQuery<any>
+  ? ToResultEndValues<GetQueryResponseType<T>>[]
+  : T extends QueryShapeSet<any>
+  ? ShapeSet<GetQueryShapeSetType<T>>
+  : T extends QueryShape<any>
+  ? GetQueryShapeType<T>
+  : T extends QueryString
+  ? string[]
+  : T extends Array<any>
+  ? Array<ToResultEndValues<GetArrayType<T>>>
+  : T extends Evaluation
+  ? boolean[]
+  : T;
+
 export type CustomQueryObject = {[key: string]: QueryPath};
 export type LinkedQueryObject = QueryPath[] | CustomQueryObject;
 
@@ -441,12 +339,6 @@ export type CountStep = {
 export type PropertyQueryStep = {
   property: PropertyShape;
   where?: WherePath;
-  // count?: CountObj;
-};
-
-// export type CountObj = true | QueryPropertyPath;
-export type WhereAnd = {
-  and: WherePath[];
 };
 
 export type WhereAndOr = {
@@ -481,15 +373,12 @@ export class QueryValue<
   //is null by default to avoid warnings when trying to access wherePath when its undefined
   wherePath?: WherePath = null;
 
-  // _count: Count;
-
   constructor(
     public property?: PropertyShape,
     public subject?: QueryShape<any> | QueryShapeSet<any> | QueryPrimitiveSet,
   ) {}
 
   getOriginalValue() {
-    //NOTE: this is a bit of a shortcut, so that
     return this.originalValue;
   }
 
@@ -513,23 +402,6 @@ export class QueryValue<
       return this.subject.getPropertyPath(path);
     }
     return path;
-
-    /*let current: QueryValue = this;
-    while (
-      current &&
-      (current.property || current.wherePath || current._count)
-    ) {
-      path.unshift({
-        property: current.property,
-        where: current.wherePath,
-        //if no argument was given to count, then property path will be undefined and we use true
-        //to indicate that this property is counted.
-        count: current._count ? current._count.getArgs() || true : null,
-      } as QueryStep);
-      current = current.subject;
-    }
-    return path;
-     */
   }
 
   /**
@@ -560,12 +432,11 @@ export class QueryValue<
   static getOriginalSource(endValue: string[] | QueryValue): Shape | ShapeSet;
   static getOriginalSource(
     endValue:
-      | ShapeSet<Shape>
+      | ShapeSet
       | Shape[]
       | Shape
       | string[]
       | QueryValue
-      // | QueryValueSetOfSets
       | QueryPrimitiveSet,
   ): OriginalValue {
     if (typeof endValue === 'undefined') return undefined;
@@ -588,23 +459,6 @@ export class QueryValue<
       return endValue.originalValue;
     } else if (endValue instanceof Shape) {
       return endValue;
-      // } else if (endValue instanceof QueryValueSetOfSets) {
-      //   let first = endValue.first();
-      //   let res;
-      //   if (first instanceof QueryShapeSet) {
-      //     res = new QueryShapeSet();
-      //     endValue.forEach((queryShapeSet: QueryShapeSet) => {
-      //       queryShapeSet.queryShapes.forEach(
-      //         res.queryShapes.add.bind(res.queryShapes),
-      //       );
-      //     });
-      //   } else {
-      //     res = new QueryPrimitiveSet();
-      //     endValue.forEach((queryPrimitiveSet: QueryPrimitiveSet) => {
-      //       queryPrimitiveSet.forEach(res.add.bind(res));
-      //     });
-      //   }
-      //   return this.getOriginalSource(res);
     } else if (endValue instanceof QueryShapeSet) {
       return new ShapeSet(
         (endValue as QueryShapeSet).queryShapes.map(
@@ -631,64 +485,7 @@ const processWhereClause = (
     return (validation as Evaluation).getWherePath();
   }
 };
-// export class QueryValueSetOfSets extends CoreSet<any> {}
-/*export class QueryValueSetOfSets<
-  Source = any,
-  Property extends string | number | symbol = any,
-> extends QueryValue<any, Source, Property> {
-  public proxy;
-  public set: CoreSet<QueryShapeSet | QueryPrimitiveSet>;
 
-  constructor(
-    public originalValue?: QueryShapeSet | QueryPrimitiveSet,
-    property?: PropertyShape,
-    subject?: QueryShape<any> | QueryShapeSet<any>,
-  ) {
-    super(property, subject);
-  }
-
-  static create(
-    property: PropertyShape,
-    subject: QueryShape<any> | QueryShapeSet<any>,
-  ) {
-    let instance = new QueryValueSetOfSets(null, property, subject);
-    let proxy = this.proxify(instance);
-    return proxy;
-  }
-  static proxify(valueSets: QueryValueSetOfSets) {
-    valueSets.proxy = new Proxy(valueSets, {
-      get(target, key, receiver) {
-        //TODO: combine reusable code between profixy methods
-        //if the key is a string
-        if (typeof key === 'string') {
-          //if this is a get method that is implemented by the QueryShapeSets, then use that
-          if (key in valueSets) {
-            //if it's a function, then bind it to the queryShape and return it so it can be called
-            if (typeof valueSets[key] === 'function') {
-              return target[key].bind(target);
-            }
-            //if it's a get method, then return that
-            //NOTE: we may not need this if we don't use any get methods in QueryValue classes?
-            return valueSets[key];
-          }
-        }
-
-        //otherwise, call the method on each of the shape sets in the set
-        let res = new QueryValueSetOfSets();
-        valueSets.forEach((shapeSet) => {
-          const shapeSetResult = shapeSet[key];
-          if (shapeSetResult instanceof QueryValueSetOfSets) {
-            shapeSetResult.forEach(res.add.bind(res));
-          } else if (shapeSetResult instanceof QueryShapeSet) {
-            res.add(shapeSetResult);
-          }
-        });
-        return res;
-      },
-    });
-    return valueSets.proxy;
-  }
-}*/
 export class QueryShapeSet<
   S extends Shape = Shape,
   Source = any,
@@ -718,12 +515,6 @@ export class QueryShapeSet<
         (other as QueryShapeSet).queryShapes.forEach(
           this.queryShapes.add.bind(this.queryShapes),
         );
-        // } else if (other instanceof QueryValueSetOfSets) {
-        //   (other as QueryValueSetOfSets).forEach((shapeSet) => {
-        //     (shapeSet as QueryShapeSet).queryShapes.forEach(
-        //       this.queryShapes.add.bind(this.queryShapes),
-        //     );
-        //   });
       } else {
         throw new Error('Unknown type: ' + other);
       }
@@ -786,20 +577,15 @@ export class QueryShapeSet<
           //if each of the shapes in a set return a new shapeset for the request accessor
           //then we merge all the returned values into a single shapeset
           (result as QueryShapeSet).concat(shapeQueryValue);
-          // (result as QueryValueSetOfSets).add(shapeQueryValue);
         }
       }
     });
-    // if (result instanceof ShapeSet) {
-    //   return QueryShapeSet.create(result, propertyShape, this);
-    // }
     return result;
   }
 
   count(countable?, resultKey?: string): Count<this> {
     //when count() is called we want to count the number of items in the entire query path
     return new Count(this, countable, resultKey);
-    // return this._count;
   }
 
   // get testItem() {}
@@ -828,15 +614,6 @@ export class QueryShapeSet<
     subQuery.parentQueryPath = this.getPropertyPath();
     return subQuery as any;
   }
-
-  // static select<T extends Shape, S = unknown>(
-  //   this: {new (node: Node): T; targetClass: any},
-  //   // this: typeof Shape,
-  //   selectFn: QueryBuildFn<T, S>,
-  // ): LinkedQuery<T, S> {
-  //   const query = new LinkedQuery<T, S>(this as any, selectFn);
-  //   return query;
-  // }
 
   some(validation: WhereClause<S>): SetEvaluation {
     return this.someOrEvery(validation, WhereMethods.SOME);
@@ -1138,7 +915,6 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
     let first = this.first();
     (first.subject as QueryShapeSet).wherePath =
       (first.subject as QueryShapeSet).wherePath || this.subject.wherePath;
-    // first.subject._count = first.subject._count || this.subject._count;
     return this.first().getPropertyPath();
   }
   count(countable, resultKey?: string): Count<this> {
@@ -1178,7 +954,6 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
 
   where(validation: WhereClause<T>): this {
     throw Error('Not implemented');
-    // return this;
   }
 
   /**
@@ -1242,10 +1017,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
   }
 }
 
-export class Count<
-  Source = null,
-  // Property extends string | number | symbol = any,
-> extends QueryNumber<Source> {
+export class Count<Source = null> extends QueryNumber<Source> {
   constructor(
     public subject: QueryShapeSet | QueryShape | QueryPrimitiveSet,
     public countable?: QueryValue,
@@ -1299,10 +1071,6 @@ export class Count<
       return [self];
     }
   }
-
-  // getArgs() {
-  //   return this.countable?.getPropertyPath();
-  // }
 }
 
 export class LinkedWhereQuery<
