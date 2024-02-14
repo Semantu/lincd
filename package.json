@@ -10,6 +10,7 @@
     "dev": "npm exec lincd dev",
     "test": "jest",
     "test-queries": "yarn jest -t \"query tests\"",
+    "test-queries-update": "yarn jest -t \"query tests\" -u",
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",
     "prepack": "yarn version patch && npm exec lincd build production"

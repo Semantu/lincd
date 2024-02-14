@@ -1096,6 +1096,10 @@ export class Count<Source = null> extends QueryNumber<Source> {
   }
 }
 
+/**
+ * A sub query that is used to filter results
+ * i.e p.friends.where(f => //LinkedWhereQuery here)
+ */
 export class LinkedWhereQuery<
   S extends Shape,
   ResponseType = any,
