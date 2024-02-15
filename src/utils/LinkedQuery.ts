@@ -31,15 +31,20 @@ export type QueryBuildFn<T extends Shape, ResponseType> = (
 
 export type CustomQueryObject = {[key: string]: QueryPath};
 
-export type LinkedQueryObject = QueryPath[] | CustomQueryObject;
+export type SelectPath = QueryPath[] | CustomQueryObject;
+export type LinkedQueryObject<T extends Shape> = SelectQuery<T>;
 
-export type SubQueryPaths = LinkedQueryObject;
+export type SubQueryPaths = SelectPath;
 
 /**
  * A QueryPath is an array of QuerySteps, representing the path of properties that were requested to reach a certain value
  */
 export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
+export type SelectQuery<ShapeType extends Shape> = {
+  select: SelectPath;
+  subject?: ShapeType;
+};
 /**
  * Much like a querypath, except it can only contain QuerySteps
  */
@@ -956,6 +961,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
   constructor(
     public shape: T,
     private queryBuildFn: QueryBuildFn<T, ResponseType>,
+    private subject?: T,
   ) {
     let dummyNode = new TestNode();
     let queryShape: QueryBuilderObject;
@@ -974,6 +980,10 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     this.traceResponse = queryResponse;
   }
 
+  applyTo(subject) {
+    return new LinkedQuery(this.shape, this.queryBuildFn, subject);
+  }
+
   where(validation: WhereClause<T>): this {
     throw Error('Not implemented');
   }
@@ -984,6 +994,10 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
    * Each query path is returned as array of the property paths requested, with potential where clauses (together called a QueryStep)
    */
   getQueryPaths() {
+    let query: SelectQuery<T> = {
+      select: null,
+      subject: this.subject,
+    };
     let queryPaths: QueryPath[] = [];
     let queryObject: CustomQueryObject;
     //if the trace response is an array, then multiple paths were requested
@@ -1030,13 +1044,19 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     } else {
       throw Error('Unknown trace response type');
     }
+    let finalQueryPath;
     if (this.parentQueryPath) {
       queryPaths = (this.parentQueryPath as any[]).concat([
         queryObject || queryPaths,
       ]);
-      return queryPaths;
+      //reset the variable so it doesn't get used again below
+      queryObject = null;
     }
-    return queryObject || queryPaths;
+    let selectQuery: SelectQuery<T> = {
+      select: queryObject || queryPaths,
+      subject: this.subject,
+    };
+    return selectQuery;
   }
 }
 

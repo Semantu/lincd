@@ -21,6 +21,7 @@ import {
   WhereEvaluationPath,
   WhereMethods,
   WherePath,
+  SelectQuery,
 } from './LinkedQuery';
 import {ShapeSet} from '../collections/ShapeSet';
 import {Shape} from '../shapes/Shape';
@@ -36,27 +37,35 @@ const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
  * The results will be the end point reached by the query
  */
 export function resolveLocal<ResultType>(
-  query: LinkedQueryObject,
+  query: SelectQuery<any>,
   shape: typeof Shape,
 ): ResultType {
-  let subject = (shape as any).getLocalInstances();
+  let subject = query.subject
+    ? query.subject
+    : (shape as any).getLocalInstances();
 
-  let resultObjects = shapeSetToResultObjects(subject);
+  let resultObjects = query.subject
+    ? shapeToResultObject(subject)
+    : shapeSetToResultObjects(subject);
 
-  if (Array.isArray(query)) {
-    query.forEach((queryPath) => {
+  if (Array.isArray(query.select)) {
+    query.select.forEach((queryPath) => {
       resolveQueryPath(subject, queryPath, resultObjects);
     });
   } else {
     subject.forEach((singleShape) => {
       resolveCustomObject(
         singleShape,
-        query,
-        resultObjects.get(singleShape.uri),
+        query.select as CustomQueryObject,
+        resultObjects instanceof Map
+          ? resultObjects.get(singleShape.uri)
+          : resultObjects,
       );
     });
   }
-  return [...resultObjects.values()] as ResultType;
+  return (
+    resultObjects instanceof Map ? [...resultObjects.values()] : resultObjects
+  ) as ResultType;
 }
 function resolveCustomObject(
   subject: Shape,
@@ -70,7 +79,7 @@ function resolveCustomObject(
 export function resolveLocalEndResults<S extends LinkedQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
-  queryPaths?: LinkedQueryObject | ComponentQueryPath[],
+  queryPaths?: SelectQuery<any> | ComponentQueryPath[],
 ): QueryResponseToEndValues<GetQueryResponseType<S>> {
   queryPaths = queryPaths || query.getQueryPaths();
   subject = subject || (query.shape as any).getLocalInstances();
@@ -401,14 +410,17 @@ function resolveQuerySteps(
     throw new Error('Unknown subject type: ' + typeof subject);
   }
 }
+function shapeToResultObject(subject: Shape) {
+  return {
+    id: subject.uri,
+    shape: subject,
+  };
+}
 function shapeSetToResultObjects(subject: ShapeSet) {
   //create the start of the result JS object for each subject node
   let resultObjects: NodeResultMap = new CoreMap();
   subject.forEach((sub) => {
-    resultObjects.set(sub.uri, {
-      id: sub.uri,
-      shape: sub,
-    });
+    resultObjects.set(sub.uri, shapeToResultObject(sub));
   });
   return resultObjects;
 }

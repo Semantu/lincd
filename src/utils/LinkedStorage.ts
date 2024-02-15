@@ -868,7 +868,7 @@ export abstract class LinkedStorage {
     dataRequest: LinkedDataRequest,
   ): boolean | Promise<any> {
     //TODO fix loading for queries instead of the old property requests
-    return true;
+    return false;
 
     if (!this.nodeToPropertyRequests.has(node)) {
       return false;

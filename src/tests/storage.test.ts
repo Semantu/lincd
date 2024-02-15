@@ -16,7 +16,7 @@ import {
   LinkedDataRequest,
 } from '../interfaces/Component';
 import {PropertyShape} from '../shapes/SHACL';
-import {LinkedQueryObject} from '../utils/LinkedQuery';
+import {LinkedQueryObject, SelectQuery} from '../utils/LinkedQuery';
 import {resolveLocal} from '../utils/LocalQueryResolver';
 
 export class InMemoryStore extends Shape implements IQuadStore {
@@ -179,7 +179,7 @@ export class InMemoryStore extends Shape implements IQuadStore {
   }
 
   query<ResultType = any>(
-    query: LinkedQueryObject,
+    query: SelectQuery<any>,
     shapeClass: typeof Shape,
   ): Promise<ResultType> {
     return Promise.resolve(resolveLocal(query, shapeClass)).catch((e) => {
@@ -301,7 +301,7 @@ export class TestStore implements IQuadStore {
   }
 
   query<ResultType>(
-    query: LinkedQueryObject,
+    query: SelectQuery<any>,
     shapeClass: Shape | typeof Shape,
   ): Promise<ResultType> {
     return null;

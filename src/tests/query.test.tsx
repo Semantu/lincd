@@ -6,8 +6,9 @@ import {linkedComponent, linkedShape} from '../package';
 import {InMemoryStore} from './storage.test';
 import {QuadSet} from '../collections/QuadSet';
 import {LinkedStorage} from '../utils/LinkedStorage';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import renderer from 'react-test-renderer';
+import {render, waitFor} from '@testing-library/react';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -697,17 +698,24 @@ describe('query tests', () => {
   //   expect(subResult[0].friends[0].hasOwnProperty('hobby')).toBe(true);
   //   expect(subResult[0].friends[0].name).toBe('Moa');
   // });
-  test('component with single property query', () => {
+
+  test('component with single property query', async () => {
     const Component = linkedComponent<Person>(
       Person.query((p) => p.name),
       ({name}) => {
         return <div>{name}</div>;
       },
     );
-    let component = renderer.create(<Component of={p1} />);
-    let tree = component.toJSON();
-    expect(tree.children[0]).toBe('Semmy');
-    expect(tree).toMatchSnapshot();
+    let component = render(<Component of={p1} />);
+
+    await waitFor(() => expect(component.getByText('Semmy')).toBeTruthy(), {
+      timeout: 5000,
+      interval: 50,
+    });
+    console.log(component.container.children);
+    // let tree = component.toJSON();
+    // expect(tree.children[0]).toBe('Semmy');
+    // expect(tree).toMatchSnapshot();
   });
   /*
   test('component with where query', () => {

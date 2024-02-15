@@ -33,6 +33,7 @@
     "email": "rene@semantu.com"
   },
   "dependencies": {
+    "@testing-library/react": "^14.2.1",
     "@types/node": "^18.11.10",
     "@types/react": "^18.0.17",
     "@types/react-dom": "^18.0.6",

@@ -55,6 +55,7 @@ import {
   QueryResponseToResultType,
   QueryShape,
   QueryStep,
+  SelectQuery,
 } from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
 import {resolveLocalEndResults} from './LocalQueryResolver';
@@ -430,6 +431,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
           LinkedComponentInputProps<ShapeType> &
           BoundComponentProps
       >((props, ref) => {
+        let [queryResult, setQueryResult] = useState<any>(undefined);
+
         //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
         let linkedProps = getLinkedComponentProps<ShapeType, DeclaredProps>(
           props,
@@ -438,6 +441,9 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         //if a ref was given, we need to manually add it back to the props, React will extract it and provide is as second argument to React.forwardRef in the linked component itself
         if (ref) {
           linkedProps['ref'] = ref;
+        }
+        if (queryResult) {
+          linkedProps = Object.assign(linkedProps, queryResult);
         }
 
         if (!linkedProps.source) {
@@ -449,7 +455,6 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         //if we're not using any storage in this LINCD app, don't do any data loading
         let usingStorage = LinkedStorage.isInitialised();
 
-        let [isLoaded, setIsLoaded] = useState<any>(undefined);
         useEffect(() => {
           //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
           if (!props.isBound && usingStorage) {
@@ -460,35 +465,46 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             //if these properties were requested before and have finished loading
             if (cachedRequest === true) {
               //then we can set state to loaded straight away
-              setIsLoaded(true);
+              setQueryResult(true);
             } else if (cachedRequest === false) {
               //if we did not request all these properties before then we continue to
               // load the required PropertyShapes from storage for this specific source
-              LinkedStorage.loadShape(linkedProps.source, dataRequest).then(
-                (quads) => {
-                  //set the 'isLoaded' state to true, so we don't need to even check cache again.
-                  setIsLoaded(true);
-                },
-              );
+              // LinkedStorage.loadShape(linkedProps.source, dataRequest).then(
+              //   (quads) => {
+              //     //set the 'isLoaded' state to true, so we don't need to even check cache again.
+              //     setIsLoaded(true);
+              //   },
+              // );
+
+              LinkedStorage.query(
+                (requiredData as LinkedQuery<any>).applyTo(linkedProps.source),
+              ).then((result) => {
+                //store the result to state, this also means we don't need to check cache again.
+                setQueryResult(result);
+              });
             } else {
               //if some requiredProperties are still being loaded
               //cachedResult will be a promise (there is no other return type)
               //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
               //wait for that loading to be completed and then update the state
               cachedRequest.then(() => {
-                setIsLoaded(true);
+                setQueryResult(true);
               });
             }
           }
         }, [linkedProps.source.node, props.isBound]);
 
         //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
-        let dataIsLoaded = props.isBound || isLoaded || !usingStorage;
+        let dataIsLoaded = props.isBound || queryResult || !usingStorage;
 
         //But for the first render, when the useEffect has not run yet,
         //and no this is not a bound component (so it's a top level linkedComponent),
         //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-        if (!props.isBound && typeof isLoaded === 'undefined' && usingStorage) {
+        if (
+          !props.isBound &&
+          typeof queryResult === 'undefined' &&
+          usingStorage
+        ) {
           //only continue to render if the result is true (all required data loaded),
           // if it's a promise we already deal with that in useEffect()
           dataIsLoaded =
@@ -502,12 +518,14 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         // then this check can be turned off. We can possibly do this with RDFA (rdf in html), then we can probably parse the data from the html, whilst rendering it on the server in one go.
         if (dataIsLoaded && typeof window !== 'undefined') {
           if (dataRequest) {
-            linkedProps.linkedData = resolveLinkedQuery(
-              requiredData as LinkedQuery<any>,
-              linkedProps.source,
-              dataRequest,
-              pureDataRequest,
-            );
+            //TODO: find a way with the new LinkedQuery setup to send the data to the frontend for initial page loads AND then retreive that data here
+            // const dataResult = await resolveLinkedQuery(
+            //   requiredData as LinkedQuery<any>,
+            //   // linkedProps.source,
+            //   // dataRequest,
+            //   // pureDataRequest,
+            // );
+            // linkedProps = {...linkedProps, dataResult};
           }
           //if the component used a Shape.requestSet() data declaration function
           // if (dataDeclaration) {
@@ -673,9 +691,9 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         if (dataRequest) {
           linkedProps.linkedData = resolveLinkedQuery(
             requiredData as LinkedQuery<any>,
-            linkedProps.sources,
-            dataRequest,
-            pureDataRequest,
+            // linkedProps.sources,
+            // dataRequest,
+            // pureDataRequest,
           );
         }
 
@@ -949,7 +967,7 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
   setComponent: boolean = false,
 ) {
   let shapeClass: typeof Shape;
-  let dataRequest: LinkedDataRequest | ComponentQueryPath[];
+  let dataRequest: LinkedDataRequest | SelectQuery<ShapeType>;
   let tracedDataResponse: TransformedLinkedDataResponse;
   let dataDeclaration:
     | LinkedDataSetDeclaration<ShapeType>
@@ -967,14 +985,14 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
     // dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : [];
   } else if (requiredData instanceof LinkedQuery) {
     // [dataRequest, tracedDataResponse] = requiredData.toQueryObject();
-    dataRequest = requiredData.getQueryPaths() as QueryPath[];
+    dataRequest = requiredData.getQueryPaths() as SelectQuery<ShapeType>;
     shapeClass = requiredData.shape as any;
     dataDeclaration = {
       request: dataRequest as any,
       shape: shapeClass,
     };
     //TODO: review this if the component uses custom keys, should it be
-    pureDataRequest = removeBoundComponents(dataRequest as QueryPath[]);
+    pureDataRequest = removeBoundComponents(dataRequest.select as QueryPath[]);
   } else {
     //requiredData is a LinkedDataDeclaration or a LinkedDataSetDeclaration
     dataDeclaration = requiredData as
@@ -1016,14 +1034,14 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
   ];
 }
 
-function resolveLinkedQuery(
-  linkedQuery: LinkedQuery<any>,
-  source: Shape | ShapeSet,
-  dataRequest: ComponentQueryPath[],
-  pureDataRequest: QueryPath[],
-) {
-  return resolveLocalEndResults(linkedQuery, source, dataRequest);
-  // let linkedData = Storage.query(genericQuery, source.shape);
+function resolveLinkedQuery<Resp>(
+  linkedQuery: LinkedQuery<any, Resp>,
+  // source: Shape | ShapeSet,
+  // dataRequest: ComponentQueryPath[],
+  // pureDataRequest: QueryPath[],
+): Promise<QueryResponseToResultType<Resp>> {
+  // return resolveLocalEndResults(linkedQuery, source, dataRequest);
+  return LinkedStorage.query(linkedQuery);
   // return linkedData;
 }
 
