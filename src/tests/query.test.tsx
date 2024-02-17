@@ -9,6 +9,12 @@ import {LinkedStorage} from '../utils/LinkedStorage';
 import React, {useEffect, useState} from 'react';
 import renderer from 'react-test-renderer';
 import {render, waitFor} from '@testing-library/react';
+import {
+  GetQueryResponseType,
+  LinkedQuery,
+  QueryProps,
+  QueryResponseToResultType,
+} from '../utils/LinkedQuery';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -698,7 +704,6 @@ describe('query tests', () => {
   //   expect(subResult[0].friends[0].hasOwnProperty('hobby')).toBe(true);
   //   expect(subResult[0].friends[0].name).toBe('Moa');
   // });
-
   test('component with single property query', async () => {
     const Component = linkedComponent<Person>(
       Person.query((p) => p.name),
@@ -712,24 +717,74 @@ describe('query tests', () => {
       timeout: 5000,
       interval: 50,
     });
-    console.log(component.container.children);
+    // console.log(component.container.children);
     // let tree = component.toJSON();
     // expect(tree.children[0]).toBe('Semmy');
     // expect(tree).toMatchSnapshot();
   });
-  /*
-  test('component with where query', () => {
-    const Component2 = linkedComponent<Person>(
-      Person.select((p) => [p.friends.where((f) => f.name.equals('Moa')).name]),
-      ({linkedData: [name]}) => {
-        return <div>{name}</div>;
+
+  test('component with where query', async () => {
+    const query = Person.query(
+      (p) => p.friends.where((f) => f.name.equals('Jinx')).name,
+    );
+    // QResult<Person, {friends: QResult<Person, {name: string}>[]}>[]
+    //These types should be identical
+    const query1Result = await query.exec();
+    const query2Result = await Person.select(
+      (p) => p.friends.where((f) => f.name.equals('Jinx')).name,
+    );
+
+    const Component2 = linkedComponent(
+      query,
+      ({friends, shape, id, source}) => {
+        // unknown extends LinkedQuery<any, infer Response, infer Source> ? GetNestedQueryResultType<Response, Source, null> : (unknown extends Array<infer Type> ? UnionToIntersection<QueryResponseToResultType<Type>> : (unknown extends Evaluation ? boolean : (unknown extends Object ? QResult<null, ObjectToPlainResult<unknown>> : unknown)))
+        let s = source;
+        let f = friends;
+        let shp = shape;
+        let i = id;
+
+        return <div>{friends[0].name}</div>;
       },
     );
-    let component = renderer.create(<Component2 of={p1} />);
-    let tree = component.toJSON();
-    expect(tree.children[0]).toBe('Moa');
-    expect(tree).toMatchSnapshot();
+    let component = render(<Component2 of={p1} />);
+    await waitFor(() => expect(component.getByText('Jinx')).toBeTruthy());
+
+    // let component = renderer.create(<Component2 of={p1} />);
+    // let tree = component.toJSON();
+    // expect(tree.children[0]).toBe('Jinx');
+    // expect(tree).toMatchSnapshot();
   });
+  test('component with custom props', async () => {
+    //Typescript has some limitations, which mean we cannot infer the type of the query AND define custom props at the same time
+    //https://stackoverflow.com/questions/60377365/typescript-infer-type-of-generic-after-optional-first-generic/60378308#60378308
+
+    //because of this, whenever you need props from a query AND custom props,
+    //you need to define the query first, and then use the QueryProps type to define the props of the component:
+    const query = Person.query(
+      (p) => p.friends.where((f) => f.name.equals('Jinx')).name,
+    );
+
+    const ComponentWithCustomProps = linkedComponent<
+      //you NEED TO extend custom properties with & QueryProps<typeof query> to make sure that the types of `friends` and `source` are known
+      {custom1: boolean} & QueryProps<typeof query>
+    >(query, ({friends, shape, id, custom1, source}) => {
+      // unknown extends LinkedQuery<any, infer Response, infer Source> ? GetNestedQueryResultType<Response, Source, null> : (unknown extends Array<infer Type> ? UnionToIntersection<QueryResponseToResultType<Type>> : (unknown extends Evaluation ? boolean : (unknown extends Object ? QResult<null, ObjectToPlainResult<unknown>> : unknown)))
+      friends.length;
+      friends[0].name;
+      friends[0].id;
+      return (
+        <div>
+          <span>{friends[0].name}</span>
+          <span>{custom1.toString()}</span>
+        </div>
+      );
+    });
+
+    let component = render(<ComponentWithCustomProps of={p1} custom1={true} />);
+    await waitFor(() => expect(component.getByText('Jinx')).toBeTruthy());
+    await waitFor(() => expect(component.getByText('true')).toBeTruthy());
+  });
+  /*
   test('component requesting data from child components', () => {
     const Component3 = linkedComponent<Person>(
       Person.select((p) => [p.name]),

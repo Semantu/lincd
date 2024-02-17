@@ -16,7 +16,7 @@ import {
   LinkedDataRequest,
 } from '../interfaces/Component';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass';
-import {LinkedQuery} from './LinkedQuery';
+import {LinkedQuery, QueryResponseToResultType} from './LinkedQuery';
 import {node} from 'lincd-shacl/lib/ontologies/shacl';
 
 export abstract class LinkedStorage {
@@ -691,11 +691,11 @@ export abstract class LinkedStorage {
     });
   }
 
-  static query<ResultType = any>(
+  static query<ResultType>(
     // queryObject: LinkedDataGenericQuery,
-    query: LinkedQuery<any>,
+    query: LinkedQuery<any, ResultType>,
     // shapeClass: Shape | typeof Shape,
-  ): Promise<ResultType> {
+  ): Promise<QueryResponseToResultType<ResultType>> {
     // query.shape;
     // let quadStore: IQuadStore;
     // if (query.shape instanceof Shape) {

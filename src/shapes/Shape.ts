@@ -40,6 +40,7 @@ import {
   IStorageController,
   staticImplements,
 } from '../interfaces/IStorageController';
+import {resolve} from 'eslint-import-resolver-typescript';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -259,9 +260,9 @@ export abstract class Shape implements IShape {
   }
 
   static query<S extends Shape, R = unknown>(
-    this: typeof Shape,
+    this: {new (node: Node): S; targetClass: any},
     queryFn: QueryBuildFn<S, R>,
-  ): LinkedQuery<S> {
+  ): LinkedQuery<S, R> {
     const query = new LinkedQuery<S>(this as any, queryFn);
     return query;
   }
@@ -274,21 +275,22 @@ export abstract class Shape implements IShape {
   ): Promise<
     QueryResponseToResultType<GetQueryResponseType<LinkedQuery<T, S>>, T>[]
   > {
-    let resolve, reject;
-    let p = new Promise((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
+    // let resolve, reject;
+    // let p = new Promise((res, rej) => {
+    //   resolve = res;
+    //   reject = rej;
+    // });
     const query = new LinkedQuery<T, S>(this as any, selectFn);
     type ResultType = QueryResponseToResultType<
       GetQueryResponseType<LinkedQuery<T, S>>
     >[];
     // LinkedStorage.query(query).then((result) => {
-    StorageHelper.query<ResultType>(query).then((result) => {
-      resolve(result);
-    });
+    return StorageHelper.query<ResultType>(query);
+    //.then((result) => {
+    //  resolve(result);
+    //});
     // return query;
-    return p as Promise<ResultType>;
+    //return p as Promise<ResultType>;
   }
 
   /**

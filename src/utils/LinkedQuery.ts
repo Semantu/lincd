@@ -1,4 +1,4 @@
-import {Shape} from '../shapes/Shape';
+import {Shape, StorageHelper} from '../shapes/Shape';
 import {TestNode} from './TraceShape';
 import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
@@ -163,6 +163,13 @@ export type QResult<Source, Object = {}> = Object & {
   id: string;
   shape: Source;
 };
+
+export type QueryProps<Q extends LinkedQuery<any>> = Q extends LinkedQuery<
+  infer ShapeType,
+  infer ResponseType
+>
+  ? QueryResponseToResultType<ResponseType, ShapeType>
+  : never;
 
 /**
  * MAIN ENTRY to convert the response of a query into a result object
@@ -986,6 +993,10 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
 
   where(validation: WhereClause<T>): this {
     throw Error('Not implemented');
+  }
+
+  exec() {
+    return StorageHelper.query(this);
   }
 
   /**

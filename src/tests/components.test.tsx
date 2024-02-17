@@ -1,13 +1,13 @@
-// import {Buffer} from 'buffer';
-// import React from 'react';
-// import {act} from 'react-dom/test-utils';
-// import {linkedComponent, linkedSetComponent, linkedShape} from '../package';
-// import {Shape} from '../shapes/Shape';
-// import {afterEach, beforeEach, describe, expect} from '@jest/globals';
-// import {Literal, NamedNode} from '../models';
-// import {literalProperty} from '../utils/ShapeDecorators';
-// import {createNameSpace} from '../utils/NameSpace';
-// import {createRoot} from 'react-dom/client';
+import {Buffer} from 'buffer';
+import React from 'react';
+import {act} from 'react-dom/test-utils';
+import {linkedComponent, linkedSetComponent, linkedShape} from '../package';
+import {Shape} from '../shapes/Shape';
+import {it, afterEach, beforeEach, describe, expect} from '@jest/globals';
+import {Literal, NamedNode} from '../models';
+import {literalProperty} from '../utils/ShapeDecorators';
+import {createNameSpace} from '../utils/NameSpace';
+import {createRoot} from 'react-dom/client';
 //
 // let foaf = createNameSpace('http://xmlns.com/foaf/0.1/');
 //
@@ -80,7 +80,7 @@
 //     name: person.name,
 //     depiction: person.depiction,
 //   })),
-//   ({linkedData: {name, depiction}}) => {
+//   ({source, linkedData: {name, depiction}}) => {
 //     return (
 //       <div>
 //         <span>{name}</span>
@@ -247,8 +247,6 @@
 //     expect(container.textContent).toBe(person2.name + person3.name);
 //   });
 // });
-import {act} from 'react-dom/test-utils';
-import {it, describe, expect} from '@jest/globals';
 
 describe('component tests', () => {
   it('renders a SetComponent with controlled children by using Shape.requestForEachInSet()', async () => {
