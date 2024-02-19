@@ -370,6 +370,13 @@ export type GetQueryResponseType<Q> = Q extends LinkedQuery<
   ? ResponseType
   : never;
 
+export type GetQueryShapeType<Q> = Q extends LinkedQuery<
+  infer ShapeType,
+  infer ResponseType
+>
+  ? ShapeType
+  : never;
+
 export type QueryResponseToEndValues<T> = T extends Count
   ? number[]
   : T extends LinkedQuery<any, infer Response>
