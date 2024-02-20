@@ -4,8 +4,14 @@ import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
 import {shacl} from '../ontologies/shacl';
 import {CoreSet} from '../collections/CoreSet';
-import {BoundComponent} from '../interfaces/Component';
+import {
+  BoundComponentFactory,
+  LinkedFunctionalComponent,
+} from '../interfaces/Component';
 import {CoreMap} from '../collections/CoreMap';
+import React from 'react';
+import {property} from 'lincd-shacl/lib/ontologies/shacl';
+import {Property} from 'lincd-rdf/lib/shapes/Property';
 
 /**
  * ###################################
@@ -87,7 +93,11 @@ export enum WhereMethods {
 /**
  * Maps all the return types of get/set methods of a Shape and maps their return types to QueryBuilderObjects
  */
-export type QueryShapeProps<T> = {
+export type QueryShapeProps<
+  T,
+  Source,
+  Property extends string | number | symbol = any,
+> = {
   [P in keyof T]: ToQueryBuilderObject<T[P], T, P>;
 };
 
@@ -116,7 +126,11 @@ export type QShapeSet<
 /**
  * Shapes are converted to QueryShapes, but also inherit all the properties of the shape (with converted result types)
  */
-export type QShape<T extends Shape> = QueryShape<T> & QueryShapeProps<T>;
+export type QShape<
+  T extends Shape,
+  Source,
+  Property extends string | number | symbol = any,
+> = QueryShape<T, Source, Property> & QueryShapeProps<T, Source, Property>;
 
 export type ToQueryBuilderObject<
   T,
@@ -125,7 +139,7 @@ export type ToQueryBuilderObject<
 > = T extends ShapeSet<infer ShapeSetType>
   ? QShapeSet<ShapeSetType, Source, Property>
   : T extends Shape
-  ? QShape<T>
+  ? QShape<T, Source, Property>
   : T extends string
   ? QueryString<Source, Property>
   : T extends number
@@ -142,14 +156,12 @@ export type WhereEvaluationPath = {
   args: any[];
 };
 
-export type ComponentQueryPath =
-  | (QueryStep | SubQueryPaths | BoundComponentQueryStep)[]
-  | WherePath;
+export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
-export interface BoundComponentQueryStep {
-  component: BoundComponent<any, any>;
-  // path: LinkedQueryObject;
-}
+// export interface BoundComponentQueryStep {
+//   component: BoundComponent<any, any>;
+//   // path: LinkedQueryObject;
+// }
 
 /**
  * ###################################
@@ -187,6 +199,8 @@ export type QueryResponseToResultType<
   ? UnionToIntersection<QueryResponseToResultType<Type>>
   : T extends Evaluation
   ? boolean
+  : T extends BoundComponentFactory<any, any>
+  ? true
   : T extends Object
   ? QResult<QShapeType, ObjectToPlainResult<T>>
   : T;
@@ -208,8 +222,11 @@ export type GetQueryObjectResultType<
   ? CountToQueryResult<GetSource<Source, SourceOverwrite>>
   : QV extends QueryNumber<infer Source, infer Property>
   ? CreateQResult<GetSource<Source, SourceOverwrite>, number, Property>
-  : QV extends QueryShape<infer ShapeType>
+  : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
   ? CreateQResult<ShapeType>
+  : //   CreateQResult<Source, ShapeType, Property>
+  QV extends BoundComponent<infer Source, infer ShapeType>
+  ? GetShapesResultTypeWithSource<Source>
   : QV extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
   ? CreateShapeSetQResult<
       ShapeType,
@@ -219,7 +236,17 @@ export type GetQueryObjectResultType<
     >
   : QV extends Array<infer Type>
   ? UnionToIntersection<QueryResponseToResultType<Type>>
-  : any;
+  : never;
+
+export type GetShapesResultTypeWithSource<Source> = Source extends QueryShape<
+  infer ShapeType,
+  infer Source,
+  infer Property
+>
+  ? CreateQResult<Source, ShapeType, Property>
+  : Source extends QueryShapeSet<infer ShapeType, infer Source, infer Property>
+  ? CreateShapeSetQResult<ShapeType, Source, Property>
+  : never;
 
 type GetQueryObjectProperty<T> = T extends QueryBuilderObject<
   any,
@@ -425,6 +452,12 @@ export class QueryBuilderObject<
       property: this.property,
       where: this.wherePath,
     };
+  }
+
+  preloadFor<ShapeType extends Shape>(
+    component: LinkedFunctionalComponent<any, ShapeType>,
+  ): BoundComponent<this, ShapeType> {
+    return new BoundComponent<this, ShapeType>(component, this);
   }
 
   /**
@@ -741,7 +774,11 @@ export class QueryShapeSet<
   }
 }
 
-export class QueryShape<S extends Shape = Shape> extends QueryBuilderObject<S> {
+export class QueryShape<
+  S extends Shape = Shape,
+  Source = any,
+  Property extends string | number | symbol = any,
+> extends QueryBuilderObject<S, Source, Property> {
   private proxy;
   public isSource: boolean;
 
@@ -815,6 +852,63 @@ export class QueryShape<S extends Shape = Shape> extends QueryBuilderObject<S> {
       },
     });
     return queryShape.proxy;
+  }
+}
+
+export class BoundComponent<
+  Source extends QueryBuilderObject,
+  ShapeType extends Shape,
+> extends QueryBuilderObject {
+  constructor(
+    public originalValue: LinkedFunctionalComponent<any, ShapeType>,
+    public source: Source, // property?: PropertyShape, // subject?: QueryShape<any> | QueryShapeSet<any>,
+  ) {
+    super(null, null);
+  }
+  create(source: Shape) {
+    let boundComponent: LinkedFunctionalComponent<any, ShapeType> = (props) => {
+      //TODO: use propertyShapes for RDFa
+
+      //add this result as the source of the bound child component
+      let newProps = {...props};
+      newProps['of'] = source; // as Node | ShapeType;
+
+      //let the LinkedComponent know that it was bound,
+      //that means it can expect its data to have been loaded by its parent
+      newProps['isBound'] = true;
+
+      //render the child component (which is 'this')
+      return React.createElement(this.originalValue, newProps);
+    };
+    return boundComponent;
+  }
+  getPropertyPath() {
+    //get the path that is passed to Component.of(some.path.here)
+    let sourcePath: ComponentQueryPath = this.source.getPropertyPath();
+    //add the path steps that this component itself requires (so we are combining the data request of 2 components)
+    // let childRequests = [];
+    // this.dataRequest.forEach((queryStep) => {
+    //   childRequests.push(queryStep);
+    // });
+
+    let compSelectQuery = this.originalValue.query.select;
+
+    if (Array.isArray(sourcePath)) {
+      //add the path steps that this component itself requires (so we are combining the data request of 2 components)
+      //if this component only requests one path, then add it directly so that the query object stays flat
+      sourcePath.push(
+        compSelectQuery.length === 1
+          ? compSelectQuery[0].length === 1
+            ? compSelectQuery[0][0]
+            : compSelectQuery[0]
+          : compSelectQuery,
+      );
+      // sourcePath.push({
+      // component: this,
+      // path: childRequests as any,
+      // });
+    }
+    return sourcePath as QueryPropertyPath;
   }
 }
 
@@ -1002,7 +1096,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     throw Error('Not implemented');
   }
 
-  exec() {
+  exec(): Promise<QueryResponseToResultType<ResponseType>> {
     return StorageHelper.query(this);
   }
 

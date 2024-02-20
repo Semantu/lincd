@@ -1,5 +1,4 @@
 import {
-  BoundComponentQueryStep,
   ComponentQueryPath,
   CountStep,
   CustomQueryObject,
@@ -28,6 +27,7 @@ import {Shape} from '../shapes/Shape';
 import {shacl} from '../ontologies/shacl';
 import {CoreMap} from '../collections/CoreMap';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet';
+import {result} from 'lincd-shacl/lib/ontologies/shacl';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -53,7 +53,7 @@ export function resolveLocal<ResultType>(
       resolveQueryPath(subject, queryPath, resultObjects);
     });
   } else {
-    subject.forEach((singleShape) => {
+    const r = (singleShape) =>
       resolveCustomObject(
         singleShape,
         query.select as CustomQueryObject,
@@ -61,7 +61,7 @@ export function resolveLocal<ResultType>(
           ? resultObjects.get(singleShape.uri)
           : resultObjects,
       );
-    });
+    return query.subject ? r(subject) : subject.map(r);
   }
   return (
     resultObjects instanceof Map ? [...resultObjects.values()] : resultObjects
@@ -72,9 +72,14 @@ function resolveCustomObject(
   query: CustomQueryObject,
   resultObject: QResult<any, any>,
 ) {
+  let customResult = shapeToResultObject(subject);
   for (let key of Object.getOwnPropertyNames(query as CustomQueryObject)) {
-    resultObject[key] = resolveQueryPath(subject, query[key], resultObject);
+    //wrong... we need to write the result to the resultObject
+    //can we find which key was written and take that and use the key?
+    let result = resolveQueryPath(subject, query[key]);
+    customResult[key] = result;
   }
+  return customResult;
 }
 export function resolveLocalEndResults<S extends LinkedQuery<any>>(
   query: S,
@@ -512,7 +517,7 @@ function resolveQueryPathsForShapeEndResults(
   }
 }
 function resolveQueryStepForShape(
-  queryStep: QueryStep | SubQueryPaths | BoundComponentQueryStep,
+  queryStep: QueryStep | SubQueryPaths,
   subject: Shape,
   restPath: (QueryStep | SubQueryPaths)[],
   resultObject: QResult<any, any>,
@@ -528,8 +533,8 @@ function resolveQueryStepForShape(
     return resolveCountStep(subject, queryStep as CountStep, resultObject);
   } else if ((queryStep as PropertyQueryStep).where) {
     throw new Error('Cannot filter a single shape');
-  } else if ((queryStep as BoundComponentQueryStep).component) {
-    return (queryStep as BoundComponentQueryStep).component.create(subject);
+    // } else if ((queryStep as BoundComponentQueryStep).component) {
+    //   return (queryStep as BoundComponentQueryStep).component.create(subject);
   } else if (typeof queryStep === 'object') {
     return resolveCustomObject(
       subject,
@@ -542,7 +547,7 @@ function resolveQueryStepForShape(
 }
 
 function resolveQueryStepForShapeEndResults(
-  queryStep: QueryStep | SubQueryPaths | BoundComponentQueryStep,
+  queryStep: QueryStep | SubQueryPaths,
   subject: Shape,
 ) {
   if ((queryStep as PropertyQueryStep).property) {
@@ -561,9 +566,9 @@ function resolveQueryStepForShapeEndResults(
     debugger;
     // let whereResult = resolveWhere(subject as ShapeSet, queryStep.where);
     // return whereResult;
-  } else if ((queryStep as BoundComponentQueryStep).component) {
-    return (queryStep as BoundComponentQueryStep).component.create(subject);
-    debugger;
+    // } else if ((queryStep as BoundComponentQueryStep).component) {
+    //   return (queryStep as BoundComponentQueryStep).component.create(subject);
+    //   debugger;
   } else {
     throw Error('Unknown query step: ' + queryStep.toString());
   }
@@ -581,6 +586,10 @@ function resolvePropertyStep(
   if (stepResult instanceof ShapeSet) {
     subResultObjects = shapeSetToResultObjects(stepResult);
   }
+  if (stepResult instanceof Shape) {
+    subResultObjects = shapeToResultObject(stepResult);
+  }
+
   if ((queryStep as PropertyQueryStep).where) {
     stepResult = filterResults(
       stepResult,
@@ -602,18 +611,41 @@ function resolvePropertyStep(
     //if there is more properties left, continue to fill the result object by resolving the next steps
     stepResult = resolveQuerySteps(stepResult, restPath, subResultObjects);
   }
-  if (stepResult instanceof ShapeSet) {
-    stepResult = [...subResultObjects.values()];
+  if (subResultObjects) {
+    stepResult =
+      subResultObjects instanceof Map
+        ? [...subResultObjects.values()]
+        : subResultObjects;
   }
+  // if (stepResult instanceof ShapeSet) {
+  //   stepResult = [...subResultObjects.values()];
+  // }
+  // if (stepResult instanceof Shape) {
+  //   stepResult = subResultObjects;
+  // }
 
   //get the current result object for this shape
-  let nodeResult =
-    resultObjects instanceof Map
-      ? resultObjects.get(singleShape.uri)
-      : resultObjects;
-  //write the result for this property into the result object
-  nodeResult[(queryStep as PropertyQueryStep).property.label] = stepResult;
+  if (resultObjects) {
+    let nodeResult =
+      resultObjects instanceof Map
+        ? resultObjects.get(singleShape.uri)
+        : resultObjects;
+    //write the result for this property into the result object
+    nodeResult[(queryStep as PropertyQueryStep).property.label] = stepResult;
+    return subResultObjects ? nodeResult : stepResult;
+  }
+  // nodeResult[(queryStep as PropertyQueryStep).property.label] = subResultObjects
+  //   ? subResultObjects instanceof Map
+  //     ? [...subResultObjects.values()]
+  //     : subResultObjects
+  //   : stepResult;
+  // return stepResult;
   return stepResult;
+  // resultObjects
+  //   ? resultObjects instanceof Map
+  //     ? [...resultObjects.values()]
+  //     : resultObjects
+  //   : stepResult;
 }
 
 function resolveCountStep(

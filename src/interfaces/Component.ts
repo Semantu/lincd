@@ -5,13 +5,15 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {NodeSet} from '../collections/NodeSet';
 import {ICoreIterable} from './ICoreIterable';
 import {
-  BoundComponentQueryStep,
   ComponentQueryPath,
   QueryPath,
   QueryPropertyPath,
   QueryShape,
   QueryShapeSet,
   QueryBuilderObject,
+  LinkedQuery,
+  LinkedQueryObject,
+  QResult,
 } from '../utils/LinkedQuery';
 import React from 'react';
 
@@ -61,7 +63,7 @@ export interface LinkedFunctionalComponent<P, ShapeType extends Shape = Shape>
   // of?: (source?: Node | Shape) => BoundComponentFactory<P, ShapeType>;
   of?: (source?: QueryShape<ShapeType>) => BoundComponentFactory<P, ShapeType>;
   original?: LinkableFunctionalComponent<P, ShapeType>;
-  dataRequest?: LinkedDataRequest;
+  query?: LinkedQueryObject<any>;
   setLoaded?: (source?: Shape) => void;
   shape?: typeof Shape;
 }
@@ -81,7 +83,7 @@ export interface LinkedFunctionalSetComponent<
       | ((shape: ShapeType) => LinkedDataResponse),
   ) => BoundSetComponentFactory<P, ShapeType>;
   original?: LinkableFunctionalSetComponent<P, ShapeType>;
-  dataRequest?: LinkedDataRequest;
+  query?: LinkedDataRequest;
   shape?: typeof Shape;
   setLoaded?: (source?: ShapeSet<ShapeType>) => void;
 }
@@ -191,7 +193,7 @@ export interface LinkedComponentInputProps<ShapeType extends Shape = Shape>
    * The primary data source that this component will represent.
    * Can be a Node in the graph or an instance of the Shape that this component uses
    */
-  of: Node | ShapeType;
+  of: Node | ShapeType | QResult<ShapeType>;
 }
 
 export interface BoundComponentProps {
@@ -219,6 +221,7 @@ interface LinkedComponentInputBaseProps extends React.PropsWithChildren {
 export type BoundComponentFactory<P = {}, ShapeType extends Shape = Shape> =
   | BoundFunctionalComponentFactory<P, ShapeType>
   | BoundSetComponentFactory<P, ShapeType>;
+
 export type ResponseUnit =
   | Node
   | Shape
@@ -296,9 +299,11 @@ export function removeBoundComponents(
     return request.map((queryPath: ComponentQueryPath) => {
       if (Array.isArray(queryPath)) {
         return queryPath.filter((queryStep) => {
-          if ((queryStep as BoundComponentQueryStep).component) {
-            return false;
-          }
+          // debugger;
+          //TODO: review
+          // if ((queryStep as BoundComponentQueryStep).component) {
+          //   return false;
+          // }
           return true;
         }) as QueryPath;
       } else {
@@ -312,50 +317,5 @@ export function removeBoundComponents(
     throw new Error(
       'TODO: implement support for custom query object: ' + request,
     );
-  }
-}
-
-export class BoundComponent<
-  P,
-  ShapeType extends Shape,
-> extends QueryBuilderObject {
-  constructor(
-    public originalValue: any,
-    public source, // property?: PropertyShape, // subject?: QueryShape<any> | QueryShapeSet<any>,
-  ) {
-    super(null, null);
-  }
-  create(source: Shape) {
-    let boundComponent: LinkedFunctionalComponent<P, ShapeType> = (props) => {
-      //TODO: use propertyShapes for RDFa
-
-      //add this result as the source of the bound child component
-      let newProps = {...props};
-      newProps['of'] = source; // as Node | ShapeType;
-
-      //let the LinkedComponent know that it was bound,
-      //that means it can expect its data to have been loaded by its parent
-      newProps['isBound'] = true;
-
-      //render the child component (which is 'this')
-      return React.createElement(this.originalValue, newProps);
-    };
-    return boundComponent;
-  }
-  getPropertyPath() {
-    //get the path that is passed to Component.of(some.path.here)
-    let sourcePath: ComponentQueryPath = this.source.getPropertyPath();
-    //add the path steps that this component itself requires (so we are combining the data request of 2 components)
-    // let childRequests = [];
-    // this.dataRequest.forEach((queryStep) => {
-    //   childRequests.push(queryStep);
-    // });
-    if (Array.isArray(sourcePath)) {
-      sourcePath.push({
-        component: this,
-        // path: childRequests as any,
-      } as BoundComponentQueryStep);
-    }
-    return sourcePath as QueryPropertyPath;
   }
 }

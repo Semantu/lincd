@@ -12,7 +12,6 @@ import {CoreSet} from '../collections/CoreSet';
 import {NodeSet} from '../collections/NodeSet';
 import {ShapeSet} from '../collections/ShapeSet';
 import {
-  BoundComponent,
   BoundComponentFactory,
   BoundComponentProps,
   BoundSetComponentFactory,
@@ -46,11 +45,13 @@ import {
   hasSuperClass,
 } from './ShapeClass';
 import {
-  BoundComponentQueryStep,
+  BoundComponent,
   ComponentQueryPath,
   GetQueryResponseType,
   GetQueryShapeType,
   LinkedQuery,
+  QResult,
+  QueryBuilderObject,
   QueryPath,
   QueryPropertyPath,
   QueryResponseToResultType,
@@ -420,7 +421,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     ShapeType extends Shape = GetQueryShapeType<QueryType>,
     Res = GetQueryResponseType<QueryType>,
   >(
-    requiredData: QueryType,
+    query: QueryType,
     // requiredData:
     //   | typeof Shape
     //   | LinkedDataDeclaration<ShapeType>
@@ -443,7 +444,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       tracedDataResponse,
       pureDataRequest,
     ] = processDataDeclaration<ShapeType, CustomProps>(
-      requiredData,
+      query,
       functionalComponent,
     );
 
@@ -466,8 +467,14 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         if (ref) {
           linkedProps['ref'] = ref;
         }
-        if (queryResult) {
-          linkedProps = Object.assign(linkedProps, queryResult);
+        let sourceIsQResult =
+          (props.of as QResult<any>)?.shape instanceof Shape &&
+          typeof (props.of as QResult<any>)?.id === 'string';
+        //if we have loaded the query or the source is a QResult
+        if (queryResult || sourceIsQResult) {
+          //then merge the query result (or the QResult source) directly into the props
+          //NOTE: This means all keys of the object become props of the component
+          linkedProps = Object.assign(linkedProps, queryResult || props.of);
         }
 
         if (!linkedProps.source) {
@@ -481,7 +488,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
         useEffect(() => {
           //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-          if (!props.isBound && usingStorage) {
+          if (!props.isBound && usingStorage && !sourceIsQResult) {
             let cachedRequest = LinkedStorage.isLoaded(
               linkedProps.source.node,
               dataRequest,
@@ -501,7 +508,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
               // );
 
               LinkedStorage.query(
-                (requiredData as LinkedQuery<any>).applyTo(linkedProps.source),
+                (query as LinkedQuery<any>).applyTo(linkedProps.source),
               ).then((result) => {
                 //store the result to state, this also means we don't need to check cache again.
                 setQueryResult(result);
@@ -519,7 +526,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         }, [linkedProps.source.node, props.isBound]);
 
         //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
-        let dataIsLoaded = props.isBound || queryResult || !usingStorage;
+        let dataIsLoaded =
+          props.isBound || queryResult || !usingStorage || sourceIsQResult;
 
         //But for the first render, when the useEffect has not run yet,
         //and no this is not a bound component (so it's a top level linkedComponent),
@@ -527,7 +535,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         if (
           !props.isBound &&
           typeof queryResult === 'undefined' &&
-          usingStorage
+          usingStorage &&
+          !sourceIsQResult
         ) {
           //only continue to render if the result is true (all required data loaded),
           // if it's a promise we already deal with that in useEffect()
@@ -579,7 +588,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
-    _wrappedComponent.dataRequest = dataRequest;
+    _wrappedComponent.query = dataRequest;
 
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
@@ -647,11 +656,11 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       //if this component was created with an 'as' attribute,
       //then we combine the dataRequest with the childComponent that this specific instance comes with
       let instanceDataRequest =
-        props.as &&
-        (props.as as LinkedFunctionalComponent<ShapeType>).dataRequest
+        props.as && (props.as as LinkedFunctionalComponent<ShapeType>).query
           ? [
               ...dataRequest,
-              ...(props.as as LinkedFunctionalComponent<ShapeType>).dataRequest,
+              //TODO: review, turned off in remaking queries & bound components
+              // ...(props.as as LinkedFunctionalComponent<ShapeType>).query,
             ]
           : dataRequest;
 
@@ -764,7 +773,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
-    _wrappedComponent.dataRequest = dataRequest;
+    _wrappedComponent.query = dataRequest;
 
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
@@ -1016,7 +1025,8 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
       shape: shapeClass,
     };
     //TODO: review this if the component uses custom keys, should it be
-    pureDataRequest = removeBoundComponents(dataRequest.select as QueryPath[]);
+    // pureDataRequest = removeBoundComponents(dataRequest.select as QueryPath[]);
+    pureDataRequest = dataRequest.select as QueryPath[];
   } else {
     //requiredData is a LinkedDataDeclaration or a LinkedDataSetDeclaration
     dataDeclaration = requiredData as
@@ -1202,9 +1212,10 @@ function createDataRequestObject<ShapeType extends Shape>(
 
         //then place back an object stating which property shapes were requested
         //and which subRequest need to be made for those as defined by the bound child component
-        let subRequest: LinkedDataRequest = (evaluated as BoundComponentFactory)
-          ._comp.dataRequest;
-
+        debugger;
+        // let subRequest: LinkedDataRequest = (evaluated as BoundComponentFactory)
+        //   ._comp.query;
+        let subRequest;
         if ((evaluated as BoundSetComponentFactory)._childDataRequest) {
           subRequest = subRequest.concat(
             (evaluated as BoundSetComponentFactory<any, any>)._childDataRequest,
@@ -1297,6 +1308,10 @@ function registerPackageInTree(packageName, packageExports?) {
 }
 
 function getSourceFromInputProps(props, shapeClass) {
+  //Support for QResult objects as source input (as 'of' prop)
+  if (props.of?.shape instanceof Shape && typeof props.of.id === 'string') {
+    return getSourceFromInputProps({of: props.of.shape}, shapeClass);
+  }
   return props.of instanceof Node
     ? new shapeClass(props.of)
     : //if it's a shape it needs to match the shape of the component, or extend it, if not we recreate the shape
@@ -1369,13 +1384,17 @@ export function initTree() {
   }
 }
 
-function bindComponentToData<P, ShapeType extends Shape>(
+function bindComponentToData<
+  Source extends QueryBuilderObject,
+  P,
+  ShapeType extends Shape,
+>(
   tracedDataResponse: TransformedLinkedDataResponse,
   // source: Node | Shape,
-  source: QueryShape,
+  source: Source,
   // ): BoundComponentFactory<P, ShapeType> {
-): BoundComponent<P, ShapeType> {
-  return new BoundComponent<P, ShapeType>(this, source);
+): BoundComponent<Source, ShapeType> {
+  return new BoundComponent<Source, ShapeType>(this, source);
   // return {
   //   _comp: this,
   //   _create: (propertyShapes) => {
@@ -1428,9 +1447,10 @@ function bindSetComponentToData<P, ShapeType extends Shape>(
     //if a single bound component was given
     if ((childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of) {
       //we can access its required properties directly
-      childDataRequest = (
-        childDataRequestFn as LinkedFunctionalComponent<ShapeType>
-      ).dataRequest;
+      debugger;
+      // childDataRequest = (
+      //   childDataRequestFn as LinkedFunctionalComponent<ShapeType>
+      // ).query;
     } else {
       //else, a child data request function was given as second argument of .of()
       //then create a test instance of the shape
