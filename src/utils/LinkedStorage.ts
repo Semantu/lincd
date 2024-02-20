@@ -708,7 +708,7 @@ export abstract class LinkedStorage {
     // }
     let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape);
 
-    let queryObject = query.getQueryPaths();
+    let queryObject = query.getQueryObject();
 
     return quadStore.query<ResultType>(queryObject, query.shape) as any;
   }

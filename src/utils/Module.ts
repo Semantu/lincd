@@ -1018,7 +1018,7 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
     // dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : [];
   } else if (requiredData instanceof LinkedQuery) {
     // [dataRequest, tracedDataResponse] = requiredData.toQueryObject();
-    dataRequest = requiredData.getQueryPaths() as SelectQuery<ShapeType>;
+    dataRequest = requiredData.getQueryObject();
     shapeClass = requiredData.shape as any;
     dataDeclaration = {
       request: dataRequest as any,

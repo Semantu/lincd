@@ -1100,16 +1100,20 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     return StorageHelper.query(this);
   }
 
+  getQueryObject(): SelectQuery<T> {
+    let queryPaths = this.getQueryPaths();
+    return {
+      select: queryPaths,
+      subject: this.subject,
+    } as SelectQuery<T>;
+  }
+
   /**
    * Returns an array of query paths
    * A single query can request multiple things in multiple "query paths" (For example this is using 2 paths: Shape.select(p => [p.name, p.friends.name]))
    * Each query path is returned as array of the property paths requested, with potential where clauses (together called a QueryStep)
    */
-  getQueryPaths() {
-    let query: SelectQuery<T> = {
-      select: null,
-      subject: this.subject,
-    };
+  getQueryPaths(): CustomQueryObject | QueryPath[] {
     let queryPaths: QueryPath[] = [];
     let queryObject: CustomQueryObject;
     //if the trace response is an array, then multiple paths were requested
@@ -1156,7 +1160,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     } else {
       throw Error('Unknown trace response type');
     }
-    let finalQueryPath;
+
     if (this.parentQueryPath) {
       queryPaths = (this.parentQueryPath as any[]).concat([
         queryObject || queryPaths,
@@ -1164,11 +1168,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
       //reset the variable so it doesn't get used again below
       queryObject = null;
     }
-    let selectQuery: SelectQuery<T> = {
-      select: queryObject || queryPaths,
-      subject: this.subject,
-    };
-    return selectQuery;
+    return queryObject || queryPaths;
   }
 }
 

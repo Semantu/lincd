@@ -61,30 +61,38 @@ export function resolveLocal<ResultType>(
           ? resultObjects.get(singleShape.uri)
           : resultObjects,
       );
-    return query.subject ? r(subject) : subject.map(r);
+    query.subject ? r(subject) : subject.map(r);
   }
   return (
     resultObjects instanceof Map ? [...resultObjects.values()] : resultObjects
   ) as ResultType;
 }
+
+/**
+ * resolves each key of the custom query object
+ * and writes the result to the resultObject with the same keys
+ * @param subject
+ * @param query
+ * @param resultObject
+ */
 function resolveCustomObject(
   subject: Shape,
   query: CustomQueryObject,
   resultObject: QResult<any, any>,
 ) {
-  let customResult = shapeToResultObject(subject);
+  // let customResult = shapeToResultObject(subject);
   for (let key of Object.getOwnPropertyNames(query as CustomQueryObject)) {
     //wrong... we need to write the result to the resultObject
     //can we find which key was written and take that and use the key?
     let result = resolveQueryPath(subject, query[key]);
-    customResult[key] = result;
+    resultObject[key] = result;
   }
-  return customResult;
+  return resultObject;
 }
 export function resolveLocalEndResults<S extends LinkedQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
-  queryPaths?: SelectQuery<any> | ComponentQueryPath[],
+  queryPaths?: CustomQueryObject | ComponentQueryPath[],
 ): QueryResponseToEndValues<GetQueryResponseType<S>> {
   queryPaths = queryPaths || query.getQueryPaths();
   subject = subject || (query.shape as any).getLocalInstances();
