@@ -31,6 +31,9 @@ export class EventEmitter extends EventEmitter3 {
       args,
       i;
 
+    if (listeners.fn) {
+      listeners = [listeners];
+    }
     //ignored listeners.fn
     var length = listeners.length,
       j;

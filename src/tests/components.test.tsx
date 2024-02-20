@@ -1,14 +1,15 @@
 import {Buffer} from 'buffer';
 import React from 'react';
 import {act} from 'react-dom/test-utils';
-import {linkedComponent,linkedSetComponent,linkedShape} from '../package';
+import {linkedComponent, linkedSetComponent, linkedShape} from '../package';
 import {Shape} from '../shapes/Shape';
-import {afterEach,beforeEach,expect} from '@jest/globals';
-import {Literal,NamedNode} from '../models';
+import {afterEach, beforeEach, expect} from '@jest/globals';
+import {Literal, NamedNode} from '../models';
 import {literalProperty} from '../utils/ShapeDecorators';
 import {createNameSpace} from '../utils/NameSpace';
 let foaf = createNameSpace('http://xmlns.com/foaf/0.1/');
 import {createRoot} from 'react-dom/client';
+import {it} from '@jest/globals';
 
 //these were needed to get react components to work with the testing environment. Maybe one of them can go?
 Buffer && true;
@@ -20,8 +21,7 @@ export var depiction: NamedNode = foaf('depiction');
 export var knows: NamedNode = foaf('knows');
 
 @linkedShape
-export class Person extends Shape
-{
+export class Person extends Shape {
   static targetClass: NamedNode = FoafPerson;
 
   @literalProperty({
@@ -29,59 +29,53 @@ export class Person extends Shape
     required: true,
     maxCount: 1,
   })
-  get name()
-  {
+  get name() {
     return this.getValue(name);
   }
 
-  set name(val: string)
-  {
-    this.overwrite(name,new Literal(val));
+  set name(val: string) {
+    this.overwrite(name, new Literal(val));
   }
 
   @literalProperty({
     path: depiction,
     maxCount: 1,
   })
-  get depiction()
-  {
+  get depiction() {
     return this.getValue(depiction);
   }
 
-  set depiction(val: string)
-  {
-    this.overwrite(depiction,new Literal(val));
+  set depiction(val: string) {
+    this.overwrite(depiction, new Literal(val));
   }
 
   @literalProperty({
     path: knows,
     shape: Person,
   })
-  get knows()
-  {
+  get knows() {
     return this.getAll(knows);
   }
 }
 
-
-export const Grid = linkedSetComponent(Shape,({sources,children,ChildComponent}) => {
+export const Grid = linkedSetComponent(Shape, ({sources, children, ChildComponent}) => {
   return (
     <div>
       {ChildComponent
         ? sources.map((source) => {
-          return <ChildComponent of={source} key={source.node.toString()} />;
-        })
+            return <ChildComponent of={source} key={source.node.toString()} />;
+          })
         : children}
     </div>
   );
 });
 
-export const Card = linkedComponent<Person,{}>(
+export const Card = linkedComponent<Person, {}>(
   Person.request((person) => ({
     name: person.name,
     depiction: person.depiction,
   })),
-  ({linkedData: {name,depiction}}) => {
+  ({linkedData: {name, depiction}}) => {
     return (
       <div>
         <span>{name}</span>
@@ -93,7 +87,7 @@ export const Card = linkedComponent<Person,{}>(
 
 export const PersonOverview = linkedSetComponent<Person>(
   Person.requestForEachInSet((person) => () => Card.of(person)),
-  ({sources,getLinkedData}) => {
+  ({sources, getLinkedData}) => {
     return (
       <div>
         {sources.map((source) => {
@@ -111,13 +105,13 @@ export const PersonOverview = linkedSetComponent<Person>(
 
 export const PersonOverviewWithConfigurableChildren = linkedSetComponent(
   Person,
-  ({sources,children,ChildComponent}) => {
+  ({sources, children, ChildComponent}) => {
     return (
       <div>
         {ChildComponent
           ? sources.map((source) => {
-            return <ChildComponent of={source} key={source.node.toString()} />;
-          })
+              return <ChildComponent of={source} key={source.node.toString()} />;
+            })
           : children}
       </div>
     );
@@ -126,7 +120,7 @@ export const PersonOverviewWithConfigurableChildren = linkedSetComponent(
 
 export const PersonOverviewFixedGrid = linkedSetComponent<Person>(
   Person.requestSet((persons) => ({
-    PersonGrid: () => Grid.of(persons,Card),
+    PersonGrid: () => Grid.of(persons, Card),
   })),
   ({linkedData: {PersonGrid}}) => {
     return (
@@ -139,13 +133,13 @@ export const PersonOverviewFixedGrid = linkedSetComponent<Person>(
 
 export const PersonOverviewWithChildRenderFn = linkedSetComponent<Person>(
   Person.requestSet((persons) => ({
-    PersonGrid: () => Grid.of(persons,(person) => ({Profile: () => Card.of(person)})),
+    PersonGrid: () => Grid.of(persons, (person) => ({Profile: () => Card.of(person)})),
   })),
   ({linkedData: {PersonGrid}}) => {
     return (
       <div>
         <PersonGrid>
-          {({linkedData: {Profile},...props}) => {
+          {({linkedData: {Profile}, ...props}) => {
             //with this setup we can choose to customise our child render function, add tags/props etc.
             return <Profile {...props} />;
           }}
@@ -161,8 +155,7 @@ export const PersonNetwork = linkedComponent<Person>(
     Friends: () => PersonOverview.of(person.knows),
   })),
   (props) => {
-
-    let {Card,Friends} = props.linkedData;
+    let {Card, Friends} = props.linkedData;
     return (
       <div>
         <Card />
@@ -206,34 +199,33 @@ person.depiction = 'pic';
 person2.depiction = 'pic2';
 person3.depiction = 'pic3';
 
-
-it('renders a SetComponent with controlled children by using Shape.requestForEachInSet()',async () => {
+it('renders a SetComponent with controlled children by using Shape.requestForEachInSet()', async () => {
   await act(async () => {
     root = createRoot(container).render(<PersonNetwork of={person} />);
   });
-  expect(container.textContent).toBe(`${person.name} knows ${person2.name+person3.name}`);
+  expect(container.textContent).toBe(`${person.name} knows ${person2.name + person3.name}`);
 });
-it("renders a SetComponent with controlled children using < SetComponent of={.. } />",async () => {
+it('renders a SetComponent with controlled children using < SetComponent of={.. } />', async () => {
   await act(async () => {
     root = createRoot(container).render(<PersonOverview of={person.knows} />);
   });
-  expect(container.textContent).toBe(person2.name+person3.name);
+  expect(container.textContent).toBe(person2.name + person3.name);
 });
-it("renders a SetComponent with configurable children using < SetComponent as={.. } />",async () => {
+it('renders a SetComponent with configurable children using < SetComponent as={.. } />', async () => {
   await act(async () => {
     root = createRoot(container).render(<PersonOverviewWithConfigurableChildren of={person.knows} as={Card} />);
   });
-  expect(container.textContent).toBe(person2.name+person3.name);
+  expect(container.textContent).toBe(person2.name + person3.name);
 });
-it("renders a SetComponent that passes on its sources to another SetComponent using Shape.requestSet() with SetComponent.of(source,ChildComponent)",async () => {
+it('renders a SetComponent that passes on its sources to another SetComponent using Shape.requestSet() with SetComponent.of(source,ChildComponent)', async () => {
   await act(async () => {
     root = createRoot(container).render(<PersonOverviewFixedGrid of={person.knows} />);
   });
-  expect(container.textContent).toBe(person2.name+person3.name);
+  expect(container.textContent).toBe(person2.name + person3.name);
 });
-it("renders a SetComponent that passes on its sources to another SetComponent using Shape.requestSet() with a child render function",async () => {
+it('renders a SetComponent that passes on its sources to another SetComponent using Shape.requestSet() with a child render function', async () => {
   await act(async () => {
     root = createRoot(container).render(<PersonOverviewWithChildRenderFn of={person.knows} />);
   });
-  expect(container.textContent).toBe(person2.name+person3.name);
+  expect(container.textContent).toBe(person2.name + person3.name);
 });
