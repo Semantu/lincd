@@ -2,9 +2,10 @@ import {IFileStore} from '../interfaces/IFileStore';
 
 export abstract class LinkedFileStorage {
   private static defaultStore: IFileStore;
-  
+
   static get accessURL(): string {
-    return this.defaultStore.accessURL;
+    throw new Error('Not implemented');
+    // return this.defaultStore.accessURL;
   }
 
   static getDefaultStore(): IFileStore {
