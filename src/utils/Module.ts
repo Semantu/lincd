@@ -294,16 +294,22 @@ export interface LinkedPackageObject {
    * });
    * ```
    */
-  linkedSetComponent<ShapeType extends Shape, DeclaredProps = {}>(
-    requiredData:
-      | typeof Shape
-      | LinkedDataSetDeclaration<ShapeType>
-      | LinkedQuery<ShapeType>,
+  linkedSetComponent<
+    QueryType extends LinkedQuery<any> = null,
+    CustomProps = {},
+    ShapeType extends Shape = GetQueryShapeType<QueryType>,
+    Res = GetQueryResponseType<QueryType>,
+  >(
+    requiredData: QueryType,
     functionalComponent: LinkableFunctionalSetComponent<
-      DeclaredProps,
-      ShapeType
+      CustomProps, //this maps all the keys of the result object to props //the result of a query is always an object.
+      ShapeType,
+      QueryResponseToResultType<
+        GetQueryResponseType<LinkedQuery<ShapeType, Res>>,
+        ShapeType
+      >[]
     >,
-  ): LinkedFunctionalSetComponent<DeclaredProps, ShapeType>;
+  ): LinkedFunctionalSetComponent<CustomProps, ShapeType>;
 
   /**
    * Register a file (a javascript module) and all its exported objects.
@@ -467,11 +473,15 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         if (ref) {
           linkedProps['ref'] = ref;
         }
-        let sourceIsQResult =
+        //check if the given source is a QResult, and not just that, but also if its structure
+        //matches the query of this component. (if not, it could be sent as the source but the parent query did not preload the data of this component)
+        let sourceIsValidQResult =
           (props.of as QResult<any>)?.shape instanceof Shape &&
-          typeof (props.of as QResult<any>)?.id === 'string';
+          typeof (props.of as QResult<any>)?.id === 'string' &&
+          query.isValidResult(props.of as QResult<any>);
+
         //if we have loaded the query or the source is a QResult
-        if (queryResult || sourceIsQResult) {
+        if (queryResult || sourceIsValidQResult) {
           //then merge the query result (or the QResult source) directly into the props
           //NOTE: This means all keys of the object become props of the component
           linkedProps = Object.assign(linkedProps, queryResult || props.of);
@@ -488,7 +498,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
         useEffect(() => {
           //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
-          if (!props.isBound && usingStorage && !sourceIsQResult) {
+          if (!props.isBound && usingStorage && !sourceIsValidQResult) {
             let cachedRequest = LinkedStorage.isLoaded(
               linkedProps.source.node,
               dataRequest,
@@ -527,7 +537,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
         //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
         let dataIsLoaded =
-          props.isBound || queryResult || !usingStorage || sourceIsQResult;
+          props.isBound || queryResult || !usingStorage || sourceIsValidQResult;
 
         //But for the first render, when the useEffect has not run yet,
         //and no this is not a bound component (so it's a top level linkedComponent),
@@ -536,7 +546,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
           !props.isBound &&
           typeof queryResult === 'undefined' &&
           usingStorage &&
-          !sourceIsQResult
+          !sourceIsValidQResult
         ) {
           //only continue to render if the result is true (all required data loaded),
           // if it's a promise we already deal with that in useEffect()
@@ -609,21 +619,30 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     return _wrappedComponent;
   }
 
-  function linkedSetComponent<ShapeType extends Shape, DeclaredProps = {}>(
-    requiredData: typeof Shape | LinkedDataSetDeclaration<ShapeType>,
+  function linkedSetComponent<
+    QueryType extends LinkedQuery<any> = null,
+    CustomProps = {},
+    ShapeType extends Shape = GetQueryShapeType<QueryType>,
+    Res = GetQueryResponseType<QueryType>,
+  >(
+    query: QueryType,
     functionalComponent: LinkableFunctionalSetComponent<
-      DeclaredProps,
-      ShapeType
+      CustomProps, //this maps all the keys of the result object to props //the result of a query is always an object.
+      ShapeType,
+      QueryResponseToResultType<
+        GetQueryResponseType<LinkedQuery<ShapeType, Res>>,
+        ShapeType
+      >[]
     >,
-  ): LinkedFunctionalSetComponent<DeclaredProps, ShapeType> {
+  ): LinkedFunctionalSetComponent<CustomProps, ShapeType> {
     let [
       shapeClass,
       dataRequest,
       dataDeclaration,
       tracedDataResponse,
       pureDataRequest,
-    ] = processDataDeclaration<ShapeType, DeclaredProps>(
-      requiredData,
+    ] = processDataDeclaration<ShapeType, CustomProps>(
+      query,
       functionalComponent,
       true,
     );
@@ -633,19 +652,24 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
     //create a new functional component which wraps the original
     let _wrappedComponent: LinkedFunctionalSetComponent<
-      DeclaredProps,
+      CustomProps,
       ShapeType
     > = (
-      props: DeclaredProps &
+      props: CustomProps &
         LinkedSetComponentInputProps<ShapeType> &
         BoundComponentProps,
     ) => {
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
-      let linkedProps = getLinkedSetComponentProps<ShapeType, DeclaredProps>(
+      let linkedProps = getLinkedSetComponentProps<ShapeType, CustomProps>(
         props,
         shapeClass,
         functionalComponent,
       );
+
+      //if a ref was given, we need to manually add it back to the props, React will extract it and provide is as second argument to React.forwardRef in the linked component itself
+      // if (ref) {
+      //   linkedProps['ref'] = ref;
+      // }
 
       //if this component was created with an 'as' attribute (so <SetComponent of={sources} as={ChildComponent} />
       if (props.as) {
@@ -723,7 +747,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       if (dataIsLoaded) {
         if (dataRequest) {
           linkedProps.linkedData = resolveLinkedQuery(
-            requiredData as LinkedQuery<any>,
+            query as LinkedQuery<any>,
             // linkedProps.sources,
             // dataRequest,
             // pureDataRequest,
@@ -1046,9 +1070,8 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
     //if then also dataDeclaration.setRequest is defined, then the SetComponent used Shape.requestSet()
     //and its LinkedDataRequestFn expects a set of shape instances
     //otherwise (also for Shape.requestForEachInSet) it expects a single shape instance
-    let provideSetToDataRequestFn =
-      setComponent &&
-      (dataDeclaration as LinkedDataSetDeclaration<ShapeType>).setRequest;
+    let provideSetToDataRequestFn = setComponent;
+    //&& (dataDeclaration as LinkedDataSetDeclaration<ShapeType>).setRequest;
     let dummySet = provideSetToDataRequestFn
       ? new ShapeSet([dummyInstance])
       : dummyInstance;

@@ -95,10 +95,13 @@ export type LinkableFunctionalComponent<
 export type LinkableFunctionalSetComponent<
   P,
   ShapeType extends Shape = Shape,
-> = React.FC<P & LinkedSetComponentProps<ShapeType>>;
+  DataResultType = any,
+> = React.FC<LinkedSetComponentProps<ShapeType, DataResultType> & P>;
 
-export interface LinkedSetComponentProps<ShapeType extends Shape>
-  extends LinkedComponentBaseProps {
+export interface LinkedSetComponentProps<
+  ShapeType extends Shape,
+  DataResultType = any,
+> extends LinkedComponentBaseProps<DataResultType> {
   /**
    * An instance of the Shape that this component is linked to.
    * Users of this component can provide this shape with the property of: of={nodeOrShapeInstance}
@@ -166,7 +169,8 @@ export interface LinkedComponentProps<ShapeType extends Shape>
   source: ShapeType;
 }
 
-interface LinkedComponentBaseProps extends React.PropsWithChildren {
+interface LinkedComponentBaseProps<DataResultType = any>
+  extends React.PropsWithChildren {
   /**
    * Then linkedData will be the result of the data request, if defined.
    * linkedData will either be an array or an object, matching the function defined in this very component
@@ -174,7 +178,7 @@ interface LinkedComponentBaseProps extends React.PropsWithChildren {
    * e.g: linkedComponent(Shape.request((shapeInstance) => ...)) then linkedData is defined.
    * If simply a Shape class was given as first parameter, only source will be defined, and linkedData will be undefined.
    */
-  linkedData?: any;
+  linkedData?: DataResultType;
 }
 
 export interface LinkedSetComponentInputProps<ShapeType extends Shape = Shape>

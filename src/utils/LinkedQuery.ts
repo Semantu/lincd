@@ -10,8 +10,9 @@ import {
 } from '../interfaces/Component';
 import {CoreMap} from '../collections/CoreMap';
 import React from 'react';
-import {property} from 'lincd-shacl/lib/ontologies/shacl';
+import {property, result} from 'lincd-shacl/lib/ontologies/shacl';
 import {Property} from 'lincd-rdf/lib/shapes/Property';
+import {valid} from 'lincd-dcmi/lib/ontologies/dcterms';
 
 /**
  * ###################################
@@ -1169,6 +1170,77 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
       queryObject = null;
     }
     return queryObject || queryPaths;
+  }
+
+  isValidResult(qResult: QResult<any>) {
+    let select = this.getQueryObject().select;
+    if (Array.isArray(select)) {
+      return this.isValidQueryPathsResult(qResult, select);
+    } else if (typeof select === 'object') {
+      return this.isValidCustomObjectResult(qResult, select);
+    }
+  }
+  private isValidQueryPathsResult(qResult: QResult<any>, select: QueryPath[]) {
+    return select.every((path) => {
+      return this.isValidQueryPathResult(qResult, path);
+    });
+  }
+  private isValidQueryPathResult(qResult: QResult<any>, path: QueryPath) {
+    if (Array.isArray(path)) {
+      return this.isValidQueryStepResult(qResult, path[0], path.splice(1));
+    } else {
+      if ((path as WhereAndOr).firstPath) {
+        return this.isValidQueryPathResult(
+          qResult,
+          (path as WhereAndOr).firstPath,
+        );
+      } else if ((path as WhereEvaluationPath).path) {
+        return this.isValidQueryPathResult(
+          qResult,
+          (path as WhereEvaluationPath).path,
+        );
+      }
+    }
+  }
+  private isValidQueryStepResult(
+    qResult: QResult<any>,
+    step: QueryStep | SubQueryPaths,
+    restPath: (QueryStep | SubQueryPaths)[] = [],
+  ): boolean {
+    if ((step as PropertyQueryStep).property) {
+      if (!qResult[(step as PropertyQueryStep).property.label]) {
+        return false;
+      }
+      if (restPath.length > 0) {
+        return this.isValidQueryStepResult(
+          qResult[(step as PropertyQueryStep).property.label],
+          restPath[0],
+          restPath.splice(1),
+        );
+      }
+      return true;
+    } else if ((step as CountStep).count) {
+      return this.isValidQueryStepResult(qResult, (step as CountStep).count[0]);
+    } else if (Array.isArray(step)) {
+      return step.every((subStep) => {
+        return this.isValidQueryPathResult(qResult, subStep);
+      });
+    } else if (typeof step === 'object') {
+      return this.isValidCustomObjectResult(qResult, step as CustomQueryObject);
+    }
+  }
+  private isValidCustomObjectResult(
+    qResult: QResult<any>,
+    step: CustomQueryObject,
+  ) {
+    //for custom objects, all keys need to be defined, even if the value is undefined
+    for (let key in step as CustomQueryObject) {
+      if (!qResult.hasOwnProperty(key)) {
+        return false;
+      }
+      let path: QueryPath = step[key];
+      return this.isValidQueryPathResult(qResult[key], path);
+    }
   }
 }
 
