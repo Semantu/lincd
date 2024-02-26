@@ -36,6 +36,7 @@ export type QueryBuildFn<T extends Shape, ResponseType> = (
   q: LinkedQuery<T>,
 ) => ResponseType;
 
+export type QueryWrapperObject = {[key: string]: LinkedQuery<any>};
 export type CustomQueryObject = {[key: string]: QueryPath};
 
 export type SelectPath = QueryPath[] | CustomQueryObject;
@@ -184,6 +185,20 @@ export type QueryProps<Q extends LinkedQuery<any>> = Q extends LinkedQuery<
   ? QueryResponseToResultType<ResponseType, ShapeType>
   : never;
 
+export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
+  ? {
+      [P in keyof T]: T[P] extends LinkedQuery<any>
+        ? ToQueryResult<T[P]>
+        : never;
+    }
+  : [];
+
+export type ToQueryResult<T> = T extends LinkedQuery<
+  infer ShapeType,
+  infer ResponseType
+>
+  ? QueryResponseToResultType<ResponseType, ShapeType>[]
+  : null;
 /**
  * MAIN ENTRY to convert the response of a query into a result object
  */
@@ -396,7 +411,12 @@ export type GetQueryResponseType<Q> = Q extends LinkedQuery<
   infer ResponseType
 >
   ? ResponseType
-  : never;
+  : Q;
+
+export type GetQueryObjectResponseType<Q> = Q;
+// {
+//   [P in keyof Q]: GetQueryResponseType<Q[P]>;
+// };
 
 export type GetQueryShapeType<Q> = Q extends LinkedQuery<
   infer ShapeType,
@@ -1070,7 +1090,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
   constructor(
     public shape: T,
     private queryBuildFn: QueryBuildFn<T, ResponseType>,
-    private subject?: T,
+    private subject?: T | ShapeSet<T>,
   ) {
     let dummyNode = new TestNode();
     let queryShape: QueryBuilderObject;
@@ -1172,6 +1192,11 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     return queryObject || queryPaths;
   }
 
+  isValidSetResult(qResults: QResult<any>[]) {
+    return qResults.every((qResult) => {
+      return this.isValidResult(qResult);
+    });
+  }
   isValidResult(qResult: QResult<any>) {
     let select = this.getQueryObject().select;
     if (Array.isArray(select)) {

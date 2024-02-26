@@ -44,9 +44,12 @@ export function resolveLocal<ResultType>(
     ? query.subject
     : (shape as any).getLocalInstances();
 
-  let resultObjects = query.subject
-    ? shapeToResultObject(subject)
-    : shapeSetToResultObjects(subject);
+  let resultObjects =
+    query.subject instanceof ShapeSet
+      ? shapeSetToResultObjects(subject)
+      : query.subject instanceof Shape
+      ? shapeToResultObject(subject)
+      : shapeSetToResultObjects(subject);
 
   if (Array.isArray(query.select)) {
     query.select.forEach((queryPath) => {

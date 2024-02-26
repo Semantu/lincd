@@ -842,7 +842,7 @@ export abstract class LinkedStorage {
 
   static nodesAreLoaded(nodes: NodeSet, dataRequest): boolean | Promise<any> {
     //@TODO: reimplement tracking of loaded paths for queries
-    return true;
+    return false;
 
     let stillLoading = [];
     if (

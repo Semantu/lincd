@@ -71,7 +71,11 @@ export interface LinkedFunctionalComponent<P, ShapeType extends Shape = Shape>
 export interface LinkedFunctionalSetComponent<
   P,
   ShapeType extends Shape = Shape,
-> extends React.FC<P & LinkedSetComponentInputProps<ShapeType>> {
+> extends React.FC<
+    P &
+      LinkedSetComponentInputProps<ShapeType> &
+      React.ComponentPropsWithRef<any>
+  > {
   /**
    * Binds a component to a source. Usually used in Shape.request() for automatic data loading.
    * @param source the node or shape that this component should visualise
@@ -187,7 +191,7 @@ export interface LinkedSetComponentInputProps<ShapeType extends Shape = Shape>
    * The primary set of data sources that this component will represent.
    * Can be a set of Nodes in the graph or a set of instances of the Shape that this component uses
    */
-  of?: NodeSet | ShapeSet<ShapeType>;
+  of?: NodeSet | ShapeSet<ShapeType> | QResult<ShapeType>[];
   as?: React.FC | LinkedFunctionalComponent<any, ShapeType>;
 }
 
