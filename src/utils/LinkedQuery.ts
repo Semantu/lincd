@@ -11,9 +11,6 @@ import {
 } from '../interfaces/Component';
 import {CoreMap} from '../collections/CoreMap';
 import React from 'react';
-import {property, result} from 'lincd-shacl/lib/ontologies/shacl';
-import {Property} from 'lincd-rdf/lib/shapes/Property';
-import {valid} from 'lincd-dcmi/lib/ontologies/dcterms';
 
 /**
  * ###################################
@@ -37,7 +34,9 @@ export type QueryBuildFn<T extends Shape, ResponseType> = (
   q: LinkedQuery<T>,
 ) => ResponseType;
 
-export type QueryWrapperObject = {[key: string]: LinkedQuery<any>};
+export type QueryWrapperObject<ShapeType extends Shape = any> = {
+  [key: string]: LinkedQuery<ShapeType>;
+};
 export type CustomQueryObject = {[key: string]: QueryPath};
 
 export type SelectPath = QueryPath[] | CustomQueryObject;
@@ -53,6 +52,8 @@ export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 export type SelectQuery<ShapeType extends Shape> = {
   select: SelectPath;
   subject?: ShapeType;
+  limit?: number;
+  offset?: number;
 };
 /**
  * Much like a querypath, except it can only contain QuerySteps
@@ -186,15 +187,25 @@ export type QueryProps<Q extends LinkedQuery<any>> = Q extends LinkedQuery<
   ? QueryResponseToResultType<ResponseType, ShapeType>
   : never;
 
+export type QueryControllerProps = {
+  query?: QueryController;
+};
+export type QueryController = {
+  nextPage: () => void;
+  previousPage: () => void;
+  setLimit: (limit: number) => void;
+  setPage: (page: number) => void;
+};
+
 export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
   ? {
       [P in keyof T]: T[P] extends LinkedQuery<any>
-        ? ToQueryResult<T[P]>
+        ? ToQueryResultSet<T[P]>
         : never;
     }
   : [];
 
-export type ToQueryResult<T> = T extends LinkedQuery<
+export type ToQueryResultSet<T> = T extends LinkedQuery<
   infer ShapeType,
   infer ResponseType
 >
@@ -484,6 +495,9 @@ export class QueryBuilderObject<
     return new BoundComponent<this, ShapeType>(component, this);
   }
 
+  limit(lim: number) {
+    console.log(lim);
+  }
   /**
    * Returns the path of properties that were requested to reach this value
    */
@@ -1091,6 +1105,8 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
    */
   public traceResponse: ResponseType;
   public parentQueryPath: QueryPath;
+  private limit: number;
+  private offset: number;
 
   constructor(
     public shape: T,
@@ -1113,10 +1129,25 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     let queryResponse = this.queryBuildFn(queryShape as any, this);
     this.traceResponse = queryResponse;
   }
-
-  applyTo(subject) {
-    return new LinkedQuery(this.shape, this.queryBuildFn, subject);
+  setLimit(limit: number) {
+    this.limit = limit;
   }
+  getLimit() {
+    return this.limit;
+  }
+  setOffset(offset: number) {
+    this.offset = offset;
+  }
+  getOffset() {
+    return this.offset;
+  }
+
+  setSubject(subject) {
+    this.subject = subject;
+  }
+  // applyTo(subject) {
+  //   return new LinkedQuery(this.shape, this.queryBuildFn, subject);
+  // }
 
   where(validation: WhereClause<T>): this {
     throw Error('Not implemented');
@@ -1131,6 +1162,8 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     return {
       select: queryPaths,
       subject: this.subject,
+      limit: this.limit,
+      offset: this.offset,
     } as SelectQuery<T>;
   }
 
@@ -1271,6 +1304,10 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
       let path: QueryPath = step[key];
       return this.isValidQueryPathResult(qResult[key], path);
     }
+  }
+
+  clone() {
+    return new LinkedQuery(this.shape, this.queryBuildFn, this.subject);
   }
 }
 

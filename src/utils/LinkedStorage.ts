@@ -863,10 +863,7 @@ export abstract class LinkedStorage {
     return stillLoading ? Promise.all(stillLoading) : true;
   }
 
-  static isLoaded(
-    node: Node,
-    dataRequest: LinkedDataRequest,
-  ): boolean | Promise<any> {
+  static isLoaded(node: Node, dataRequest: any): boolean | Promise<any> {
     //TODO fix loading for queries instead of the old property requests
     return false;
 

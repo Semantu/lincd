@@ -14,6 +14,7 @@ import {
   LinkedQuery,
   LinkedQueryObject,
   QResult,
+  QueryControllerProps,
 } from '../utils/LinkedQuery';
 import React from 'react';
 
@@ -106,62 +107,14 @@ export type LinkableFunctionalSetComponent<
 export interface LinkedSetComponentProps<
   ShapeType extends Shape,
   DataResultType = any,
-> extends LinkedComponentBaseProps<DataResultType> {
+> extends LinkedComponentBaseProps<DataResultType>,
+    QueryControllerProps {
   /**
    * An instance of the Shape that this component is linked to.
    * Users of this component can provide this shape with the property of: of={nodeOrShapeInstance}
    * if a node was given for 'of', linkedComponent() converts that node into an instance of the shape and provides it as 'source'
    */
   sources: ShapeSet<ShapeType>;
-
-  /**
-   * A ChildComponent will be given, unless your component was used with explicit children, in that case you should render props.children as is.
-   * This component can be used to render all the items in the set.
-   * It will automatically account for the different ways in which your setComponent
-   * can be used. That is, with a single child as render function, a single component as dataRequest or a full dataRequest for linkedData for the child components.
-   *
-   * You are free to wrap this child component in other JSX elements of your own.
-   *
-   * Here's an example setComponent that takes a set of sources and renders them with the ChildComponent property if it's given:
-   * ```tsx
-   * export const Grid = linkedSetComponent(Shape, ({sources, children, ChildComponent}) => {
-   *   return (
-   *     <div className={style.Grid}>
-   *       {ChildComponent
-   *         ? sources.map((source) => {
-   *             return <ChildComponent of={source} key={source.node.toString()} />;
-   *           })
-   *         : children}
-   *     </div>
-   *   );
-   * });
-   * ```
-   */
-  ChildComponent?: LinkedFunctionalComponent<any, ShapeType>;
-
-  /**
-   * Retrieve the linked data for a specific item in the set of sources.
-   * This prop will be provided if your component uses Shape.requestForEachInSet()
-   * The result of calling the function will be of the same shape as what you returned in requestForEachInSet(() => ...)
-   * Example:
-   * ```tsx
-   * export const PersonOverview = linkedSetComponent(
-   *   Person.requestForEachInSet(person => () => PersonProfileCard.of(person)),
-   *   ({sources,getLinkedData}) => {
-   *     return (
-   *       <div>
-   *         {sources.map(source => {
-   *           let Profile = getLinkedData(source) as any;
-   *           //You can pass the same props to Profile as you would to PersonProfileCard
-   *           return <div><Profile /></div>
-   *         })}
-   *       </div>
-   *     );
-   *   },
-   * );
-   * ```
-   */
-  getLinkedData?: LinkedDataRequestFn<ShapeType>;
 }
 
 export interface LinkedComponentProps<ShapeType extends Shape>

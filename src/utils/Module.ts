@@ -47,19 +47,23 @@ import {
 import {
   BoundComponent,
   ComponentQueryPath,
+  CustomQueryObject,
   GetCustomObjectKeys,
   GetQueryResponseType,
   GetQueryShapeType,
   LinkedQuery,
   QResult,
   QueryBuilderObject,
+  QueryController,
+  QueryControllerProps,
   QueryPath,
   QueryPropertyPath,
   QueryResponseToResultType,
   QueryShape,
   QueryStep,
+  QueryWrapperObject,
   SelectQuery,
-  ToQueryResult,
+  ToQueryResultSet,
 } from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
 import {resolveLocalEndResults} from './LocalQueryResolver';
@@ -305,9 +309,9 @@ export interface LinkedPackageObject {
   >(
     requiredData: QueryType,
     functionalComponent: LinkableFunctionalSetComponent<
-      CustomProps & GetCustomObjectKeys<QueryType>, //this maps all the keys of the result object to props //the result of a query is always an object.
+      CustomProps & GetCustomObjectKeys<QueryType> & QueryControllerProps, //this maps all the keys of the result object to props, but only if a QueryWrapperObject was used as query
       ShapeType,
-      ToQueryResult<QueryType>
+      ToQueryResultSet<QueryType>
     >,
   ): LinkedFunctionalSetComponent<CustomProps, ShapeType>;
 
@@ -325,6 +329,11 @@ export interface LinkedPackageObject {
  * - http://some-example.org/prop > ex:prop
  *  */
 const prefix = (n) => Prefix.toPrefixed(n.uri);
+
+export var DEFAULT_LIMIT = 12;
+export function setDefaultPageLimit(limit: number) {
+  DEFAULT_LIMIT = limit;
+}
 
 export function autoLoadOntologyData(value: boolean) {
   _autoLoadOntologyData = value;
@@ -443,16 +452,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       ShapeType
     >,
   ): LinkedFunctionalComponent<CustomProps, ShapeType> {
-    let [
-      shapeClass,
-      dataRequest,
-      dataDeclaration,
-      tracedDataResponse,
-      pureDataRequest,
-    ] = processDataDeclaration<ShapeType, CustomProps>(
-      query,
-      functionalComponent,
-    );
+    let [shapeClass, dataRequest, actualQuery] =
+      processDataDeclaration<ShapeType>(query);
 
     //create a new functional component which wraps the original
     //also, first of all use React.forwardRef to support OPTIONAL use of forwardRef by the linked component itself
@@ -511,9 +512,10 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
               //if we did not request all these properties before then we continue to
               // load the required PropertyShapes from storage for this specific source
 
-              LinkedStorage.query(
-                (query as LinkedQuery<any>).applyTo(linkedProps.source),
-              ).then((result) => {
+              let requestQuery = (actualQuery as LinkedQuery<any>).clone();
+              requestQuery.setSubject(linkedProps.source);
+
+              LinkedStorage.query(requestQuery).then((result) => {
                 //store the result to state, this also means we don't need to check cache again.
                 setQueryResult(result);
               });
@@ -575,10 +577,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
     //connect the Component.of() function, which is called bindComponentToData here
     //<DeclaredProps & LinkedComponentInputProps<ShapeType>, ShapeType>
-    _wrappedComponent.of = bindComponentToData.bind(
-      _wrappedComponent,
-      tracedDataResponse,
-    );
+    _wrappedComponent.of = bindComponentToData.bind(_wrappedComponent);
 
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
@@ -620,18 +619,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       >[]
     >,
   ): LinkedFunctionalSetComponent<CustomProps, ShapeType> {
-    let [
-      shapeClass,
-      dataRequest,
-      dataDeclaration,
-      tracedDataResponse,
-      pureDataRequest,
-      actualQuery,
-    ] = processDataDeclaration<ShapeType, CustomProps>(
-      query,
-      functionalComponent,
-      true,
-    );
+    let [shapeClass, dataRequest, actualQuery] =
+      processDataDeclaration<ShapeType>(query, true);
 
     //if we're not using any storage in this LINCD app, don't do any data loading
     let usingStorage = LinkedStorage.isInitialised();
@@ -654,6 +643,14 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         shapeClass,
         functionalComponent,
       );
+
+      //get the limit from the query,
+      // if none, then if no source was given, use the default limit (because then the query will apply to all instances of the shape)
+      let defaultLimit =
+        actualQuery.getLimit() ||
+        (!linkedProps.sources ? DEFAULT_LIMIT : undefined);
+      let [limit, setLimit] = useState<number>(defaultLimit);
+      let [offset, setOffset] = useState<number>(0);
 
       //if a ref was given, we need to manually add it back to the props, React will extract it and provide is as second argument to React.forwardRef in the linked component itself
       if (ref) {
@@ -684,6 +681,25 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         }
       }
 
+      //if no sources were added, then this query applies to all instances
+      //then we add a query control object
+      if (!linkedProps.sources) {
+        linkedProps.query = {
+          nextPage: () => {
+            setOffset(offset + limit);
+          },
+          previousPage: () => {
+            setOffset(Math.max(0, offset - limit));
+          },
+          setLimit: (limit: number) => {
+            setLimit(limit);
+          },
+          setPage: (page: number) => {
+            setOffset(page * limit);
+          },
+        } as QueryController;
+      }
+
       useEffect(() => {
         //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
         if (!props.isBound && usingStorage && !sourceIsValidQResult) {
@@ -701,9 +717,17 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             //load the required PropertyShapes from storage for this specific source
             //we bypass cache because already checked cache ourselves above
 
-            LinkedStorage.query(
-              (actualQuery as LinkedQuery<any>).applyTo(linkedProps.sources),
-            ).then((result) => {
+            let requestQuery = (actualQuery as LinkedQuery<any>).clone();
+            requestQuery.setSubject(linkedProps.sources);
+
+            if (limit) {
+              requestQuery.setLimit(limit);
+            }
+            if (offset) {
+              requestQuery.setOffset(offset);
+            }
+
+            LinkedStorage.query(requestQuery).then((result) => {
               //store the result to state, this also means we don't need to check cache again.
               setQueryResult(result);
             });
@@ -720,7 +744,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         //note: this useEffect function should be re-triggered if a different set of source nodes is given
         //however the actual set could be a new one every time. For now we check the 'of' prop, but if this triggers
         //on every parent update whilst it shouldn't, we could try linkedProps.sources.map(s => s.node.value).join("")
-      }, [props.of, props.isBound]);
+      }, [props.of, props.isBound, limit, offset]);
 
       //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
       let dataIsLoaded =
@@ -757,8 +781,6 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     _wrappedComponent.of = bindSetComponentToData.bind(
       _wrappedComponent,
       shapeClass,
-      tracedDataResponse,
-      dataDeclaration,
     );
 
     //keep a copy of the original for strict checking of equality when compared to
@@ -963,63 +985,25 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
   } as LinkedPackageObject;
 }
 
-function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
-  requiredData:
-    | typeof Shape
-    | LinkedDataDeclaration<ShapeType>
-    | LinkedQuery<ShapeType>,
-  functionalComponent: LinkableFunctionalComponent<DeclaredProps, ShapeType>,
-  setComponent?: boolean,
-);
-function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
-  requiredData:
-    | typeof Shape
-    | LinkedDataSetDeclaration<ShapeType>
-    | LinkedQuery<ShapeType>,
-  functionalComponent: LinkableFunctionalSetComponent<DeclaredProps, ShapeType>,
-  setComponent?: boolean,
-);
-function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
-  requiredData:
-    | typeof Shape
-    | LinkedQuery<ShapeType>
-    | LinkedDataDeclaration<ShapeType>
-    | LinkedDataSetDeclaration<ShapeType>,
-  functionalComponent:
-    | LinkableFunctionalComponent<DeclaredProps, ShapeType>
-    | LinkableFunctionalSetComponent<DeclaredProps, ShapeType>,
+type ProcessDataResultType<ShapeType extends Shape> = [
+  typeof Shape,
+  SelectQuery<ShapeType>,
+  LinkedQuery<ShapeType>,
+];
+
+function processDataDeclaration<ShapeType extends Shape>(
+  requiredData: LinkedQuery<ShapeType> | QueryWrapperObject<ShapeType>,
   setComponent: boolean = false,
-) {
+): ProcessDataResultType<ShapeType> {
   let shapeClass: typeof Shape;
-  let dataRequest: LinkedDataRequest | SelectQuery<ShapeType>;
-  let tracedDataResponse: TransformedLinkedDataResponse;
-  let dataDeclaration:
-    | LinkedDataSetDeclaration<ShapeType>
-    | LinkedDataDeclaration<ShapeType>
-    | LinkedQuery<ShapeType>;
-  let pureDataRequest: QueryPath[];
+  let dataRequest: SelectQuery<ShapeType>;
   let query: LinkedQuery<ShapeType>;
 
   //if a Shape class was given (the actual class that extends Shape)
-  if (requiredData['prototype'] instanceof Shape || requiredData === Shape) {
-    //then we will load instances of this shape
-    // and require instances of this shape to be used for this component
-    shapeClass = requiredData as typeof Shape;
-    //but we don't specifically request any data
-    dataRequest = [];
-    // dataRequest = shapeClass.shape ? [...shapeClass.shape.getPropertyShapes()] : [];
-  } else if (requiredData instanceof LinkedQuery) {
-    // [dataRequest, tracedDataResponse] = requiredData.toQueryObject();
+  if (requiredData instanceof LinkedQuery) {
     dataRequest = requiredData.getQueryObject();
     query = requiredData;
     shapeClass = requiredData.shape as any;
-    dataDeclaration = {
-      request: dataRequest as any,
-      shape: shapeClass,
-    };
-    //TODO: review this if the component uses custom keys, should it be
-    // pureDataRequest = removeBoundComponents(dataRequest.select as QueryPath[]);
-    pureDataRequest = dataRequest.select as QueryPath[];
   } else if (typeof requiredData === 'object' && setComponent) {
     if (Object.keys(requiredData).length > 1) {
       throw new Error(
@@ -1031,59 +1015,18 @@ function processDataDeclaration<ShapeType extends Shape, DeclaredProps = {}>(
         dataRequest = requiredData[key].getQueryObject();
         shapeClass = requiredData[key].shape as any;
         query = requiredData[key];
-        dataDeclaration = {
-          request: dataRequest as any,
-          shape: shapeClass,
-        };
       } else {
         throw new Error(
           'Unknown value type for query object. Keep to this format: {propName: Shape.query(s => ...)}',
         );
       }
     }
-
-    // //requiredData is a LinkedDataDeclaration or a LinkedDataSetDeclaration
-    // dataDeclaration = requiredData as
-    //   | LinkedDataSetDeclaration<ShapeType>
-    //   | LinkedDataDeclaration<ShapeType>;
-    // shapeClass = dataDeclaration.shape;
-    //
-    // //create a test instance of the shape
-    // let dummyInstance = createTraceShape(
-    //   shapeClass,
-    //   null,
-    //   functionalComponent.name ||
-    //     functionalComponent.toString().substring(0, 80) + ' ...',
-    // );
-    //
-    // //if setComponent is true then linkedSetComponent() was used
-    // //if then also dataDeclaration.setRequest is defined, then the SetComponent used Shape.requestSet()
-    // //and its LinkedDataRequestFn expects a set of shape instances
-    // //otherwise (also for Shape.requestForEachInSet) it expects a single shape instance
-    // let provideSetToDataRequestFn = setComponent;
-    // //&& (dataDeclaration as LinkedDataSetDeclaration<ShapeType>).setRequest;
-    // let dummySet = provideSetToDataRequestFn
-    //   ? new ShapeSet([dummyInstance])
-    //   : dummyInstance;
-    //
-    // //create a dataRequest object, we will use this for requesting data from stores
-    // [dataRequest, tracedDataResponse] = createDataRequestObject(
-    //   dataDeclaration.request || (dataDeclaration as any).setRequest,
-    //   dummySet as any,
-    // );
   } else {
     throw new Error(
       'Unknown data query type. Expected a LinkedQuery (from Shape.query()) or an object with 1 key whose value is a LinkedQuery',
     );
   }
-  return [
-    shapeClass,
-    dataRequest,
-    dataDeclaration,
-    tracedDataResponse,
-    pureDataRequest,
-    query,
-  ];
+  return [shapeClass, dataRequest, query];
 }
 
 function resolveLinkedQuery<Resp>(
@@ -1422,55 +1365,12 @@ function bindComponentToData<
   Source extends QueryBuilderObject,
   P,
   ShapeType extends Shape,
->(
-  tracedDataResponse: TransformedLinkedDataResponse,
-  // source: Node | Shape,
-  source: Source,
-  // ): BoundComponentFactory<P, ShapeType> {
-): BoundComponent<Source, ShapeType> {
+>(source: Source): BoundComponent<Source, ShapeType> {
   return new BoundComponent<Source, ShapeType>(this, source);
-  // return {
-  //   _comp: this,
-  //   _create: (propertyShapes) => {
-  //     let boundComponent: LinkedFunctionalComponent<P, ShapeType> = (props) => {
-  //       //TODO: use propertyShapes for RDFa
-  //
-  //       //add this result as the source of the bound child component
-  //       let newProps = {...props};
-  //       newProps['of'] = source.getOriginalValue(); // as Node | ShapeType;
-  //
-  //       //let the LinkedComponent know that it was bound,
-  //       //that means it can expect its data to have been loaded by its parent
-  //       newProps['isBound'] = true;
-  //
-  //       //render the child component (which is 'this')
-  //       return React.createElement(this, newProps);
-  //     };
-  //     return boundComponent;
-  //   },
-  //   getPropertyPath: () => {
-  //     //get the path that is passed to Component.of(some.path.here)
-  //     let sourcePath: ComponentQueryPath = source.getPropertyPath();
-  //     //add the path steps that this component itself requires (so we are combining the data request of 2 components)
-  //     // let childRequests = [];
-  //     // this.dataRequest.forEach((queryStep) => {
-  //     //   childRequests.push(queryStep);
-  //     // });
-  //     if (Array.isArray(sourcePath)) {
-  //       sourcePath.push({
-  //         component: this,
-  //         // path: childRequests as any,
-  //       } as BoundComponentQueryStep);
-  //     }
-  //     return sourcePath;
-  //   },
-  // };
 }
 
 function bindSetComponentToData<P, ShapeType extends Shape>(
   shapeClass: typeof Shape,
-  tracedDataResponse: TransformedLinkedDataResponse,
-  dataDeclaration: LinkedDataSetDeclaration<ShapeType>,
   sources: NodeSet | ShapeSet<ShapeType>,
   childDataRequestFn?: LinkedDataChildRequestFn<ShapeType>,
 ): BoundSetComponentFactory<P, ShapeType> {
@@ -1543,38 +1443,38 @@ function bindSetComponentToData<P, ShapeType extends Shape>(
           }
 
           //then we provide a ChildComponent prop, which is a render function that uses the childRenderFn defined above
-          newProps.ChildComponent = (childProps) => {
-            let newChildProps = {...childProps};
-
-            //children are 'bound', meaning their data will always be loaded
-            newChildProps['isBound'] = true;
-
-            //automatically set a key for each child component if a source is set
-            if (newChildProps.of) {
-              newChildProps['key'] =
-                newChildProps.of instanceof Shape
-                  ? newChildProps.of.node.toString()
-                  : newChildProps.of.toString();
-            }
-
-            //if a dataRequest was given (not a component)
-            if (
-              !(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of
-            ) {
-              //NOTE: unlike other places where we call getLinkedDataResponse, the child component is a linkedComponent, which will convert the input props ('of') to source. so, we don't want to already do that here.
-              // Hence, we manually get the source from props to get the linkedDataResponse
-              let source = getSourceFromInputProps(childProps, shapeClass);
-
-              //then we resolve that and use it as linkedData for the child component
-              newChildProps.linkedData = getLinkedDataResponse(
-                childDataRequestFn as LinkedDataRequestFn<ShapeType>,
-                source,
-                tracedChildDataResponse as TransformedLinkedDataResponse,
-              );
-            }
-
-            return childRenderFn(newChildProps);
-          };
+          // newProps.ChildComponent = (childProps) => {
+          //   let newChildProps = {...childProps};
+          //
+          //   //children are 'bound', meaning their data will always be loaded
+          //   newChildProps['isBound'] = true;
+          //
+          //   //automatically set a key for each child component if a source is set
+          //   if (newChildProps.of) {
+          //     newChildProps['key'] =
+          //       newChildProps.of instanceof Shape
+          //         ? newChildProps.of.node.toString()
+          //         : newChildProps.of.toString();
+          //   }
+          //
+          //   //if a dataRequest was given (not a component)
+          //   if (
+          //     !(childDataRequestFn as LinkedFunctionalComponent<ShapeType>).of
+          //   ) {
+          //     //NOTE: unlike other places where we call getLinkedDataResponse, the child component is a linkedComponent, which will convert the input props ('of') to source. so, we don't want to already do that here.
+          //     // Hence, we manually get the source from props to get the linkedDataResponse
+          //     let source = getSourceFromInputProps(childProps, shapeClass);
+          //
+          //     //then we resolve that and use it as linkedData for the child component
+          //     newChildProps.linkedData = getLinkedDataResponse(
+          //       childDataRequestFn as LinkedDataRequestFn<ShapeType>,
+          //       source,
+          //       tracedChildDataResponse as TransformedLinkedDataResponse,
+          //     );
+          //   }
+          //
+          //   return childRenderFn(newChildProps);
+          // };
         }
 
         //render the child component (which is 'this')

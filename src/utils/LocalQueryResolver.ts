@@ -44,6 +44,13 @@ export function resolveLocal<ResultType>(
     ? query.subject
     : (shape as any).getLocalInstances();
 
+  if (query.limit && subject instanceof ShapeSet) {
+    subject = subject.slice(
+      query.offset || 0,
+      (query.offset || 0) + query.limit,
+    );
+  }
+
   let resultObjects =
     query.subject instanceof ShapeSet
       ? shapeSetToResultObjects(subject)
