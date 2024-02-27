@@ -626,7 +626,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       dataDeclaration,
       tracedDataResponse,
       pureDataRequest,
-      linkedQuery,
+      actualQuery,
     ] = processDataDeclaration<ShapeType, CustomProps>(
       query,
       functionalComponent,
@@ -667,7 +667,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         props.of.length > 0 &&
         (props.of[0] as QResult<any>)?.shape instanceof Shape &&
         typeof (props.of[0] as QResult<any>)?.id === 'string' &&
-        query.isValidSetResult(props.of as QResult<any>[]);
+        actualQuery.isValidSetResult(props.of as QResult<any>[]);
 
       //if we have loaded the query or the source is a QResult
       if (queryResult || sourceIsValidQResult) {
@@ -702,7 +702,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
             //we bypass cache because already checked cache ourselves above
 
             LinkedStorage.query(
-              (linkedQuery as LinkedQuery<any>).applyTo(linkedProps.sources),
+              (actualQuery as LinkedQuery<any>).applyTo(linkedProps.sources),
             ).then((result) => {
               //store the result to state, this also means we don't need to check cache again.
               setQueryResult(result);
@@ -1364,6 +1364,10 @@ function getLinkedSetComponentProps<ShapeType extends Shape, P>(
     props.of &&
     !(props.of instanceof NodeSet) &&
     !(props.of instanceof ShapeSet) &&
+    !Array.isArray(props.of) &&
+    (props.of as QResult<any>[]).every(
+      (qResult) => qResult.shape instanceof Shape,
+    ) &&
     !props.of['then']
   ) {
     throw Error(

@@ -7,6 +7,7 @@ import {CoreSet} from '../collections/CoreSet';
 import {
   BoundComponentFactory,
   LinkedFunctionalComponent,
+  LinkedFunctionalSetComponent,
 } from '../interfaces/Component';
 import {CoreMap} from '../collections/CoreMap';
 import React from 'react';
@@ -476,7 +477,9 @@ export class QueryBuilderObject<
   }
 
   preloadFor<ShapeType extends Shape>(
-    component: LinkedFunctionalComponent<any, ShapeType>,
+    component:
+      | LinkedFunctionalComponent<any, ShapeType>
+      | LinkedFunctionalSetComponent<any, ShapeType>,
   ): BoundComponent<this, ShapeType> {
     return new BoundComponent<this, ShapeType>(component, this);
   }
@@ -881,7 +884,9 @@ export class BoundComponent<
   ShapeType extends Shape,
 > extends QueryBuilderObject {
   constructor(
-    public originalValue: LinkedFunctionalComponent<any, ShapeType>,
+    public originalValue:
+      | LinkedFunctionalComponent<any, ShapeType>
+      | LinkedFunctionalSetComponent<any, ShapeType>,
     public source: Source, // property?: PropertyShape, // subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
     super(null, null);
@@ -1233,7 +1238,7 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
     restPath: (QueryStep | SubQueryPaths)[] = [],
   ): boolean {
     if ((step as PropertyQueryStep).property) {
-      if (!qResult[(step as PropertyQueryStep).property.label]) {
+      if (!qResult.hasOwnProperty((step as PropertyQueryStep).property.label)) {
         return false;
       }
       if (restPath.length > 0) {

@@ -87,7 +87,8 @@ export interface LinkedFunctionalSetComponent<
       | ((shape: ShapeType) => LinkedDataResponse),
   ) => BoundSetComponentFactory<P, ShapeType>;
   original?: LinkableFunctionalSetComponent<P, ShapeType>;
-  query?: LinkedDataRequest;
+  query?: LinkedQueryObject<any>;
+
   shape?: typeof Shape;
   setLoaded?: (source?: ShapeSet<ShapeType>) => void;
 }

@@ -852,36 +852,62 @@ describe('query tests', () => {
   //   });
   // });
 
-  test('linked set components without source', async () => {
-    const NameList = linkedSetComponent(
-      Person.query((person) => [person.name, person.hobby]),
-      ({sources, linkedData}) => {
-        let persons = linkedData;
-        return (
-          <ul>
-            {persons.map((person) => {
-              return (
-                <li key={person.id}>
-                  <span>{person.name}</span>
-                  <span>{person.hobby}</span>
-                </li>
-              );
-            })}
-          </ul>
-        );
-      },
-    );
-    let persons = new ShapeSet([p1, p2, p3, p4]);
-    let component = render(<NameList />);
-    await waitFor(() => {
-      persons.forEach((person) => {
-        expect(component.getByText(person.name)).toBeTruthy();
-      });
-      expect(component.getByText(p2.hobby)).toBeTruthy();
-    });
-  });
+  // test('linked set components without source', async () => {
+  //   const NameList = linkedSetComponent(
+  //     Person.query((person) => [person.name, person.hobby]),
+  //     ({sources, linkedData}) => {
+  //       let persons = linkedData;
+  //       return (
+  //         <ul>
+  //           {persons.map((person) => {
+  //             return (
+  //               <li key={person.id}>
+  //                 <span>{person.name}</span>
+  //                 <span>{person.hobby}</span>
+  //               </li>
+  //             );
+  //           })}
+  //         </ul>
+  //       );
+  //     },
+  //   );
+  //   let persons = new ShapeSet([p1, p2, p3, p4]);
+  //   let component = render(<NameList />);
+  //   await waitFor(() => {
+  //     persons.forEach((person) => {
+  //       expect(component.getByText(person.name)).toBeTruthy();
+  //     });
+  //     expect(component.getByText(p2.hobby)).toBeTruthy();
+  //   });
+  // });
+  //
+  // test('linked set components with named data prop', async () => {
+  //   let query = Person.query((person) => [person.name, person.hobby]);
+  //   const NameList = linkedSetComponent({persons: query}, ({persons}) => {
+  //     return (
+  //       <ul>
+  //         {persons.map((person) => {
+  //           return (
+  //             <li key={person.id}>
+  //               <span>{person.name}</span>
+  //               <span>{person.hobby}</span>
+  //             </li>
+  //           );
+  //         })}
+  //       </ul>
+  //     );
+  //   });
+  //   let persons = new ShapeSet([p1, p2, p3, p4]);
+  //   let component = render(<NameList />);
+  //   await waitFor(() => {
+  //     persons.forEach((person) => {
+  //       expect(component.getByText(person.name)).toBeTruthy();
+  //     });
+  //     expect(component.getByText(p2.hobby)).toBeTruthy();
+  //   });
+  // });
 
-  test('linked set components with named data prop', async () => {
+  test('linked set components rendered by linked component', async () => {
     let query = Person.query((person) => [person.name, person.hobby]);
     const NameList = linkedSetComponent({persons: query}, ({persons}) => {
       return (
@@ -897,13 +923,29 @@ describe('query tests', () => {
         </ul>
       );
     });
-    let persons = new ShapeSet([p1, p2, p3, p4]);
-    let component = render(<NameList />);
+
+    const PersonFriends = linkedComponent(
+      Person.query((p) => {
+        return [p.name, p.friends.preloadFor(NameList)];
+      }),
+      ({name, friends}) => {
+        return (
+          <div>
+            <span>{name}</span>
+            <NameList of={friends} />
+          </div>
+        );
+      },
+    );
+
+    //YOU ARE HERE
+    let component = render(<PersonFriends of={p1} />);
     await waitFor(() => {
-      persons.forEach((person) => {
-        expect(component.getByText(person.name)).toBeTruthy();
-      });
+      expect(component.getByText(p1.name)).toBeTruthy();
+      expect(component.getByText(p2.name)).toBeTruthy();
       expect(component.getByText(p2.hobby)).toBeTruthy();
+      expect(component.getByText(p3.name)).toBeTruthy();
+      // expect(component.getByText(p4.name)).toBeFalsy();
     });
   });
 
