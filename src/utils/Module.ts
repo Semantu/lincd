@@ -646,9 +646,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
       //get the limit from the query,
       // if none, then if no source was given, use the default limit (because then the query will apply to all instances of the shape)
-      let defaultLimit =
-        actualQuery.getLimit() ||
-        (!linkedProps.sources ? DEFAULT_LIMIT : undefined);
+      let defaultLimit = actualQuery.getLimit() || DEFAULT_LIMIT;
       let [limit, setLimit] = useState<number>(defaultLimit);
       let [offset, setOffset] = useState<number>(0);
 
@@ -668,22 +666,35 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
 
       //if we have loaded the query or the source is a QResult
       if (queryResult || sourceIsValidQResult) {
+        let dataResult;
+        if (queryResult) {
+          dataResult = queryResult;
+        } else {
+          if (limit) {
+            dataResult = (props.of as Array<QResult<any>>).slice(
+              offset || 0,
+              offset + limit,
+            );
+          } else {
+            dataResult = props.of;
+          }
+        }
         //if the passed query parameter was a LinkedQuery
         if (query instanceof LinkedQuery) {
           //then the results are passed as `linkedData`
           linkedProps = Object.assign(linkedProps, {
-            linkedData: queryResult || props.of,
+            linkedData: dataResult,
           });
         } else {
           //if not: a custom query object was passed, so we pass the results as the name of the first (and only) key of the query object
           let key = Object.keys(query)[0];
-          linkedProps[key] = queryResult || props.of;
+          linkedProps[key] = dataResult;
         }
       }
 
       //if no sources were added, then this query applies to all instances
       //then we add a query control object
-      if (!linkedProps.sources) {
+      if (limit) {
         linkedProps.query = {
           nextPage: () => {
             setOffset(offset + limit);
