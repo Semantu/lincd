@@ -3,6 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
+import nextTick = require('next-tick');
 import {EventEmitter} from '../events/EventEmitter';
 import {Literal, NamedNode, Node, Quad} from '../models';
 import {rdf} from '../ontologies/rdf';
@@ -33,6 +34,7 @@ import {
   GetQueryResponseType,
   LinkedQuery,
   QueryBuildFn,
+  PatchedQueryPromise,
   QueryResponseToResultType,
 } from '../utils/LinkedQuery';
 import {LinkedStorage} from '../utils/LinkedStorage';
@@ -268,29 +270,33 @@ export abstract class Shape implements IShape {
   }
 
   //Shape.select(selectFn:(p:QueryShape)=>QueryValue[])
-  static select<T extends Shape, S = unknown>(
-    this: {new (node: Node): T; targetClass: any},
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      ShapeType
+    >[],
+  >(
+    this: {new (node: Node): ShapeType; targetClass: any},
     // this: typeof Shape,
-    selectFn: QueryBuildFn<T, S>,
-  ): Promise<
-    QueryResponseToResultType<GetQueryResponseType<LinkedQuery<T, S>>, T>[]
-  > {
-    // let resolve, reject;
-    // let p = new Promise((res, rej) => {
-    //   resolve = res;
-    //   reject = rej;
-    // });
-    const query = new LinkedQuery<T, S>(this as any, selectFn);
-    type ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedQuery<T, S>>
-    >[];
-    // LinkedStorage.query(query).then((result) => {
-    return StorageHelper.query<ResultType>(query);
-    //.then((result) => {
-    //  resolve(result);
-    //});
-    // return query;
-    //return p as Promise<ResultType>;
+    selectFn?: QueryBuildFn<ShapeType, S>,
+  ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType> {
+    const query = new LinkedQuery<ShapeType, S>(this as any, selectFn);
+    let p = new Promise<ResultType>((resolve, reject) => {
+      nextTick(() => {
+        StorageHelper.query<ResultType>(query)
+          .then((result) => {
+            resolve(result);
+          })
+          .catch((err) => {
+            reject(err);
+          });
+      });
+    });
+    return query.patchResultPromise<ResultType>(p);
+
+    // return StorageHelper.query<ResultType>(query);
   }
 
   /**

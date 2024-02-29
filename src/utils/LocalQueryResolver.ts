@@ -44,6 +44,9 @@ export function resolveLocal<ResultType>(
     ? query.subject
     : (shape as any).getLocalInstances();
 
+  if (query.where) {
+    subject = filterResults(subject, query.where);
+  }
   if (query.limit && subject instanceof ShapeSet) {
     subject = subject.slice(
       query.offset || 0,
@@ -226,7 +229,7 @@ function filterResults(
   if (subject instanceof ShapeSet) {
     subject.forEach((singleShape) => {
       if (!evaluate(singleShape, where as WhereEvaluationPath)) {
-        resultObjects.delete(singleShape.uri);
+        resultObjects?.delete(singleShape.uri);
         (subject as ShapeSet).delete(singleShape);
       }
     });

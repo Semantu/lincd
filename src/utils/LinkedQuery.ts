@@ -51,6 +51,7 @@ export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
 export type SelectQuery<ShapeType extends Shape> = {
   select: SelectPath;
+  where?: WherePath;
   subject?: ShapeType;
   limit?: number;
   offset?: number;
@@ -197,6 +198,13 @@ export type QueryController = {
   setPage: (page: number) => void;
 };
 
+export type PatchedQueryPromise<ResultType, ShapeType extends Shape> = {
+  where(
+    validation: WhereClause<ShapeType>,
+  ): PatchedQueryPromise<ResultType, ShapeType>;
+  limit(lim: number): PatchedQueryPromise<ResultType, ShapeType>;
+} & Promise<ResultType>;
+
 export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
   ? {
       [P in keyof T]: T[P] extends LinkedQuery<any>
@@ -211,6 +219,7 @@ export type ToQueryResultSet<T> = T extends LinkedQuery<
 >
   ? QueryResponseToResultType<ResponseType, ShapeType>[]
   : null;
+
 /**
  * MAIN ENTRY to convert the response of a query into a result object
  */
@@ -828,12 +837,12 @@ export class QueryShape<
     super(property, subject);
   }
 
-  where(validation: WhereClause<S>): this {
-    let nodeShape = this.originalValue.nodeShape;
-    this.wherePath = processWhereClause(validation, nodeShape);
-    //return this because after Shape.friends.where() we can call other methods of Shape.friends
-    return this.proxy;
-  }
+  // where(validation: WhereClause<S>): this {
+  //   let nodeShape = this.originalValue.nodeShape;
+  //   this.wherePath = processWhereClause(validation, nodeShape);
+  //   //return this because after Shape.friends.where() we can call other methods of Shape.friends
+  //   return this.proxy;
+  // }
 
   count(countable: QueryBuilderObject, resultKey?: string): Count<this> {
     return new Count(this, countable, resultKey);
@@ -1097,7 +1106,11 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
   }
 }
 
-export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
+export class LinkedQuery<
+  ShapeType extends Shape,
+  ResponseType = any,
+  Source = any,
+> {
   /**
    * The returned value when the query was initially run.
    * Will likely be an array or object or query values that can be used to trace back which methods/accessors were used in the query.
@@ -1107,11 +1120,12 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
   public parentQueryPath: QueryPath;
   private limit: number;
   private offset: number;
+  private wherePath: WherePath;
 
   constructor(
-    public shape: T,
-    private queryBuildFn: QueryBuildFn<T, ResponseType>,
-    private subject?: T | ShapeSet<T>,
+    public shape: ShapeType,
+    private queryBuildFn?: QueryBuildFn<ShapeType, ResponseType>,
+    private subject?: ShapeType | ShapeSet<ShapeType>,
   ) {
     let dummyNode = new TestNode();
     let queryShape: QueryBuilderObject;
@@ -1126,8 +1140,10 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
       queryShape = QueryShape.create(dummyShape);
     }
 
-    let queryResponse = this.queryBuildFn(queryShape as any, this);
-    this.traceResponse = queryResponse;
+    if (queryBuildFn) {
+      let queryResponse = this.queryBuildFn(queryShape as any, this);
+      this.traceResponse = queryResponse;
+    }
   }
   setLimit(limit: number) {
     this.limit = limit;
@@ -1149,22 +1165,27 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
   //   return new LinkedQuery(this.shape, this.queryBuildFn, subject);
   // }
 
-  where(validation: WhereClause<T>): this {
-    throw Error('Not implemented');
+  where(validation: WhereClause<ShapeType>): this {
+    this.wherePath = processWhereClause(validation, this.shape);
+    return this;
   }
 
   exec(): Promise<QueryResponseToResultType<ResponseType>> {
     return StorageHelper.query(this);
   }
 
-  getQueryObject(): SelectQuery<T> {
+  getQueryObject(): SelectQuery<ShapeType> {
     let queryPaths = this.getQueryPaths();
-    return {
+    let selectQuery = {
       select: queryPaths,
       subject: this.subject,
       limit: this.limit,
       offset: this.offset,
-    } as SelectQuery<T>;
+    } as SelectQuery<ShapeType>;
+    if (this.wherePath) {
+      selectQuery.where = this.wherePath;
+    }
+    return selectQuery;
   }
 
   /**
@@ -1195,6 +1216,9 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
       queryPaths.push(
         (this.traceResponse as LinkedQuery<any, any>).getQueryPaths() as any,
       );
+    } else if (!this.traceResponse) {
+      //that's totally fine. For example Person.select().where(p => p.name.equals('John'))
+      //will return all persons with the name John, but no properties are selected for these persons
     }
     //if it's an object
     else if (typeof this.traceResponse === 'object') {
@@ -1308,6 +1332,24 @@ export class LinkedQuery<T extends Shape, ResponseType = any, Source = any> {
 
   clone() {
     return new LinkedQuery(this.shape, this.queryBuildFn, this.subject);
+  }
+
+  patchResultPromise<ResultType>(
+    p: Promise<ResultType>,
+  ): PatchedQueryPromise<ResultType, ShapeType> {
+    let pAdjusted = p as PatchedQueryPromise<ResultType, ShapeType>;
+    p['where'] = (
+      validation: WhereClause<ShapeType>,
+    ): PatchedQueryPromise<ResultType, ShapeType> => {
+      // preventExec();
+      this.where(validation);
+      return pAdjusted;
+    };
+    p['limit'] = (lim: number): PatchedQueryPromise<ResultType, ShapeType> => {
+      this.setLimit(lim);
+      return pAdjusted;
+    };
+    return p as PatchedQueryPromise<ResultType, ShapeType>;
   }
 }
 
