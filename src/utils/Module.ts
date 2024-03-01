@@ -66,8 +66,6 @@ import {
   ToQueryResultSet,
 } from './LinkedQuery';
 import {createTraceShape, TraceShape} from './TraceShape';
-import {resolveLocalEndResults} from './LocalQueryResolver';
-import {QueryType} from 'typedoc';
 
 //global tree
 declare var lincd: any;
@@ -1287,11 +1285,11 @@ function getSourceFromInputProps(props, shapeClass) {
   return props.of instanceof Node
     ? new shapeClass(props.of)
     : //if it's a shape it needs to match the shape of the component, or extend it, if not we recreate the shape
-    props.of instanceof Shape &&
-      props.of.nodeShape !== shapeClass.shape.node &&
-      !hasSuperClass(getShapeClass(props.of.nodeShape.namedNode), shapeClass)
-    ? new shapeClass(props.of.namedNode)
-    : props.of;
+      props.of instanceof Shape &&
+        props.of.nodeShape !== shapeClass.shape.node &&
+        !hasSuperClass(getShapeClass(props.of.nodeShape.namedNode), shapeClass)
+      ? new shapeClass(props.of.namedNode)
+      : props.of;
 }
 
 function getLinkedComponentProps<ShapeType extends Shape, P>(
@@ -1363,8 +1361,8 @@ export function initTree() {
     typeof window !== 'undefined'
       ? window
       : typeof global !== 'undefined'
-      ? global
-      : undefined;
+        ? global
+        : undefined;
   if ('lincd' in globalObject) {
     throw new Error('Multiple versions of LINCD are loaded');
   } else {

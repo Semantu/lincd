@@ -27,7 +27,6 @@ import {Shape} from '../shapes/Shape';
 import {shacl} from '../ontologies/shacl';
 import {CoreMap} from '../collections/CoreMap';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet';
-import {result} from 'lincd-shacl/lib/ontologies/shacl';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 

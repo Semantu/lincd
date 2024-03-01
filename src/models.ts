@@ -8,11 +8,11 @@ import {
   Literal as ILiteral,
   NamedNode as INamedNode,
   Term,
-} from 'rdflib/lib/tf-types';
-import {DefaultGraphTermType, TermType} from 'rdflib/lib/types';
-import {defaultGraphURI} from 'rdflib/lib/utils/default-graph-uri';
+} from 'rdflib/lib/tf-types.js';
+import {DefaultGraphTermType, TermType} from 'rdflib/lib/types.js';
+import {defaultGraphURI} from 'rdflib/lib/utils/default-graph-uri.js';
 
-import {QuadSet} from './collections/QuadSet';
+import {QuadSet} from './collections/QuadSet.js';
 import {CoreMap} from './collections/CoreMap';
 import {QuadMap} from './collections/QuadMap';
 import {QuadArray} from './collections/QuadArray';
@@ -455,7 +455,10 @@ export class NamedNode
    * @param uri - the URI (more generic form of a URL) of the NamedNode
    * @param _isTemporaryNode - set to true if this node is only temporarily available in the local environment
    */
-  constructor(uri: string = '', private _isTemporaryNode: boolean = false) {
+  constructor(
+    uri: string = '',
+    private _isTemporaryNode: boolean = false,
+  ) {
     super(uri);
     if (this._isTemporaryNode) {
       //created locally, so we know everything about it there is to know
@@ -2643,7 +2646,10 @@ export class Graph implements Term {
   termType: string = 'Graph';
   private quads: QuadSet;
 
-  constructor(public value: string, quads?: QuadSet) {
+  constructor(
+    public value: string,
+    quads?: QuadSet,
+  ) {
     // super();
     this._node = NamedNode.getOrCreate(value);
     this.quads = quads ? quads : new QuadSet();

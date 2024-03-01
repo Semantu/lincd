@@ -17,7 +17,6 @@ import {
 } from '../interfaces/Component';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass';
 import {LinkedQuery, QueryResponseToResultType} from './LinkedQuery';
-import {node} from 'lincd-shacl/lib/ontologies/shacl';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
