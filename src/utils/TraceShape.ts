@@ -1,5 +1,4 @@
 import {Shape} from '../shapes/Shape.js';
-import {LinkedDataRequest} from '../interfaces/Component.js';
 import {NamedNode, Quad} from '../models.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {rdfs} from '../ontologies/rdfs.js';
@@ -12,6 +11,18 @@ export interface TraceShape extends Shape {
   usedAccessors: any[];
   responses: any[];
 }
+
+export declare type SubRequest = LinkedDataRequest;
+/**
+ * An array of requested property shapes.
+ * If you want to request specific property shapes of another property shape (this is called a SubRequest)
+ * then replace a property shape with an array that contains the main property shape as the first element, and an array of property shapes as subRequest of that main property shape
+ * e.g.: [shape1,[shape2,[shape3,shape4]]] will request shape 3 & 4 of shape 2
+ */
+export declare type LinkedDataRequest = SingleDataRequest[];
+export declare type SingleDataRequest =
+  | PropertyShape
+  | [PropertyShape, SubRequest];
 
 export function createTraceShape<ShapeType extends Shape>(
   shapeClass: typeof Shape,

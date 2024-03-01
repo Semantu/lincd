@@ -28,6 +28,8 @@ import * as URI from './utils/URI.js';
 import * as Find from './utils/Find.js';
 import * as Order from './utils/Order.js';
 import * as NQuads from './utils/NQuads.js';
+import * as LinkedQuery from './utils/LinkedQuery.js';
+import * as LinkedComponent from './utils/LinkedComponent.js';
 import * as LinkedComponentClass from './utils/LinkedComponentClass.js';
 import * as ForwardReasoning from './utils/ForwardReasoning.js';
 import * as NameSpace from './utils/NameSpace.js';
@@ -41,7 +43,6 @@ import * as IGraphObjectSet from './interfaces/IGraphObjectSet.js';
 import * as ICoreIterable from './interfaces/ICoreIterable.js';
 import * as IFileStore from './interfaces/IFileStore.js';
 import * as IQuadStore from './interfaces/IQuadStore.js';
-import * as Component from './interfaces/Component.js';
 import * as rdf from './ontologies/rdf.js';
 import * as rdfs from './ontologies/rdfs.js';
 import * as xsd from './ontologies/xsd.js';
@@ -93,8 +94,9 @@ export function initModularApp() {
     ICoreIterable,
     IFileStore,
     IQuadStore,
-    Component,
     LinkedComponentClass,
+    LinkedComponent,
+    LinkedQuery,
     SHACLShapes,
     rdf,
     rdfs,

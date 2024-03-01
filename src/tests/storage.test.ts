@@ -11,12 +11,8 @@ import {QuadArray} from '../collections/QuadArray.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {
-  LinkedDataGenericQuery,
-  LinkedDataRequest,
-} from '../interfaces/Component.js';
 import {PropertyShape} from '../shapes/SHACL.js';
-import {LinkedQueryObject, SelectQuery} from '../utils/LinkedQuery.js';
+import {SelectQuery} from '../utils/LinkedQuery.js';
 import {resolveLocal} from '../utils/LocalQueryResolver.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {
@@ -188,10 +184,7 @@ export class InMemoryStore extends Shape implements IQuadStore {
     }) as Promise<ResultType>;
   }
 
-  loadShape(
-    shapeInstance: Shape,
-    request: LinkedDataRequest,
-  ): Promise<QuadArray> {
+  loadShape(shapeInstance: Shape, request: any): Promise<QuadArray> {
     return this.init().then(() => {
       return this.getRequestQuads(shapeInstance, request);
       //for testing: add timer
@@ -206,10 +199,7 @@ export class InMemoryStore extends Shape implements IQuadStore {
     });
   }
 
-  loadShapes(
-    shapeInstances: ShapeSet,
-    request: LinkedDataRequest,
-  ): Promise<QuadArray> {
+  loadShapes(shapeInstances: ShapeSet, request: any): Promise<QuadArray> {
     return this.init().then(() => {
       let quads = new QuadArray();
       shapeInstances.forEach((shapeInstance) => {
@@ -233,12 +223,12 @@ export class InMemoryStore extends Shape implements IQuadStore {
 
   private getRequestQuads(
     source: Shape | QuadSet,
-    request: LinkedDataRequest,
+    request: any,
     quads: QuadArray = new QuadArray(),
   ) {
     // let {shape, properties}: {shape: typeof Shape; properties?: (PropertyShape | BoundPropertyShapes)[]} = request;
     request.forEach((propertyRequest) => {
-      let subRequest: LinkedDataRequest;
+      let subRequest: any;
       let propertyShape: PropertyShape;
       let propertyShapeSource: QuadSet | Shape;
 
@@ -337,17 +327,11 @@ export class TestStore implements IQuadStore {
     return null;
   }
 
-  loadShape(
-    shapeInstance: Shape,
-    request: LinkedDataRequest,
-  ): Promise<QuadArray> {
+  loadShape(shapeInstance: Shape, request: any): Promise<QuadArray> {
     return null;
   }
 
-  loadShapes(
-    shapeSet: ShapeSet,
-    request: LinkedDataRequest,
-  ): Promise<QuadArray> {
+  loadShapes(shapeSet: ShapeSet, request: any): Promise<QuadArray> {
     return null;
   }
 

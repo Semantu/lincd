@@ -8,12 +8,6 @@ import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {Shape} from '../shapes/Shape.js';
 import {Prefix} from './Prefix.js';
 import {CoreSet} from '../collections/CoreSet.js';
-import {ShapeSet} from '../collections/ShapeSet.js';
-import {
-  Component,
-  LinkedDataGenericQuery,
-  LinkedDataRequest,
-} from '../interfaces/Component.js';
 import {lincd as lincdOntology} from '../ontologies/lincd.js';
 import {npm} from '../ontologies/npm.js';
 import {rdf} from '../ontologies/rdf.js';
@@ -22,6 +16,7 @@ import {addNodeShapeToShapeClass} from './ShapeClass.js';
 import {
   createLinkedComponentFn,
   createLinkedSetComponentFn,
+  Component,
   LinkedComponentFactoryFn,
   LinkedSetComponentFactoryFn,
 } from '../utils/LinkedComponent';
@@ -42,9 +37,9 @@ let _autoLoadOntologyData = false;
  * a map of requested property shapes for specific nodes
  * The value is a promise if it's still loading, or true if it is fully loaded
  */
-type ClassDecorator = <T extends {new (...args: any[]): {}}>(
-  constructor: T,
-) => T;
+// type ClassDecorator = <T extends {new (...args: any[]): {}}>(
+//   constructor: T,
+// ) => T;
 
 /**
  * This object, returned by [linkedPackage()](/docs/lincd.js/modules/utils_Module#linkedPackage),
@@ -268,30 +263,6 @@ export function autoLoadOntologyData(value: boolean) {
       }
     });
   }
-}
-
-function dataRequestToGenericQuery(
-  shapeType: typeof Shape,
-  dataRequest: LinkedDataRequest,
-  subject?: Shape | ShapeSet,
-) {
-  let genericQuery: LinkedDataGenericQuery;
-
-  let where: [string, string, string][];
-  if (!subject) {
-    where = [['?s', prefix(rdf.type), prefix(shapeType.targetClass)]];
-  } else if (subject instanceof Shape) {
-    where = [['?s', '@id', subject.uri]];
-  } else {
-    // ShapeSet
-  }
-
-  genericQuery = {
-    select: dataRequest,
-    where,
-  };
-
-  return genericQuery;
 }
 
 export function linkedPackage(packageName: string): LinkedPackageObject {

@@ -11,8 +11,7 @@ import nextTick from 'next-tick';
 import {QuadArray} from '../collections/QuadArray.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {LinkedDataRequest} from '../interfaces/Component.js';
-import {getShapeClass, getSuperShapesClasses} from './ShapeClass.js';
+import {getSuperShapesClasses} from './ShapeClass.js';
 import {LinkedQuery, QueryResponseToResultType} from './LinkedQuery.js';
 
 export abstract class LinkedStorage {
@@ -404,104 +403,6 @@ export abstract class LinkedStorage {
     });
   }
 
-  static loadShapes(
-    shapeSet: ShapeSet,
-    shapeOrRequest: LinkedDataRequest,
-    byPassCache: boolean = false,
-  ): Promise<QuadArray> {
-    let nodes = shapeSet.getNodes();
-    if (!byPassCache) {
-      let cachedResult = this.nodesAreLoaded(nodes, shapeOrRequest);
-      if (cachedResult) {
-        //return the load promise that's already in progress,
-        // or a promise that resolves to true straight away if it's already been loaded
-        return cachedResult === true ? Promise.resolve(true) : cachedResult;
-      }
-    }
-
-    let storeMap = this.getStoreMapForShapes(shapeSet);
-    let storePromises = [];
-    storeMap.map((shapes, store) => {
-      storePromises.push(
-        store.loadShapes(new ShapeSet(shapes), shapeOrRequest),
-      );
-    });
-    let loadPromise = Promise.all(storePromises).then((results) => {
-      // return new QuadArray();
-      let quads = new QuadArray();
-      results.forEach((result) => {
-        if (result instanceof QuadArray) {
-          quads.push(...(result as any));
-        }
-      });
-      //update the cache to indicate these property shapes have finished loading for these nodes
-      this.setNodesLoaded(nodes, shapeOrRequest, true);
-      return quads;
-    });
-    //update the cache to indicate these property shapes are being loaded for these nodes
-    LinkedStorage.setNodesLoaded(nodes, shapeOrRequest, loadPromise);
-    return loadPromise;
-  }
-
-  /**
-   * Loads the requested Shape(s) from storage for a specific node.
-   * To form a request see the LinkedDataRequest interface
-   * Returns a promise that resolves when the loading has completed.
-   * Requests are cached so the second time you request the same data you will get the same answer. Use byPassCache if you want to ensure the data is loaded again.
-   * The returned promise resolves to null if no target store was found for this node (the app may not have a defaultStore set up then)
-   * @param shapeInstance
-   * @param shapeOrRequest
-   * @param byPassCache
-   */
-  static loadShape(
-    shapeInstance: Shape,
-    shapeOrRequest?: LinkedDataRequest,
-    byPassCache: boolean = false,
-  ): Promise<QuadArray> {
-    //if no shape is requested then we automatically request all properties of the shape
-    if (!shapeOrRequest) {
-      //TODO: maybe we can optimise requests by not sending all the shapes and letting the backend fill in the property shapes
-      shapeOrRequest = [...shapeInstance.nodeShape.getPropertyShapes()];
-      //also add the property shapes of all classes that extend this shape
-      let shapeClass = getShapeClass(shapeInstance.nodeShape.namedNode);
-      let superShapes: (typeof Shape)[] = getSuperShapesClasses(shapeClass);
-      superShapes.forEach((superShapeClass) => {
-        shapeOrRequest.push(...superShapeClass.shape.getPropertyShapes());
-      });
-    }
-    //@TODO: optimise the shapeOrRequest. Currently if the same property is requested twice, but once with more sub properties, then both will be requested.
-    // This can be merged into 1 shape request because the longer one automatically loads the shorter one
-
-    let node = shapeInstance.node;
-    if (!byPassCache) {
-      let cachedResult = this.isLoaded(node, shapeOrRequest);
-      if (cachedResult) {
-        //return the load promise that's already in progress,
-        // or a promise that resolves to true straight away if it's already been loaded
-        return cachedResult === true ? Promise.resolve(true) : cachedResult;
-      }
-    }
-    let store = this.getStoreForNode(shapeInstance.namedNode);
-    if (store) {
-      let promise = store
-        .loadShape(shapeInstance, shapeOrRequest)
-        .then((res) => {
-          //indicate that these property shapes have finished loading for this node
-          this.setNodeLoaded(node, shapeOrRequest);
-          return res;
-        });
-      //indicate that these property shapes are being loaded for this node
-      this.setNodeLoaded(node, shapeOrRequest, promise);
-      return promise;
-    } else {
-      //NOTE: if we ever need to know that we could not find a store to load this node from
-      //then we could setNodeLoaded to false, and we need to account for the possibility of a false value in other places
-      //any place using cached results would need to differentiate between null and false
-      this.setNodeLoaded(node, shapeOrRequest);
-      return Promise.resolve(null);
-    }
-  }
-
   static nodesAreLoaded(nodes: NodeSet, dataRequest): boolean | Promise<any> {
     //@TODO: reimplement tracking of loaded paths for queries
     return false;
@@ -621,7 +522,7 @@ export abstract class LinkedStorage {
 
   static setNodesLoaded(
     nodes: NodeSet,
-    dataRequest: LinkedDataRequest,
+    dataRequest: any,
     requestState: true | Promise<any> = true,
   ) {
     nodes.forEach((source) => {
@@ -631,7 +532,7 @@ export abstract class LinkedStorage {
 
   static setNodeLoaded(
     node: Node,
-    request: LinkedDataRequest,
+    request: any,
     requestState: true | Promise<any> = true,
   ) {
     if (!this.nodeToPropertyRequests.get(node)) {

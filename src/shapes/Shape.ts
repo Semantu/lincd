@@ -18,11 +18,6 @@ import {SearchMap} from '../collections/SearchMap.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {NodeShape} from './SHACL.js';
-import {
-  LinkedDataDeclaration,
-  LinkedDataResponse,
-  LinkedDataSetDeclaration,
-} from '../interfaces/Component.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
   getMostSpecificShapes,
@@ -294,67 +289,6 @@ export abstract class Shape implements IShape {
     return query.patchResultPromise<ResultType>(p);
 
     // return StorageHelper.query<ResultType>(query);
-  }
-
-  /**
-   * Lets a LinkedComponent request specific data of a shape.
-   *
-   * @param dataRequestFn this function receives a dummy instance of the shape. The function is expected to request all the properties & methods of the shape that the component requires to function. This will inform automatic data loading
-   */
-  static request<T extends Shape>(
-    this: {new (node: Node): T; targetClass: any},
-    dataRequestFn: (shapeInstance: T) => LinkedDataResponse,
-  ): LinkedDataDeclaration<T> {
-    //calling this method like this so that we can keep it private without having to add it to the 'this' interface
-    this['ensureLinkedShape']();
-
-    //return an object with the shape and a request key. The value of request is a function
-    //that can be executed for a specific instance of the shape
-    return {
-      shape: this as any as typeof Shape,
-      request: (shapeInstance) => {
-        return dataRequestFn(shapeInstance);
-      },
-    };
-  }
-
-  /**
-   * Lets a LinkedComponent request specific data of a shape.
-   *
-   * @param dataRequestFn this function receives a dummy instance of the shape. The function is expected to request all the properties & methods of the shape that the component requires to function. This will inform automatic data loading
-   */
-  static requestSet<T extends Shape>(
-    this: {new (node: Node): T; targetClass: any},
-    dataRequestFn: (shapeSet: ShapeSet<T>) => LinkedDataResponse,
-  ): LinkedDataSetDeclaration<T> {
-    //calling this method like this so that we can keep it private without having to add it to the 'this' interface
-    this['ensureLinkedShape']();
-
-    //return an object with the shape and a request key. The value of request is a function
-    //that can be executed for a set of instances of the shape
-    return {
-      shape: this as any as typeof Shape,
-      setRequest: (shapeSet) => {
-        return dataRequestFn(shapeSet);
-      },
-    };
-  }
-
-  static requestForEachInSet<T extends Shape>(
-    this: {new (node: Node): T; targetClass: any},
-    dataRequestFn: (shape: T) => LinkedDataResponse,
-  ): LinkedDataSetDeclaration<T> {
-    //calling this method like this so that we can keep it private without having to add it to the 'this' interface
-    this['ensureLinkedShape']();
-
-    //return an object with the shape and a request key. The value of request is a function
-    //that can be executed for a specific instance of the shape
-    return {
-      shape: this as any as typeof Shape,
-      request: (shape) => {
-        return dataRequestFn(shape);
-      },
-    };
   }
 
   static isInstanceOfTargetClass(node: Node) {

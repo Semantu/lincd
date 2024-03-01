@@ -3,10 +3,7 @@ import {Graph, NamedNode, Quad} from '../models.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {ICoreIterable} from './ICoreIterable.js';
 import {Shape} from '../shapes/Shape.js';
-import {QuadArray} from '../collections/QuadArray.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {ShapeSet} from '../collections/ShapeSet.js';
-import {LinkedDataRequest} from './Component.js';
 import {SelectQuery} from '../utils/LinkedQuery.js';
 
 export interface IQuadStore {
@@ -47,10 +44,6 @@ export interface IQuadStore {
     query: SelectQuery<any>,
     shapeClass: Shape | typeof Shape,
   ): Promise<ResultType>;
-
-  loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
-
-  loadShapes(shapeSet: ShapeSet, shape: LinkedDataRequest): Promise<QuadArray>;
 
   /**
    * Clears all values of specific predicates for specific subjects

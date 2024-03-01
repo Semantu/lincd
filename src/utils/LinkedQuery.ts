@@ -4,13 +4,8 @@ import {PropertyShape} from '../shapes/SHACL.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
-import {
-  BoundComponentFactory,
-  LinkedFunctionalComponent,
-  LinkedFunctionalSetComponent,
-} from '../interfaces/Component.js';
+import {LinkedComponent, LinkedSetComponent} from './LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import React from 'react';
 
 /**
  * ###################################
@@ -233,11 +228,9 @@ export type QueryResponseToResultType<
       ? UnionToIntersection<QueryResponseToResultType<Type>>
       : T extends Evaluation
         ? boolean
-        : T extends BoundComponentFactory<any, any>
-          ? true
-          : T extends Object
-            ? QResult<QShapeType, ObjectToPlainResult<T>>
-            : T;
+        : T extends Object
+          ? QResult<QShapeType, ObjectToPlainResult<T>>
+          : T;
 
 /**
  * Turns a QueryBuilderObject into a plain JS object
@@ -561,8 +554,8 @@ export class QueryBuilderObject<
 
   preloadFor<ShapeType extends Shape>(
     component:
-      | LinkedFunctionalComponent<any, ShapeType>
-      | LinkedFunctionalSetComponent<any, ShapeType>,
+      | LinkedComponent<any, ShapeType>
+      | LinkedSetComponent<any, ShapeType>,
   ): BoundComponent<this, ShapeType> {
     return new BoundComponent<this, ShapeType>(component, this);
   }
@@ -903,29 +896,11 @@ export class BoundComponent<
 > extends QueryBuilderObject {
   constructor(
     public originalValue:
-      | LinkedFunctionalComponent<any, ShapeType>
-      | LinkedFunctionalSetComponent<any, ShapeType>,
+      | LinkedComponent<any, ShapeType>
+      | LinkedSetComponent<any, ShapeType>,
     public source: Source, // property?: PropertyShape, // subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
     super(null, null);
-  }
-
-  create(source: Shape) {
-    let boundComponent: LinkedFunctionalComponent<any, ShapeType> = (props) => {
-      //TODO: use propertyShapes for RDFa
-
-      //add this result as the source of the bound child component
-      let newProps = {...props};
-      newProps['of'] = source; // as Node | ShapeType;
-
-      //let the LinkedComponent know that it was bound,
-      //that means it can expect its data to have been loaded by its parent
-      newProps['isBound'] = true;
-
-      //render the child component (which is 'this')
-      return React.createElement(this.originalValue, newProps);
-    };
-    return boundComponent;
   }
 
   getPropertyPath() {

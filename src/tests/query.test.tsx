@@ -1122,12 +1122,10 @@ test('linked set components with pagination with sources from other linked compo
 //});
 
 //NEXT:
-//test Component.of() .. or do we entirely remove it and just use preload?
-//clean up old linked component code
-//Refactor structure of json objects, where and count need to be added? investigate other libraries
+//bring back flat
 //Refactor duplicate value in "every"
 //Refactor firstPath into an array
-//FLAT: old, but kee
+//FLAT: old, but keep
 // // test('can select sub properties of a first property that returns a set - FLAT result', () => {
 // //   let q = Person.select((p) => {
 // //     return p.friends.name;
