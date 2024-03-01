@@ -464,54 +464,16 @@ export class QueryBuilderObject<
   Source = any,
   Property extends string | number | symbol = any,
 > {
+  //is null by default to avoid warnings when trying to access wherePath when its undefined
+  wherePath?: WherePath = null;
   protected originalValue?: OriginalValue;
   protected source: Source;
   protected prop: Property;
-
-  //is null by default to avoid warnings when trying to access wherePath when its undefined
-  wherePath?: WherePath = null;
 
   constructor(
     public property?: PropertyShape,
     public subject?: QueryShape<any> | QueryShapeSet<any> | QueryPrimitiveSet,
   ) {}
-
-  getOriginalValue() {
-    return this.originalValue;
-  }
-
-  getPropertyStep(): QueryStep {
-    return {
-      property: this.property,
-      where: this.wherePath,
-    };
-  }
-
-  preloadFor<ShapeType extends Shape>(
-    component:
-      | LinkedFunctionalComponent<any, ShapeType>
-      | LinkedFunctionalSetComponent<any, ShapeType>,
-  ): BoundComponent<this, ShapeType> {
-    return new BoundComponent<this, ShapeType>(component, this);
-  }
-
-  limit(lim: number) {
-    console.log(lim);
-  }
-  /**
-   * Returns the path of properties that were requested to reach this value
-   */
-  getPropertyPath(currentPath?: QueryPropertyPath): QueryPropertyPath {
-    let path: QueryPropertyPath = currentPath || [];
-    //add the step of this object to the beginning of the path (so that the next parent will always before the current item)
-    if (this.property || this.wherePath) {
-      path.unshift(this.getPropertyStep());
-    }
-    if (this.subject) {
-      return this.subject.getPropertyPath(path);
-    }
-    return path;
-  }
 
   /**
    * Converts an original value into a query value
@@ -536,11 +498,15 @@ export class QueryBuilderObject<
     endValue: ShapeSet<Shape> | Shape[] | QueryPrimitiveSet,
   ): // | QueryValueSetOfSets,
   ShapeSet;
+
   static getOriginalSource(endValue: Shape): Shape;
+
   static getOriginalSource(endValue: QueryString): Shape | string;
+
   static getOriginalSource(
     endValue: string[] | QueryBuilderObject,
   ): Shape | ShapeSet;
+
   static getOriginalSource(
     endValue:
       | ShapeSet
@@ -581,6 +547,44 @@ export class QueryBuilderObject<
       throw new Error('Unimplemented. Return as is?');
     }
   }
+
+  getOriginalValue() {
+    return this.originalValue;
+  }
+
+  getPropertyStep(): QueryStep {
+    return {
+      property: this.property,
+      where: this.wherePath,
+    };
+  }
+
+  preloadFor<ShapeType extends Shape>(
+    component:
+      | LinkedFunctionalComponent<any, ShapeType>
+      | LinkedFunctionalSetComponent<any, ShapeType>,
+  ): BoundComponent<this, ShapeType> {
+    return new BoundComponent<this, ShapeType>(component, this);
+  }
+
+  limit(lim: number) {
+    console.log(lim);
+  }
+
+  /**
+   * Returns the path of properties that were requested to reach this value
+   */
+  getPropertyPath(currentPath?: QueryPropertyPath): QueryPropertyPath {
+    let path: QueryPropertyPath = currentPath || [];
+    //add the step of this object to the beginning of the path (so that the next parent will always before the current item)
+    if (this.property || this.wherePath) {
+      path.unshift(this.getPropertyStep());
+    }
+    if (this.subject) {
+      return this.subject.getPropertyPath(path);
+    }
+    return path;
+  }
 }
 
 const processWhereClause = (
@@ -602,8 +606,8 @@ export class QueryShapeSet<
   Source = any,
   Property extends string | number | symbol = any,
 > extends QueryBuilderObject<ShapeSet<S>, Source, Property> {
-  private proxy;
   public queryShapes: CoreSet<QueryShape>;
+  private proxy;
 
   constructor(
     _originalValue?: ShapeSet<S>,
@@ -618,6 +622,75 @@ export class QueryShapeSet<
         QueryShape.create(shape, property, subject),
       ),
     );
+  }
+
+  static create<S extends Shape = Shape>(
+    originalValue: ShapeSet<S>,
+    property: PropertyShape,
+    subject: QueryShape<any> | QueryShapeSet<any>,
+  ) {
+    let instance = new QueryShapeSet<S>(originalValue, property, subject);
+
+    let proxy = this.proxifyShapeSet<S>(instance);
+    return proxy;
+  }
+
+  static proxifyShapeSet<T extends Shape = Shape>(
+    queryShapeSet: QueryShapeSet<T>,
+  ) {
+    let originalShapeSet = queryShapeSet.getOriginalValue();
+
+    queryShapeSet.proxy = new Proxy(queryShapeSet, {
+      get(target, key, receiver) {
+        //if the key is a string
+        if (typeof key === 'string') {
+          //if this is a get method that is implemented by the QueryShapeSet, then use that
+          if (key in queryShapeSet) {
+            //if it's a function, then bind it to the queryShape and return it so it can be called
+            if (typeof queryShapeSet[key] === 'function') {
+              return target[key].bind(target);
+            }
+            //if it's a get method, then return that
+            //NOTE: we may not need this if we don't use any get methods in QueryValue classes?
+            return queryShapeSet[key];
+          }
+
+          //if not, then a method/accessor was called that likely fits with the methods of the original SHAPE of the items in the shape set
+          //As in Shape.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Shapes
+          //So here we find back the shape that all items have in common, and then find the property shape that matches the key
+          //NOTE: this will only work if the key corresponds with an accessor in the shape that uses a @linkedProperty decorator
+          let leastSpecificShape = queryShapeSet
+            .getOriginalValue()
+            .getLeastSpecificShape();
+          let propertyShape: PropertyShape = leastSpecificShape?.shape
+            .getPropertyShapes()
+            .find((propertyShape) => propertyShape.label === key);
+
+          //if the property shape is found
+          if (propertyShape) {
+            return queryShapeSet.callPropertyShapeAccessor(propertyShape);
+          } else if (
+            //else if a method of the original shape is called, like .forEach() or similar
+            originalShapeSet[key] &&
+            typeof originalShapeSet[key] === 'function'
+          ) {
+            //then return that method and bind the original value as 'this'
+            return originalShapeSet[key].bind(originalShapeSet);
+          } else {
+            console.warn(
+              'Could not find property shape for key ' +
+                key +
+                ' on shape ' +
+                leastSpecificShape +
+                '. Make sure the get method exists and is decorated with @linkedProperty / @objectProperty / @literalProperty',
+            );
+          }
+        }
+        //otherwise return the value of the property on the original shape
+        return originalShapeSet[key];
+      },
+    });
+    return queryShapeSet.proxy;
   }
 
   concat(other: QueryShapeSet): QueryShapeSet {
@@ -741,75 +814,6 @@ export class QueryShapeSet<
     let wherePath = processWhereClause(validation, leastSpecificShape);
     return new SetEvaluation(this, method, [wherePath]);
   }
-
-  static create<S extends Shape = Shape>(
-    originalValue: ShapeSet<S>,
-    property: PropertyShape,
-    subject: QueryShape<any> | QueryShapeSet<any>,
-  ) {
-    let instance = new QueryShapeSet<S>(originalValue, property, subject);
-
-    let proxy = this.proxifyShapeSet<S>(instance);
-    return proxy;
-  }
-
-  static proxifyShapeSet<T extends Shape = Shape>(
-    queryShapeSet: QueryShapeSet<T>,
-  ) {
-    let originalShapeSet = queryShapeSet.getOriginalValue();
-
-    queryShapeSet.proxy = new Proxy(queryShapeSet, {
-      get(target, key, receiver) {
-        //if the key is a string
-        if (typeof key === 'string') {
-          //if this is a get method that is implemented by the QueryShapeSet, then use that
-          if (key in queryShapeSet) {
-            //if it's a function, then bind it to the queryShape and return it so it can be called
-            if (typeof queryShapeSet[key] === 'function') {
-              return target[key].bind(target);
-            }
-            //if it's a get method, then return that
-            //NOTE: we may not need this if we don't use any get methods in QueryValue classes?
-            return queryShapeSet[key];
-          }
-
-          //if not, then a method/accessor was called that likely fits with the methods of the original SHAPE of the items in the shape set
-          //As in Shape.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Shapes
-          //So here we find back the shape that all items have in common, and then find the property shape that matches the key
-          //NOTE: this will only work if the key corresponds with an accessor in the shape that uses a @linkedProperty decorator
-          let leastSpecificShape = queryShapeSet
-            .getOriginalValue()
-            .getLeastSpecificShape();
-          let propertyShape: PropertyShape = leastSpecificShape?.shape
-            .getPropertyShapes()
-            .find((propertyShape) => propertyShape.label === key);
-
-          //if the property shape is found
-          if (propertyShape) {
-            return queryShapeSet.callPropertyShapeAccessor(propertyShape);
-          } else if (
-            //else if a method of the original shape is called, like .forEach() or similar
-            originalShapeSet[key] &&
-            typeof originalShapeSet[key] === 'function'
-          ) {
-            //then return that method and bind the original value as 'this'
-            return originalShapeSet[key].bind(originalShapeSet);
-          } else {
-            console.warn(
-              'Could not find property shape for key ' +
-                key +
-                ' on shape ' +
-                leastSpecificShape +
-                '. Make sure the get method exists and is decorated with @linkedProperty / @objectProperty / @literalProperty',
-            );
-          }
-        }
-        //otherwise return the value of the property on the original shape
-        return originalShapeSet[key];
-      },
-    });
-    return queryShapeSet.proxy;
-  }
 }
 
 export class QueryShape<
@@ -817,8 +821,8 @@ export class QueryShape<
   Source = any,
   Property extends string | number | symbol = any,
 > extends QueryBuilderObject<S, Source, Property> {
-  private proxy;
   public isSource: boolean;
+  private proxy;
 
   constructor(
     public originalValue: S,
@@ -834,11 +838,6 @@ export class QueryShape<
   //   //return this because after Shape.friends.where() we can call other methods of Shape.friends
   //   return this.proxy;
   // }
-
-  count(countable: QueryBuilderObject, resultKey?: string): Count<this> {
-    return new Count(this, countable, resultKey);
-    // return this._count;
-  }
 
   static create(
     original: Shape,
@@ -891,6 +890,11 @@ export class QueryShape<
     });
     return queryShape.proxy;
   }
+
+  count(countable: QueryBuilderObject, resultKey?: string): Count<this> {
+    return new Count(this, countable, resultKey);
+    // return this._count;
+  }
 }
 
 export class BoundComponent<
@@ -905,6 +909,7 @@ export class BoundComponent<
   ) {
     super(null, null);
   }
+
   create(source: Shape) {
     let boundComponent: LinkedFunctionalComponent<any, ShapeType> = (props) => {
       //TODO: use propertyShapes for RDFa
@@ -922,6 +927,7 @@ export class BoundComponent<
     };
     return boundComponent;
   }
+
   getPropertyPath() {
     //get the path that is passed to Component.of(some.path.here)
     let sourcePath: ComponentQueryPath = this.source.getPropertyPath();
@@ -953,13 +959,13 @@ export class BoundComponent<
 }
 
 export class Evaluation {
+  private _andOr: AndOrQueryToken[] = [];
+
   constructor(
     public value: QueryBuilderObject | QueryPrimitiveSet,
     public method: WhereMethods,
     public args: any[],
   ) {}
-
-  private _andOr: AndOrQueryToken[] = [];
 
   getPropertyPath() {
     return this.getWherePath();
@@ -1078,6 +1084,7 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
     }
     return this.first().getPropertyStep();
   }
+
   getPropertyPath(): QueryPropertyPath {
     if (this.size > 1) {
       throw new Error(
@@ -1092,6 +1099,7 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
       (first.subject as QueryShapeSet).wherePath || this.subject.wherePath;
     return this.first().getPropertyPath();
   }
+
   count(countable, resultKey?: string): Count<this> {
     return new Count(this, countable, resultKey);
   }
@@ -1136,15 +1144,19 @@ export class LinkedQuery<
       this.traceResponse = queryResponse;
     }
   }
+
   setLimit(limit: number) {
     this.limit = limit;
   }
+
   getLimit() {
     return this.limit;
   }
+
   setOffset(offset: number) {
     this.offset = offset;
   }
+
   getOffset() {
     return this.offset;
   }
@@ -1152,6 +1164,7 @@ export class LinkedQuery<
   setSubject(subject) {
     this.subject = subject;
   }
+
   // applyTo(subject) {
   //   return new LinkedQuery(this.shape, this.queryBuildFn, subject);
   // }
@@ -1250,6 +1263,7 @@ export class LinkedQuery<
       return this.isValidResult(qResult);
     });
   }
+
   isValidResult(qResult: QResult<any>) {
     let select = this.getQueryObject().select;
     if (Array.isArray(select)) {
@@ -1258,11 +1272,35 @@ export class LinkedQuery<
       return this.isValidCustomObjectResult(qResult, select);
     }
   }
+
+  clone() {
+    return new LinkedQuery(this.shape, this.queryBuildFn, this.subject);
+  }
+
+  patchResultPromise<ResultType>(
+    p: Promise<ResultType>,
+  ): PatchedQueryPromise<ResultType, ShapeType> {
+    let pAdjusted = p as PatchedQueryPromise<ResultType, ShapeType>;
+    p['where'] = (
+      validation: WhereClause<ShapeType>,
+    ): PatchedQueryPromise<ResultType, ShapeType> => {
+      // preventExec();
+      this.where(validation);
+      return pAdjusted;
+    };
+    p['limit'] = (lim: number): PatchedQueryPromise<ResultType, ShapeType> => {
+      this.setLimit(lim);
+      return pAdjusted;
+    };
+    return p as PatchedQueryPromise<ResultType, ShapeType>;
+  }
+
   private isValidQueryPathsResult(qResult: QResult<any>, select: QueryPath[]) {
     return select.every((path) => {
       return this.isValidQueryPathResult(qResult, path);
     });
   }
+
   private isValidQueryPathResult(qResult: QResult<any>, path: QueryPath) {
     if (Array.isArray(path)) {
       return this.isValidQueryStepResult(qResult, path[0], path.splice(1));
@@ -1280,6 +1318,7 @@ export class LinkedQuery<
       }
     }
   }
+
   private isValidQueryStepResult(
     qResult: QResult<any>,
     step: QueryStep | SubQueryPaths,
@@ -1307,6 +1346,7 @@ export class LinkedQuery<
       return this.isValidCustomObjectResult(qResult, step as CustomQueryObject);
     }
   }
+
   private isValidCustomObjectResult(
     qResult: QResult<any>,
     step: CustomQueryObject,
@@ -1319,28 +1359,6 @@ export class LinkedQuery<
       let path: QueryPath = step[key];
       return this.isValidQueryPathResult(qResult[key], path);
     }
-  }
-
-  clone() {
-    return new LinkedQuery(this.shape, this.queryBuildFn, this.subject);
-  }
-
-  patchResultPromise<ResultType>(
-    p: Promise<ResultType>,
-  ): PatchedQueryPromise<ResultType, ShapeType> {
-    let pAdjusted = p as PatchedQueryPromise<ResultType, ShapeType>;
-    p['where'] = (
-      validation: WhereClause<ShapeType>,
-    ): PatchedQueryPromise<ResultType, ShapeType> => {
-      // preventExec();
-      this.where(validation);
-      return pAdjusted;
-    };
-    p['limit'] = (lim: number): PatchedQueryPromise<ResultType, ShapeType> => {
-      this.setLimit(lim);
-      return pAdjusted;
-    };
-    return p as PatchedQueryPromise<ResultType, ShapeType>;
   }
 }
 

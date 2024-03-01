@@ -6,8 +6,8 @@ import {Shape} from '../shapes/Shape.js';
 import {QuadArray} from '../collections/QuadArray.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {LinkedDataGenericQuery, LinkedDataRequest} from './Component.js';
-import {LinkedQueryObject, SelectQuery} from '../utils/LinkedQuery.js';
+import {LinkedDataRequest} from './Component.js';
+import {SelectQuery} from '../utils/LinkedQuery.js';
 
 export interface IQuadStore {
   /**

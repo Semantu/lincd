@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import nextTick from 'next-tick';
-import {EventEmitter} from '../events/EventEmitter.js';
 import {Literal, NamedNode, Node, Quad} from '../models.js';
 import {rdf} from '../ontologies/rdf.js';
 import {NodeValuesSet} from '../collections/NodeValuesSet.js';
@@ -33,16 +32,14 @@ import {
 import {
   GetQueryResponseType,
   LinkedQuery,
-  QueryBuildFn,
   PatchedQueryPromise,
+  QueryBuildFn,
   QueryResponseToResultType,
 } from '../utils/LinkedQuery.js';
-import {LinkedStorage} from '../utils/LinkedStorage.js';
 import {
   IStorageController,
   staticImplements,
 } from '../interfaces/IStorageController.js';
-import {resolve} from 'eslint-import-resolver-typescript';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -1091,10 +1088,12 @@ export interface ShapeLike<M extends Shape> extends Constructor<M> {
 @staticImplements<IStorageController>() /* this statement implements both normal interface & static interface */
 export class StorageHelper {
   static storageController: IStorageController;
+
   static query<ResultType = any>(query: LinkedQuery<any>) {
     this.checkSetup();
     return this.storageController.query<ResultType>(query);
   }
+
   private static checkSetup() {
     if (!this.storageController) {
       throw new Error('LinkedStorage is not configured.');

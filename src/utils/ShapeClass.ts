@@ -85,9 +85,11 @@ function ensureShapeConstructor(shape: typeof Shape | (typeof Shape)[]) {
   //   return shape;
   // }
 }
+
 export function hasSuperClass(a: Function, b: Function) {
   return (a as Function).prototype instanceof b;
 }
+
 export function hasSubClass(a: Function, b: Function) {
   return (b as Function).prototype instanceof a;
 }
@@ -121,6 +123,7 @@ export function getLeastSpecificShapeClasses(shapes: ICoreIterable<Shape>) {
   );
   return filterShapesToLeastSpecific(shapeClasses);
 }
+
 export function getMostSpecificSubShapes(
   shape: typeof Shape | (typeof Shape)[],
 ): (typeof Shape)[] {

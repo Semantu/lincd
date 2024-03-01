@@ -1,16 +1,4 @@
-import {IQuadStore} from './IQuadStore.js';
-import {CoreMap} from '../collections/CoreMap.js';
-import {Graph, NamedNode, Node, Quad} from '../models.js';
-import {Shape} from '../shapes/Shape.js';
-import {PropertyShape} from '../shapes/SHACL.js';
-import {QuadSet} from '../collections/QuadSet.js';
-import {CoreSet} from '../collections/CoreSet.js';
-import {QuadArray} from '../collections/QuadArray.js';
-import {NodeSet} from '../collections/NodeSet.js';
-import {ICoreIterable} from './ICoreIterable.js';
-import {ShapeSet} from '../collections/ShapeSet.js';
 import {LinkedQuery} from '../utils/LinkedQuery.js';
-import {LinkedDataRequest} from './Component.js';
 
 export interface IStorageController {
   // new():MyType;
@@ -73,6 +61,7 @@ export interface IStorageController {
     query: LinkedQuery<any>,
     // shapeClass: Shape | typeof Shape,
   ): Promise<ResultType>;
+
   //
   // update(toAdd: QuadSet, toRemove: QuadSet): Promise<void | any>;
   //

@@ -6,15 +6,12 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {ICoreIterable} from './ICoreIterable.js';
 import {
   ComponentQueryPath,
-  QueryPath,
-  QueryPropertyPath,
-  QueryShape,
-  QueryShapeSet,
-  QueryBuilderObject,
-  LinkedQuery,
   LinkedQueryObject,
   QResult,
   QueryControllerProps,
+  QueryPath,
+  QueryShape,
+  QueryShapeSet,
 } from '../utils/LinkedQuery.js';
 import React from 'react';
 

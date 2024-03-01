@@ -6,21 +6,20 @@ import {
   GetQueryResponseType,
   JSPrimitive,
   LinkedQuery,
-  LinkedQueryObject,
   NodeResultMap,
   PropertyQueryStep,
   QResult,
+  QueryBuilderObject,
   QueryPath,
   QueryPrimitiveSet,
-  QueryStep,
-  QueryBuilderObject,
-  SubQueryPaths,
   QueryResponseToEndValues,
+  QueryStep,
+  SelectQuery,
+  SubQueryPaths,
   WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
   WherePath,
-  SelectQuery,
 } from './LinkedQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
@@ -101,6 +100,7 @@ function resolveCustomObject(
   }
   return resultObject;
 }
+
 export function resolveLocalEndResults<S extends LinkedQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
@@ -435,12 +435,14 @@ function resolveQuerySteps(
     throw new Error('Unknown subject type: ' + typeof subject);
   }
 }
+
 function shapeToResultObject(subject: Shape) {
   return {
     id: subject.uri,
     shape: subject,
   };
 }
+
 function shapeSetToResultObjects(subject: ShapeSet) {
   //create the start of the result JS object for each subject node
   let resultObjects: NodeResultMap = new CoreMap();
@@ -536,6 +538,7 @@ function resolveQueryPathsForShapeEndResults(
     );
   }
 }
+
 function resolveQueryStepForShape(
   queryStep: QueryStep | SubQueryPaths,
   subject: Shape,
@@ -690,6 +693,7 @@ function resolveCountStep(
   updateResultObjects(singleShape, queryStep, result, resultObjects, 'count');
   return result;
 }
+
 function updateResultObjects(
   singleShape: Shape,
   queryStep: QueryStep,
@@ -707,6 +711,7 @@ function updateResultObjects(
     }
   }
 }
+
 function resolveQueryStepForShapes(
   queryStep: QueryStep,
   subject: ShapeSet,

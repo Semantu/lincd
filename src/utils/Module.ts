@@ -21,17 +21,14 @@ import {
   LinkedComponentInputProps,
   LinkedComponentProps,
   LinkedDataChildRequestFn,
-  LinkedDataDeclaration,
   LinkedDataGenericQuery,
   LinkedDataRequest,
   LinkedDataRequestFn,
   LinkedDataResponse,
-  LinkedDataSetDeclaration,
   LinkedFunctionalComponent,
   LinkedFunctionalSetComponent,
   LinkedSetComponentInputProps,
   LinkedSetComponentProps,
-  removeBoundComponents,
   TransformedLinkedDataResponse,
 } from '../interfaces/Component.js';
 import {lincd as lincdOntology} from '../ontologies/lincd.js';
@@ -46,8 +43,6 @@ import {
 } from './ShapeClass.js';
 import {
   BoundComponent,
-  ComponentQueryPath,
-  CustomQueryObject,
   GetCustomObjectKeys,
   GetQueryResponseType,
   GetQueryShapeType,
@@ -56,11 +51,7 @@ import {
   QueryBuilderObject,
   QueryController,
   QueryControllerProps,
-  QueryPath,
-  QueryPropertyPath,
   QueryResponseToResultType,
-  QueryShape,
-  QueryStep,
   QueryWrapperObject,
   SelectQuery,
   ToQueryResultSet,
@@ -329,6 +320,7 @@ export interface LinkedPackageObject {
 const prefix = (n) => Prefix.toPrefixed(n.uri);
 
 export var DEFAULT_LIMIT = 12;
+
 export function setDefaultPageLimit(limit: number) {
   DEFAULT_LIMIT = limit;
 }
