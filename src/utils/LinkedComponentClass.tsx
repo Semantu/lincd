@@ -1,7 +1,7 @@
 import React from 'react';
-import {Shape} from '../shapes/Shape';
-import {LinkedComponentProps} from '../interfaces/Component';
-import {NamedNode} from '../models';
+import {Shape} from '../shapes/Shape.js';
+import {LinkedComponentProps} from '../interfaces/Component.js';
+import {NamedNode} from '../models.js';
 
 /**
  * Extend this class when you want to create a linked component using a classes (instead of a Functional Component).

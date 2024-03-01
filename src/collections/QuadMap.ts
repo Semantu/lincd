@@ -3,11 +3,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode, Node, Quad} from '../models';
-import {NodeSet} from './NodeSet';
-import {QuadSet} from './QuadSet';
-import {CoreSet} from './CoreSet';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
+import {NamedNode, Node, Quad} from '../models.js';
+import {NodeSet} from './NodeSet.js';
+import {QuadSet} from './QuadSet.js';
+import {CoreSet} from './CoreSet.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 
 /**
  * A map who's values are sets

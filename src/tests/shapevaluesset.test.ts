@@ -1,6 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
-import {NamedNode} from '../models';
-import {Shape} from '../shapes/Shape';
+import {NamedNode} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
 
 class Person extends Shape {
   get knows() {

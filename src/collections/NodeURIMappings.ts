@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {BlankNode, NamedNode} from '../models';
-import {NodeMap} from './NodeMap';
-import {NodeSet} from './NodeSet';
+import {BlankNode, NamedNode} from '../models.js';
+import {NodeMap} from './NodeMap.js';
+import {NodeSet} from './NodeSet.js';
 
 //TODO: rename to something more fitting now that it also handles TMP NamedNodes
 export class NodeURIMappings extends NodeMap<NamedNode> {

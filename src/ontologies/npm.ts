@@ -1,6 +1,6 @@
-import {createNameSpace} from '../utils/NameSpace';
-import {NamedNode} from '../models';
-import {Prefix} from '../utils/Prefix';
+import {createNameSpace} from '../utils/NameSpace.js';
+import {NamedNode} from '../models.js';
+import {Prefix} from '../utils/Prefix.js';
 
 let base = 'http://purl.org/on/npm/';
 export var ns = createNameSpace(base);

@@ -1,4 +1,4 @@
-import {linkedPackage} from './utils/Module';
+import {linkedPackage} from './utils/Module.js';
 
 export const {
   linkedComponent,

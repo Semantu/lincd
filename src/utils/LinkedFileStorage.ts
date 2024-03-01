@@ -1,8 +1,8 @@
-import {IFileStore} from '../interfaces/IFileStore';
+import {IFileStore} from '../interfaces/IFileStore.js';
 
 export abstract class LinkedFileStorage {
   private static defaultStore: IFileStore;
-  
+
   static get accessURL(): string {
     return this.defaultStore.accessURL;
   }

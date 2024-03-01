@@ -1,22 +1,22 @@
-import {IQuadStore} from '../interfaces/IQuadStore';
-import {defaultGraph, Graph, NamedNode, Quad, Node} from '../models';
-import {QuadSet} from '../collections/QuadSet';
-import {CoreMap} from '../collections/CoreMap';
-import {NodeSet} from '../collections/NodeSet';
-import {Shape, StorageHelper} from '../shapes/Shape';
-import {NodeShape, PropertyShape} from '../shapes/SHACL';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {eventBatcher} from '../events/EventBatcher';
+import {IQuadStore} from '../interfaces/IQuadStore.js';
+import {defaultGraph, Graph, NamedNode, Quad, Node} from '../models.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {Shape, StorageHelper} from '../shapes/Shape.js';
+import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {eventBatcher} from '../events/EventBatcher.js';
 import nextTick from 'next-tick';
-import {QuadArray} from '../collections/QuadArray';
-import {CoreSet} from '../collections/CoreSet';
-import {ShapeSet} from '../collections/ShapeSet';
+import {QuadArray} from '../collections/QuadArray.js';
+import {CoreSet} from '../collections/CoreSet.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
 import {
   LinkedDataGenericQuery,
   LinkedDataRequest,
-} from '../interfaces/Component';
-import {getShapeClass, getSuperShapesClasses} from './ShapeClass';
-import {LinkedQuery, QueryResponseToResultType} from './LinkedQuery';
+} from '../interfaces/Component.js';
+import {getShapeClass, getSuperShapesClasses} from './ShapeClass.js';
+import {LinkedQuery, QueryResponseToResultType} from './LinkedQuery.js';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;

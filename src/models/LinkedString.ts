@@ -1,4 +1,4 @@
-import {Literal, NamedNode} from '../models';
+import {Literal, NamedNode} from '../models.js';
 
 export class LinkedString extends String {
   constructor(

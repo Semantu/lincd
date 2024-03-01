@@ -3,11 +3,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {BlankNode, Literal, NamedNode, Node} from '../models';
-import {Shape} from '../shapes/Shape';
-import {NodeSet} from '../collections/NodeSet';
-import {NodeShape, PropertyShape} from '../shapes/SHACL';
-import {shacl} from '../ontologies/shacl';
+import {BlankNode, Literal, NamedNode, Node} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
+import {shacl} from '../ontologies/shacl.js';
 
 export interface NodeShapeConfig {
   /**

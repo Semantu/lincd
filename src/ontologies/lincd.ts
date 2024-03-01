@@ -1,6 +1,6 @@
-import {NamedNode} from '../models';
-import {createNameSpace} from '../utils/NameSpace';
-import {Prefix} from '../utils/Prefix';
+import {NamedNode} from '../models.js';
+import {createNameSpace} from '../utils/NameSpace.js';
+import {Prefix} from '../utils/Prefix.js';
 
 export var ns = createNameSpace('https://purl.org/on/lincd/');
 export var _self: NamedNode = ns('');

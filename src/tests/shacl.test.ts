@@ -1,9 +1,9 @@
-import {Shape} from '../shapes/Shape';
-import {objectProperty} from '../utils/ShapeDecorators';
-import {ShapeValuesSet} from '../collections/ShapeValuesSet';
-import {NamedNode} from '../models';
+import {Shape} from '../shapes/Shape.js';
+import {objectProperty} from '../utils/ShapeDecorators.js';
+import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
+import {NamedNode} from '../models.js';
 import {describe, expect, test} from '@jest/globals';
-import {linkedShape} from '../package';
+import {linkedShape} from '../package.js';
 
 let knows = NamedNode.create();
 let person = NamedNode.create();

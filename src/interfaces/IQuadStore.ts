@@ -1,13 +1,13 @@
-import {QuadSet} from '../collections/QuadSet';
-import {Graph, NamedNode, Quad} from '../models';
-import {NodeSet} from '../collections/NodeSet';
-import {ICoreIterable} from './ICoreIterable';
-import {Shape} from '../shapes/Shape';
-import {QuadArray} from '../collections/QuadArray';
-import {CoreMap} from '../collections/CoreMap';
-import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataGenericQuery, LinkedDataRequest} from './Component';
-import {LinkedQueryObject, SelectQuery} from '../utils/LinkedQuery';
+import {QuadSet} from '../collections/QuadSet.js';
+import {Graph, NamedNode, Quad} from '../models.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {ICoreIterable} from './ICoreIterable.js';
+import {Shape} from '../shapes/Shape.js';
+import {QuadArray} from '../collections/QuadArray.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {LinkedDataGenericQuery, LinkedDataRequest} from './Component.js';
+import {LinkedQueryObject, SelectQuery} from '../utils/LinkedQuery.js';
 
 export interface IQuadStore {
   /**

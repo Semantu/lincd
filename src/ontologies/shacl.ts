@@ -3,8 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models';
-import {Prefix} from '../utils/Prefix';
+import {NamedNode} from '../models.js';
+import {Prefix} from '../utils/Prefix.js';
 
 var base: string = 'http://www.w3.org/ns/shacl#';
 export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);

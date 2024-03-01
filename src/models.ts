@@ -13,22 +13,22 @@ import {DefaultGraphTermType, TermType} from 'rdflib/lib/types.js';
 import {defaultGraphURI} from 'rdflib/lib/utils/default-graph-uri.js';
 
 import {QuadSet} from './collections/QuadSet.js';
-import {CoreMap} from './collections/CoreMap';
-import {QuadMap} from './collections/QuadMap';
-import {QuadArray} from './collections/QuadArray';
-import {NodeSet} from './collections/NodeSet';
+import {CoreMap} from './collections/CoreMap.js';
+import {QuadMap} from './collections/QuadMap.js';
+import {QuadArray} from './collections/QuadArray.js';
+import {NodeSet} from './collections/NodeSet.js';
 
-import {ICoreIterable} from './interfaces/ICoreIterable';
-import {IShape} from './interfaces/IShape';
-import {IGraphObject} from './interfaces/IGraphObject';
+import {ICoreIterable} from './interfaces/ICoreIterable.js';
+import {IShape} from './interfaces/IShape.js';
+import {IGraphObject} from './interfaces/IGraphObject.js';
 
-import {NodeValuesSet} from './collections/NodeValuesSet';
-import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher';
-import {EventEmitter} from './events/EventEmitter';
-import {NodeMap} from './collections/NodeMap';
-import {NodeURIMappings} from './collections/NodeURIMappings';
-import {CoreSet} from './collections/CoreSet';
-import {Prefix} from './utils/Prefix';
+import {NodeValuesSet} from './collections/NodeValuesSet.js';
+import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher.js';
+import {EventEmitter} from './events/EventEmitter.js';
+import {NodeMap} from './collections/NodeMap.js';
+import {NodeURIMappings} from './collections/NodeURIMappings.js';
+import {CoreSet} from './collections/CoreSet.js';
+import {Prefix} from './utils/Prefix.js';
 
 export abstract class Node extends EventEmitter {
   /** The type of node */

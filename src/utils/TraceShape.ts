@@ -1,9 +1,9 @@
-import {Shape} from '../shapes/Shape';
-import {LinkedDataRequest} from '../interfaces/Component';
-import {NamedNode, Quad} from '../models';
-import {PropertyShape} from '../shapes/SHACL';
-import {rdfs} from '../ontologies/rdfs';
-import {NodeSet} from '../collections/NodeSet';
+import {Shape} from '../shapes/Shape.js';
+import {LinkedDataRequest} from '../interfaces/Component.js';
+import {NamedNode, Quad} from '../models.js';
+import {PropertyShape} from '../shapes/SHACL.js';
+import {rdfs} from '../ontologies/rdfs.js';
+import {NodeSet} from '../collections/NodeSet.js';
 
 export interface TraceShape extends Shape {
   // constructor(p:TestNode):TraceShape;

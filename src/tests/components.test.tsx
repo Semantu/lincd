@@ -1,12 +1,12 @@
 import {Buffer} from 'buffer';
 import React from 'react';
 import {act} from 'react-dom/test-utils';
-import {linkedComponent, linkedSetComponent, linkedShape} from '../package';
-import {Shape} from '../shapes/Shape';
+import {linkedComponent, linkedSetComponent, linkedShape} from '../package.js';
+import {Shape} from '../shapes/Shape.js';
 import {it, afterEach, beforeEach, describe, expect} from '@jest/globals';
-import {Literal, NamedNode} from '../models';
-import {literalProperty} from '../utils/ShapeDecorators';
-import {createNameSpace} from '../utils/NameSpace';
+import {Literal, NamedNode} from '../models.js';
+import {literalProperty} from '../utils/ShapeDecorators.js';
+import {createNameSpace} from '../utils/NameSpace.js';
 import {createRoot} from 'react-dom/client';
 //
 // let foaf = createNameSpace('http://xmlns.com/foaf/0.1/');

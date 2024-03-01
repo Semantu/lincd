@@ -21,12 +21,12 @@ import {
   WhereMethods,
   WherePath,
   SelectQuery,
-} from './LinkedQuery';
-import {ShapeSet} from '../collections/ShapeSet';
-import {Shape} from '../shapes/Shape';
-import {shacl} from '../ontologies/shacl';
-import {CoreMap} from '../collections/CoreMap';
-import {ShapeValuesSet} from '../collections/ShapeValuesSet';
+} from './LinkedQuery.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {Shape} from '../shapes/Shape.js';
+import {shacl} from '../ontologies/shacl.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -57,8 +57,8 @@ export function resolveLocal<ResultType>(
     query.subject instanceof ShapeSet
       ? shapeSetToResultObjects(subject)
       : query.subject instanceof Shape
-      ? shapeToResultObject(subject)
-      : shapeSetToResultObjects(subject);
+        ? shapeToResultObject(subject)
+        : shapeSetToResultObjects(subject);
 
   if (Array.isArray(query.select)) {
     query.select.forEach((queryPath) => {

@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {CoreMap} from './CoreMap';
-import {NamedNode} from '../models';
-import {NodeSet} from './NodeSet';
+import {CoreMap} from './CoreMap.js';
+import {NamedNode} from '../models.js';
+import {NodeSet} from './NodeSet.js';
 
 export class SearchMap extends CoreMap<
   NamedNode | NodeSet<NamedNode> | '*',

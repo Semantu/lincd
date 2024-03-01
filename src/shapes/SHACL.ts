@@ -3,16 +3,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {Literal, NamedNode, Node} from '../models';
-import {Shape} from './Shape';
-import {shacl} from '../ontologies/shacl';
-import {List} from './List';
-import {xsd} from '../ontologies/xsd';
-import {ShapeSet} from '../collections/ShapeSet';
-import {NodeSet} from '../collections/NodeSet';
-import {rdf} from '../ontologies/rdf';
-import {CoreMap} from '../collections/CoreMap';
-import {ForwardReasoning} from '../utils/ForwardReasoning';
+import {Literal, NamedNode, Node} from '../models.js';
+import {Shape} from './Shape.js';
+import {shacl} from '../ontologies/shacl.js';
+import {List} from './List.js';
+import {xsd} from '../ontologies/xsd.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {rdf} from '../ontologies/rdf.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import {ForwardReasoning} from '../utils/ForwardReasoning.js';
 
 export class SHACL_Shape extends Shape {
   static targetClass: NamedNode = shacl.Shape;

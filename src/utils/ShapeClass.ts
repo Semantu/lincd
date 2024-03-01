@@ -1,7 +1,7 @@
-import {NamedNode} from '../models';
-import {Shape} from '../shapes/Shape';
-import {NodeShape} from '../shapes/SHACL';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
+import {NamedNode} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
+import {NodeShape} from '../shapes/SHACL.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 
 let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
 

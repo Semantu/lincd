@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {IGraphObject} from './IGraphObject';
-import {NamedNode, Node} from '../models';
-import {ICoreIterable} from './ICoreIterable';
+import {IGraphObject} from './IGraphObject.js';
+import {NamedNode, Node} from '../models.js';
+import {ICoreIterable} from './ICoreIterable.js';
 
 export interface IShape extends IGraphObject {
   namedNode: NamedNode;

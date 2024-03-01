@@ -3,11 +3,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models';
-import {ShapeSet} from './ShapeSet';
-import {Shape} from '../shapes/Shape';
-import {QuadSet} from './QuadSet';
-import {getShapeOrSubShape} from '../utils/ShapeClass';
+import {NamedNode} from '../models.js';
+import {ShapeSet} from './ShapeSet.js';
+import {Shape} from '../shapes/Shape.js';
+import {QuadSet} from './QuadSet.js';
+import {getShapeOrSubShape} from '../utils/ShapeClass.js';
 
 export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
   constructor(

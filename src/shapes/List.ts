@@ -3,10 +3,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NodeSet} from '../collections/NodeSet';
-import {rdf} from '../ontologies/rdf';
-import {BlankNode, NamedNode, Node} from '../models';
-import {Shape} from './Shape';
+import {NodeSet} from '../collections/NodeSet.js';
+import {rdf} from '../ontologies/rdf.js';
+import {BlankNode, NamedNode, Node} from '../models.js';
+import {Shape} from './Shape.js';
 
 export class List extends Shape {
   static targetClass: NamedNode = rdf.List;

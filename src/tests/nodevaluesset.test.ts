@@ -1,5 +1,5 @@
 import {describe, expect, test} from '@jest/globals';
-import {NamedNode} from '../models';
+import {NamedNode} from '../models.js';
 
 let subject = NamedNode.create();
 let predicate = NamedNode.create();

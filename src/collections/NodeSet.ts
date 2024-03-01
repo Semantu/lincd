@@ -3,14 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {CoreSet} from './CoreSet';
-import {Literal, NamedNode, Node} from '../models';
-import {IGraphObjectSet} from '../interfaces/IGraphObjectSet';
-import {QuadSet} from './QuadSet';
-import {QuadArray} from './QuadArray';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {Debug} from '../utils/Debug';
-import {URI} from '../utils/URI';
+import {CoreSet} from './CoreSet.js';
+import {Literal, NamedNode, Node} from '../models.js';
+import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
+import {QuadSet} from './QuadSet.js';
+import {QuadArray} from './QuadArray.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {Debug} from '../utils/Debug.js';
+import {URI} from '../utils/URI.js';
 
 export class NodeSet<R extends Node = Node>
   extends CoreSet<R>

@@ -1,15 +1,15 @@
 import {describe, expect, test} from '@jest/globals';
-import {Literal, NamedNode} from '../models';
-import {Shape} from '../shapes/Shape';
-import {literalProperty, objectProperty} from '../utils/ShapeDecorators';
-import {linkedComponent, linkedSetComponent, linkedShape} from '../package';
-import {InMemoryStore} from './storage.test';
-import {QuadSet} from '../collections/QuadSet';
-import {LinkedStorage} from '../utils/LinkedStorage';
+import {Literal, NamedNode} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
+import {literalProperty, objectProperty} from '../utils/ShapeDecorators.js';
+import {linkedComponent, linkedSetComponent, linkedShape} from '../package.js';
+import {InMemoryStore} from './storage.test.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {LinkedStorage} from '../utils/LinkedStorage.js';
 import React from 'react';
 import {render, waitFor} from '@testing-library/react';
-import {ShapeSet} from '../collections/ShapeSet';
-import {setDefaultPageLimit} from '../utils/Module';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {setDefaultPageLimit} from '../utils/Module.js';
 import {act} from 'react-dom/test-utils';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');

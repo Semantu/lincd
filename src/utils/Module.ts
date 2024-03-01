@@ -3,14 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode, Node} from '../models';
-import {NodeShape, PropertyShape} from '../shapes/SHACL';
-import {Shape} from '../shapes/Shape';
-import {Prefix} from './Prefix';
+import {NamedNode, Node} from '../models.js';
+import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
+import {Shape} from '../shapes/Shape.js';
+import {Prefix} from './Prefix.js';
 import React, {createElement, useEffect, useState} from 'react';
-import {CoreSet} from '../collections/CoreSet';
-import {NodeSet} from '../collections/NodeSet';
-import {ShapeSet} from '../collections/ShapeSet';
+import {CoreSet} from '../collections/CoreSet.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
 import {
   BoundComponentFactory,
   BoundComponentProps,
@@ -33,17 +33,17 @@ import {
   LinkedSetComponentProps,
   removeBoundComponents,
   TransformedLinkedDataResponse,
-} from '../interfaces/Component';
-import {lincd as lincdOntology} from '../ontologies/lincd';
-import {npm} from '../ontologies/npm';
-import {rdf} from '../ontologies/rdf';
-import {LinkedStorage} from './LinkedStorage';
-import {URI} from './URI';
+} from '../interfaces/Component.js';
+import {lincd as lincdOntology} from '../ontologies/lincd.js';
+import {npm} from '../ontologies/npm.js';
+import {rdf} from '../ontologies/rdf.js';
+import {LinkedStorage} from './LinkedStorage.js';
+import {URI} from './URI.js';
 import {
   addNodeShapeToShapeClass,
   getShapeClass,
   hasSuperClass,
-} from './ShapeClass';
+} from './ShapeClass.js';
 import {
   BoundComponent,
   ComponentQueryPath,
@@ -64,8 +64,8 @@ import {
   QueryWrapperObject,
   SelectQuery,
   ToQueryResultSet,
-} from './LinkedQuery';
-import {createTraceShape, TraceShape} from './TraceShape';
+} from './LinkedQuery.js';
+import {createTraceShape, TraceShape} from './TraceShape.js';
 
 //global tree
 declare var lincd: any;
@@ -186,10 +186,10 @@ export interface LinkedPackageObject {
    * import {NamedNode} from 'lincd/lib/models';
    * import {JSONLD} from 'lincd-jsonld/lib/JSONLD';
    * import {createNameSpace} from 'lincd/lib/utils/NameSpace';
-   * import {linkedOntology} from '../package';
-   * import * as _this from './my-ontology';
+   * import {linkedOntology} from '../package.js';
+   * import * as _this from './my.js-ontology';
    *
-   * let dataFile = '../data/my-ontology.json';
+   * let dataFile = '../data/my.js-ontology.json';
    * export var loadData = () => JSONLD.parsePromise(import(dataFile));
    *
    * export var ns = createNameSpace('http://www.my-ontology.com/');

@@ -1,3 +1,3 @@
-import {LinkedString} from './LinkedString';
+import {LinkedString} from './LinkedString.js';
 
 export type LinkedDataValue = LinkedString;

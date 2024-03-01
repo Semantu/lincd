@@ -4,44 +4,44 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import nextTick from 'next-tick';
-import {EventEmitter} from '../events/EventEmitter';
-import {Literal, NamedNode, Node, Quad} from '../models';
-import {rdf} from '../ontologies/rdf';
-import {NodeValuesSet} from '../collections/NodeValuesSet';
-import {rdfs} from '../ontologies/rdfs';
-import {NodeSet} from '../collections/NodeSet';
-import {QuadArray} from '../collections/QuadArray';
-import {Find} from '../utils/Find';
-import {IShape} from '../interfaces/IShape';
-import {ShapeSet} from '../collections/ShapeSet';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {SearchMap} from '../collections/SearchMap';
-import {CoreSet} from '../collections/CoreSet';
-import {QuadSet} from '../collections/QuadSet';
-import {NodeShape} from './SHACL';
+import {EventEmitter} from '../events/EventEmitter.js';
+import {Literal, NamedNode, Node, Quad} from '../models.js';
+import {rdf} from '../ontologies/rdf.js';
+import {NodeValuesSet} from '../collections/NodeValuesSet.js';
+import {rdfs} from '../ontologies/rdfs.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {QuadArray} from '../collections/QuadArray.js';
+import {Find} from '../utils/Find.js';
+import {IShape} from '../interfaces/IShape.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {SearchMap} from '../collections/SearchMap.js';
+import {CoreSet} from '../collections/CoreSet.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {NodeShape} from './SHACL.js';
 import {
   LinkedDataDeclaration,
   LinkedDataResponse,
   LinkedDataSetDeclaration,
-} from '../interfaces/Component';
-import {ShapeValuesSet} from '../collections/ShapeValuesSet';
+} from '../interfaces/Component.js';
+import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
   getMostSpecificShapes,
   getShapeOrSubShape,
   getSubShapesClasses,
-} from '../utils/ShapeClass';
+} from '../utils/ShapeClass.js';
 import {
   GetQueryResponseType,
   LinkedQuery,
   QueryBuildFn,
   PatchedQueryPromise,
   QueryResponseToResultType,
-} from '../utils/LinkedQuery';
-import {LinkedStorage} from '../utils/LinkedStorage';
+} from '../utils/LinkedQuery.js';
+import {LinkedStorage} from '../utils/LinkedStorage.js';
 import {
   IStorageController,
   staticImplements,
-} from '../interfaces/IStorageController';
+} from '../interfaces/IStorageController.js';
 import {resolve} from 'eslint-import-resolver-typescript';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;

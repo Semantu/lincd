@@ -1,23 +1,23 @@
 import {describe, expect, test} from '@jest/globals';
-import {IQuadStore} from '../interfaces/IQuadStore';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {LinkedStorage} from '../utils/LinkedStorage';
-import {Graph, Literal, NamedNode, Quad, defaultGraph} from '../models';
-import {QuadSet} from '../collections/QuadSet';
-import {rdfs} from '../ontologies/rdfs';
-import {rdf} from '../ontologies/rdf';
-import {Shape} from '../shapes/Shape';
-import {QuadArray} from '../collections/QuadArray';
-import {NodeSet} from '../collections/NodeSet';
-import {CoreMap} from '../collections/CoreMap';
-import {ShapeSet} from '../collections/ShapeSet';
+import {IQuadStore} from '../interfaces/IQuadStore.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {LinkedStorage} from '../utils/LinkedStorage.js';
+import {Graph, Literal, NamedNode, Quad, defaultGraph} from '../models.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {rdfs} from '../ontologies/rdfs.js';
+import {rdf} from '../ontologies/rdf.js';
+import {Shape} from '../shapes/Shape.js';
+import {QuadArray} from '../collections/QuadArray.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
 import {
   LinkedDataGenericQuery,
   LinkedDataRequest,
-} from '../interfaces/Component';
-import {PropertyShape} from '../shapes/SHACL';
-import {LinkedQueryObject, SelectQuery} from '../utils/LinkedQuery';
-import {resolveLocal} from '../utils/LocalQueryResolver';
+} from '../interfaces/Component.js';
+import {PropertyShape} from '../shapes/SHACL.js';
+import {LinkedQueryObject, SelectQuery} from '../utils/LinkedQuery.js';
+import {resolveLocal} from '../utils/LocalQueryResolver.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {
   protected contents: QuadSet;

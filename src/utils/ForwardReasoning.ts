@@ -1,7 +1,7 @@
-import {rdf} from '../ontologies/rdf';
-import {rdfs} from '../ontologies/rdfs';
-import {owl} from '../ontologies/owl';
-import {NamedNode} from '../models';
+import {rdf} from '../ontologies/rdf.js';
+import {rdfs} from '../ontologies/rdfs.js';
+import {owl} from '../ontologies/owl.js';
+import {NamedNode} from '../models.js';
 
 export class ForwardReasoning {
   /**

@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NodeSet} from './NodeSet';
-import {NamedNode, Node} from '../models';
-import {QuadSet} from './QuadSet';
+import {NodeSet} from './NodeSet.js';
+import {NamedNode, Node} from '../models.js';
+import {QuadSet} from './QuadSet.js';
 
 export class NodeValuesSet extends NodeSet {
   constructor(

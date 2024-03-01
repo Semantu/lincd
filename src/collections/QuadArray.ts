@@ -3,8 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {Graph, NamedNode, Quad} from '../models';
-import {NodeSet} from './NodeSet';
+import {Graph, NamedNode, Quad} from '../models.js';
+import {NodeSet} from './NodeSet.js';
 
 //TODO: test performance of QuadArray vs QuadSet and probably remove QuadArray
 export class QuadArray extends Array<Quad> {

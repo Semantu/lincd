@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NodeSet} from '../collections/NodeSet';
-import {NamedNode, Node} from '../models';
-import {rdfs} from '../ontologies/rdfs';
+import {NodeSet} from '../collections/NodeSet.js';
+import {NamedNode, Node} from '../models.js';
+import {rdfs} from '../ontologies/rdfs.js';
 
 export class Order {
   static propertiesByDepth(properties: NodeSet<NamedNode>): NodeSet<NamedNode> {

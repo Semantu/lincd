@@ -5,7 +5,7 @@
  */
 import nextTick from 'next-tick';
 import {EventEmitter} from 'eventemitter3';
-import {CoreSet} from '../collections/CoreSet';
+import {CoreSet} from '../collections/CoreSet.js';
 
 //import {CoreMap} from "../collections/CoreMap";
 

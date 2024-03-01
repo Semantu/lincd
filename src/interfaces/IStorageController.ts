@@ -1,16 +1,16 @@
-import {IQuadStore} from './IQuadStore';
-import {CoreMap} from '../collections/CoreMap';
-import {Graph, NamedNode, Node, Quad} from '../models';
-import {Shape} from '../shapes/Shape';
-import {PropertyShape} from '../shapes/SHACL';
-import {QuadSet} from '../collections/QuadSet';
-import {CoreSet} from '../collections/CoreSet';
-import {QuadArray} from '../collections/QuadArray';
-import {NodeSet} from '../collections/NodeSet';
-import {ICoreIterable} from './ICoreIterable';
-import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedQuery} from '../utils/LinkedQuery';
-import {LinkedDataRequest} from './Component';
+import {IQuadStore} from './IQuadStore.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import {Graph, NamedNode, Node, Quad} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
+import {PropertyShape} from '../shapes/SHACL.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {CoreSet} from '../collections/CoreSet.js';
+import {QuadArray} from '../collections/QuadArray.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {ICoreIterable} from './ICoreIterable.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {LinkedQuery} from '../utils/LinkedQuery.js';
+import {LinkedDataRequest} from './Component.js';
 
 export interface IStorageController {
   // new():MyType;

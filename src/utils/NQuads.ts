@@ -3,10 +3,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {BlankNode, Graph, Literal, NamedNode, Node, Quad} from '../models';
-import {QuadSet} from '../collections/QuadSet';
-import {Shape} from '../shapes/Shape';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {BlankNode, Graph, Literal, NamedNode, Node, Quad} from '../models.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {Shape} from '../shapes/Shape.js';
 
 export class NQuads {
   static fromGraphs(
@@ -41,8 +41,8 @@ export class NQuads {
         (fixedGraph && fixedGraph.node.uri !== ''
           ? ' ' + this.toString(fixedGraph)
           : includeGraphs && quad.graph && quad.graph.node.uri !== ''
-          ? ' ' + this.toString(quad.graph)
-          : '') +
+            ? ' ' + this.toString(quad.graph)
+            : '') +
         '.\n';
     });
     return resultString;

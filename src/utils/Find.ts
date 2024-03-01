@@ -3,14 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NodeSet} from '../collections/NodeSet';
-import {NamedNode, Node, Quad} from '../models';
-import {rdf} from '../ontologies/rdf';
-import {rdfs} from '../ontologies/rdfs';
-import {QuadSet} from '../collections/QuadSet';
-import {URI} from './URI';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {SearchMap} from '../collections/SearchMap';
+import {NodeSet} from '../collections/NodeSet.js';
+import {NamedNode, Node, Quad} from '../models.js';
+import {rdf} from '../ontologies/rdf.js';
+import {rdfs} from '../ontologies/rdfs.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {URI} from './URI.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {SearchMap} from '../collections/SearchMap.js';
 
 export class Find {
   static byPropertyValues(

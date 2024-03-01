@@ -1,8 +1,8 @@
 import {describe, expect, test} from '@jest/globals';
-import {NamedNode} from '../models';
-import {Shape} from '../shapes/Shape';
-import {ShapeSet} from '../collections/ShapeSet';
-import {linkedShape} from '../package';
+import {NamedNode} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {linkedShape} from '../package.js';
 
 let knows = NamedNode.create();
 let person = NamedNode.create();
