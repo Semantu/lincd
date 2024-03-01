@@ -9,7 +9,7 @@ import {LinkedStorage} from '../utils/LinkedStorage.js';
 import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {setDefaultPageLimit} from '../utils/Module.js';
+import {setDefaultPageLimit} from '../utils/Package.js';
 import {act} from 'react-dom/test-utils';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
@@ -1122,11 +1122,7 @@ test('linked set components with pagination with sources from other linked compo
 //});
 
 //NEXT:
-//Outer select().where()
-//Combine queries
-//Return an object
-//Return a single entry
-//Work with components that show multiple sources (setComponents)
+//test Component.of() .. or do we entirely remove it and just use preload?
 //clean up old linked component code
 //Refactor structure of json objects, where and count need to be added? investigate other libraries
 //Refactor duplicate value in "every"

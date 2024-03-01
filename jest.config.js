@@ -2,5 +2,5 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  rootDir: 'lib/tests',
+  rootDir: 'lib/cjs/tests',
 };

@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 //import everything from each file that we want to be bundled in the stand-alone dist/lincd.js file
-import * as Module from './utils/Module.js';
+import * as Package from './utils/Package.js';
 import * as models from './models.js';
 import * as LinkedFileStorage from './utils/LinkedFileStorage.js';
 import * as LinkedStorage from './utils/LinkedStorage.js';
@@ -87,7 +87,7 @@ export function initModularApp() {
     NQuads,
     Boolean,
     ShapeDecorators,
-    Module,
+    Package,
     IGraphObject,
     IGraphObjectSet,
     ICoreIterable,

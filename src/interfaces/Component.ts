@@ -6,10 +6,13 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {ICoreIterable} from './ICoreIterable.js';
 import {
   ComponentQueryPath,
+  GetQueryResponseType,
+  LinkedQuery,
   LinkedQueryObject,
   QResult,
   QueryControllerProps,
   QueryPath,
+  QueryResponseToResultType,
   QueryShape,
   QueryShapeSet,
 } from '../utils/LinkedQuery.js';
@@ -69,6 +72,7 @@ export interface LinkedFunctionalComponent<P, ShapeType extends Shape = Shape>
 export interface LinkedFunctionalSetComponent<
   P,
   ShapeType extends Shape = Shape,
+  Res = any,
 > extends React.FC<
     P &
       LinkedSetComponentInputProps<ShapeType> &

@@ -68,7 +68,7 @@ export class EventEmitter extends EventEmitter3 {
           );
       }
     }
-    return Promise.all(listenerPromises).catch((err) => {
+    return Promise.all(listenerPromises).catch(function (err) {
       console.log(
         'Error during emitPromise of event ' +
           evt.toString() +
