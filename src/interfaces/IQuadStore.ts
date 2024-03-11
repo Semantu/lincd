@@ -42,7 +42,7 @@ export interface IQuadStore {
 
   query<ResultType>(
     query: SelectQuery<any>,
-    shapeClass: Shape | typeof Shape,
+    shapeClass: typeof Shape,
   ): Promise<ResultType>;
 
   /**

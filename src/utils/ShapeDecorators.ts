@@ -105,7 +105,7 @@ export interface PropertyShapeConfig {
 
    @example
    ```tsx
-   import {BlankNode,NamedNode,Literal} from "lincd/lib/models";
+   import {BlankNode,NamedNode,Literal} from "lincd/models";
    @linkedProperty({nodeKind:NamedNode})
    ```
    */

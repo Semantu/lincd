@@ -11,12 +11,15 @@ import {render, waitFor} from '@testing-library/react';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {setDefaultPageLimit} from '../utils/Package.js';
 import {act} from 'react-dom/test-utils';
+import {xsd} from '../ontologies/xsd';
+import {TestNode} from '../utils/TraceShape';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
 let bestFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'bestFriend');
 let hobby = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hobby');
 let hasFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasFriend');
+let birthDate = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'birthDate');
 let pluralTestProp = NamedNode.getOrCreate(
   NamedNode.TEMP_URI_BASE + 'pluralTestProp',
 );
@@ -80,11 +83,37 @@ class Person extends Shape {
   get pluralTestProp() {
     return this.getAllAs<Person>(pluralTestProp, Person);
   }
+
+  @literalProperty({
+    path: birthDate,
+  })
+  get birthDate(): Date {
+    return this.hasProperty(birthDate)
+      ? toNativeDate(this.getOne(birthDate) as Literal)
+      : null;
+  }
+
+  set birthDate(nativeDate: Date) {
+    this.overwrite(birthDate, fromNativeDate(nativeDate));
+  }
+}
+
+function fromNativeDate(nativeDate: Date) {
+  if (!nativeDate) return null;
+
+  var value = nativeDate.toISOString();
+  return new Literal(value, xsd.date);
+}
+
+function toNativeDate(literal: Literal) {
+  return literal
+    ? new Date(literal instanceof TestNode ? null : literal.value)
+    : null;
 }
 
 let p1 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p1-semmy');
 p1.name = 'Semmy';
-
+p1.birthDate = new Date('1990-01-01');
 let p2 = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p2-moa');
 p2.name = 'Moa';
 p2.hobby = 'Jogging';
@@ -178,6 +207,18 @@ describe('query tests', () => {
     expect(firstResult.friends.length).toBe(2);
     expect(firstResult.friends[0].id).toBe(p2.uri);
     expect(firstResult.friends[1].id).toBe(p3.uri);
+  });
+
+  test('can select a date', async () => {
+    let birthDates = await Person.select((p) => {
+      return [p.birthDate, p.name];
+    });
+
+    let firstResult = birthDates[0];
+    expect(Array.isArray(birthDates)).toBe(true);
+    expect(birthDates.length).toBe(4);
+    expect(typeof firstResult.birthDate === 'object').toBe(true);
+    expect(firstResult.birthDate.toString()).toBe(p1.birthDate.toString());
   });
 
   test('can select sub properties of a first property that returns a set', async () => {

@@ -144,10 +144,12 @@ export type ToQueryBuilderObject<
       : T extends string
         ? QueryString<Source, Property>
         : T extends number
-          ? QueryNumber
-          : T extends boolean
-            ? QueryBoolean
-            : QueryBuilderObject<T>;
+          ? QueryNumber<Source, Property>
+          : T extends Date
+            ? QueryDate<Source, Property>
+            : T extends boolean
+              ? QueryBoolean
+              : QueryBuilderObject<T>;
 
 export type WherePath = WhereEvaluationPath | WhereAndOr;
 
@@ -250,25 +252,27 @@ export type GetQueryObjectResultType<
       ? CountToQueryResult<GetSource<Source, SourceOverwrite>>
       : QV extends QueryNumber<infer Source, infer Property>
         ? CreateQResult<GetSource<Source, SourceOverwrite>, number, Property>
-        : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
-          ? CreateQResult<ShapeType>
-          : //   CreateQResult<Source, ShapeType, Property>
-            QV extends BoundComponent<infer Source, infer ShapeType>
-            ? GetShapesResultTypeWithSource<Source>
-            : QV extends QueryShapeSet<
-                  infer ShapeType,
-                  infer Source,
-                  infer Property
-                >
-              ? CreateShapeSetQResult<
-                  ShapeType,
-                  GetSource<Source, SourceOverwrite>,
-                  Property,
-                  SubProperties
-                >
-              : QV extends Array<infer Type>
-                ? UnionToIntersection<QueryResponseToResultType<Type>>
-                : never;
+        : QV extends QueryDate<infer Source, infer Property>
+          ? CreateQResult<GetSource<Source, SourceOverwrite>, Date, Property>
+          : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
+            ? CreateQResult<ShapeType>
+            : //   CreateQResult<Source, ShapeType, Property>
+              QV extends BoundComponent<infer Source, infer ShapeType>
+              ? GetShapesResultTypeWithSource<Source>
+              : QV extends QueryShapeSet<
+                    infer ShapeType,
+                    infer Source,
+                    infer Property
+                  >
+                ? CreateShapeSetQResult<
+                    ShapeType,
+                    GetSource<Source, SourceOverwrite>,
+                    Property,
+                    SubProperties
+                  >
+                : QV extends Array<infer Type>
+                  ? UnionToIntersection<QueryResponseToResultType<Type>>
+                  : never;
 
 export type GetShapesResultTypeWithSource<Source> =
   Source extends QueryShape<infer ShapeType, infer Source, infer Property>
@@ -484,6 +488,10 @@ export class QueryBuilderObject<
       return QueryShapeSet.create(originalValue, property, subject);
     } else if (typeof originalValue === 'string') {
       return new QueryString(originalValue, property, subject);
+    } else if (typeof originalValue === 'number') {
+      return new QueryNumber(originalValue, property, subject);
+    } else if (originalValue instanceof Date) {
+      return new QueryDate(originalValue, property, subject);
     }
   }
 
@@ -1021,6 +1029,11 @@ export class QueryString<
   Source = any,
   Property extends string | number | symbol = '',
 > extends QueryPrimitive<string, Source, Property> {}
+
+export class QueryDate<
+  Source = any,
+  Property extends string | number | symbol = any,
+> extends QueryPrimitive<Date, Source, Property> {}
 
 export class QueryNumber<
   Source = any,

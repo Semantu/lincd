@@ -59,7 +59,7 @@ export interface LinkedPackageObject {
    * ```tsx
    * import {React} from "react";
    * import {linkedComponentClass} from "../package";
-   * import {LinkedComponentClass} from "lincd/lib/utils/ComponentClass";
+   * import {LinkedComponentClass} from "lincd/utils/ComponentClass";
    * @linkedComponentClass(Person)
    * export class PersonView extends LinkedComponentClass<Person> {
    *   render() {
@@ -137,9 +137,9 @@ export interface LinkedPackageObject {
    * @example
    * Example of an Ontology File that used linkedOntology()
    * ```tsx
-   * import {NamedNode} from 'lincd/lib/models';
+   * import {NamedNode} from 'lincd/models';
    * import {JSONLD} from 'lincd-jsonld/lib/JSONLD';
-   * import {createNameSpace} from 'lincd/lib/utils/NameSpace';
+   * import {createNameSpace} from 'lincd/utils/NameSpace';
    * import {linkedOntology} from '../package.js';
    * import * as _this from './my.js-ontology';
    *

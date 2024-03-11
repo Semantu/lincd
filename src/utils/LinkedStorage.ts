@@ -12,7 +12,11 @@ import {QuadArray} from '../collections/QuadArray.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {getSuperShapesClasses} from './ShapeClass.js';
-import {LinkedQuery, QueryResponseToResultType} from './LinkedQuery.js';
+import {
+  LinkedQuery,
+  QueryResponseToResultType,
+  SelectQuery,
+} from './LinkedQuery.js';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
@@ -352,21 +356,16 @@ export abstract class LinkedStorage {
     });
   }
 
-  static query<ResultType>(
-    // queryObject: LinkedDataGenericQuery,
-    query: LinkedQuery<any, ResultType>,
-    // shapeClass: Shape | typeof Shape,
+  static queryRaw<ResultType>(
+    query: SelectQuery<any>,
+    shapeClass: typeof Shape,
   ): Promise<QueryResponseToResultType<ResultType>> {
-    // query.shape;
-    // let quadStore: IQuadStore;
-    // if (query.shape instanceof Shape) {
-    //   quadStore = this.getStoreForNode(query.shape.namedNode);
-    // } else {
-    //   //we expect shape to be a class
-    //   quadStore = this.getStoreForNode(
-    //     (query.shape as typeof Shape).targetClass,
-    //   );
-    // }
+    let quadStore: IQuadStore = this.getStoreForShapeClass(shapeClass);
+    return quadStore.query<ResultType>(query, shapeClass) as any;
+  }
+  static query<ResultType>(
+    query: LinkedQuery<any, ResultType>,
+  ): Promise<QueryResponseToResultType<ResultType>> {
     let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape);
 
     let queryObject = query.getQueryObject();
