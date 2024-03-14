@@ -2,6 +2,10 @@ export interface IErrorLogger {
   log?(error: any): Promise<void>;
 }
 
+/**
+ * Utility class to log errors.
+ * Install any error client package like lincd-sentry in your app to log errors.
+ */
 export class LinkedErrorLogging {
   private static logger: IErrorLogger;
 
@@ -13,13 +17,9 @@ export class LinkedErrorLogging {
     return this.logger && true;
   }
 
-  static log(error: any) {
-    if (!this.logger) {
-      throw new Error(
-        'No error logger set. Make sure the package of your error logger is added to package.json of the application.',
-      );
+  static log(error: Error) {
+    if (this.logger) {
+      return this.logger.log(error);
     }
-
-    return this.logger.log(error);
   }
 }
