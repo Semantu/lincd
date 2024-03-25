@@ -47,7 +47,9 @@ import * as rdf from './ontologies/rdf';
 import * as rdfs from './ontologies/rdfs';
 import * as xsd from './ontologies/xsd';
 import * as shacl from './ontologies/shacl';
+import * as DataFactory from './Datafactory';
 import React from 'react';
+
 export const nextTick = require('next-tick');
 
 export function initModularApp() {
@@ -56,6 +58,7 @@ export function initModularApp() {
   //therefor we do not export all the classes here from the index directly
   //instead we make all components of LINCD available through the global tree for modular apps
   let publicFiles = {
+    DataFactory,
     Node,
     EventEmitter,
     NodeURIMappings,

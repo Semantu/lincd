@@ -125,9 +125,9 @@ export abstract class Node extends EventEmitter {
     return undefined;
   }
 
-	getAll(property: NamedNode): NodeValuesSet {
-		return new NodeValuesSet(this,property);
-	}
+  getAll(property: NamedNode): NodeValuesSet {
+    return new NodeValuesSet(this, property);
+  }
 
   getValue(property?: NamedNode): string {
     return undefined;
@@ -301,7 +301,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   private static nodesToLoadFully: NodeSet<NamedNode> = new NodeSet();
   private static nodesToRemove: CoreSet<[NamedNode, QuadArray]> = new CoreSet();
   private static nodesURIUpdated: CoreMap<NamedNode, [string, string]> = new CoreMap();
-  private static clearedProperties: CoreMap<NamedNode,[NamedNode,QuadArray][]> = new CoreMap();
+  private static clearedProperties: CoreMap<NamedNode, [NamedNode, QuadArray][]> = new CoreMap();
 
   //### event types ###
 
@@ -399,17 +399,14 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    */
   private asPredicate: QuadArray;
 
-	/**
-	 * map of QuadMaps indexed by property (where this node occurs as subject)
-	 * NOTE: 'properties' serves only to increase lookup speed but also costs memory
-	 * since reverse lookup (where this node occurs as object) will be much less frequent
-	 * the inverse of 'properties' is not kept, so all results for reverse lookup will be created from 'asObject'
-	 * @internal
-	 */
-	properties: CoreMap<NamedNode, NodeValuesSet> = new CoreMap<
-		NamedNode,
-		NodeValuesSet
-	>();
+  /**
+   * map of QuadMaps indexed by property (where this node occurs as subject)
+   * NOTE: 'properties' serves only to increase lookup speed but also costs memory
+   * since reverse lookup (where this node occurs as object) will be much less frequent
+   * the inverse of 'properties' is not kept, so all results for reverse lookup will be created from 'asObject'
+   * @internal
+   */
+  properties: CoreMap<NamedNode, NodeValuesSet> = new CoreMap<NamedNode, NodeValuesSet>();
 
   //keeping track of changes to be emitted in one batched event
   //NOTE: the quad sets in these maps will contain both newly ADDED and REMOVED quads
@@ -431,7 +428,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 
   // private static termType: string = 'NamedNode';
   termType: any = 'NamedNode';
-  private _isStoring: {promise?, resolve?, reject?};
+  private _isStoring: {promise?; resolve?; reject?};
 
   /**
    * WARNING: Do not directly create a Node, instead use NamedNode.getOrCreate(uri)
@@ -492,23 +489,19 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   }
 
   /**
-	 * Used by Quads to signal their subject about a new property
-	 * @internal
-	 * @param quad
-	 * @param alteration
-	 * @param emitEvents
-	 */
-	registerProperty(
-		quad: Quad,
-		alteration: boolean = false,
-		emitEvents: boolean = true,
-	) {
-		var predicate: NamedNode = quad.predicate;
-		//first make sure we have a QuadMap value for key=predicate
-		if (!this.asSubject.has(predicate)) {
-			this.asSubject.set(predicate, new QuadMap());
-			this.properties.set(predicate, new NodeValuesSet(this,predicate));
-		}
+   * Used by Quads to signal their subject about a new property
+   * @internal
+   * @param quad
+   * @param alteration
+   * @param emitEvents
+   */
+  registerProperty(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
+    var predicate: NamedNode = quad.predicate;
+    //first make sure we have a QuadMap value for key=predicate
+    if (!this.asSubject.has(predicate)) {
+      this.asSubject.set(predicate, new QuadMap());
+      this.properties.set(predicate, new NodeValuesSet(this, predicate));
+    }
 
     //Add the quad to the QuadMap (see implementation for more details)
     let quadMap = this.asSubject.get(predicate);
@@ -644,7 +637,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
           //Note: in some cases, for example when a quad moved between graphs, the object registered here as property value might not be the same as the as the object of the quad that is still registered,
           // therefor we also check & remove equivalent values in case regular removal didnt work
           //TODO: we could improve this by making sure that this.properties stays up to date with the actual quads
-          this.properties.get(predicate).__delete(quad.object) || this.properties.get(predicate).__delete(this.properties.get(predicate).find((object) => object.equals(quad.object)));
+          this.properties.get(predicate).__delete(quad.object) ||
+            this.properties
+              .get(predicate)
+              .__delete(this.properties.get(predicate).find((object) => object.equals(quad.object)));
         }
 
         //if we now also no longer hold any values for this predicate
@@ -1038,24 +1034,23 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     }
   }
 
-	/**
-	 * Returns all values this node has for the given property
-	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 */
-	getAll(property: NamedNode): NodeValuesSet {
+  /**
+   * Returns all values this node has for the given property
+   * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
+   */
+  getAll(property: NamedNode): NodeValuesSet {
     //we usually just index all the existing properties
     //but to have consistent behaviour with PropertyValueSets, when you request a property that has no values
     //we need to create an index for the empty result set
-    if(!this.properties.has(property))
-    {
-      this.asSubject.set(property,new QuadMap());
-      this.properties.set(property,new NodeValuesSet(this,property));
+    if (!this.properties.has(property)) {
+      this.asSubject.set(property, new QuadMap());
+      this.properties.set(property, new NodeValuesSet(this, property));
     }
     return this.properties.get(property);
-		// return this.properties.has(property)
-		// 	? this.properties.get(property)
-		// 	: new PropertyValueSet(this,property);
-	}
+    // return this.properties.has(property)
+    // 	? this.properties.get(property)
+    // 	: new PropertyValueSet(this,property);
+  }
 
   /**
    * Returns all values this node EXPLICITLY has for the given property
@@ -1406,8 +1401,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
 
     //clear all values and set new value
     this.unsetAll(property);
-    if(value)
-    {
+    if (value) {
       return this.set(property, value);
     }
   }
@@ -1472,37 +1466,38 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return false;
   }
 
-	/**
-	 * unset (remove) all values of a certain property.
-	 * Removes all connections (edges) in the graph between this node and other nodes, where the given property is used as the connecting 'edge' between them
-	 * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
-	 */
-	unsetAll(property: NamedNode): boolean {
-		//if not a local node we will emit events for storage controllers to be picked up
-		if (!this.isTemporaryNode) {
-			//regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
-			if (!NamedNode.clearedProperties.has(this)) {
-				NamedNode.clearedProperties.set(this, []);
-				eventBatcher.register(NamedNode);
-			}
-			//we save the property that was cleared AND the quads that were cleared
-			NamedNode.clearedProperties
-				.get(this)
-				.push([
-					property,
-					this.asSubject.has(property)
-						? new QuadArray(...this.asSubject.get(property).getQuadSet())
-						: null,
-				]);
-		}
+  /**
+   * unset (remove) all values of a certain property.
+   * Removes all connections (edges) in the graph between this node and other nodes, where the given property is used as the connecting 'edge' between them
+   * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
+   */
+  unsetAll(property: NamedNode): boolean {
+    NamedNode.emitClearedProperty(this, property);
+    if (this.hasProperty(property)) {
+      //false as parameter because we don't need alteration events for each single quad, but rather manage this with clearedProperties events
+      this.asSubject.get(property).removeAll(false);
+      return true;
+    }
+    return false;
+  }
 
-		if (this.hasProperty(property)) {
-			//false as parameter because we don't need alteration events for each single quad, but rather manage this with clearedProperties events
-			this.asSubject.get(property).removeAll(false);
-			return true;
-		}
-		return false;
-	}
+  static emitClearedProperty(node: NamedNode, property: NamedNode) {
+    //if not a local node we will emit events for storage controllers to be picked up
+    if (!node.isTemporaryNode) {
+      //regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
+      if (!NamedNode.clearedProperties.has(node)) {
+        NamedNode.clearedProperties.set(node, []);
+        eventBatcher.register(NamedNode);
+      }
+      //we save the property that was cleared AND the quads that were cleared
+      NamedNode.clearedProperties
+        .get(node)
+        .push([
+          property,
+          node.asSubject.has(property) ? new QuadArray(...node.asSubject.get(property).getQuadSet()) : null,
+        ]);
+    }
+  }
 
   /**
    * returns true if ANY node has this node as the value of the given property
@@ -1533,7 +1528,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return other === this;
   }
 
-
   private createPromise() {
     var resolve, reject;
     var promise = new Promise((res, rej) => {
@@ -1548,11 +1542,10 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * Newly created nodes will exist only in local memory until you call this function
    * @returns a promise that resolves when the node has received a permanent URI
    */
-  save():Promise<void> {
+  save(): Promise<void> {
     if (this.isTemporaryNode) {
-      if(!this._isStoring)
-      {
-        this._isTemporaryNode = false;
+      if (!this._isStoring) {
+        // this._isTemporaryNode = false;
         //this creates a promise that will resolve when the node is stored
         this.isStoring = true;
         NamedNode.nodesToSave.add(this);
@@ -1560,7 +1553,6 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       }
       //always return a promise
       return this._isStoring.promise;
-
     }
   }
 
@@ -1734,7 +1726,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       [this.changedProperties, NamedNode.PROPERTY_CHANGED],
       [this.changedInverseProperties, NamedNode.INVERSE_PROPERTY_CHANGED],
       [this.alteredProperties, NamedNode.PROPERTY_ALTERED],
-      [this.alteredInverseProperties, NamedNode.INVERSE_PROPERTY_ALTERED]
+      [this.alteredInverseProperties, NamedNode.INVERSE_PROPERTY_ALTERED],
     ].forEach(([map, event]: [CoreMap<NamedNode, QuadSet>, string]) => {
       if (!map) return;
       //for each individual change that was made
@@ -1911,7 +1903,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     return this.TEMP_URI_BASE + this.tempCounter++; //+'/';+Date.now()+Math.random();
   }
 
-  static getCounter():number {
+  static getCounter(): number {
     return this.tempCounter;
   }
 
@@ -2076,8 +2068,8 @@ export class Literal extends Node implements IGraphObject, ILiteral {
    */
   constructor(value: string, protected _datatype: NamedNode = null, private _language: string = '') {
     super(value);
-    if(typeof value !== 'string') {
-      throw new Error('Literal value must be a string. Given value was a '+typeof value+' ('+value+')');
+    if (typeof value !== 'string') {
+      throw new Error('Literal value must be a string. Given value was a ' + typeof value + ' (' + value + ')');
     }
   }
 
@@ -2441,7 +2433,7 @@ export class Graph implements Term {
    */
   static CONTENTS_CHANGED = 'CONTENTS_ALTERED';
 
-  termType: string = 'Graph';
+  termType: string = 'NamedNode';
 
   constructor(public value: string, quads?: QuadSet) {
     // super();
@@ -2703,18 +2695,22 @@ export class Quad extends EventEmitter {
     this._graph.registerQuad(this, alteration);
 
     if (emitEvents) {
-      //new quad events are batched together and emitted on the next tick
-      //so here we make sure the Quad class will emit its batched events on the next tick
-      eventBatcher.register(Quad);
-      //and here we save this quad to a set of newQuads which is a static property of the Quad class
-      Quad.createdQuads.add(this);
-
-      //only if it's an alteration AND it's relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
-      if (alteration && !this.implicit) {
-        Quad.createdQuadsAltered.add(this);
-      }
+      Quad.emitCreatedQuad(this, alteration);
     }
     Quad.globalNumQuads++;
+  }
+
+  static emitCreatedQuad(quad: Quad, alteration: boolean = false) {
+    //new quad events are batched together and emitted on the next tick
+    //so here we make sure the Quad class will emit its batched events on the next tick
+    eventBatcher.register(Quad);
+    //and here we save this quad to a set of newQuads which is a static property of the Quad class
+    Quad.createdQuads.add(quad);
+
+    //only if it's an alteration AND it's relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
+    if (alteration && !quad.implicit) {
+      Quad.createdQuadsAltered.add(quad);
+    }
   }
 
   get graph() {
@@ -2727,8 +2723,7 @@ export class Quad extends EventEmitter {
    * @param newGraph
    */
   moveToGraph(newGraph: Graph, alteration: boolean = true): Quad {
-    if(newGraph === this._graph)
-    {
+    if (newGraph === this._graph) {
       return this;
     }
     let newQuad = Quad.getOrCreate(this.subject, this.predicate, this.object, newGraph, this.implicit, alteration);
@@ -2819,6 +2814,15 @@ export class Quad extends EventEmitter {
    * @internal
    */
   static emitBatchedEvents() {
+    if (this.createdQuads.size > 0 && this.removedQuads.size > 0) {
+      //if both created and removed quads are batched then we remove the quad from both sets
+      this.createdQuads.forEach((quad) => {
+        if (this.removedQuads.has(quad)) {
+          this.createdQuads.delete(quad);
+          this.removedQuads.delete(quad);
+        }
+      });
+    }
     if (this.createdQuads.size > 0) {
       this.emitter.emit(Quad.QUADS_CREATED, this.createdQuads);
       this.createdQuads = new QuadSet();
@@ -2849,9 +2853,11 @@ export class Quad extends EventEmitter {
     graph: Graph = defaultGraph,
     implicit: boolean = false,
     alteration: boolean = false,
+    emitEvents: boolean = true,
   ) {
     return (
-      this.get(subject, predicate, object, graph) || new Quad(subject, predicate, object, graph, implicit, alteration)
+      this.get(subject, predicate, object, graph) ||
+      new Quad(subject, predicate, object, graph, implicit, alteration, emitEvents)
     );
   }
 
@@ -2867,8 +2873,8 @@ export class Quad extends EventEmitter {
     return subject.getQuads(predicate, object).find((q) => q._graph === graph);
   }
 
-  static moveQuadsToGraph(quads: Quad[], graph: Graph,alteration:boolean=false) {
-    let result = new (Object.getPrototypeOf(quads)).constructor();
+  static moveQuadsToGraph(quads: Quad[], graph: Graph, alteration: boolean = false) {
+    let result = new (Object.getPrototypeOf(quads).constructor)();
     quads.forEach((quad) => {
       result.push(quad.moveToGraph(graph, alteration));
     });
@@ -2880,7 +2886,7 @@ export class Quad extends EventEmitter {
    * Will be removed both locally and from the graph database
    * @param alteration
    */
-  remove(alteration: boolean = false): void {
+  remove(alteration: boolean = false, emitEvents: boolean = true): void {
     if (this._removed) return;
 
     //first set removed is true so event handlers can detect the difference between added or removed values
@@ -2889,21 +2895,28 @@ export class Quad extends EventEmitter {
     this.subject.unregisterProperty(this);
     this.predicate.unregisterAsPredicate(this);
     this.object.unregisterInverseProperty(this);
+    this.graph.unregisterQuad(this, alteration);
 
+    if (emitEvents) {
+      Quad.emitRemovedQuad(this, alteration);
+    }
+
+    Quad.globalNumQuads--;
+  }
+
+  static emitRemovedQuad(quad: Quad, alteration: boolean = false) {
     //removed quad events are batched together and emitted on the next tick
     //so here we make sure the Quad class will emit its batched events on the next tick
     eventBatcher.register(Quad);
     //and here we save this quad to a set of removedQuads which is a static property of the Quad class
-    Quad.removedQuads.add(this);
+    Quad.removedQuads.add(quad);
 
-    if (alteration && !this.implicit) {
-      Quad.removedQuadsAltered.add(this);
+    if (alteration && !quad.implicit) {
+      Quad.removedQuadsAltered.add(quad);
     }
 
     //we need to let this quad emit this event straight away because for example the reasoner needs to listen to this exact quad to retract
-    this.emit(Quad.QUAD_REMOVED);
-
-    Quad.globalNumQuads--;
+    quad.emit(Quad.QUAD_REMOVED);
   }
 
   /**
@@ -2947,7 +2960,8 @@ export class Quad extends EventEmitter {
       ' ' +
       this.object.toString() +
       ' ' +
-      this.graph.toString()
+      this.graph.toString() +
+      (this.isRemoved ? ' (removed)' : '')
     );
   }
 }

@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode, Node, Quad} from '../models';
+import {defaultGraph, Literal, NamedNode, Node, Quad} from '../models';
 import {Shape} from '../shapes/Shape';
 import {NodeShape, PropertyShape} from '../shapes/SHACL';
 import {Prefix} from './Prefix';
@@ -284,8 +284,11 @@ export function autoLoadOntologyData(value: boolean) {
 
 export function linkedPackage(packageName: string): LinkedPackageObject {
   let packageNode = NamedNode.getOrCreate(`${LINCD_DATA_ROOT}module/${packageName}`, true);
-  packageNode.set(rdf.type, lincdOntology.Module);
-  packageNode.setValue(npm.packageName, packageName);
+  //set certain values but don't emit change events or alteration events
+  new Quad(packageNode, rdf.type, lincdOntology.Module, defaultGraph, false, false, false);
+  new Quad(packageNode, npm.packageName, new Literal(packageName), defaultGraph, false, false, false);
+  // packageNode.set(rdf.type, lincdOntology.Module);
+  // packageNode.setValue(npm.packageName, packageName);
 
   let packageTreeObject = registerPackageInTree(packageName);
 

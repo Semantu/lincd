@@ -299,13 +299,18 @@ export abstract class LinkedStorage {
     });
   }
 
-  private static onQuadsAltered(quadsCreated: QuadSet, quadsRemoved: QuadSet, baseStoreOnSubject: boolean = false) {
+  private static onQuadsAltered(
+    quadsCreated: QuadSet,
+    quadsRemoved: QuadSet,
+    baseStoreOnSubject: boolean = false,
+    alteration: boolean = false,
+  ) {
     //quads may have been removed since they have been created and emitted filter that out here
     let addMap, removeMap;
     if (quadsCreated) {
       quadsCreated = quadsCreated.filter((q) => !q.isRemoved);
 
-      //first see if any new quads need to move to the right graphs (note that this will possibly add "mimiced" quads (with the previous graph as their graph) to quadsRemoved)
+      //first see if any new quads need to move to the right graphs (note that this will possibly add "mimicked" quads (with the previous graph as their graph) to quadsRemoved)
       //true, signals that we want to remove the quads from quadsCreated if they get moved
       this.assignQuadsToGraph(quadsCreated, true);
       if (baseStoreOnSubject) {
@@ -351,7 +356,7 @@ export abstract class LinkedStorage {
         return res;
       })
       .catch((err) => {
-        console.warn('Error during storage update: ' + err);
+        console.warn('Error during storage update: ', err);
       });
   }
 
@@ -369,7 +374,7 @@ export abstract class LinkedStorage {
     }
 
     //if it's not a temporary node, and we have a default graph for permanent storage, then use that
-    if (!subject.isTemporaryNode && this.defaultStorageGraph) {
+    if ((!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.defaultStorageGraph) {
       return this.defaultStorageGraph;
     }
 
@@ -414,6 +419,7 @@ export abstract class LinkedStorage {
         console.warn('Could not clear properties: ' + err);
       });
   }
+
   private static async onRemoveNodes(nodesAndQuads: CoreSet<[NamedNode, QuadArray]>): Promise<any> {
     //turn all the removed quads back on (as if they were still in the graph)
     //this allows us to read the properties of the node as they were just before the node was removed.
@@ -474,12 +480,12 @@ export abstract class LinkedStorage {
     //NOTE though that the code below will move the nodes to the right graphs, which will trigger update events (which ACTUALLY stores the nodes)
     //if in the meantime requests get made that involve this node as a value of a property, then the data of this node will no longer be sent over
     //even though it may NOT be known yet on the server. If this is a problem, we may want to (somehow) wait with setting temporaryNode to false untill after all the quads are moved AND stored
-    nodes.forEach((node) => {
-      // node.isTemporaryNode = false;
-      //this may need to move to a later point, after quads are stored
-      //this also resolves the promise that was returned when the node was .saved()
-      node.isStoring = false;
-    });
+    // nodes.forEach((node) => {
+    //   // node.isTemporaryNode = false;
+    //   //this may need to move to a later point, after quads are stored
+    //   //this also resolves the promise that was returned when the node was .saved()
+    //   node.isStoring = false;
+    // });
 
     //move all the quads to the right graph.
     //note that IF this is a new graph, this will trigger onQuadsAltered, which will notify the right stores to store these quads
@@ -490,6 +496,11 @@ export abstract class LinkedStorage {
       });
     });
     this.assignQuadsToGraph(quads);
+
+    nodes.forEach((node) => {
+      node.isTemporaryNode = false;
+      node.isStoring = false;
+    });
   }
 
   static getStoreForNode(node: NamedNode) {
@@ -606,7 +617,7 @@ export abstract class LinkedStorage {
     //   store.deleteMultiple(quads);
     //
     // });
-    return this.onQuadsAltered(toAdd, toRemove, true);
+    return this.onQuadsAltered(toAdd, toRemove, true, true);
   }
 
   static clearProperties(subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>): Promise<boolean> {
