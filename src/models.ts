@@ -1846,7 +1846,12 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * Until saved, `node.isTemporaryNode()` will return true.
    */
   static create(): NamedNode {
-    return this._create(this.createNewTempUri(), true);
+    let tmpURI = this.createNewTempUri();
+    while (this.getNamedNode(tmpURI)) {
+      this.tempCounter++;
+      tmpURI = this.createNewTempUri();
+    }
+    return this._create(tmpURI, true);
   }
 
   private static _create(uri: string, isLocalNode: boolean = false): NamedNode {
