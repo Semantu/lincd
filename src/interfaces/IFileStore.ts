@@ -5,7 +5,7 @@ export interface IFileStore {
    * - https://s3.amazonaws.com/my-bucket
    * - https://my-bucket.nyc3.digitaloceanspaces.com
    */
-  // readonly accessURL: string;
+  readonly accessURL: string;
 
   init?(): Promise<any>;
 

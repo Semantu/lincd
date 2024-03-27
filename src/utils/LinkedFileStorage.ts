@@ -2,10 +2,19 @@ import {IFileStore} from '../interfaces/IFileStore';
 
 export abstract class LinkedFileStorage {
   private static defaultStore: IFileStore;
+  private static url: string; // default accessURL
 
   static get accessURL(): string {
-    throw new Error('Not implemented');
-    // return this.defaultStore.accessURL;
+    // check if default store is not set, return default accessURL
+    if (!this.defaultStore) {
+      return this.url;
+    }
+
+    return this.defaultStore.accessURL;
+  }
+
+  static setDefaultAccessURL(accessURL: string): string {
+    return (this.url = accessURL);
   }
 
   static getDefaultStore(): IFileStore {
@@ -39,4 +48,17 @@ export abstract class LinkedFileStorage {
   static saveFile(filePath: string, fileContent: Buffer): Promise<string> {
     return this.defaultStore.saveFile(filePath, fileContent);
   }
+}
+
+/**
+ *  get the asset include with cdn
+ *
+ * @param path asset path
+ * @param directory asset directory (optional, default is /public)
+ * @returns asset url. e.g. https://cdn.example.com/public/assets/image.png
+ */
+export function asset(path: string, directory: string = '/public'): string {
+  const accessURL = LinkedFileStorage.accessURL;
+  const assetUrl = accessURL + directory + path;
+  return assetUrl;
 }
