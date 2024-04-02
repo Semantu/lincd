@@ -51,11 +51,11 @@ export abstract class LinkedFileStorage {
 }
 
 /**
- *  get the asset include with cdn
+ *  Get the full path of an asset based on the way LinkedFileStorage is configured
  *
  * @param path asset path
  * @param directory asset directory (optional, default is /public)
- * @returns asset url. e.g. https://cdn.example.com/public/assets/image.png
+ * @returns asset url. e.g. https://cdn.example.com/public/image.png
  */
 export function asset(path: string, directory: string = '/public'): string {
   const accessURL = LinkedFileStorage.accessURL;
