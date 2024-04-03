@@ -277,7 +277,11 @@ export abstract class LinkedStorage {
     }
 
     //if it's not a temporary node, and we have a default graph for permanent storage, then use that
-    if (!subject.isTemporaryNode && this.defaultStorageGraph) {
+    if (
+      (!subject.isTemporaryNode ||
+        (subject.isTemporaryNode && subject.isStoring)) &&
+      this.defaultStorageGraph
+    ) {
       return this.defaultStorageGraph;
     }
 
@@ -380,7 +384,7 @@ export abstract class LinkedStorage {
     //   store.deleteMultiple(quads);
     //
     // });
-    return this.onQuadsAltered(toAdd, toRemove, true);
+    return this.onQuadsAltered(toAdd, toRemove, true, true);
   }
 
   static clearProperties(
