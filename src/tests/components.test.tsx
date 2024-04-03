@@ -8,7 +8,7 @@ import {Literal, NamedNode} from '../models.js';
 import {literalProperty} from '../utils/ShapeDecorators.js';
 import {createNameSpace} from '../utils/NameSpace.js';
 import {createRoot} from 'react-dom/client';
-//
+
 // let foaf = createNameSpace('http://xmlns.com/foaf/0.1/');
 //
 // //these were needed to get react components to work with the testing environment. Maybe one of them can go?
@@ -248,8 +248,37 @@ import {createRoot} from 'react-dom/client';
 //   });
 // });
 
-describe('component tests', () => {
-  it('renders a SetComponent with controlled children by using Shape.requestForEachInSet()', async () => {
-    expect(true).toBe(true);
-  });
+//
+// it('renders a SetComponent with controlled children by using Shape.requestForEachInSet()',async () => {
+//   await act(async () => {
+//     root = createRoot(container).render(<PersonNetwork of={person} />);
+//   });
+//   expect(container.textContent).toBe(`${person.name} knows ${person2.name+person3.name}`);
+// });
+// it("renders a SetComponent with controlled children using < SetComponent of={.. } />",async () => {
+//   await act(async () => {
+//     root = createRoot(container).render(<PersonOverview of={person.knows} />);
+//   });
+//   expect(container.textContent).toBe(person2.name+person3.name);
+// });
+// it("renders a SetComponent with configurable children using < SetComponent as={.. } />",async () => {
+//   await act(async () => {
+//     root = createRoot(container).render(<PersonOverviewWithConfigurableChildren of={person.knows} as={Card} />);
+//   });
+//   expect(container.textContent).toBe(person2.name+person3.name);
+// });
+// it("renders a SetComponent that passes on its sources to another SetComponent using Shape.requestSet() with SetComponent.of(source,ChildComponent)",async () => {
+//   await act(async () => {
+//     root = createRoot(container).render(<PersonOverviewFixedGrid of={person.knows} />);
+//   });
+//   expect(container.textContent).toBe(person2.name+person3.name);
+// });
+// it("renders a SetComponent that passes on its sources to another SetComponent using Shape.requestSet() with a child render function",async () => {
+//   await act(async () => {
+//     root = createRoot(container).render(<PersonOverviewWithChildRenderFn of={person.knows} />);
+//   });
+//   expect(container.textContent).toBe(person2.name+person3.name);
+// });
+it('is true', () => {
+  expect(true).toBe(true);
 });

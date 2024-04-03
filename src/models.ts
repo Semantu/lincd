@@ -626,7 +626,12 @@ export class NamedNode
    * Until saved, `node.isTemporaryNode()` will return true.
    */
   static create(): NamedNode {
-    return this._create(this.createNewTempUri(), true);
+    let tmpURI = this.createNewTempUri();
+    while (this.getNamedNode(tmpURI)) {
+      this.tempCounter++;
+      tmpURI = this.createNewTempUri();
+    }
+    return this._create(tmpURI, true);
   }
 
   /**
@@ -1745,30 +1750,33 @@ export class NamedNode
    * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
    */
   unsetAll(property: NamedNode): boolean {
-    //if not a local node we will emit events for storage controllers to be picked up
-    if (!this.isTemporaryNode) {
-      //regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
-      if (!NamedNode.clearedProperties.has(this)) {
-        NamedNode.clearedProperties.set(this, []);
-        eventBatcher.register(NamedNode);
-      }
-      //we save the property that was cleared AND the quads that were cleared
-      NamedNode.clearedProperties
-        .get(this)
-        .push([
-          property,
-          this.asSubject.has(property)
-            ? new QuadArray(...this.asSubject.get(property).getQuadSet())
-            : null,
-        ]);
-    }
-
+    NamedNode.emitClearedProperty(this, property);
     if (this.hasProperty(property)) {
       //false as parameter because we don't need alteration events for each single quad, but rather manage this with clearedProperties events
       this.asSubject.get(property).removeAll(false);
       return true;
     }
     return false;
+  }
+
+  static emitClearedProperty(node: NamedNode, property: NamedNode) {
+    //if not a local node we will emit events for storage controllers to be picked up
+    if (!node.isTemporaryNode) {
+      //regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
+      if (!NamedNode.clearedProperties.has(node)) {
+        NamedNode.clearedProperties.set(node, []);
+        eventBatcher.register(NamedNode);
+      }
+      //we save the property that was cleared AND the quads that were cleared
+      NamedNode.clearedProperties
+        .get(node)
+        .push([
+          property,
+          node.asSubject.has(property)
+            ? new QuadArray(...node.asSubject.get(property).getQuadSet())
+            : null,
+        ]);
+    }
   }
 
   /**
@@ -1803,6 +1811,15 @@ export class NamedNode
     return other === this;
   }
 
+  private createPromise() {
+    var resolve, reject;
+    var promise = new Promise((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return {promise, resolve, reject};
+  }
+
   /**
    * Save this node into the graph database.
    * Newly created nodes will exist only in local memory until you call this function
@@ -1811,7 +1828,6 @@ export class NamedNode
   save(): Promise<void> {
     if (this.isTemporaryNode) {
       if (!this._isStoring) {
-        this._isTemporaryNode = false;
         //this creates a promise that will resolve when the node is stored
         this.isStoring = true;
         NamedNode.nodesToSave.add(this);
@@ -2114,15 +2130,6 @@ export class NamedNode
       : this.asSubject
           .get(property)
           .filter((quad) => quad.object.equals(value), QuadSet);
-  }
-
-  private createPromise() {
-    var resolve, reject;
-    var promise = new Promise((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    return {promise, resolve, reject};
   }
 }
 
@@ -2639,6 +2646,7 @@ export class Graph implements Term {
    * Emitted when the contents of this graph have changed. Can also be due to loading data
    */
   static CONTENTS_CHANGED = 'CONTENTS_ALTERED';
+
   private static graphs: CoreMap<string, Graph> = new CoreMap<string, Graph>();
   // private static addedQuads: Map<Graph,QuadArray> = new Map();
   // private static removedQuads: Map<Graph,QuadArray> = new Map();
@@ -2956,6 +2964,15 @@ export class Quad extends EventEmitter {
    * @internal
    */
   static emitBatchedEvents() {
+    if (this.createdQuads.size > 0 && this.removedQuads.size > 0) {
+      //if both created and removed quads are batched then we remove the quad from both sets
+      this.createdQuads.forEach((quad) => {
+        if (this.removedQuads.has(quad)) {
+          this.createdQuads.delete(quad);
+          this.removedQuads.delete(quad);
+        }
+      });
+    }
     if (this.createdQuads.size > 0) {
       this.emitter.emit(Quad.QUADS_CREATED, this.createdQuads);
       this.createdQuads = new QuadSet();
@@ -2993,10 +3010,19 @@ export class Quad extends EventEmitter {
     graph: Graph = defaultGraph,
     implicit: boolean = false,
     alteration: boolean = false,
+    emitEvents: boolean = true,
   ) {
     return (
       this.get(subject, predicate, object, graph) ||
-      new Quad(subject, predicate, object, graph, implicit, alteration)
+      new Quad(
+        subject,
+        predicate,
+        object,
+        graph,
+        implicit,
+        alteration,
+        emitEvents,
+      )
     );
   }
 
@@ -3090,7 +3116,7 @@ export class Quad extends EventEmitter {
    * Will be removed both locally and from the graph database
    * @param alteration
    */
-  remove(alteration: boolean = false): void {
+  remove(alteration: boolean = false, emitEvents: boolean = true): void {
     if (this._removed) return;
 
     //first set removed is true so event handlers can detect the difference between added or removed values
@@ -3099,21 +3125,28 @@ export class Quad extends EventEmitter {
     this.subject.unregisterProperty(this);
     this.predicate.unregisterAsPredicate(this);
     this.object.unregisterInverseProperty(this);
+    this.graph.unregisterQuad(this, alteration);
 
+    if (emitEvents) {
+      Quad.emitRemovedQuad(this, alteration);
+    }
+
+    Quad.globalNumQuads--;
+  }
+
+  static emitRemovedQuad(quad: Quad, alteration: boolean = false) {
     //removed quad events are batched together and emitted on the next tick
     //so here we make sure the Quad class will emit its batched events on the next tick
     eventBatcher.register(Quad);
     //and here we save this quad to a set of removedQuads which is a static property of the Quad class
-    Quad.removedQuads.add(this);
+    Quad.removedQuads.add(quad);
 
-    if (alteration && !this.implicit) {
-      Quad.removedQuadsAltered.add(this);
+    if (alteration && !quad.implicit) {
+      Quad.removedQuadsAltered.add(quad);
     }
 
     //we need to let this quad emit this event straight away because for example the reasoner needs to listen to this exact quad to retract
-    this.emit(Quad.QUAD_REMOVED);
-
-    Quad.globalNumQuads--;
+    quad.emit(Quad.QUAD_REMOVED);
   }
 
   /**
@@ -3160,7 +3193,8 @@ export class Quad extends EventEmitter {
       ' ' +
       this.object.toString() +
       ' ' +
-      this.graph.toString()
+      this.graph.toString() +
+      (this.isRemoved ? ' (removed)' : '')
     );
   }
 
@@ -3178,18 +3212,22 @@ export class Quad extends EventEmitter {
     this._graph.registerQuad(this, alteration);
 
     if (emitEvents) {
-      //new quad events are batched together and emitted on the next tick
-      //so here we make sure the Quad class will emit its batched events on the next tick
-      eventBatcher.register(Quad);
-      //and here we save this quad to a set of newQuads which is a static property of the Quad class
-      Quad.createdQuads.add(this);
-
-      //only if it's an alteration AND it's relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
-      if (alteration && !this.implicit) {
-        Quad.createdQuadsAltered.add(this);
-      }
+      Quad.emitCreatedQuad(this, alteration);
     }
     Quad.globalNumQuads++;
+  }
+
+  static emitCreatedQuad(quad: Quad, alteration: boolean = false) {
+    //new quad events are batched together and emitted on the next tick
+    //so here we make sure the Quad class will emit its batched events on the next tick
+    eventBatcher.register(Quad);
+    //and here we save this quad to a set of newQuads which is a static property of the Quad class
+    Quad.createdQuads.add(quad);
+
+    //only if it's an alteration AND it's relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
+    if (alteration && !quad.implicit) {
+      Quad.createdQuadsAltered.add(quad);
+    }
   }
 
   private mimicEventsOnUpdate(oldQuad: Quad) {

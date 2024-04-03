@@ -1091,6 +1091,13 @@ export class QueryPrimitiveSet<P = any> {
     this.contents = new CoreSet(items);
   }
 
+  add(item) {
+    this.contents.add(item);
+  }
+
+  values() {
+    return this.contents.values();
+  }
   //this is needed because we extend CoreSet which has a createNew method but does not expect the constructor to have arguments
   createNew(...args): this {
     return new (<any>this.constructor)(

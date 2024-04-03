@@ -659,13 +659,14 @@ export abstract class LinkedStorage {
     quadsCreated: QuadSet,
     quadsRemoved: QuadSet,
     baseStoreOnSubject: boolean = false,
+    alteration: boolean = false,
   ) {
     //quads may have been removed since they have been created and emitted filter that out here
     let addMap, removeMap;
     if (quadsCreated) {
       quadsCreated = quadsCreated.filter((q) => !q.isRemoved);
 
-      //first see if any new quads need to move to the right graphs (note that this will possibly add "mimiced" quads (with the previous graph as their graph) to quadsRemoved)
+      //first see if any new quads need to move to the right graphs (note that this will possibly add "mimicked" quads (with the previous graph as their graph) to quadsRemoved)
       //true, signals that we want to remove the quads from quadsCreated if they get moved
       this.assignQuadsToGraph(quadsCreated, true);
       if (baseStoreOnSubject) {
@@ -718,7 +719,7 @@ export abstract class LinkedStorage {
         return res;
       })
       .catch((err) => {
-        console.warn('Error during storage update: ' + err);
+        console.warn('Error during storage update: ', err);
       });
   }
 
@@ -821,12 +822,12 @@ export abstract class LinkedStorage {
     //NOTE though that the code below will move the nodes to the right graphs, which will trigger update events (which ACTUALLY stores the nodes)
     //if in the meantime requests get made that involve this node as a value of a property, then the data of this node will no longer be sent over
     //even though it may NOT be known yet on the server. If this is a problem, we may want to (somehow) wait with setting temporaryNode to false untill after all the quads are moved AND stored
-    nodes.forEach((node) => {
-      // node.isTemporaryNode = false;
-      //this may need to move to a later point, after quads are stored
-      //this also resolves the promise that was returned when the node was .saved()
-      node.isStoring = false;
-    });
+    // nodes.forEach((node) => {
+    //   // node.isTemporaryNode = false;
+    //   //this may need to move to a later point, after quads are stored
+    //   //this also resolves the promise that was returned when the node was .saved()
+    //   node.isStoring = false;
+    // });
 
     //move all the quads to the right graph.
     //note that IF this is a new graph, this will trigger onQuadsAltered, which will notify the right stores to store these quads
@@ -837,6 +838,11 @@ export abstract class LinkedStorage {
       });
     });
     this.assignQuadsToGraph(quads);
+
+    nodes.forEach((node) => {
+      node.isTemporaryNode = false;
+      node.isStoring = false;
+    });
   }
 
   private static groupQuadsBySubject(

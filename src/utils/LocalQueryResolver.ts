@@ -630,7 +630,7 @@ function resolvePropertyStep(
     }
   }
 
-  if (restPath.length > 0) {
+  if (restPath.length > 0 && typeof stepResult !== 'undefined') {
     //if there is more properties left, continue to fill the result object by resolving the next steps
     stepResult = resolveQuerySteps(stepResult, restPath, subResultObjects);
   }

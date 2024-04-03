@@ -21,7 +21,7 @@ export class NodeURIMappings extends NodeMap<NamedNode> {
    * @param {string} givenUri
    * @returns {BlankNode}
    */
-  getNamedNodeOrCreateBlankNode(givenUri: string): BlankNode {
+  getOrCreateBlankNode(givenUri: string): BlankNode {
     //TODO: rename this method to getOrCreateBlankNode
     if (this.has(givenUri)) {
       return this.get(givenUri);

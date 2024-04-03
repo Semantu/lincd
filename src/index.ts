@@ -6,6 +6,7 @@
 //import everything from each file that we want to be bundled in the stand-alone dist/lincd.js file
 import * as Package from './utils/Package.js';
 import * as models from './models.js';
+import * as LinkedErrorLogging from './utils/LinkedErrorLogging';
 import * as LinkedFileStorage from './utils/LinkedFileStorage.js';
 import * as LinkedStorage from './utils/LinkedStorage.js';
 import * as EventEmitter from './events/EventEmitter.js';
@@ -47,6 +48,7 @@ import * as rdf from './ontologies/rdf.js';
 import * as rdfs from './ontologies/rdfs.js';
 import * as xsd from './ontologies/xsd.js';
 import * as shacl from './ontologies/shacl.js';
+import * as DataFactory from './Datafactory';
 import React from 'react';
 
 export const nextTick = require('next-tick');
@@ -57,6 +59,7 @@ export function initModularApp() {
   //therefor we do not export all the classes here from the index directly
   //instead we make all components of LINCD available through the global tree for modular apps
   let publicFiles = {
+    DataFactory,
     Node,
     EventEmitter,
     NodeURIMappings,
@@ -70,6 +73,7 @@ export function initModularApp() {
     QuadMap,
     QuadSet,
     models,
+    LinkedErrorLogging,
     LinkedFileStorage,
     LinkedStorage,
     Shape,
