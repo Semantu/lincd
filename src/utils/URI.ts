@@ -25,4 +25,16 @@ export class URI {
     //must have a scheme followed by ://
     return /([A-Za-z][A-Za-z0-9+\-.]*)\:\/\//.test(uri);
   }
+
+  /**
+   * Generate a new URI based on the given URI components (labels / identifiers).
+   * This URI will start with the DATA_ROOT environment variable
+   * @param uriComponents
+   */
+  static generate(...uriComponents: string[]) {
+    return (
+      process.env.DATA_ROOT +
+      uriComponents.filter(Boolean).map(encodeURIComponent).join('/')
+    );
+  }
 }

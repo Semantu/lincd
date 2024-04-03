@@ -6,6 +6,7 @@ import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {LinkedComponent, LinkedSetComponent} from './LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
+import {getSubShapesClasses, getSuperShapesClasses} from './ShapeClass';
 
 /**
  * ###################################
@@ -18,7 +19,7 @@ export type JSPrimitive = string | number | boolean | Date | null | undefined;
 /**
  * All the possible types that a regular get/set method of a Shape can return
  */
-export type AccessorReturnValue = Shape | ShapeSet | JSPrimitive;
+export type AccessorReturnValue = Shape | ShapeSet | JSPrimitive | TestNode;
 
 export type WhereClause<S extends Shape | AccessorReturnValue> =
   | Evaluation
@@ -60,8 +61,8 @@ export type QueryPropertyPath = QueryStep[];
  * A QueryStep is a single step in a query path
  * It contains the property that was requested, and optionally a where clause
  */
-export type QueryStep = PropertyQueryStep | CountStep | CustomQueryObject;
-export type CountStep = {
+export type QueryStep = PropertyQueryStep | SizeStep | CustomQueryObject;
+export type SizeStep = {
   count: QueryPropertyPath;
   label?: string;
 };
@@ -94,11 +95,11 @@ export enum WhereMethods {
  * Maps all the return types of get/set methods of a Shape and maps their return types to QueryBuilderObjects
  */
 export type QueryShapeProps<
-  T,
+  T extends Shape,
   Source,
   Property extends string | number | symbol = any,
 > = {
-  [P in keyof T]: ToQueryBuilderObject<T[P], T, P>;
+  [P in keyof T]: ToQueryBuilderObject<T[P], QShape<T, Source, Property>, P>;
 };
 
 /**
@@ -134,7 +135,7 @@ export type QShape<
 
 export type ToQueryBuilderObject<
   T,
-  Source = any,
+  Source = null,
   Property extends string | number | symbol = '',
 > =
   T extends ShapeSet<infer ShapeSetType>
@@ -161,11 +162,6 @@ export type WhereEvaluationPath = {
 
 export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
-// export interface BoundComponentQueryStep {
-//   component: BoundComponent<any, any>;
-//   // path: LinkedQueryObject;
-// }
-
 /**
  * ###################################
  * ####    QUERY RESULT TYPES     ####
@@ -174,9 +170,9 @@ export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
 export type NodeResultMap = CoreMap<string, QResult<any, any>>;
 
-export type QResult<Source, Object = {}> = Object & {
+export type QResult<ShapeType extends Shape, Object = {}> = Object & {
   id: string;
-  shape: Source;
+  shape: ShapeType;
 };
 
 export type QueryProps<Q extends LinkedQuery<any>> =
@@ -220,7 +216,6 @@ export type ToQueryResultSet<T> =
 export type QueryResponseToResultType<
   T,
   QShapeType extends Shape = null,
-  SubProperties = null,
   SourceOverwrite = null,
 > = T extends QueryBuilderObject
   ? GetQueryObjectResultType<T, {}, SourceOverwrite>
@@ -248,14 +243,18 @@ export type GetQueryObjectResultType<
   QV extends QueryString<infer Source, infer Property>
     ? CreateQResult<GetSource<Source, SourceOverwrite>, string, Property>
     : //note: count needs to be above number
-      QV extends Count<infer Source>
-      ? CountToQueryResult<GetSource<Source, SourceOverwrite>>
+      QV extends SetSize<infer Source>
+      ? SetSizeToQueryResult<GetSource<Source, SourceOverwrite>>
       : QV extends QueryNumber<infer Source, infer Property>
         ? CreateQResult<GetSource<Source, SourceOverwrite>, number, Property>
         : QV extends QueryDate<infer Source, infer Property>
           ? CreateQResult<GetSource<Source, SourceOverwrite>, Date, Property>
           : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
-            ? CreateQResult<ShapeType>
+            ? CreateQResult<
+                GetSource<Source, SourceOverwrite>,
+                ShapeType,
+                Property
+              >
             : //   CreateQResult<Source, ShapeType, Property>
               QV extends BoundComponent<infer Source, infer ShapeType>
               ? GetShapesResultTypeWithSource<Source>
@@ -299,7 +298,7 @@ type QueryValueIntersectionToObject<Items> = {
   [Type in Items as GetQueryObjectProperty<Type>]: GetQueryObjectOriginal<Type>;
 };
 
-export type CountToQueryResult<Source> =
+export type SetSizeToQueryResult<Source> =
   Source extends QueryShapeSet<
     infer ShapeType,
     infer ParentSource,
@@ -308,7 +307,8 @@ export type CountToQueryResult<Source> =
     ? //for counted shapesets, the result is the same as the result was before count() was called
       //hence we use parent source and sourceProperty, but the value type is now a number
       CreateQResult<ParentSource, number, SourceProperty>
-    : Source;
+    : // : {count: number};
+      number;
 
 /**
  * If the source is an object (it extends shape)
@@ -319,75 +319,91 @@ export type CreateQResult<
   Value = undefined,
   Property extends string | number | symbol = '',
   SubProperties = {},
-> = Source extends Shape
-  ? QResult<
-      Source,
-      {
-        //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
-        //but for all other cases (like string, number, boolean) the value is just passed through
-        [P in Property]: CreateQResult<Value, Value>;
-      } & SubProperties
-    >
-  : Source extends QueryShapeSet<
-        infer ShapeType,
-        infer ParentSource,
-        infer SourceProperty
-      >
-    ? //for a shapeset, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
-      CreateQResult<
-        ParentSource,
-        QResult<
-          ShapeType,
+> =
+  Source extends QueryShape<
+    infer SourceShapeType,
+    infer ParentSource,
+    infer SourceProperty
+  >
+    ? ParentSource extends null
+      ? QResult<
+          SourceShapeType,
           {
             //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
             //but for all other cases (like string, number, boolean) the value is just passed through
             [P in Property]: CreateQResult<Value, Value>;
-          }
-        >[],
-        SourceProperty
-      >
-    : //this needs to be value amongst other things for .select({customKeys}) and ObjectToPlainResult
-      Value;
+          } & SubProperties
+        >
+      : CreateQResult<
+          ParentSource,
+          QResult<
+            SourceShapeType,
+            {
+              //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
+              //but for all other cases (like string, number, boolean) the value is just passed through
+              [P in Property]: CreateQResult<Value, Value>;
+            } & SubProperties
+          >,
+          SourceProperty
+        >
+    : Source extends QueryShapeSet<
+          infer ShapeType,
+          infer ParentSource,
+          infer SourceProperty
+        >
+      ? //for a shapeset, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
+        CreateQResult<
+          ParentSource,
+          QResult<
+            ShapeType,
+            {
+              //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
+              //but for all other cases (like string, number, boolean) the value is just passed through
+              [P in Property]: CreateQResult<Value, Value>;
+            }
+          >[],
+          SourceProperty
+        >
+      : //this needs to be value amongst other things for .select({customKeys}) and ObjectToPlainResult
+        Value extends Shape
+        ? QResult<Value>
+        : Value;
 
 export type CreateShapeSetQResult<
   ShapeType = undefined,
   Source = undefined,
   Property extends string | number | symbol = '',
   SubProperties = {},
-> = Source extends Shape
-  ? QResult<
-      Source,
-      {
-        [P in Property]: CreateQResult<ShapeType, null, null, SubProperties>[];
-      }
-    >
-  : Source extends QueryShapeSet<
-        infer ShapeType,
-        infer ParentSource,
-        infer SourceProperty
+> =
+  Source extends QueryShape<infer SourceShapeType>
+    ? QResult<
+        SourceShapeType,
+        {[P in Property]: CreateQResult<Source, null, null, SubProperties>[]}
       >
-    ? //for a shapeset source, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
-      CreateQResult<
-        ParentSource,
-        QResult<
-          ShapeType,
-          {
-            [P in Property]: CreateQResult<ShapeType>[];
-          }
-        >[],
-        SourceProperty
-      >
-    : CreateQResult<ShapeType>;
-
-// export type ObjectToResult<T> = {
-//   [P in keyof T]: ToResultType<T[P]>;
-// };
+    : Source extends QueryShapeSet<
+          infer ShapeType,
+          infer ParentSource,
+          infer SourceProperty
+        >
+      ? //for a shapeset source, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
+        CreateQResult<
+          ParentSource,
+          QResult<
+            ShapeType,
+            {
+              [P in Property]: CreateQResult<ShapeType>[];
+            }
+          >[],
+          SourceProperty
+        >
+      : CreateQResult<ShapeType>;
 
 /**
  * Ignores the source and property, and returns the converted value
  */
 export type ObjectToPlainResult<T> = {
-  [P in keyof T]: QueryResponseToResultType<T[P], null, {}, true>;
+  //passing true as sourceOverwrite will mean that the original source is ignored and so the converted value will not be wrapped in a QResult
+  [P in keyof T]: QueryResponseToResultType<T[P], null, true>;
 };
 
 export type GetSource<Source, Overwrite> = Overwrite extends null
@@ -424,17 +440,12 @@ type ResponseToObject<R> =
 export type GetQueryResponseType<Q> =
   Q extends LinkedQuery<any, infer ResponseType> ? ResponseType : Q;
 
-export type GetQueryObjectResponseType<Q> = Q;
-// {
-//   [P in keyof Q]: GetQueryResponseType<Q[P]>;
-// };
-
 export type GetQueryShapeType<Q> =
   Q extends LinkedQuery<infer ShapeType, infer ResponseType>
     ? ShapeType
     : never;
 
-export type QueryResponseToEndValues<T> = T extends Count
+export type QueryResponseToEndValues<T> = T extends SetSize
   ? number[]
   : T extends LinkedQuery<any, infer Response>
     ? QueryResponseToEndValues<Response>[]
@@ -492,6 +503,13 @@ export class QueryBuilderObject<
       return new QueryNumber(originalValue, property, subject);
     } else if (originalValue instanceof Date) {
       return new QueryDate(originalValue, property, subject);
+    } else if ((originalValue as any) instanceof TestNode) {
+      throw new Error(
+        subject.getOriginalValue().shape.label +
+          '.' +
+          property.label +
+          ': A property accessor should return a Shape or a primitive value. Returning a NamedNode is currently not supported.',
+      );
     }
   }
 
@@ -520,7 +538,9 @@ export class QueryBuilderObject<
     if (typeof endValue === 'undefined') return undefined;
     if (endValue instanceof QueryPrimitiveSet) {
       return new ShapeSet(
-        endValue.map((endValue) => this.getOriginalSource(endValue) as Shape),
+        endValue.contents.map(
+          (endValue) => this.getOriginalSource(endValue) as Shape,
+        ),
       ) as ShapeSet;
     }
     if (endValue instanceof QueryString) {
@@ -768,9 +788,10 @@ export class QueryShapeSet<
     return result;
   }
 
-  count(countable?, resultKey?: string): Count<this> {
+  //countable?, resultKey?: string
+  size(): SetSize<this> {
     //when count() is called we want to count the number of items in the entire query path
-    return new Count(this, countable, resultKey);
+    return new SetSize(this); //countable, resultKey
   }
 
   // get testItem() {}
@@ -870,9 +891,23 @@ export class QueryShape<
           //if not, then a method/accessor of the original shape was called
           //then check if we have indexed any property shapes with that name for this shapes NodeShape
           //NOTE: this will only work with a @linkedProperty decorator
-          let propertyShape = originalShape.nodeShape
-            .getPropertyShapes()
-            .find((propertyShape) => propertyShape.label === key);
+          // let propertyShape = originalShape.nodeShape
+          //   .getPropertyShapes()
+          //   .find((propertyShape) => propertyShape.label === key);
+
+          let shapeChain: (typeof Shape)[] = getSuperShapesClasses(
+            originalShape.constructor as typeof Shape,
+          );
+          shapeChain.unshift(originalShape.constructor as typeof Shape);
+          let propertyShape;
+          for (let shapeClass of shapeChain) {
+            propertyShape = shapeClass.shape
+              .getPropertyShapes()
+              .find((propertyShape) => propertyShape.label === key);
+            if (propertyShape) {
+              break;
+            }
+          }
 
           if (propertyShape) {
             //get the value of the property from the original shape
@@ -886,16 +921,22 @@ export class QueryShape<
           }
         }
         //otherwise return the value of the property on the original shape
+        console.warn(
+          "Couldn't find property shape for key " +
+            originalShape.constructor.name +
+            ' -> ' +
+            key.toString(),
+        );
         return originalShape[key];
       },
     });
     return queryShape.proxy;
   }
 
-  count(countable: QueryBuilderObject, resultKey?: string): Count<this> {
-    return new Count(this, countable, resultKey);
-    // return this._count;
-  }
+  // count(countable: QueryBuilderObject, resultKey?: string): SetSize<this> {
+  //   return new SetSize(this, countable, resultKey);
+  //   // return this._count;
+  // }
 }
 
 export class BoundComponent<
@@ -1040,13 +1081,14 @@ export class QueryNumber<
   Property extends string | number | symbol = any,
 > extends QueryPrimitive<number, Source, Property> {}
 
-export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
+export class QueryPrimitiveSet<P = any> {
+  public contents: CoreSet<QueryPrimitive<P>>;
   constructor(
     public property?: PropertyShape,
     public subject?: QueryShapeSet<any> | QueryShape<any>,
     items?,
   ) {
-    super(items);
+    this.contents = new CoreSet(items);
   }
 
   //this is needed because we extend CoreSet which has a createNew method but does not expect the constructor to have arguments
@@ -1065,16 +1107,16 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
   }
 
   getPropertyStep(): QueryStep {
-    if (this.size > 1) {
+    if (this.contents.size > 1) {
       throw new Error(
         'This should never happen? Not implemented: get property path for a QueryPrimitiveSet with multiple values',
       );
     }
-    return this.first().getPropertyStep();
+    return this.contents.first().getPropertyStep();
   }
 
   getPropertyPath(): QueryPropertyPath {
-    if (this.size > 1) {
+    if (this.contents.size > 1) {
       throw new Error(
         'This should never happen? Not implemented: get property path for a QueryPrimitiveSet with multiple values',
       );
@@ -1082,14 +1124,16 @@ export class QueryPrimitiveSet<P = any> extends CoreSet<QueryPrimitive<P>> {
     //here we let the first item in the set return its property path, because all items will be the same
     //however, sometimes the path goes through the subject of this SET rather than the individual items (which have an individual shape as subject)
     //so we pass the subject of this set so it can be used
-    let first = this.first();
+    let first = this.contents.first();
     (first.subject as QueryShapeSet).wherePath =
       (first.subject as QueryShapeSet).wherePath || this.subject.wherePath;
-    return this.first().getPropertyPath();
+    return this.contents.first().getPropertyPath();
   }
 
-  count(countable, resultKey?: string): Count<this> {
-    return new Count(this, countable, resultKey);
+  //countable, resultKey?: string
+  size(): SetSize<this> {
+    return new SetSize(this);
+    //countable, resultKey
   }
 }
 
@@ -1324,8 +1368,8 @@ export class LinkedQuery<
         );
       }
       return true;
-    } else if ((step as CountStep).count) {
-      return this.isValidQueryStepResult(qResult, (step as CountStep).count[0]);
+    } else if ((step as SizeStep).count) {
+      return this.isValidQueryStepResult(qResult, (step as SizeStep).count[0]);
     } else if (Array.isArray(step)) {
       return step.every((subStep) => {
         return this.isValidQueryPathResult(qResult, subStep);
@@ -1350,7 +1394,7 @@ export class LinkedQuery<
   }
 }
 
-export class Count<Source = null> extends QueryNumber<Source> {
+export class SetSize<Source = null> extends QueryNumber<Source> {
   constructor(
     public subject: QueryShapeSet | QueryShape | QueryPrimitiveSet,
     public countable?: QueryBuilderObject,
@@ -1366,43 +1410,44 @@ export class Count<Source = null> extends QueryNumber<Source> {
 
   getPropertyPath(): QueryPropertyPath {
     //if a countable argument was given
-    if (this.countable) {
-      //then creating the count step is straightforward
-      let countablePath = this.countable.getPropertyPath();
-      if (countablePath.some((step) => Array.isArray(step))) {
-        throw new Error(
-          'Cannot count a diverging path. Provide one path of properties to count',
-        );
-      }
-      let self: CountStep = {
-        count: this.countable?.getPropertyPath(),
-        label: this.label,
-      };
-      //and we can add the count step to the path of the subject
-      let parent = this.subject.getPropertyPath();
-      parent.push(self);
-      return parent;
-    } else {
-      //if nothing to count was given as an argument,
-      //then we just count the last property in the path
-      //also, we use the label of the last property as the label of the count step
-      let countable = this.subject.getPropertyStep();
-      let self: CountStep = {
-        count: [countable],
-        label: this.label || this.subject.property.label,
-      };
+    // if (this.countable) {
+    //then creating the count step is straightforward
+    // let countablePath = this.countable.getPropertyPath();
+    // if (countablePath.some((step) => Array.isArray(step))) {
+    //   throw new Error(
+    //     'Cannot count a diverging path. Provide one path of properties to count',
+    //   );
+    // }
+    // let self: CountStep = {
+    //   count: this.countable?.getPropertyPath(),
+    //   label: this.label,
+    // };
+    // //and we can add the count step to the path of the subject
+    // let parent = this.subject.getPropertyPath();
+    // parent.push(self);
+    // return parent;
+    // } else {
 
-      //in that case we request the path of the subject of the subject (the parent of the parent)
-      //and add the CountStep to that path
-      //since we already used the subject as the thing that's counted.
-      if (this.subject.subject) {
-        let path = this.subject.subject.getPropertyPath();
-        path.push(self);
-        return path;
-      }
-      //if there is no parent of a parent, then we just return the count step as the whole path
-      return [self];
+    //if nothing to count was given as an argument,
+    //then we just count the last property in the path
+    //also, we use the label of the last property as the label of the count step
+    let countable = this.subject.getPropertyStep();
+    let self: SizeStep = {
+      count: [countable],
+      label: this.label || this.subject.property.label,
+    };
+
+    //in that case we request the path of the subject of the subject (the parent of the parent)
+    //and add the CountStep to that path
+    //since we already used the subject as the thing that's counted.
+    if (this.subject.subject) {
+      let path = this.subject.subject.getPropertyPath();
+      path.push(self);
+      return path;
     }
+    //if there is no parent of a parent, then we just return the count step as the whole path
+    return [self];
+    // }
   }
 }
 

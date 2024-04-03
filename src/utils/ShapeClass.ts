@@ -16,6 +16,12 @@ export function getShapeClass(nodeShape: NamedNode): typeof Shape {
   return nodeShapeToShapeClass.get(nodeShape);
 }
 
+/**
+ * Returns all the sub shapes of the given shape
+ * That is all the shapes that extend this shape
+ * @param shape
+ */
+
 export function getSubShapesClasses(
   shape: typeof Shape | (typeof Shape)[],
 ): (typeof Shape)[] {
@@ -42,6 +48,12 @@ export function getSubShapesClasses(
   // return result;
 }
 
+/**
+ * Returns all the superclasses of the given shape
+ * That is all the shapes that it extends.
+ * Results are sorted from most specific to least specific
+ * @param shape
+ */
 export function getSuperShapesClasses(
   shape: typeof Shape | (typeof Shape)[],
 ): (typeof Shape)[] {

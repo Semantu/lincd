@@ -20,6 +20,9 @@ import {
   LinkedComponentFactoryFn,
   LinkedSetComponentFactoryFn,
 } from '../utils/LinkedComponent';
+import {registerLinkedProperty} from './ShapeDecorators';
+import {shacl} from '../ontologies/shacl';
+import {rdfs} from '../ontologies/rdfs';
 
 //global tree
 declare var lincd: any;
@@ -534,3 +537,27 @@ initTree();
 let lincdPackage = linkedPackage('lincd');
 lincdPackage.linkedShape(NodeShape);
 lincdPackage.linkedShape(PropertyShape);
+
+//ALL the following is to support Shape having get/set methods with property shapes
+//and Shape itself having a nodeShape
+//if we dont need Shape to have get/set methods (like label and type) then this can be removed
+Shape.shape = NodeShape.getFromURI('http://lincd/Shape');
+addNodeShapeToShapeClass(Shape.shape, Shape);
+
+//Here we can register the properties of the Shape class itself
+//We can't do that inside of Shape because it would cause circular dependencies
+registerLinkedProperty(
+  {
+    path: rdfs.label,
+  },
+  'label',
+  Shape.shape,
+  shacl.Literal,
+);
+registerLinkedProperty(
+  {
+    path: rdf.type,
+  },
+  'type',
+  Shape.shape,
+);

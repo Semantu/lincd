@@ -1,6 +1,6 @@
 import {
   ComponentQueryPath,
-  CountStep,
+  SizeStep,
   CustomQueryObject,
   Evaluation,
   GetQueryResponseType,
@@ -552,8 +552,8 @@ function resolveQueryStepForShape(
       restPath,
       resultObject,
     );
-  } else if ((queryStep as CountStep).count) {
-    return resolveCountStep(subject, queryStep as CountStep, resultObject);
+  } else if ((queryStep as SizeStep).count) {
+    return resolveCountStep(subject, queryStep as SizeStep, resultObject);
   } else if ((queryStep as PropertyQueryStep).where) {
     throw new Error('Cannot filter a single shape');
     // } else if ((queryStep as BoundComponentQueryStep).component) {
@@ -579,8 +579,8 @@ function resolveQueryStepForShapeEndResults(
       result = filterResults(result, (queryStep as PropertyQueryStep).where);
     }
     return result;
-  } else if ((queryStep as CountStep).count) {
-    return resolveCountStep(subject, queryStep as CountStep);
+  } else if ((queryStep as SizeStep).count) {
+    return resolveCountStep(subject, queryStep as SizeStep);
   } else if ((queryStep as PropertyQueryStep).where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
@@ -673,14 +673,14 @@ function resolvePropertyStep(
 
 function resolveCountStep(
   singleShape: Shape,
-  queryStep: CountStep,
+  queryStep: SizeStep,
   resultObjects?: NodeResultMap,
 ) {
   //We use the flat version of resolveQuerySteps here, because  we don't need QResult objects here
   // we're only interested in the final results
   let countable = resolveQueryPathEndResults(
     singleShape,
-    (queryStep as CountStep).count,
+    (queryStep as SizeStep).count,
   );
   let result: number;
   if (Array.isArray(countable)) {
@@ -707,7 +707,7 @@ function updateResultObjects(
         ? resultObjects.get(singleShape.uri)
         : resultObjects;
     if (nodeResult) {
-      nodeResult[(queryStep as CountStep).label || defaultLabel] = result;
+      nodeResult[(queryStep as SizeStep).label || defaultLabel] = result;
     }
   }
 }
@@ -728,10 +728,10 @@ function resolveQueryStepForShapes(
       );
     });
     // return result;
-  } else if ((queryStep as CountStep).count) {
+  } else if ((queryStep as SizeStep).count) {
     //count the countable
     (subject as ShapeSet).forEach((singleShape) => {
-      resolveCountStep(singleShape, queryStep as CountStep, resultObjects);
+      resolveCountStep(singleShape, queryStep as SizeStep, resultObjects);
     });
   } else if ((queryStep as PropertyQueryStep).where) {
     //in some cases there is a query step without property but WITH where
@@ -769,7 +769,7 @@ function resolveQueryStepForShapesEndResults(
     // then the result will be an Array
     let result =
       (queryStep as PropertyQueryStep).property.nodeKind === shacl.Literal ||
-      (queryStep as CountStep).count
+      (queryStep as SizeStep).count
         ? []
         : new ShapeSet();
 
@@ -783,7 +783,7 @@ function resolveQueryStepForShapesEndResults(
           (queryStep as PropertyQueryStep).where,
         );
       }
-      if ((queryStep as CountStep).count) {
+      if ((queryStep as SizeStep).count) {
         if (Array.isArray(stepResult)) {
           stepResult = stepResult.length;
         } else if (stepResult instanceof Set) {
