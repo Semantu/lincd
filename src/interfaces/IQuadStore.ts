@@ -5,6 +5,9 @@ import {ICoreIterable} from './ICoreIterable.js';
 import {Shape} from '../shapes/Shape.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {SelectQuery} from '../utils/LinkedQuery.js';
+import { LinkedDataRequest } from '../utils/TraceShape';
+import { QuadArray } from '../collections/QuadArray';
+import { ShapeSet } from '../collections/ShapeSet';
 
 export interface IQuadStore {
   /**
@@ -53,4 +56,19 @@ export interface IQuadStore {
   clearProperties(
     subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>,
   ): Promise<boolean>;
+
+  /**
+   * @deprecated
+   * @param shapeInstance
+   * @param shape
+   */
+  loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
+
+  /**
+   * @deprecated
+   * @param shapeSet
+   * @param shape
+   */
+  loadShapes(shapeSet: ShapeSet, shape: LinkedDataRequest): Promise<QuadArray>;
+
 }
