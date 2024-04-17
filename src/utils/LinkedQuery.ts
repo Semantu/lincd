@@ -6,7 +6,7 @@ import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {LinkedComponent, LinkedSetComponent} from './LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {getSubShapesClasses, getSuperShapesClasses} from './ShapeClass';
+import {getSubShapesClasses, getSuperShapesClasses} from './ShapeClass.js';
 
 /**
  * ###################################
@@ -505,7 +505,7 @@ export class QueryBuilderObject<
       return new QueryDate(originalValue, property, subject);
     } else if ((originalValue as any) instanceof TestNode) {
       throw new Error(
-        subject.getOriginalValue().shape.label +
+        subject.getOriginalValue().nodeShape.label +
           '.' +
           property.label +
           ': A property accessor should return a Shape or a primitive value. Returning a NamedNode is currently not supported.',
@@ -921,13 +921,8 @@ export class QueryShape<
           }
         }
         //otherwise return the value of the property on the original shape
-        console.warn(
-          "Couldn't find property shape for key " +
-            originalShape.constructor.name +
-            ' -> ' +
-            key.toString(),
-        );
-        return originalShape[key];
+        throw new Error(`${originalShape.constructor.name}.${key.toString()} is missing a @linkedProperty decorator. Queries can only access decorated get/set methods.`);
+        //return originalShape[key];
       },
     });
     return queryShape.proxy;

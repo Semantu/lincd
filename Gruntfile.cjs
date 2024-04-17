@@ -1,4 +1,4 @@
-const buildTools = require('lincd-cli');
+const buildTools = require('lincd-cli/config-grunt');
 module.exports = buildTools.generateGruntConfig('lincd', {
   target: 'es6',
   externals: {

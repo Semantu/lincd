@@ -172,14 +172,6 @@ export abstract class Shape implements IShape {
     this.overwrite(rdfs.label, new Literal(val));
   }
 
-  //TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
-  get type() {
-    return this.getOne(rdf.type) as NamedNode;
-  }
-
-  set type(val: NamedNode) {
-    this.overwrite(rdf.type, val);
-  }
 
   static create<T extends Shape>(
     this: ShapeLike<T>,
