@@ -11,16 +11,16 @@ import {
   QueryWrapperObject,
   SelectQuery,
   ToQueryResultSet,
-} from '../utils/LinkedQuery';
-import {Shape} from '../shapes/Shape';
+} from '../utils/LinkedQuery.js';
+import {Shape} from '../shapes/Shape.js';
 
 import React, {createElement, useEffect, useState} from 'react';
-import {LinkedStorage} from '../utils/LinkedStorage';
-import {DEFAULT_LIMIT} from '../utils/Package';
-import {NodeSet} from '../collections/NodeSet';
-import {ShapeSet} from '../collections/ShapeSet';
-import {Node} from '../models';
-import {getShapeClass, hasSuperClass} from '../utils/ShapeClass';
+import {LinkedStorage} from '../utils/LinkedStorage.js';
+import {DEFAULT_LIMIT} from '../utils/Package.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {Node} from '../models.js';
+import {getShapeClass, hasSuperClass} from '../utils/ShapeClass.js';
 
 type ProcessDataResultType<ShapeType extends Shape> = [
   typeof Shape,

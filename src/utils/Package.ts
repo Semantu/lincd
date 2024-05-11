@@ -19,10 +19,10 @@ import {
   Component,
   LinkedComponentFactoryFn,
   LinkedSetComponentFactoryFn,
-} from '../utils/LinkedComponent';
-import {registerLinkedProperty} from './ShapeDecorators';
-import {shacl} from '../ontologies/shacl';
-import {rdfs} from '../ontologies/rdfs';
+} from '../utils/LinkedComponent.js';
+import {registerLinkedProperty} from './ShapeDecorators.js';
+import {shacl} from '../ontologies/shacl.js';
+import {rdfs} from '../ontologies/rdfs.js';
 
 //global tree
 declare var lincd: any;
@@ -239,7 +239,7 @@ export interface LinkedPackageObject {
    * @param _this
    * @param _module
    */
-  registerPackageModule(_module): void;
+  // registerPackageModule(_module): void;
 }
 
 /**
@@ -310,28 +310,28 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     packageTreeObject[exportName] = exportedObject;
   };
 
-  function registerPackageModule(_module): void {
-    for (var key in _module.exports) {
+  /*function registerPackageModule(moduleExports): void {
+    for (var key in moduleExports) {
       //if the exported object itself (usually FunctionalComponents) is not named or its name is _wrappedComponent (which ends up happening in the linkedComponent method above)
       //then we give it the same name as it's export name.
       if (
-        !_module.exports[key].name ||
-        _module.exports[key].name === '_wrappedComponent'
+        !moduleExports[key].name ||
+        moduleExports[key].name === '_wrappedComponent'
       ) {
-        Object.defineProperty(_module.exports[key], 'name', {value: key});
+        Object.defineProperty(moduleExports[key], 'name', {value: key});
         //manual 'hack' to set the name of the original function
         if (
-          _module.exports[key]['original'] &&
-          !_module.exports[key]['original']['name']
+          moduleExports[key]['original'] &&
+          !moduleExports[key]['original']['name']
         ) {
-          Object.defineProperty(_module.exports[key]['original'], 'name', {
+          Object.defineProperty(moduleExports[key]['original'], 'name', {
             value: key + '_implementation',
           });
         }
       }
-      registerInPackageTree(key, _module.exports[key]);
+      registerInPackageTree(key, moduleExports[key]);
     }
-  }
+  }*/
 
   //create a declarator function which Components of this module can use register themselves and add themselves to the global tree
   let linkedUtil = function (constructor) {
@@ -448,11 +448,12 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     loadData?,
     dataSource?: string | string[],
   ) {
+    let exportsCopy = {...exports};
     //store specifics in exports. And make sure we can detect this as an ontology later
-    exports['_ns'] = nameSpace;
-    exports['_prefix'] = prefixAndFileName;
-    exports['_load'] = loadData;
-    exports['_data'] = dataSource;
+    exportsCopy['_ns'] = nameSpace;
+    exportsCopy['_prefix'] = prefixAndFileName;
+    exportsCopy['_load'] = loadData;
+    exportsCopy['_data'] = dataSource;
 
     //register the prefix here (so just calling linkedOntology with a prefix will automatically register that prefix)
     if (prefixAndFileName) {
@@ -460,9 +461,9 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       Prefix.add(prefixAndFileName, nameSpace('').uri);
     }
 
-    ontologies.add(exports);
+    ontologies.add(exportsCopy);
     //register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
-    registerInPackageTree(prefixAndFileName, exports);
+    registerInPackageTree(prefixAndFileName, exportsCopy);
     // });
 
     if (autoLoadOntologyData) {
@@ -485,7 +486,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     linkedUtil,
     linkedOntology,
     registerPackageExport,
-    registerPackageModule,
+    // 
     packageExports: packageTreeObject,
     packageName: packageName,
   } as LinkedPackageObject;

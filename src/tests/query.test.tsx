@@ -11,8 +11,8 @@ import {render, waitFor} from '@testing-library/react';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {setDefaultPageLimit} from '../utils/Package.js';
 import {act} from 'react-dom/test-utils';
-import {xsd} from '../ontologies/xsd';
-import {TestNode} from '../utils/TraceShape';
+import {xsd} from '../ontologies/xsd.js';
+import {TestNode} from '../utils/TraceShape.js';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');

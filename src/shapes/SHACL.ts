@@ -17,6 +17,15 @@ import {ForwardReasoning} from '../utils/ForwardReasoning.js';
 export class SHACL_Shape extends Shape {
   static targetClass: NamedNode = shacl.Shape;
 
+  get type() {
+    return this.getOne(rdf.type) as NamedNode;
+  }
+
+  set type(val: NamedNode) {
+    this.overwrite(rdf.type, val);
+  }
+
+
   protected _validateNode(
     node: NamedNode,
     validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),

@@ -5,9 +5,9 @@ import {ICoreIterable} from './ICoreIterable.js';
 import {Shape} from '../shapes/Shape.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {SelectQuery} from '../utils/LinkedQuery.js';
-import { LinkedDataRequest } from '../utils/TraceShape';
-import { QuadArray } from '../collections/QuadArray';
-import { ShapeSet } from '../collections/ShapeSet';
+import { LinkedDataRequest } from '../utils/TraceShape.js';
+import { QuadArray } from '../collections/QuadArray.js';
+import { ShapeSet } from '../collections/ShapeSet.js';
 
 export interface IQuadStore {
   /**

@@ -7,6 +7,5 @@ export const {
   linkedUtil,
   linkedOntology,
   registerPackageExport,
-  registerPackageModule,
   packageExports,
 } = linkedPackage('lincd');

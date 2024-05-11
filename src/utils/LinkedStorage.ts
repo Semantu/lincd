@@ -17,7 +17,7 @@ import {
   QueryResponseToResultType,
   SelectQuery,
 } from './LinkedQuery.js';
-import { LinkedDataRequest } from './TraceShape';
+import { LinkedDataRequest } from './TraceShape.js';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
