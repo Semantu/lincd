@@ -239,7 +239,7 @@ export interface LinkedPackageObject {
    * @param _this
    * @param _module
    */
-  // registerPackageModule(_module): void;
+  registerPackageModule(_module): void;
 }
 
 /**
@@ -310,28 +310,28 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     packageTreeObject[exportName] = exportedObject;
   };
 
-  /*function registerPackageModule(moduleExports): void {
-    for (var key in moduleExports) {
+  function registerPackageModule(_module): void {
+    for (var key in _module.exports) {
       //if the exported object itself (usually FunctionalComponents) is not named or its name is _wrappedComponent (which ends up happening in the linkedComponent method above)
       //then we give it the same name as it's export name.
       if (
-        !moduleExports[key].name ||
-        moduleExports[key].name === '_wrappedComponent'
+        !_module.exports[key].name ||
+        _module.exports[key].name === '_wrappedComponent'
       ) {
-        Object.defineProperty(moduleExports[key], 'name', {value: key});
+        Object.defineProperty(_module.exports[key], 'name', {value: key});
         //manual 'hack' to set the name of the original function
         if (
-          moduleExports[key]['original'] &&
-          !moduleExports[key]['original']['name']
+          _module.exports[key]['original'] &&
+          !_module.exports[key]['original']['name']
         ) {
-          Object.defineProperty(moduleExports[key]['original'], 'name', {
+          Object.defineProperty(_module.exports[key]['original'], 'name', {
             value: key + '_implementation',
           });
         }
       }
-      registerInPackageTree(key, moduleExports[key]);
+      registerInPackageTree(key, _module.exports[key]);
     }
-  }*/
+  }
 
   //create a declarator function which Components of this module can use register themselves and add themselves to the global tree
   let linkedUtil = function (constructor) {
@@ -486,7 +486,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     linkedUtil,
     linkedOntology,
     registerPackageExport,
-    // 
+    registerPackageModule,
     packageExports: packageTreeObject,
     packageName: packageName,
   } as LinkedPackageObject;
