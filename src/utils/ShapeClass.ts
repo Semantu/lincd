@@ -1,6 +1,6 @@
 import {NamedNode} from '../models.js';
 import {Shape} from '../shapes/Shape.js';
-import {NodeShape} from '../shapes/SHACL.js';
+import { NodeShape,PropertyShape } from '../shapes/SHACL.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 
 let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
@@ -65,6 +65,27 @@ export function getSuperShapesClasses(
   return filterShapeClasses(filterFunction).sort((a, b) => {
     return hasSubClass(a, b) ? 1 : -1;
   });
+}
+
+export function getPropertyShapeByLabel(shapeClass:typeof Shape,label:string):PropertyShape {
+  //get all the shapes that this shape extends
+  let shapeChain: (typeof Shape)[] = getSuperShapesClasses(
+    shapeClass as typeof Shape,
+  );
+  //include the shape itself as the first shape in the array
+  shapeChain.unshift(shapeClass as typeof Shape);
+
+  let propertyShape:PropertyShape;
+  for (let sClass of shapeChain) {
+    propertyShape = sClass.shape
+      .getPropertyShapes()
+      .find((propertyShape) => propertyShape.label === label);
+    if (propertyShape) {
+      break;
+    }
+  }
+  return propertyShape;
+
 }
 
 //https://stackoverflow.com/a/30760236

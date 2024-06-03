@@ -6,7 +6,7 @@ import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {LinkedComponent, LinkedSetComponent} from './LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {getSubShapesClasses, getSuperShapesClasses} from './ShapeClass.js';
+import { getPropertyShapeByLabel } from './ShapeClass.js';
 
 /**
  * ###################################
@@ -895,20 +895,7 @@ export class QueryShape<
           //   .getPropertyShapes()
           //   .find((propertyShape) => propertyShape.label === key);
 
-          let shapeChain: (typeof Shape)[] = getSuperShapesClasses(
-            originalShape.constructor as typeof Shape,
-          );
-          shapeChain.unshift(originalShape.constructor as typeof Shape);
-          let propertyShape;
-          for (let shapeClass of shapeChain) {
-            propertyShape = shapeClass.shape
-              .getPropertyShapes()
-              .find((propertyShape) => propertyShape.label === key);
-            if (propertyShape) {
-              break;
-            }
-          }
-
+          let propertyShape = getPropertyShapeByLabel(originalShape.constructor as typeof Shape, key);
           if (propertyShape) {
             //get the value of the property from the original shape
             let value = originalShape[key];

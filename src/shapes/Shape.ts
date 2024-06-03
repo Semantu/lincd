@@ -17,10 +17,10 @@ import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {SearchMap} from '../collections/SearchMap.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {QuadSet} from '../collections/QuadSet.js';
-import {NodeShape} from './SHACL.js';
+import { NodeShape,PropertyShape } from './SHACL.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
-  getMostSpecificShapes,
+  getMostSpecificShapes,getPropertyShapeByLabel,
   getShapeOrSubShape,
   getSubShapesClasses,
 } from '../utils/ShapeClass.js';
@@ -35,6 +35,7 @@ import {
   IStorageController,
   staticImplements,
 } from '../interfaces/IStorageController.js';
+import { TestNode } from '../utils/TraceShape.js';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -43,6 +44,12 @@ interface IClassConstruct {
 
   new (): any;
 }
+
+//shape that returns property shapes for its keys
+type AccessPropertiesShape<T extends Shape> = {
+  [P in keyof T]: PropertyShape
+};
+type PropertyShapeMapFunction<T extends Shape, ResponseType> = (p:AccessPropertiesShape<T>) => ResponseType;
 
 /**
  * The base class of all classes that represent a rdfs:Class in the graph.
@@ -281,6 +288,44 @@ export abstract class Shape implements IShape {
     return query.patchResultPromise<ResultType>(p);
 
     // return StorageHelper.query<ResultType>(query);
+  }
+
+  static mapPropertyShapes<
+    ShapeType extends Shape,
+    ResponseType = unknown,
+  >(
+    this: {new (node: Node): ShapeType; targetClass: any},
+    mapFunction?: PropertyShapeMapFunction<ShapeType, ResponseType>
+  ):ResponseType {
+    let dummyNode = new TestNode();
+    let dummyShape = new (this as any)(dummyNode);
+    //store the proxy on the shape, so we can access it later
+    dummyShape.proxy = new Proxy(dummyShape, {
+      get(target, key, receiver) {
+        //if the key is a string
+        if (typeof key === 'string') {
+          //if this is a get method that is implemented by the QueryShape, then use that
+          if (key in dummyShape) {
+            //if it's a function, then bind it to the queryShape and return it so it can be called
+            if (typeof dummyShape[key] === 'function') {
+              return target[key].bind(target);
+            }
+            //if not, then a method/accessor of the original shape was called
+            //then check if we have indexed any property shapes with that name for this shapes NodeShape
+            let propertyShape = getPropertyShapeByLabel(dummyShape.constructor,key.toString());
+            if (propertyShape) {
+              //this method does not allow any further chaining, so we return the value of the property
+              return propertyShape;
+            }
+
+            //otherwise return the value of the property on the original shape
+            throw new Error(`${this.name}.${key.toString()} is missing a @linkedProperty decorator. This method can only access decorated get/set methods.`);
+          }
+        }
+      },
+    });
+    //call the provided method with the proxy. When the method requests get/set methods, it will get the property shapes instead
+    return mapFunction(dummyShape.proxy);
   }
 
   static isInstanceOfTargetClass(node: Node) {
