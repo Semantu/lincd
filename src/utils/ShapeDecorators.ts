@@ -164,7 +164,7 @@ export const literalProperty = (config: LiteralPropertyShapeConfig) => {
   return _linkedProperty(config, shacl.Literal);
 };
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
-  return _linkedProperty(config);
+  return _linkedProperty(config, shacl.IRI);
 };
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
