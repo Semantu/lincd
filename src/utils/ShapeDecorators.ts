@@ -247,9 +247,12 @@ export function registerLinkedProperty(
 
   if (config.nodeKind) {
     let nodeKind = config.nodeKind;
+    //for @linkedProperty, nodeKind will be Literal
     if (nodeKind === Literal) {
       propertyShape.nodeKind = shacl.Literal;
     }
+    //for @objectProperty, by default nodeKind will be NamedNode
+    // stored as shacl.IRI
     if (nodeKind === NamedNode) {
       propertyShape.nodeKind = shacl.IRI;
     }
