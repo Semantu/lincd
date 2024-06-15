@@ -79,7 +79,7 @@
     "lincd-cli": "^1.1",
     "prettier": "^3.2.5",
     "react-test-renderer": "^18.2.0",
-    "rimraf": "^5.0.5",
+    "rimraf": "^5.0.7",
     "ts-jest": "^29.1.2",
     "tsconfig-to-dual-package": "^1.2.0",
     "typescript": "^5.3.3"
