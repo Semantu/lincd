@@ -164,7 +164,7 @@ export const literalProperty = (config: LiteralPropertyShapeConfig) => {
   return _linkedProperty(config, shacl.Literal);
 };
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
-  return _linkedProperty(config);
+  return _linkedProperty(config, shacl.IRI);
 };
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
@@ -247,9 +247,12 @@ export function registerLinkedProperty(
 
   if (config.nodeKind) {
     let nodeKind = config.nodeKind;
+    //for @linkedProperty, nodeKind will be Literal
     if (nodeKind === Literal) {
       propertyShape.nodeKind = shacl.Literal;
     }
+    //for @objectProperty, by default nodeKind will be NamedNode
+    // stored as shacl.IRI
     if (nodeKind === NamedNode) {
       propertyShape.nodeKind = shacl.IRI;
     }
