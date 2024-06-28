@@ -17,6 +17,7 @@ var declare: NamedNode = NamedNode.getOrCreate(base + 'declare');
 var _in: NamedNode = NamedNode.getOrCreate(base + 'in');
 var maxCount: NamedNode = NamedNode.getOrCreate(base + 'maxCount');
 var minCount: NamedNode = NamedNode.getOrCreate(base + 'minCount');
+var inList: NamedNode = NamedNode.getOrCreate(base + 'inList');
 var name: NamedNode = NamedNode.getOrCreate(base + 'name');
 var NodeShape: NamedNode = NamedNode.getOrCreate(base + 'NodeShape');
 var optional: NamedNode = NamedNode.getOrCreate(base + 'optional');
@@ -71,4 +72,5 @@ export const shacl = {
   BlankNodeOrLiteral,
   IRIOrLiteral,
   nodeKind,
+  inList,
 };

@@ -8,6 +8,7 @@ import {Shape} from '../shapes/Shape.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
+import {List} from '../shapes/List.js';
 
 export interface NodeShapeConfig {
   /**
@@ -72,6 +73,10 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
    * Each literal value of this property must use this datatype
    */
   dataType?: NamedNode;
+  /**
+   * Each value of the property must occur in this set
+   */
+  in?: NodeSet | Node[];
 }
 
 export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
@@ -153,7 +158,7 @@ export interface PropertyShapeConfig {
   /**
    * Each value of the property must occur in this set
    */
-  in?: NodeSet;
+  in?: NodeSet | Node[];
 }
 
 export interface ParameterConfig {
@@ -291,6 +296,11 @@ export function registerLinkedProperty(
       }
       config.shape['nodeShapeOf'].push(propertyShape);
     }
+  }
+
+  if (config.in) {
+    //assuming config.in is a NodeSet already:
+    propertyShape.inList = List.createFrom(config.in);
   }
 
   // console.log('Property method ' + config.path.toString() + ' initialised.');
