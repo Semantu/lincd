@@ -45,8 +45,8 @@ export abstract class LinkedFileStorage {
     return this.defaultStore.listFiles(recursive);
   }
 
-  static saveFile(filePath: string, fileContent: Buffer): Promise<string> {
-    return this.defaultStore.saveFile(filePath, fileContent);
+  static saveFile(filePath: string, fileContent: Buffer,mimeType?:string): Promise<string> {
+    return this.defaultStore.saveFile(filePath, fileContent,mimeType);
   }
 }
 

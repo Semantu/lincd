@@ -204,15 +204,15 @@ export const linkedProperty = (config: PropertyShapeConfig) => {
     }
 
     if (config.nodeKind) {
-      let nodeKind = config.nodeKind;
+      const nodeKind = config.nodeKind;
       if (nodeKind === Literal) {
         propertyShape.nodeKind = shacl.Literal;
       }
       if (nodeKind === NamedNode) {
-        propertyShape.nodeKind = shacl.Literal;
+        propertyShape.nodeKind = shacl.NodeShape;
       }
       if (nodeKind === BlankNode) {
-        propertyShape.nodeKind = shacl.Literal;
+        propertyShape.nodeKind = shacl.BlankNode;
       }
       if (Array.isArray(nodeKind)) {
         if (nodeKind.includes(BlankNode) && nodeKind.includes(NamedNode)) {

@@ -17,5 +17,5 @@ export interface IFileStore {
 
   listFiles(recursive?: boolean): Promise<string[]>;
 
-  saveFile(filePath: string, fileContent: Buffer): Promise<string | null>;
+  saveFile(filePath: string, fileContent: Buffer,mimeType?:string): Promise<string | null>;
 }

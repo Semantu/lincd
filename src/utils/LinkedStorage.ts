@@ -307,11 +307,12 @@ export abstract class LinkedStorage {
   ) {
     //quads may have been removed since they have been created and emitted filter that out here
     let addMap, removeMap;
-    if (quadsCreated) {
+    if (quadsCreated && (quadsCreated.size || quadsCreated['length'])) {
       quadsCreated = quadsCreated.filter((q) => !q.isRemoved);
 
       //first see if any new quads need to move to the right graphs (note that this will possibly add "mimicked" quads (with the previous graph as their graph) to quadsRemoved)
       //true, signals that we want to remove the quads from quadsCreated if they get moved
+      //the new quads will be going through the event loop again and end up here again, but then they will not be removed from quadsCreated
       this.assignQuadsToGraph(quadsCreated, true);
       if (baseStoreOnSubject) {
         addMap = this.getStoreMapForNodes(quadsCreated.getSubjects());
@@ -320,7 +321,8 @@ export abstract class LinkedStorage {
         addMap = this.getTargetStoreMap(quadsCreated);
       }
     }
-    if (quadsRemoved) {
+    if (quadsRemoved && (quadsRemoved.size || quadsRemoved['length'])) {
+      //TODO: we may not need this baseStoreOnSubject anymore, the second call with "true" param is more accurate?
       if (baseStoreOnSubject) {
         removeMap = this.getStoreMapForNodes(quadsRemoved.getSubjects());
       } else {
@@ -561,10 +563,12 @@ export abstract class LinkedStorage {
     return storeMap;
   }
 
-  private static getTargetStoreMap(quads: ICoreIterable<Quad>): CoreMap<IQuadStore, QuadArray> {
-    let storeMap: CoreMap<IQuadStore, QuadArray> = new CoreMap();
+  private static getTargetStoreMap(quads: ICoreIterable<Quad>,basedOnSubject:boolean=false): CoreMap<IQuadStore, QuadArray> {
+    const storeMap: CoreMap<IQuadStore, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
-      let store = this.getStoreForGraph(quad.graph);
+      //if basedOnSubject and the quad is not in the default graph, then we find the store for the subject of the quad
+      //this is used for removing properties of a node, who's quads are in the default graph but should be stored in the graph of the default store
+      const store = basedOnSubject && quad.graph === defaultGraph ? this.getStoreForNode(quad.subject) : this.getStoreForGraph(quad.graph);
       //if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
       if (store) {
         if (!storeMap.has(store)) {
