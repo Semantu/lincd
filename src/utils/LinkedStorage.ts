@@ -290,9 +290,11 @@ export abstract class LinkedStorage {
       await this.defaultStore.init();
     }
     //we wait till all events are dispatched
+    console.log('awaiting events');
     return eventBatcher.promiseDone().then(() => {
       //if that triggered a storage update
       if (this.processingPromise) {
+        console.log('awaiting storage process');
         //we will wait for that
         return this.processingPromise.promise;
       }
@@ -327,7 +329,7 @@ export abstract class LinkedStorage {
         removeMap = this.getStoreMapForNodes(quadsRemoved.getSubjects());
       } else {
         //default: get the right stores based on the graph of the quads
-        removeMap = this.getTargetStoreMap(quadsRemoved);
+        removeMap = this.getTargetStoreMap(quadsRemoved,true);
       }
     }
 
@@ -351,6 +353,7 @@ export abstract class LinkedStorage {
           storeAddQuads = addMap?.get(store) || null;
           storeRemoveQuads = removeMap?.get(store) || null;
         }
+        console.log('updating store', store.toString());
         return store.update(storeAddQuads, storeRemoveQuads);
       }),
     )
@@ -442,6 +445,7 @@ export abstract class LinkedStorage {
     //call on each store to remove the appropriate nodes
     await Promise.all(
       [...storeMap.entries()].map(([store, nodesToRemove]) => {
+        console.log('removing '+nodesToRemove.length+' nodes from store', store.toString());
         return store.removeNodes(nodesToRemove);
       }),
     )
@@ -568,8 +572,11 @@ export abstract class LinkedStorage {
     quads.forEach((quad) => {
       //if basedOnSubject and the quad is not in the default graph, then we find the store for the subject of the quad
       //this is used for removing properties of a node, who's quads are in the default graph but should be stored in the graph of the default store
-      const store = basedOnSubject && quad.graph === defaultGraph ? this.getStoreForNode(quad.subject) : this.getStoreForGraph(quad.graph);
+      // const store = basedOnSubject && quad.graph === defaultGraph ? this.getStoreForNode(quad.subject) : this.getStoreForGraph(quad.graph);
       //if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
+      //UPDATE2: the above caused issues when saving a new shape/node, because the new quads were MOVED (removed from old graph) and then stored in the target graph,
+      // but the removed quads were also sent to the same store with the code above, causing nothing to be saved
+      const store = this.getStoreForGraph(quad.graph);
       if (store) {
         if (!storeMap.has(store)) {
           storeMap.set(store, new QuadArray());
