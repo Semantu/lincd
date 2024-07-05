@@ -290,11 +290,11 @@ export abstract class LinkedStorage {
       await this.defaultStore.init();
     }
     //we wait till all events are dispatched
-    console.log('awaiting events');
+    // console.log('awaiting events');
     return eventBatcher.promiseDone().then(() => {
       //if that triggered a storage update
       if (this.processingPromise) {
-        console.log('awaiting storage process');
+        // console.log('awaiting storage process');
         //we will wait for that
         return this.processingPromise.promise;
       }
@@ -353,7 +353,7 @@ export abstract class LinkedStorage {
           storeAddQuads = addMap?.get(store) || null;
           storeRemoveQuads = removeMap?.get(store) || null;
         }
-        console.log('updating store', store.toString());
+        // console.log('updating store', store.toString());
         return store.update(storeAddQuads, storeRemoveQuads);
       }),
     )
@@ -445,7 +445,7 @@ export abstract class LinkedStorage {
     //call on each store to remove the appropriate nodes
     await Promise.all(
       [...storeMap.entries()].map(([store, nodesToRemove]) => {
-        console.log('removing '+nodesToRemove.length+' nodes from store', store.toString());
+        // console.log('removing '+nodesToRemove.length+' nodes from store', store.toString());
         return store.removeNodes(nodesToRemove);
       }),
     )
