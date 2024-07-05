@@ -6,28 +6,33 @@ interface DataFactoryConfig {
   preventNewQuads?: boolean;
   emitEvents?: boolean;
   triggerStorage?: boolean;
+  nodeMap?: NodeURIMappings;
+  targetGraph?: Graph;
 }
 export class Datafactory {
-  private blankNodes;
+  private nodeMap;
   public quads = new QuadSet();
   private preventNewQuads: boolean;
   private emitEvents: boolean = true;
   private triggerStorage: boolean = false;
+  private targetGraph: Graph;
   constructor(config?: DataFactoryConfig) {
     for (let key in config) {
       this[key] = config[key];
     }
-    this.blankNodes = new NodeURIMappings();
+    if(!config?.nodeMap) {
+      this.nodeMap = new NodeURIMappings();
+    }
     this.quad = this.quad.bind(this);
     this.blankNode = this.blankNode.bind(this);
     this.namedNode = this.namedNode.bind(this);
     this.literal = this.literal.bind(this);
   }
   // startBlanknodeSpace() {
-  //   this.blankNodes = new NodeURIMappings();
+  //   this.nodeMap = new NodeURIMappings();
   // }
   // endBlanknodeSpace() {
-  //   this.blankNodes = null;
+  //   this.nodeMap = null;
   // }
   //TODO:
   //   Variable variable(DOMString value);
@@ -35,7 +40,7 @@ export class Datafactory {
   //   Quad fromQuad(Quad original);
 
   namedNode(uri: string) {
-    return NamedNode.getOrCreate(uri);
+    return this.nodeMap.getOrCreateNamedNode(uri);
   }
   literal(value, languageOrDatatype) {
     if (languageOrDatatype instanceof NamedNode) {
@@ -46,8 +51,8 @@ export class Datafactory {
   }
   blankNode(value) {
     //when using start/end blanknode space you can let the factory reuse the same blank nodes
-    // if (this.blankNodes) {
-    return this.blankNodes.getOrCreateBlankNode(value);
+    // if (this.nodeMap) {
+    return this.nodeMap.getOrCreateBlankNode(value);
     // }
     // return BlankNode.getOrCreate(value);
   }
@@ -57,7 +62,10 @@ export class Datafactory {
   quad(subject: Term, predicate: Term, object: Term, graph: Term) {
     //if a target graph is given, we always use that, regardless of whether there was any graph present in the data
     //else if a graph was in the data, use that, or fall back to default graph
-    if (!graph) {
+    if(this.targetGraph) {
+      graph = this.targetGraph;
+    }
+    else if (!graph) {
       graph = _default;
     }
 
