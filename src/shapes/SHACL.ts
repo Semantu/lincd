@@ -236,6 +236,14 @@ export class PropertyShape extends SHACL_Shape {
     this.overwrite(shacl.in, value.node);
   }
 
+  get editInline(): boolean {
+    return this.getValue(shacl.editInline)  === 'true';
+  }
+
+  set editInline(val: boolean) {
+    this.overwrite(shacl.editInline, new Literal(val ? 'true' : "false",xsd.boolean));
+  }
+
   get parentNodeShape(): NodeShape {
     return this.hasInverseProperty(shacl.property)
       ? new NodeShape(this.getOneInverse(shacl.property))
