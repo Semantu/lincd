@@ -784,6 +784,15 @@ export abstract class Shape implements IShape {
     }
   }
 
+  /**
+   * Finds all the instances whos rdf:type matches the targetClass of this shape
+   * Ignores if the nodes are valid instances of the shape
+   * Returns a set of shape instances.
+   * This is helpful when using partly loaded data
+   */
+  static getLocalInstancesByType<T extends Shape>(this:ShapeLike<T>):ShapeSet<T> {
+    return this.getSetOf(this.targetClass.getAllInverse(rdf.type))
+  }
   static getLocalInstances<T extends Shape>(this: ShapeLike<T>, explicitInstancesOnly: boolean = false): ShapeSet<T> {
     //'this' is listed as a parameter ti be able to return a set of instances with the type of the actual class that extends Shape
     // https://www.typescriptlang.org/docs/handbook/generics.html#using-class-types-in-generics
