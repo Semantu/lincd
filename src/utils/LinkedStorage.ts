@@ -541,7 +541,17 @@ export abstract class LinkedStorage {
       if (!graphMap.has(targetGraph)) {
         graphMap.set(targetGraph, new QuadArray());
       }
-      graphMap.set(targetGraph, new QuadArray(...graphMap.get(targetGraph).concat(quads)));
+      // try
+      // {
+      //   graphMap.set(targetGraph,new QuadArray(...graphMap.get(targetGraph).concat(quads)));
+      // } catch (e) {
+      //   console.log(e);
+        let t = graphMap.get(targetGraph);
+        let t2 = t.concat(quads);
+        let t3 = new QuadArray();
+        t2.forEach((q) => t3.push(q));
+        graphMap.set(targetGraph,t3);
+      // }
     });
     return graphMap;
   }
