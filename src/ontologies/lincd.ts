@@ -11,6 +11,7 @@ var ShapeClass: NamedNode = ns('ShapeClass');
 var definesShape: NamedNode = ns('definesShape');
 var module: NamedNode = ns('module');
 var usesShapeClass: NamedNode = ns('usesShapeClass');
+var editInline: NamedNode = ns('editInline');
 
 export var lincd = {
   Module,
@@ -18,4 +19,5 @@ export var lincd = {
   definesShape,
   module,
   usesShapeClass,
+  editInline,
 };

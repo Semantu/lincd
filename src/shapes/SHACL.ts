@@ -54,24 +54,6 @@ export class NodeShape extends SHACL_Shape {
     this.overwrite(shacl.targetClass, value);
   }
 
-  get in(): NamedNode {
-    return this.getOne(shacl.in) as NamedNode;
-  }
-
-  set in(value: NamedNode) {
-    this.overwrite(shacl.in, value);
-  }
-
-  get inList(): List {
-    return this.hasProperty(shacl.in)
-      ? List.getOf(this.getOne(shacl.in))
-      : null;
-  }
-
-  set inList(value: List) {
-    this.overwrite(shacl.in, value.node);
-  }
-
   static getShapesOf(node: Node) {
     return this.getLocalInstances().filter((shape) => {
       return shape.validateNode(node);
@@ -234,6 +216,32 @@ export class PropertyShape extends SHACL_Shape {
 
   set path(value: NamedNode) {
     this.overwrite(shacl.path, value);
+  }
+
+  get in(): NamedNode {
+    return this.getOne(shacl.in) as NamedNode;
+  }
+
+  set in(value: NamedNode) {
+    this.overwrite(shacl.in, value);
+  }
+
+  get inList(): List {
+    return this.hasProperty(shacl.in)
+      ? List.getOf(this.getOne(shacl.in))
+      : null;
+  }
+
+  set inList(value: List) {
+    this.overwrite(shacl.in, value.node);
+  }
+
+  get editInline(): boolean {
+    return this.getValue(shacl.editInline)  === 'true';
+  }
+
+  set editInline(val: boolean) {
+    this.overwrite(shacl.editInline, new Literal(val ? 'true' : "false",xsd.boolean));
   }
 
   get parentNodeShape(): NodeShape {

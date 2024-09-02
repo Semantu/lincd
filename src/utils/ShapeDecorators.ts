@@ -8,6 +8,7 @@ import {Shape} from '../shapes/Shape.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
+import {List} from '../shapes/List.js';
 
 export interface NodeShapeConfig {
   /**
@@ -72,6 +73,14 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
    * Each literal value of this property must use this datatype
    */
   dataType?: NamedNode;
+  /**
+   * Each value of the property must occur in this set
+   */
+  in?: NodeSet | Node[];
+  /**
+   * Value of the property must be boolean
+   */
+  editInline?: boolean;
 }
 
 export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
@@ -153,7 +162,11 @@ export interface PropertyShapeConfig {
   /**
    * Each value of the property must occur in this set
    */
-  in?: NodeSet;
+  in?: NodeSet | Node[];
+  /**
+   * Value of the property must be boolean
+   */
+  editInline?: boolean;
 }
 
 export interface ParameterConfig {
@@ -164,7 +177,7 @@ export const literalProperty = (config: LiteralPropertyShapeConfig) => {
   return _linkedProperty(config, shacl.Literal);
 };
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
-  return _linkedProperty(config);
+  return _linkedProperty(config, shacl.IRI);
 };
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
@@ -247,9 +260,12 @@ export function registerLinkedProperty(
 
   if (config.nodeKind) {
     let nodeKind = config.nodeKind;
+    //for @linkedProperty, nodeKind will be Literal
     if (nodeKind === Literal) {
       propertyShape.nodeKind = shacl.Literal;
     }
+    //for @objectProperty, by default nodeKind will be NamedNode
+    // stored as shacl.IRI
     if (nodeKind === NamedNode) {
       propertyShape.nodeKind = shacl.IRI;
     }
@@ -288,6 +304,15 @@ export function registerLinkedProperty(
       }
       config.shape['nodeShapeOf'].push(propertyShape);
     }
+  }
+
+  if (config.in) {
+    //assuming config.in is a NodeSet already:
+    propertyShape.inList = List.createFrom(config.in);
+  }
+
+  if (config.editInline) {
+    propertyShape.editInline = config.editInline;
   }
 
   // console.log('Property method ' + config.path.toString() + ' initialised.');

@@ -29,13 +29,13 @@ export class List extends Shape {
    * Most performant way to create a new list if you already have the items in the list
    * @param items
    */
-  static createFrom(items: NodeSet | Node[]): List {
+  static createFrom(items: NodeSet | Node[],isTemporaryNode:boolean=true): List {
     //NOTE: this method exists because new List(nodes) will not work because all shapes require a node as first parameter, hence a static method
 
     let firstItem = this.getFirstItem(items);
 
     //create the list and the first entry manually
-    let list = BlankNode.create();
+    let list = BlankNode.create(isTemporaryNode);
     list.set(rdf.type, rdf.List);
     list.set(rdf.first, firstItem);
 
@@ -75,16 +75,16 @@ export class List extends Shape {
     }
   }
 
-  private static appendItems(endPoint, items) {
+  private static appendItems(currentEnd:BlankNode, items) {
     items.forEach((item) => {
-      let rest = List._createListEntry(item);
-      endPoint.set(rdf.rest, rest);
-      endPoint = rest;
+      let rest = List._createListEntry(item,currentEnd.isTemporaryNode);
+      currentEnd.set(rdf.rest, rest);
+      currentEnd = rest;
     });
     //close the list
-    endPoint.set(rdf.rest, rdf.nil);
+    currentEnd.set(rdf.rest, rdf.nil);
 
-    return endPoint;
+    return currentEnd;
   }
 
   private static getLastListItem(list: NamedNode) {
@@ -96,10 +96,9 @@ export class List extends Shape {
     return list || last;
   }
 
-  private static _createListEntry(item: Node): BlankNode {
-    let list = BlankNode.create();
+  private static _createListEntry(item: Node,isTemporaryNode:boolean=true): BlankNode {
+    let list = BlankNode.create(isTemporaryNode);
     list.set(rdf.first, item);
-    list.set(rdf.rest, rdf.nil);
     return list;
   }
 
@@ -120,8 +119,10 @@ export class List extends Shape {
   // }
 
   private static _append(item: Node, last: NamedNode): NamedNode {
-    let next = this._createListEntry(item);
+    let next = this._createListEntry(item,last.isTemporaryNode);
     last.overwrite(rdf.rest, next);
+    //this newly appended item is now the end of the list
+    next.set(rdf.rest, rdf.nil);
     return next;
   }
 
