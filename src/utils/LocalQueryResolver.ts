@@ -36,11 +36,16 @@ const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
  */
 export function resolveLocal<ResultType>(
   query: SelectQuery<any>,
-  shape: typeof Shape,
+  // shape: typeof Shape,
 ): ResultType {
+  //TODO: review if we need the shape here or if we can get it from the query
+  // if(!shape) {
+  //   shape = query.subject
+  // }
+
   let subject = query.subject
     ? query.subject
-    : (shape as any).getLocalInstances();
+    : (query.shape as any).getLocalInstances();
 
   if (query.where) {
     subject = filterResults(subject, query.where);

@@ -12,7 +12,11 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {PropertyShape} from '../shapes/SHACL.js';
-import {SelectQuery} from '../utils/LinkedQuery.js';
+import {
+  GetQueryResponseType,LinkedQuery,
+  QueryResponseToResultType,
+  SelectQuery,
+} from '../utils/LinkedQuery.js';
 import {resolveLocal} from '../utils/LocalQueryResolver.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {
@@ -174,11 +178,10 @@ export class InMemoryStore extends Shape implements IQuadStore {
     return Promise.resolve(true);
   }
 
-  query<ResultType = any>(
-    query: SelectQuery<any>,
-    shapeClass: typeof Shape,
+  query<ResultType>(
+    query: SelectQuery<any>
   ): Promise<ResultType> {
-    return Promise.resolve(resolveLocal(query, shapeClass)).catch((e) => {
+    return Promise.resolve(resolveLocal(query)).catch((e) => {
       console.error('Error in query', e);
       return new QuadArray();
     }) as Promise<ResultType>;
@@ -291,11 +294,11 @@ export class TestStore implements IQuadStore {
   }
 
   query<ResultType>(
-    query: SelectQuery<any>,
-    shapeClass: Shape | typeof Shape,
+    query: SelectQuery<any>
   ): Promise<ResultType> {
     return null;
   }
+
 
   add(quad: Quad): Promise<any> {
     return null;

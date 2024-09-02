@@ -36,6 +36,11 @@ export type QueryWrapperObject<ShapeType extends Shape = any> = {
 export type CustomQueryObject = {[key: string]: QueryPath};
 
 export type SelectPath = QueryPath[] | CustomQueryObject;
+/**
+ * A LinkedQuery is used to build a query, when complete it can be turned into a LinkedQueryObject
+ * that is used to send across the network as it can be serialized to JSON
+ * @todo add | UpdateQuery and others
+ */
 export type LinkedQueryObject<T extends Shape> = SelectQuery<T>;
 
 export type SubQueryPaths = SelectPath;
@@ -45,12 +50,18 @@ export type SubQueryPaths = SelectPath;
  */
 export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
+/**
+ * A plain JS object that represents a LinkedQuery created by a Shape.select(...) call
+ * It can be sent across the network.
+ * @see LinkedQueryObject
+ */
 export type SelectQuery<ShapeType extends Shape> = {
   select: SelectPath;
   where?: WherePath;
   subject?: ShapeType;
   limit?: number;
   offset?: number;
+  shape?:ShapeType;
 };
 /**
  * Much like a querypath, except it can only contain QuerySteps
@@ -1199,6 +1210,9 @@ export class LinkedQuery<
     return StorageHelper.query(this);
   }
 
+  /**
+   * Turns the LinkedQuery into a SelectQuery, which is a plain JS object that can be serialized to JSON
+   */
   getQueryObject(): SelectQuery<ShapeType> {
     let queryPaths = this.getQueryPaths();
     let selectQuery = {
@@ -1206,6 +1220,7 @@ export class LinkedQuery<
       subject: this.subject,
       limit: this.limit,
       offset: this.offset,
+      shape: this.shape,
     } as SelectQuery<ShapeType>;
     if (this.wherePath) {
       selectQuery.where = this.wherePath;

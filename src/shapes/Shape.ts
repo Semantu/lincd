@@ -276,9 +276,9 @@ export abstract class Shape implements IShape {
     const query = new LinkedQuery<ShapeType, S>(this as any, selectFn);
     let p = new Promise<ResultType>((resolve, reject) => {
       nextTick(() => {
-        StorageHelper.query<ResultType>(query)
+        StorageHelper.query(query)
           .then((result) => {
-            resolve(result);
+            resolve(result as ResultType);
           })
           .catch((err) => {
             reject(err);
@@ -1056,14 +1056,25 @@ export interface ShapeLike<M extends Shape> extends Constructor<M> {
   getLocalInstanceNodes(explicitInstancesOnly?: boolean): NodeSet;
 }
 
-@staticImplements<IStorageController>() /* this statement implements both normal interface & static interface */
+@staticImplements<IStorageController>() /* this class implements this interface with static methods */
 export class StorageHelper {
   static storageController: IStorageController;
 
-  static query<ResultType = any>(query: LinkedQuery<any>) {
+  // static query<ResultType = any>(query: LinkedQuery<any>) {
+  //   this.checkSetup();
+  //   return this.storageController.query<ResultType>(query);
+  // }
+  static query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
+    GetQueryResponseType<LinkedQuery<ShapeType, ResponseType>>,
+    ShapeType
+  >[]>(
+    query: LinkedQuery<ShapeType,ResponseType,Source>
+  ): Promise<ResultType> {
     this.checkSetup();
-    return this.storageController.query<ResultType>(query);
+    return this.storageController.query(query);
   }
+
+
 
   private static checkSetup() {
     if (!this.storageController) {

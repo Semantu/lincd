@@ -1,10 +1,15 @@
 import {QuadSet} from '../collections/QuadSet.js';
-import {Graph, NamedNode, Quad} from '../models.js';
+import { Graph,NamedNode,Node,Quad } from '../models.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {ICoreIterable} from './ICoreIterable.js';
 import {Shape} from '../shapes/Shape.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {SelectQuery} from '../utils/LinkedQuery.js';
+import {
+  GetQueryResponseType,
+  LinkedQuery,PatchedQueryPromise,QueryBuildFn,
+  QueryResponseToResultType,
+  SelectQuery,
+} from '../utils/LinkedQuery.js';
 import { LinkedDataRequest } from '../utils/TraceShape.js';
 import { QuadArray } from '../collections/QuadArray.js';
 import { ShapeSet } from '../collections/ShapeSet.js';
@@ -43,9 +48,15 @@ export interface IQuadStore {
 
   removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
 
+  // query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
+  //   GetQueryResponseType<LinkedQuery<ShapeType, ResponseType>>,
+  //   ShapeType
+  // >[]>(
+  //   query: LinkedQuery<ShapeType,ResponseType,Source>
+  // ): Promise<ResultType>;
+
   query<ResultType>(
-    query: SelectQuery<any>,
-    shapeClass: typeof Shape,
+    query: SelectQuery<any>
   ): Promise<ResultType>;
 
   /**

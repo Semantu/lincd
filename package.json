@@ -35,7 +35,7 @@
     "test-queries-update": "yarn jest -t \"query tests\" -u",
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",
-    "prepack": "yarn version patch && npm build"
+    "prepack": "yarn build"
   },
   "keywords": [
     "lincd",

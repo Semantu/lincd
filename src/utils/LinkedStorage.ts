@@ -13,12 +13,15 @@ import {CoreSet} from '../collections/CoreSet.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import { getShapeClass,getSuperShapesClasses } from './ShapeClass.js';
 import {
+  GetQueryResponseType,
   LinkedQuery,
   QueryResponseToResultType,
   SelectQuery,
 } from './LinkedQuery.js';
 import { LinkedDataRequest } from './TraceShape.js';
+import { IStorageController,staticImplements } from '../interfaces/IStorageController.js';
 
+@staticImplements<IStorageController>() /* this class implements this interface with static methods */
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
   private static _initialized: boolean;
@@ -361,22 +364,27 @@ export abstract class LinkedStorage {
     });
   }
 
-  static queryRaw<ResultType>(
-    query: SelectQuery<any>,
+  static queryRaw<ShapeType extends Shape,ResultType>(
+    query: SelectQuery<ShapeType>,
     shapeClass: typeof Shape,
-  ): Promise<QueryResponseToResultType<ResultType>> {
+  ): Promise<ResultType> {
     let quadStore: IQuadStore = this.getStoreForShapeClass(shapeClass);
-    return quadStore.query<ResultType>(query, shapeClass) as any;
+    return quadStore.query(query);
   }
-  static query<ResultType>(
-    query: LinkedQuery<any, ResultType>,
-  ): Promise<QueryResponseToResultType<ResultType>> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape);
-
+  // static query<ResultType>(
+  //   query: LinkedQuery<any, ResultType>,
+  // ): Promise<QueryResponseToResultType<ResultType>> {
+  static query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
+    GetQueryResponseType<LinkedQuery<ShapeType, ResponseType>>,
+    ShapeType
+  >[]>(
+    query: LinkedQuery<ShapeType,ResponseType,Source>
+  ): Promise<ResultType> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape as any);
     let queryObject = query.getQueryObject();
-
-    return quadStore.query<ResultType>(queryObject, query.shape) as any;
+    return quadStore.query(queryObject) as any;
   }
+
 
   static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void | any> {
     // let storeMap = this.getStoreMapForNodes(toRemove.getSubjects());
