@@ -1515,7 +1515,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param value - a single node. Can be a NamedNode or Literal
    */
   hasInverse(property: NamedNode, value: Node): boolean {
-    return this.asObject && this.asObject.get(property).some((quad) => quad.subject.equals(value));
+    return this.asObject && this.asObject.get(property)?.some((quad) => quad.subject.equals(value));
   }
 
   /**
