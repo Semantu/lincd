@@ -109,7 +109,7 @@ export class NodeShape extends SHACL_Shape {
         return false;
       }
     }
-    let propertyShapes = this.getPropertyShapes();
+    const propertyShapes = this.getPropertyShapes();
     if (propertyShapes.size > 0) {
       if (node instanceof Literal) {
         validated.set(node, false);
@@ -255,9 +255,7 @@ export class PropertyShape extends SHACL_Shape {
    */
   getOntologyEntities(): NodeSet<NamedNode> {
     //start with values of those properties that have a NamedNode as value
-    let entities = new NodeSet<NamedNode>(
-      [this.class, this.path, this.datatype].filter((value) => value && true),
-    );
+    const entities = new NodeSet<NamedNode>([this.class, this.path, this.datatype].filter((value) => value && true));
     //this caused loops!
     // if (this.nodeShape) {
     //if a node shape is defined, also add all the entities of that node shape
@@ -280,8 +278,8 @@ export class PropertyShape extends SHACL_Shape {
     validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
   ): boolean {
     //TODO: make property nodes support property paths beyond a single property
-    let property = this.path;
-    let values = node instanceof NamedNode ? node.getAll(property) : null;
+    const property = this.path;
+    const values = node instanceof NamedNode ? node.getAll(property) : null;
     if (this.class) {
       if (
         !values.every(

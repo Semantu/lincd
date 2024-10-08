@@ -74,8 +74,8 @@ export abstract class LinkedStorage {
 
   private static startProcessingOnNextTick() {
     //create the processing promise, so that any request for promiseUpdate() will already get the promise that resolves after these events are handled
-    var resolve, reject;
-    var promise = new Promise<any>((res, rej) => {
+    let resolve, reject;
+    const promise = new Promise<any>((res, rej) => {
       resolve = res;
       reject = rej;
     });
@@ -88,13 +88,13 @@ export abstract class LinkedStorage {
   }
 
   static async processStoredEvents() {
-    let storedEvents = this.storedEvents;
+    const storedEvents = this.storedEvents;
     this.storedEvents = null;
 
     //we store and then process events, so we can determine in which order we process them.
     //the order of this array determines the order.
     //each entry in the array that is looped is an event type + handler
-    let processOrder: [string, Function][] = [
+    const processOrder: [string, Function][] = [
       [NamedNode.REMOVE_NODES, this.onRemoveNodes],
       [NamedNode.CLEARED_PROPERTIES, this.onClearedProperties],
       [NamedNode.STORE_NODES, this.onStoreNodes],
@@ -103,8 +103,8 @@ export abstract class LinkedStorage {
 
     //combine multiple events that want to add/remove quads into 1
     if (storedEvents[Quad.QUADS_ALTERED] && storedEvents[Quad.QUADS_ALTERED].length > 1) {
-      let created = new QuadSet();
-      let removed = new QuadSet();
+      const created = new QuadSet();
+      const removed = new QuadSet();
       storedEvents[Quad.QUADS_ALTERED].forEach(([quadsCreated, quadsRemoved]: [QuadSet, QuadSet]) => {
         quadsCreated.forEach((q) => created.add(q));
         quadsRemoved.forEach((q) => removed.add(q));
@@ -123,7 +123,7 @@ export abstract class LinkedStorage {
     // note that since they have slightly different values, this will convert NodeSets of STORE_NODES  to a CoreSet (note a NodeSet)
     [NamedNode.STORE_NODES, NamedNode.REMOVE_NODES].forEach((eventType) => {
       if (storedEvents[eventType] && storedEvents[eventType].length > 1) {
-        let mergedNodes = new CoreSet();
+        const mergedNodes = new CoreSet();
         storedEvents[eventType].forEach(([nodesCreated]: [CoreSet<any>]) => {
           nodesCreated.forEach((n) => mergedNodes.add(n));
         });
@@ -181,7 +181,7 @@ export abstract class LinkedStorage {
   static setDefaultStore(store: IQuadStore) {
     this.defaultStore = store;
     this.defaultStore.init();
-    let defaultGraph = store.getDefaultGraph();
+    const defaultGraph = store.getDefaultGraph();
     if (defaultGraph) {
       this.setDefaultStorageGraph(defaultGraph);
       this.setStoreForGraph(store, defaultGraph);
@@ -211,7 +211,7 @@ export abstract class LinkedStorage {
   }
 
   static getGraphForStore(store: IQuadStore): Graph {
-    for (let [graph, targetStore] of this.graphToStore) {
+    for (const [graph, targetStore] of this.graphToStore) {
       //shapes don't have to be the same instance, but they share the same node
       if (store['node'] === targetStore['node']) {
         return graph;
@@ -228,15 +228,15 @@ export abstract class LinkedStorage {
    * @param shapes
    */
   static setStoreForShapes(store: IQuadStore, ...shapes: (typeof Shape)[]) {
-    let graph = store.getDefaultGraph();
+    const graph = store.getDefaultGraph();
     this.setStoreForGraph(store, graph);
     this.setGraphForShapes(graph, ...shapes);
   }
 
   private static assignQuadsToGraph(quads: QuadSet | QuadArray, removeFromSet: boolean = false) {
-    let map = this.getTargetGraphMap(quads);
-    let alteredNodes = new CoreMap<NamedNode, Graph>();
-    let movedQuads = new QuadSet();
+    const map = this.getTargetGraphMap(quads);
+    const alteredNodes = new CoreMap<NamedNode, Graph>();
+    const movedQuads = new QuadSet();
     map.forEach((graphQuads, graph) => {
       graphQuads.forEach((quad) => {
         if (quad.graph !== graph) {
@@ -265,7 +265,7 @@ export abstract class LinkedStorage {
   }
 
   private static moveAllQuadsOfNodeIfRequired(alteredNodes: CoreMap<NamedNode, Graph>): QuadSet {
-    let movedQuads = new QuadSet();
+    const movedQuads = new QuadSet();
     //for all subjects who have a quad that moved to a different graph
     alteredNodes.forEach((graph, subjectNode) => {
       //go over each quad of that node
@@ -334,7 +334,7 @@ export abstract class LinkedStorage {
     }
 
     //combine the keys of both maps (which are stores)
-    let stores = [...(addMap ? addMap.keys() : []), ...(removeMap ? removeMap.keys() : [])];
+    const stores = [...(addMap ? addMap.keys() : []), ...(removeMap ? removeMap.keys() : [])];
 
     //go over each store that has added/removed quads
     return Promise.all(
@@ -343,8 +343,8 @@ export abstract class LinkedStorage {
         if (baseStoreOnSubject) {
           //in case we looked up target stores based on the subject of the quads,
           // we need to still filter the quads to get only those that are relevant for this store
-          let storeAddSubjects = addMap?.get(store);
-          let storeRemoveSubjects = removeMap?.get(store);
+          const storeAddSubjects = addMap?.get(store);
+          const storeRemoveSubjects = removeMap?.get(store);
           storeAddQuads = storeAddSubjects ? quadsCreated.filter((q) => storeAddSubjects.includes(q.subject)) : null;
           storeRemoveQuads = storeRemoveSubjects
             ? quadsRemoved.filter((q) => storeRemoveSubjects.includes(q.subject))
@@ -366,11 +366,11 @@ export abstract class LinkedStorage {
   }
 
   static getGraphForNode(subject: NamedNode, checkShapes: boolean = true): Graph {
-    if (checkShapes) {
-      let subjectShapes = NodeShape.getShapesOf(subject);
+    if (checkShapes && this.nodeShapesToGraph.size > 0) {
+      const subjectShapes = NodeShape.getShapesOf(subject,true);
 
       //see if any of these shapes has a specific target graph
-      for (let shape of subjectShapes) {
+      for (const shape of subjectShapes) {
         if (this.nodeShapesToGraph.has(shape.namedNode)) {
           //currently, the target graph of the very first shape that has a target graph is returned
           return this.nodeShapesToGraph.get(shape.namedNode);
@@ -396,17 +396,17 @@ export abstract class LinkedStorage {
   private static async onClearedProperties(
     clearProperties: CoreMap<NamedNode, [NamedNode, QuadArray][]>,
   ): Promise<any> {
-    let subjects = new NodeSet<NamedNode>(clearProperties.keys());
+    const subjects = new NodeSet<NamedNode>(clearProperties.keys());
 
     //get a map of where each of these nodes are stored
-    let storeMap = this.getStoreMapForNodes(subjects);
+    const storeMap = this.getStoreMapForNodes(subjects);
 
     //call on each store to remove the appropriate nodes
     await Promise.all(
       [...storeMap.entries()].map(([store, subjects]) => {
-        let storeClearMap: CoreMap<NamedNode, NodeSet<NamedNode>> = new CoreMap();
+        const storeClearMap: CoreMap<NamedNode, NodeSet<NamedNode>> = new CoreMap();
         subjects.forEach((subject) => {
-          let subjectClearMap = new NodeSet<NamedNode>();
+          const subjectClearMap = new NodeSet<NamedNode>();
           clearProperties.get(subject).forEach(([clearedProperty, quads]) => {
             //TODO: if we ever need access to the LOCALLY cleared quads in the remote stores, grab & send them from here
             // However, if we don't, we can reshape the NamedNode model so that quads don't get sent in these events anymore
@@ -428,14 +428,14 @@ export abstract class LinkedStorage {
   private static async onRemoveNodes(nodesAndQuads: CoreSet<[NamedNode, QuadArray]>): Promise<any> {
     //turn all the removed quads back on (as if they were still in the graph)
     //this allows us to read the properties of the node as they were just before the node was removed.
-    let nodes = new NodeSet<NamedNode>();
+    const nodes = new NodeSet<NamedNode>();
     nodesAndQuads.forEach(([node, quads]) => {
       quads.turnOn();
       nodes.add(node);
     });
 
     //get a map of where each of these nodes are stored
-    let storeMap = this.getStoreMapForNodes(nodes);
+    const storeMap = this.getStoreMapForNodes(nodes);
 
     //turn the quads back off (they should be removed after all)
     nodesAndQuads.forEach(([node, quads]) => {
@@ -459,12 +459,12 @@ export abstract class LinkedStorage {
 
   private static async onStoreNodes(nodes: CoreSet<NamedNode>): Promise<any> {
     //TODO: no need to convert to QuadSet once we phase out QuadArray
-    let nodesWithTempURIs = nodes.filter((node) => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0);
+    const nodesWithTempURIs = nodes.filter((node) => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0);
 
-    let storeMap = this.getStoreMapForNodes(nodesWithTempURIs);
+    const storeMap = this.getStoreMapForNodes(nodesWithTempURIs);
     await Promise.all(
       [...storeMap.entries()].map(([store, temporaryNodes]) => {
-        let nodeUriMap: CoreMap<NamedNode, string> = new CoreMap();
+        const nodeUriMap: CoreMap<NamedNode, string> = new CoreMap();
         temporaryNodes.forEach((node) => {
           nodeUriMap.set(node, node.uri);
         });
@@ -472,7 +472,7 @@ export abstract class LinkedStorage {
         return store.setURIs(nodeUriMap).then((uriUpdates) => {
           //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
           uriUpdates.forEach(([oldUri, newUri]) => {
-            let currentNode = NamedNode.getNamedNode(oldUri);
+            const currentNode = NamedNode.getNamedNode(oldUri);
             //currently, when a node is saved and removed in the same event cycle, it will not be in the store anymore
             if (currentNode) {
               currentNode.uri = newUri;
@@ -495,7 +495,7 @@ export abstract class LinkedStorage {
 
     //move all the quads to the right graph.
     //note that IF this is a new graph, this will trigger onQuadsAltered, which will notify the right stores to store these quads
-    let quads = new QuadSet();
+    const quads = new QuadSet();
     nodes.forEach((node) => {
       node.getAllQuads().forEach((quad) => {
         quads.add(quad);
@@ -510,7 +510,7 @@ export abstract class LinkedStorage {
   }
 
   static getStoreForNode(node: NamedNode) {
-    let graph = this.getGraphForNode(node);
+    const graph = this.getGraphForNode(node);
     return this.getStoreForGraph(graph);
   }
 
@@ -523,7 +523,7 @@ export abstract class LinkedStorage {
   }
 
   private static groupQuadsBySubject(quads: ICoreIterable<Quad>): CoreMap<NamedNode, QuadArray> {
-    let subjectsToQuads: CoreMap<NamedNode, QuadArray> = new CoreMap();
+    const subjectsToQuads: CoreMap<NamedNode, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
       if (!subjectsToQuads.has(quad.subject)) {
         subjectsToQuads.set(quad.subject, new QuadArray());
@@ -534,10 +534,10 @@ export abstract class LinkedStorage {
   }
 
   private static getTargetGraphMap(quads: ICoreIterable<Quad>): CoreMap<Graph, QuadArray> {
-    let graphMap: CoreMap<Graph, QuadArray> = new CoreMap();
-    let quadsBySubject = this.groupQuadsBySubject(quads);
+    const graphMap: CoreMap<Graph, QuadArray> = new CoreMap();
+    const quadsBySubject = this.groupQuadsBySubject(quads);
     quadsBySubject.forEach((quads, subjectNode) => {
-      let targetGraph = this.getGraphForNode(subjectNode);
+      const targetGraph = this.getGraphForNode(subjectNode);
       if (!graphMap.has(targetGraph)) {
         graphMap.set(targetGraph, new QuadArray());
       }
@@ -546,9 +546,9 @@ export abstract class LinkedStorage {
       //   graphMap.set(targetGraph,new QuadArray(...graphMap.get(targetGraph).concat(quads)));
       // } catch (e) {
       //   console.log(e);
-        let t = graphMap.get(targetGraph);
-        let t2 = t.concat(quads);
-        let t3 = new QuadArray();
+        const t = graphMap.get(targetGraph);
+        const t2 = t.concat(quads);
+        const t3 = new QuadArray();
         t2.forEach((q) => t3.push(q));
         graphMap.set(targetGraph,t3);
       // }
@@ -562,10 +562,17 @@ export abstract class LinkedStorage {
   static getStoreMapForShapes(shapes: ShapeSet): CoreMap<IQuadStore, Shape[]> {
     return this.getStoreMapForIGraphObjects(shapes) as CoreMap<IQuadStore, Shape[]>;
   }
+
+  static getShapeToStoreMap(): CoreMap<typeof Shape, IQuadStore> {
+    return this.shapesToGraph.map(graph => {
+      return this.getStoreForGraph(graph);
+    }) as any;
+  }
+
   private static getStoreMapForIGraphObjects(objects: ShapeSet | ICoreIterable<NamedNode>) {
-    let storeMap: CoreMap<IQuadStore, (NamedNode | Shape)[]> = new CoreMap();
+    const storeMap: CoreMap<IQuadStore, (NamedNode | Shape)[]> = new CoreMap();
     objects.forEach((object) => {
-      let store = this.getStoreForNode(object.node || object);
+      const store = this.getStoreForNode(object.node || object);
       //if store is null, this means no store is observing this node. This will usually happen for the default graph which contains temporary nodes
       if (store) {
         if (!storeMap.has(store)) {
@@ -603,22 +610,22 @@ export abstract class LinkedStorage {
     //we temporarily make them non-temporary :)
     //this way the store map will contain the right target store for STORED nodes
     //so that THAT store can determine the URI
-    let nodes: NodeSet<NamedNode> = new NodeSet();
+    const nodes: NodeSet<NamedNode> = new NodeSet();
     nodeUriMap.forEach((currentEnvironmentURI, node) => {
       node['tmp'] = node.isTemporaryNode;
       node.isTemporaryNode = false;
       nodes.add(node);
     });
 
-    let storeMap = this.getStoreMapForNodes(nodes);
+    const storeMap = this.getStoreMapForNodes(nodes);
     nodes.forEach((node) => {
       node.isTemporaryNode = node['tmp'];
     });
 
-    let promises = [];
+    const promises = [];
     //let each store update the URI's
     storeMap.forEach((nodes, store) => {
-      let storeNodeUriMap: CoreMap<NamedNode, string> = new CoreMap();
+      const storeNodeUriMap: CoreMap<NamedNode, string> = new CoreMap();
       nodes.forEach((node) => {
         storeNodeUriMap.set(node, nodeUriMap.get(node));
       });
@@ -626,7 +633,7 @@ export abstract class LinkedStorage {
     });
     //combine the results to return an array of old to new URI's
     return Promise.all(promises).then((results) => {
-      let combinedResults: [string, string][] = [].concat(...results);
+      const combinedResults: [string, string][] = [].concat(...results);
       return combinedResults;
     });
   }
@@ -642,11 +649,11 @@ export abstract class LinkedStorage {
   }
 
   static clearProperties(subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>): Promise<boolean> {
-    let subjects = [...subjectToPredicates.keys()];
-    let storeMap = this.getStoreMapForNodes(subjects);
-    let promises = [];
+    const subjects = [...subjectToPredicates.keys()];
+    const storeMap = this.getStoreMapForNodes(subjects);
+    const promises = [];
     storeMap.forEach((nodes, store) => {
-      let map = new CoreMap(
+      const map = new CoreMap(
         nodes.map((node) => {
           return [node, subjectToPredicates.get(node)];
         }),
@@ -663,9 +670,9 @@ export abstract class LinkedStorage {
     shapeOrRequest: LinkedDataRequest,
     byPassCache: boolean = false,
   ): Promise<QuadArray> {
-    let nodes = shapeSet.getNodes();
+    const nodes = shapeSet.getNodes();
     if (!byPassCache) {
-      let cachedResult = this.nodesAreLoaded(nodes, shapeOrRequest);
+      const cachedResult = this.nodesAreLoaded(nodes, shapeOrRequest);
       if (cachedResult) {
         //return the load promise that's already in progress,
         // or a promise that resolves to true straight away if it's already been loaded
@@ -673,14 +680,14 @@ export abstract class LinkedStorage {
       }
     }
 
-    let storeMap = this.getStoreMapForShapes(shapeSet);
-    let storePromises = [];
+    const storeMap = this.getStoreMapForShapes(shapeSet);
+    const storePromises = [];
     storeMap.map((shapes, store) => {
       storePromises.push(store.loadShapes(new ShapeSet(shapes), shapeOrRequest));
     });
-    let loadPromise = Promise.all(storePromises).then((results) => {
+    const loadPromise = Promise.all(storePromises).then((results) => {
       // return new QuadArray();
-      let quads = new QuadArray();
+      const quads = new QuadArray();
       results.forEach((result) => {
         if (result instanceof QuadArray) {
           quads.push(...(result as any));
@@ -715,8 +722,8 @@ export abstract class LinkedStorage {
       //TODO: maybe we can optimise requests by not sending all the shapes and letting the backend fill in the property shapes
       shapeOrRequest = [...shapeInstance.nodeShape.getPropertyShapes()];
       //also add the property shapes of all classes that extend this shape
-      let shapeClass = getShapeClass(shapeInstance.nodeShape.namedNode);
-      let superShapes: (typeof Shape)[] = getSuperShapesClasses(shapeClass);
+      const shapeClass = getShapeClass(shapeInstance.nodeShape.namedNode);
+      const superShapes: (typeof Shape)[] = getSuperShapesClasses(shapeClass);
       superShapes.forEach((superShapeClass) => {
         shapeOrRequest.push(...superShapeClass.shape.getPropertyShapes());
       });
@@ -724,18 +731,18 @@ export abstract class LinkedStorage {
     //@TODO: optimise the shapeOrRequest. Currently if the same property is requested twice, but once with more sub properties, then both will be requested.
     // This can be merged into 1 shape request because the longer one automatically loads the shorter one
 
-    let node = shapeInstance.node;
+    const node = shapeInstance.node;
     if (!byPassCache) {
-      let cachedResult = this.isLoaded(node, shapeOrRequest);
+      const cachedResult = this.isLoaded(node, shapeOrRequest);
       if (cachedResult) {
         //return the load promise that's already in progress,
         // or a promise that resolves to true straight away if it's already been loaded
         return cachedResult === true ? Promise.resolve(true) : cachedResult;
       }
     }
-    let store = this.getStoreForNode(shapeInstance.namedNode);
+    const store = this.getStoreForNode(shapeInstance.namedNode);
     if (store) {
-      let promise = store.loadShape(shapeInstance, shapeOrRequest).then((res) => {
+      const promise = store.loadShape(shapeInstance, shapeOrRequest).then((res) => {
         //indicate that these property shapes have finished loading for this node
         this.setNodeLoaded(node, shapeOrRequest);
         return res;
@@ -753,10 +760,10 @@ export abstract class LinkedStorage {
   }
 
   static nodesAreLoaded(nodes: NodeSet, dataRequest): boolean | Promise<any> {
-    let stillLoading = [];
+    const stillLoading = [];
     if (
       !nodes.every((node) => {
-        let cached = this.isLoaded(node, dataRequest);
+        const cached = this.isLoaded(node, dataRequest);
         if (!cached) {
           return false;
         }
@@ -775,9 +782,9 @@ export abstract class LinkedStorage {
     if (!this.nodeToPropertyRequests.has(node)) {
       return false;
     }
-    let propertiesRequested = this.nodeToPropertyRequests.get(node);
+    const propertiesRequested = this.nodeToPropertyRequests.get(node);
     //return true if every top level property request has been loaded for this source
-    let stillLoading = [];
+    const stillLoading = [];
     if (
       !dataRequest.every((propertyRequest) => {
         let propertyReqResult;
@@ -790,7 +797,7 @@ export abstract class LinkedStorage {
             //if not every currently loaded value for this property-shape is loaded, then the subRequest is not loaded
             if (
               !propertyRequest[0].resolveFor(node as NamedNode).every((valueNode) => {
-                let subRequestLoaded = this.isLoaded(valueNode, propertyRequest[1]);
+                const subRequestLoaded = this.isLoaded(valueNode, propertyRequest[1]);
                 if (!subRequestLoaded) {
                   return false;
                 }
@@ -844,14 +851,14 @@ export abstract class LinkedStorage {
    * If the server returned just one and there are more, using this method means the other values will not automatically be loaded.
    */
   static setQuadsLoaded(quads: QuadSet) {
-    let propShapeMap = this.getPredicateToPropertyShapesMap();
+    const propShapeMap = this.getPredicateToPropertyShapesMap();
     //build a map of subject to property shapes
-    let subjectToPropShapes = new Map<NamedNode, PropertyShape[]>();
+    const subjectToPropShapes = new Map<NamedNode, PropertyShape[]>();
     quads.forEach((quad) => {
       if (!subjectToPropShapes.has(quad.subject)) {
         subjectToPropShapes.set(quad.subject, []);
       }
-      let currentPropShapes = subjectToPropShapes.get(quad.subject);
+      const currentPropShapes = subjectToPropShapes.get(quad.subject);
       //get all the property shapes that match this predicate and add them to the property shapes of this subject
       if (propShapeMap.has(quad.predicate)) {
         propShapeMap.get(quad.predicate).forEach((propShape) => currentPropShapes.push(propShape));
@@ -872,7 +879,7 @@ export abstract class LinkedStorage {
     if (!this.nodeToPropertyRequests.get(node)) {
       this.nodeToPropertyRequests.set(node, new CoreMap());
     }
-    let requestedProperties = this.nodeToPropertyRequests.get(node);
+    const requestedProperties = this.nodeToPropertyRequests.get(node);
 
     request.map((propertyRequest) => {
       if (Array.isArray(propertyRequest)) {

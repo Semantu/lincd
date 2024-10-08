@@ -348,7 +348,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
       DeclaredProps & LinkedComponentInputProps<ShapeType> & BoundComponentProps
     >((props, ref) => {
       //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
-      let linkedProps = getLinkedComponentProps<ShapeType, DeclaredProps>(props, shapeClass);
+      let linkedProps = getLinkedComponentProps<ShapeType, DeclaredProps>(props as any, shapeClass);
       //if a ref was given, we need to manually add it back to the props, React will extract it and provide is as second argument to React.forwardRef in the linked component itself
       if (ref) {
         linkedProps['ref'] = ref;
