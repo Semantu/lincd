@@ -54,12 +54,6 @@ export class NodeShape extends SHACL_Shape {
     this.overwrite(shacl.targetClass, value);
   }
 
-  static getShapesOf(node: Node) {
-    return this.getLocalInstances().filter((shape) => {
-      return shape.validateNode(node);
-    });
-  }
-
   addPropertyShape(property: PropertyShape) {
     this.set(shacl.property, property.namedNode);
   }
@@ -127,6 +121,17 @@ export class NodeShape extends SHACL_Shape {
     }
     // validated.set(node,true);
     return true;
+  }
+
+  static getShapesOf(node: Node,onlyByTargetType:boolean=false): ShapeSet<NodeShape> {
+    if(onlyByTargetType) {
+      return this.getLocalInstances().filter((shape) => {
+        return ForwardReasoning.hasType(node as NamedNode,shape.targetClass);
+      });
+    }
+    return this.getLocalInstances().filter((shape) => {
+      return shape.validateNode(node);
+    });
   }
 }
 
@@ -302,21 +307,17 @@ export class PropertyShape extends SHACL_Shape {
     }
     if (this.valueShape) {
       //every value should be a valid instance of this nodeShape
-      let nodeShape = this.valueShape;
-      if (
-        !values.every((value) => {
-          //nodes referring to each other or to themselves may cause loops here
-          //this is currently avoided by keeping track of which nodes have already been validated, during the validation of the root most node
-          //TODO: perhaps at some point we may want to store validation results in the shape or even the node, and invalidate whenever the node changes any of its properties. (though for complex property paths that would mean more complex invalidation as well. i.e. back tracing property shapes on a change in node 1 to invalidate a distant node 2)
-          if (validated.has(value)) {
-            return validated.get(value);
-          }
-          return (
-            (value === node && this.parentNodeShape.equals(nodeShape)) ||
-            (nodeShape as any)._validateNode(value, validated)
-          );
-        })
-      ) {
+      const nodeShape = this.valueShape;
+      if (!values.every((value) => {
+        //nodes referring to each other or to themselves may cause loops here
+        //this is currently avoided by keeping track of which nodes have already been validated, during the validation of the root most node
+        //TODO: perhaps at some point we may want to store validation results in the shape or even the node, and invalidate whenever the node changes any of its properties. (though for complex property paths that would mean more complex invalidation as well. i.e. back tracing property shapes on a change in node 1 to invalidate a distant node 2)
+        if(validated.has(value))
+        {
+          return validated.get(value);
+        }
+        return (value === node && this.parentNodeShape.equals(nodeShape)) || (nodeShape as any)._validateNode(value,validated)
+      })) {
         return false;
       }
     }
