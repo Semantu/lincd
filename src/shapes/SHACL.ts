@@ -151,7 +151,7 @@ export class PropertyShape extends SHACL_Shape {
    */
   //@NOTE: If the name valueShape is an issue we could always rename `get nodeShape` to `get shaclShape` in Shape.ts
   get valueShape(): NodeShape {
-    return this.hasProperty(shacl.node) ? NodeShape.getOf(this.getOne(shacl.node)) : null;
+    return this.hasProperty(shacl.node) ? new NodeShape(this.getOne(shacl.node)) : null;
   }
 
   set valueShape(value: NodeShape) {

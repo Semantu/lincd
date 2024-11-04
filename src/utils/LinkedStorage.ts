@@ -353,7 +353,7 @@ export abstract class LinkedStorage {
           storeAddQuads = addMap?.get(store) || null;
           storeRemoveQuads = removeMap?.get(store) || null;
         }
-        // console.log('updating store', store.toString());
+        // console.log(`updating store ${store?.toString()}. Adding ${storeAddQuads?.size || storeAddQuads?.length}. Removing ${storeRemoveQuads?.size || storeRemoveQuads?.length}`);
         return store.update(storeAddQuads, storeRemoveQuads);
       }),
     )
@@ -429,9 +429,11 @@ export abstract class LinkedStorage {
     //turn all the removed quads back on (as if they were still in the graph)
     //this allows us to read the properties of the node as they were just before the node was removed.
     const nodes = new NodeSet<NamedNode>();
+    const nodeToQuadsMap = new CoreMap<NamedNode, QuadArray>();
     nodesAndQuads.forEach(([node, quads]) => {
       quads.turnOn();
       nodes.add(node);
+      nodeToQuadsMap.set(node, quads);
     });
 
     //get a map of where each of these nodes are stored
@@ -446,7 +448,11 @@ export abstract class LinkedStorage {
     await Promise.all(
       [...storeMap.entries()].map(([store, nodesToRemove]) => {
         // console.log('removing '+nodesToRemove.length+' nodes from store', store.toString());
-        return store.removeNodes(nodesToRemove);
+        let quadsToRemove = new QuadSet();
+        nodesToRemove.forEach((node) => {
+          quadsToRemove = quadsToRemove.concat(nodeToQuadsMap.get(node));
+        });
+        return store.removeNodes(nodesToRemove,quadsToRemove);
       }),
     )
       .then((res) => {
@@ -473,12 +479,19 @@ export abstract class LinkedStorage {
           //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
           uriUpdates.forEach(([oldUri, newUri]) => {
             const currentNode = NamedNode.getNamedNode(oldUri);
+            const alreadyExistingNode = NamedNode.getNamedNode(newUri);
+            if(alreadyExistingNode) {
+              console.warn(`Node with URI ${newUri} already exists in the store. This is an error in the store ${store.toString()}`,currentNode.print(),alreadyExistingNode.print());
+              return;
+            }
             //currently, when a node is saved and removed in the same event cycle, it will not be in the store anymore
             if (currentNode) {
               currentNode.uri = newUri;
             }
           });
-        });
+        }).catch(err => {
+          console.warn(`Error during URI update for store ${store.toString()}: `, err);
+        })
       }),
     );
 

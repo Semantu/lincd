@@ -2,6 +2,7 @@ import {NamedNode, Node} from '../models';
 import {Shape} from '../shapes/Shape';
 import {NodeShape} from '../shapes/SHACL';
 import {CoreSet} from '../collections/CoreSet';
+import {rdf} from '../ontologies/rdf';
 
 let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
 export function addNodeShapeToShapeClass(nodeShape: NodeShape, shapeClass: typeof Shape) {
@@ -182,9 +183,20 @@ export function getShapeOrSubShape<S extends Shape = Shape>(node, shape: typeof 
 export function getMostSpecificShapes(
   node: NamedNode,
   baseShape: typeof Shape | (typeof Shape)[] = Shape,
-): (typeof Shape)[] {
-  // let mostSpecificShapes = getMostSpecificShapes(node,shape);
+): (typeof Shape)[]
+{
+  return _getMostSpecificShapes(baseShape,(subShape) => subShape.shape.validateNode(node));
+}
+export function getMostSpecificShapesByType(
+  node: NamedNode,
+  baseShape: typeof Shape | (typeof Shape)[] = Shape,
+): (typeof Shape)[]
+{
+  return _getMostSpecificShapes(baseShape,(subShape) => node.has(rdf.type,subShape.targetClass));
+}
 
+function _getMostSpecificShapes(baseShape:typeof Shape | (typeof Shape)[] = Shape,shapeValidationFn)
+{
   //get the subshapes of the given base shape(s)
   let subShapes: (typeof Shape)[] = getSubShapesClasses(baseShape);
 
@@ -193,9 +205,7 @@ export function getMostSpecificShapes(
     let mostSpecificSubShapes = filterShapesToMostSpecific(subShapes);
 
     //filter them down to the ones that this node is a valid instance of
-    let shapesThatMatchNode = mostSpecificSubShapes.filter((subShape) => {
-      return subShape.shape.validateNode(node);
-    });
+    let shapesThatMatchNode = mostSpecificSubShapes.filter(shapeValidationFn);
     //if any of them can create a valid instance for this node, then return that
     if (shapesThatMatchNode.length > 0) {
       return shapesThatMatchNode;
