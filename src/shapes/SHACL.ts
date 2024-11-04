@@ -3,34 +3,40 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {Literal, NamedNode, Node} from '../models';
-import {Shape} from './Shape';
-import {shacl} from '../ontologies/shacl';
-import {List} from './List';
-import {xsd} from '../ontologies/xsd';
-import {ShapeSet} from '../collections/ShapeSet';
-import {NodeSet} from '../collections/NodeSet';
-import {rdf} from '../ontologies/rdf';
-import {CoreMap} from '../collections/CoreMap';
-import {ForwardReasoning} from '../utils/ForwardReasoning';
+import {Literal, NamedNode, Node} from '../models.js';
+import {Shape} from './Shape.js';
+import {shacl} from '../ontologies/shacl.js';
+import {List} from './List.js';
+import {xsd} from '../ontologies/xsd.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {rdf} from '../ontologies/rdf.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import {ForwardReasoning} from '../utils/ForwardReasoning.js';
 
 export class SHACL_Shape extends Shape {
   static targetClass: NamedNode = shacl.Shape;
-  protected _validateNode(node:NamedNode,validated:CoreMap<Node,boolean>=new CoreMap<Node,boolean>()):boolean {
-    return false;
+
+  get type() {
+    return this.getOne(rdf.type) as NamedNode;
   }
 
+  set type(val: NamedNode) {
+    this.overwrite(rdf.type, val);
+  }
+
+
+  protected _validateNode(
+    node: NamedNode,
+    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
+  ): boolean {
+    return false;
+  }
 }
+
 //Note: this shape is linked in Module.ts to avoid cyclical dependencies
 export class NodeShape extends SHACL_Shape {
   static targetClass: NamedNode = shacl.NodeShape;
-
-  addPropertyShape(property: PropertyShape) {
-    this.set(shacl.property, property.namedNode);
-  }
-  getPropertyShapes(): ShapeSet<PropertyShape> {
-    return PropertyShape.getSetOf(this.getAll(shacl.property));
-  }
 
   get targetNode(): NamedNode {
     return this.getOne(shacl.targetNode) as NamedNode;
@@ -48,20 +54,12 @@ export class NodeShape extends SHACL_Shape {
     this.overwrite(shacl.targetClass, value);
   }
 
-  get in(): NamedNode {
-    return this.getOne(shacl.in) as NamedNode;
+  addPropertyShape(property: PropertyShape) {
+    this.set(shacl.property, property.namedNode);
   }
 
-  set in(value: NamedNode) {
-    this.overwrite(shacl.in, value);
-  }
-
-  get inList(): List {
-    return this.hasProperty(shacl.in) ? List.getOf(this.getOne(shacl.in)) : null;
-  }
-
-  set inList(value: List) {
-    this.overwrite(shacl.in, value.node);
+  getPropertyShapes(): ShapeSet<PropertyShape> {
+    return PropertyShape.getSetOf(this.getAll(shacl.property));
   }
 
   /**
@@ -79,37 +77,44 @@ export class NodeShape extends SHACL_Shape {
     return entities;
   }
 
-  validateNode(node: Node): boolean
-  {
-    return this._validateNode(node)
+  validateNode(node: Node): boolean {
+    return this._validateNode(node);
   }
-  protected _validateNode(node:Node,validated:CoreMap<Node,boolean>=new CoreMap<Node,boolean|null>()):boolean {
-    if(validated.has(node))
-    {
+
+  protected _validateNode(
+    node: Node,
+    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean | null>(),
+  ): boolean {
+    if (validated.has(node)) {
       return validated.get(node);
     }
     //whilst validating, if a connected node wants to validate THIS node, we consider this node to be valid until proven otherwise below
-    validated.set(node,true);
+    validated.set(node, true);
     if (this.targetClass) {
       //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
       //this would not be needed if a Forwards reasoning engine was in place
-      if (!(node instanceof NamedNode && ForwardReasoning.hasType(node,this.targetClass))) {
-        validated.set(node,false);
+      if (
+        !(
+          node instanceof NamedNode &&
+          ForwardReasoning.hasType(node, this.targetClass)
+        )
+      ) {
+        validated.set(node, false);
         return false;
       }
     }
     const propertyShapes = this.getPropertyShapes();
     if (propertyShapes.size > 0) {
       if (node instanceof Literal) {
-        validated.set(node,false);
+        validated.set(node, false);
         return false;
       } else if (node instanceof NamedNode) {
         if (
           !this.getPropertyShapes().every((propertyShape) => {
-            return (propertyShape as any)._validateNode(node,validated);
+            return (propertyShape as any)._validateNode(node, validated);
           })
         ) {
-          validated.set(node,false);
+          validated.set(node, false);
           return false;
         }
       }
@@ -216,6 +221,38 @@ export class PropertyShape extends SHACL_Shape {
     this.overwrite(shacl.path, value);
   }
 
+  get in(): NamedNode {
+    return this.getOne(shacl.in) as NamedNode;
+  }
+
+  set in(value: NamedNode) {
+    this.overwrite(shacl.in, value);
+  }
+
+  get inList(): List {
+    return this.hasProperty(shacl.in)
+      ? List.getOf(this.getOne(shacl.in))
+      : null;
+  }
+
+  set inList(value: List) {
+    this.overwrite(shacl.in, value.node);
+  }
+
+  get editInline(): boolean {
+    return this.getValue(shacl.editInline)  === 'true';
+  }
+
+  set editInline(val: boolean) {
+    this.overwrite(shacl.editInline, new Literal(val ? 'true' : "false",xsd.boolean));
+  }
+
+  get parentNodeShape(): NodeShape {
+    return this.hasInverseProperty(shacl.property)
+      ? new NodeShape(this.getOneInverse(shacl.property))
+      : null;
+  }
+
   /**
    * Returns all the classes and properties that are references by this shape
    */
@@ -224,31 +261,45 @@ export class PropertyShape extends SHACL_Shape {
     const entities = new NodeSet<NamedNode>([this.class, this.path, this.datatype].filter((value) => value && true));
     //this caused loops!
     // if (this.nodeShape) {
-      //if a node shape is defined, also add all the entities of that node shape
-      // entities = entities.concat(this.nodeShape.getOntologyEntities());
+    //if a node shape is defined, also add all the entities of that node shape
+    // entities = entities.concat(this.nodeShape.getOntologyEntities());
     // }
     return entities;
   }
-  get parentNodeShape(): NodeShape {
-    return this.hasInverseProperty(shacl.property) ? new NodeShape(this.getOneInverse(shacl.property)) : null;
-  }
 
-  validateNode(node: NamedNode): boolean
-  {
+  validateNode(node: NamedNode): boolean {
     return this._validateNode(node);
   }
-  protected _validateNode(node:NamedNode,validated:CoreMap<Node,boolean>=new CoreMap<Node,boolean>()):boolean
-  {
+
+  resolveFor(node: NamedNode) {
+    //TODO: support more complex property paths
+    return node.getAll(this.path);
+  }
+
+  protected _validateNode(
+    node: NamedNode,
+    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
+  ): boolean {
     //TODO: make property nodes support property paths beyond a single property
     const property = this.path;
     const values = node instanceof NamedNode ? node.getAll(property) : null;
     if (this.class) {
-      if (!values.every((value) => value instanceof NamedNode && value.has(rdf.type, this.class))) {
+      if (
+        !values.every(
+          (value) =>
+            value instanceof NamedNode && value.has(rdf.type, this.class),
+        )
+      ) {
         return false;
       }
     }
     if (this.datatype) {
-      if (!values.every((value) => value instanceof Literal && value.datatype === this.datatype)) {
+      if (
+        !values.every(
+          (value) =>
+            value instanceof Literal && value.datatype === this.datatype,
+        )
+      ) {
         return false;
       }
     }
@@ -279,11 +330,5 @@ export class PropertyShape extends SHACL_Shape {
       }
     }
     return true;
-  }
-
-  resolveFor(node: NamedNode)
-  {
-    //TODO: support more complex property paths
-    return node.getAll(this.path);
   }
 }

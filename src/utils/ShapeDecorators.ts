@@ -3,11 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {BlankNode, Literal, NamedNode, Node} from '../models';
-import {Shape} from '../shapes/Shape';
-import {NodeSet} from '../collections/NodeSet';
-import {NodeShape, PropertyShape} from '../shapes/SHACL';
-import {shacl} from '../ontologies/shacl';
+import {BlankNode, Literal, NamedNode, Node} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
+import {shacl} from '../ontologies/shacl.js';
+import {List} from '../shapes/List.js';
 
 export interface NodeShapeConfig {
   /**
@@ -72,6 +73,14 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
    * Each literal value of this property must use this datatype
    */
   dataType?: NamedNode;
+  /**
+   * Each value of the property must occur in this set
+   */
+  in?: NodeSet | Node[];
+  /**
+   * Value of the property must be boolean
+   */
+  editInline?: boolean;
 }
 
 export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
@@ -105,11 +114,11 @@ export interface PropertyShapeConfig {
 
    @example
    ```tsx
-   import {BlankNode,NamedNode,Literal} from "lincd/lib/models";
+   import {BlankNode,NamedNode,Literal} from "lincd/models";
    @linkedProperty({nodeKind:NamedNode})
    ```
    */
-  nodeKind?: typeof Node | typeof Node[];
+  nodeKind?: typeof Node | (typeof Node)[];
 
   /**
    * The shape that values of this property path need to confirm to.
@@ -153,7 +162,11 @@ export interface PropertyShapeConfig {
   /**
    * Each value of the property must occur in this set
    */
-  in?: NodeSet;
+  in?: NodeSet | Node[];
+  /**
+   * Value of the property must be boolean
+   */
+  editInline?: boolean;
 }
 
 export interface ParameterConfig {
@@ -161,10 +174,10 @@ export interface ParameterConfig {
 }
 
 export const literalProperty = (config: LiteralPropertyShapeConfig) => {
-  return linkedProperty(config);
+  return _linkedProperty(config, shacl.Literal);
 };
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
-  return linkedProperty(config);
+  return _linkedProperty(config, shacl.IRI);
 };
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
@@ -186,137 +199,168 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
  * ```
  */
 export const linkedProperty = (config: PropertyShapeConfig) => {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    let propertyShape = new PropertyShape();
-    propertyShape.path = config.path;
-    propertyShape.label = propertyKey;
-    if (config.required) {
-      propertyShape.minCount = 1;
-    } else if (config.minCount) {
-      propertyShape.minCount = config.minCount;
-    }
-
-    if (config.maxCount) {
-      propertyShape.maxCount = config.maxCount;
-    }
-    if (config['dataType']) {
-      propertyShape.datatype = config['dataType'];
-    }
-
-    if (config.nodeKind) {
-      const nodeKind = config.nodeKind;
-      if (nodeKind === Literal) {
-        propertyShape.nodeKind = shacl.Literal;
-      }
-      if (nodeKind === NamedNode) {
-        propertyShape.nodeKind = shacl.NodeShape;
-      }
-      if (nodeKind === BlankNode) {
-        propertyShape.nodeKind = shacl.BlankNode;
-      }
-      if (Array.isArray(nodeKind)) {
-        if (nodeKind.includes(BlankNode) && nodeKind.includes(NamedNode)) {
-          propertyShape.nodeKind = shacl.BlankNodeOrIRI;
-        }
-        if (nodeKind.includes(Literal) && nodeKind.includes(NamedNode)) {
-          propertyShape.nodeKind = shacl.IRIOrLiteral;
-        }
-        if (nodeKind.includes(Literal) && nodeKind.includes(BlankNode)) {
-          propertyShape.nodeKind = shacl.BlankNodeOrLiteral;
-        }
-      }
-    }
-    //we accept a shape configuration, which translates to a sh:nodeShape
-    if (config.shape) {
-      //if this shape class has already got a NodeShape connected to it
-      if(config.shape['shape'])
-      {
-        //then we can use this NodeShape now as the value of nodeShape for this property shape
-        propertyShape.valueShape = config.shape['shape']
-      }
-      else
-      {
-        //however the shape class may not have run its decorators yet
-        //so in that case we temporarily store a reference
-        //which gets processed in Module:linkedShape()
-        if(!config.shape['nodeShapeOf'])
-        {
-          config.shape['nodeShapeOf'] = [];
-        }
-        config.shape['nodeShapeOf'].push(propertyShape);
-      }
-    }
-
-    // console.log('Property method ' + config.path.toString() + ' initialised.');
-    // if (!target.constructor.shape) {
-    // 	console.log('Creating shape from method decorators.');
-    // 	target.constructor.shape = new NodeShape();
-    // }
-
+  return _linkedProperty(config);
+};
+const _linkedProperty = (
+  config: PropertyShapeConfig,
+  defaultNodeKind: NamedNode = null,
+) => {
+  return function (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
     //if the shape has already been initiated (with linkedShape)
     //Note that the constructor may have shape defined if the class that it extends is already decorated with linkedShape
     //so we need to check hasOwnProperty
-    let shape: NodeShape = target.constructor.hasOwnProperty('shape') ? target.constructor.shape : null;
-    if (shape) {
-      //update the URI (by extending the URI of the shape)
-      propertyShape.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;
+    let shape: NodeShape = target.constructor.hasOwnProperty('shape')
+      ? target.constructor
+      : null;
 
-      //then add it directly
-      shape.addPropertyShape(propertyShape);
-    } else {
-      //if not, then store property shapes in a temporary array in the constructor
-      //this is picked up in Module.ts
+    //then we pass the shape and it will be used to register the property shape
+    let propertyShape = registerLinkedProperty(
+      config,
+      propertyKey,
+      shape,
+      defaultNodeKind,
+    );
+    if (!shape) {
+      //but if it was not yet available, then store property shapes in a temporary array in the constructor
+      //this is picked up in Module.ts and put into the Shape when its ready
       if (!target.constructor['propertyShapes']) {
         target.constructor['propertyShapes'] = [];
       }
       target.constructor['propertyShapes'].push(propertyShape);
     }
-
-    // if(descriptor.get)
-    // {
-    //   descriptor.get['propertyShape'] = propertyShape;
-    // }
-    // if(descriptor.get)
-    // {
-    //   let original = descriptor.get;
-    //   descriptor.get = () => {
-    //
-    //     return original();
-    //   }
-    // }
-    // console.log(target, propertyKey, descriptor);
-
-    //
-    //sh.property
-    //  (NamedNode value must have this type, like range but restrictive)
-    //sh.class
-    // (Literal value must have this datatype, like range)
-    //sh.dataType
-    //
-    //sh.optional
-    //
-    //sh.path
-    // (values must have this node type. Choose from:  sh:NodeKind: sh:BlankNode,sh:IRI, sh:Literal, sh:BlankNodeOrIRI, sh:BlankNodeOrLiteral or sh:IRIOrLiteral)
-    //sh.nodeKind
-    // (cardinality, number, required properties would have minCount 1)
-    //sh.minCount
-    // (if only 1 value possible maxCount =1. Probably common)
-    //sh.maxCount
-    // (numbers)
-    //sh.minExclusive
-    //
-    //sh.minInclusive
-    //
-    //sh.maxExclusive
-    //
-    //sh.maxInclusive
-    // (must have exactly this value)
-    //sh.hasValue
-    // (specify possible values)
-    //sh.in
-    // (2 props must have different value)
-    //sh.disjoin
-    // (2 props must have same value)
-    //sh.equals
   };
 };
+
+export function registerLinkedProperty(
+  config: PropertyShapeConfig,
+  propertyKey: string,
+  shape: NodeShape,
+  defaultNodeKind: NamedNode = null,
+) {
+  let propertyShape = new PropertyShape();
+  propertyShape.path = config.path;
+  propertyShape.label = propertyKey;
+
+  if (config.required) {
+    propertyShape.minCount = 1;
+  } else if (config.minCount) {
+    propertyShape.minCount = config.minCount;
+  }
+
+  if (config.maxCount) {
+    propertyShape.maxCount = config.maxCount;
+  }
+  if (config['dataType']) {
+    propertyShape.datatype = config['dataType'];
+  }
+
+  if (config.nodeKind) {
+    let nodeKind = config.nodeKind;
+    //for @linkedProperty, nodeKind will be Literal
+    if (nodeKind === Literal) {
+      propertyShape.nodeKind = shacl.Literal;
+    }
+    //for @objectProperty, by default nodeKind will be NamedNode
+    // stored as shacl.IRI
+    if (nodeKind === NamedNode) {
+      propertyShape.nodeKind = shacl.IRI;
+    }
+    if (nodeKind === BlankNode) {
+      propertyShape.nodeKind = shacl.BlankNode;
+    }
+    if (Array.isArray(nodeKind)) {
+      if (nodeKind.includes(BlankNode) && nodeKind.includes(NamedNode)) {
+        propertyShape.nodeKind = shacl.BlankNodeOrIRI;
+      }
+      if (nodeKind.includes(Literal) && nodeKind.includes(NamedNode)) {
+        propertyShape.nodeKind = shacl.IRIOrLiteral;
+      }
+      if (nodeKind.includes(Literal) && nodeKind.includes(BlankNode)) {
+        propertyShape.nodeKind = shacl.BlankNodeOrLiteral;
+      }
+    }
+  } else {
+    //if no nodeKind was provided, use the default, if given
+    if (defaultNodeKind) {
+      propertyShape.nodeKind = defaultNodeKind;
+    }
+  }
+  //we accept a shape configuration, which translates to a sh:nodeShape
+  if (config.shape) {
+    //if this shape class has already got a NodeShape connected to it
+    if (config.shape['shape']) {
+      //then we can use this NodeShape now as the value of nodeShape for this property shape
+      propertyShape.valueShape = config.shape['shape'];
+    } else {
+      //however the shape class may not have run its decorators yet
+      //so in that case we temporarily store a reference
+      //which gets processed in Module:linkedShape()
+      if (!config.shape['nodeShapeOf']) {
+        config.shape['nodeShapeOf'] = [];
+      }
+      config.shape['nodeShapeOf'].push(propertyShape);
+    }
+  }
+
+  if (config.in) {
+    //assuming config.in is a NodeSet already:
+    propertyShape.inList = List.createFrom(config.in);
+  }
+
+  if (config.editInline) {
+    propertyShape.editInline = config.editInline;
+  }
+
+  // console.log('Property method ' + config.path.toString() + ' initialised.');
+  // if (!target.constructor.shape) {
+  // 	console.log('Creating shape from method decorators.');
+  // 	target.constructor.shape = new NodeShape();
+  // }
+
+  //see above why shape may not be provided
+  if (shape) {
+    //update the URI (by extending the URI of the shape)
+    propertyShape.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;
+
+    //then add it directly
+    shape.addPropertyShape(propertyShape);
+  }
+  return propertyShape;
+
+  //
+  //sh.property
+  //  (NamedNode value must have this type, like range but restrictive)
+  //sh.class
+  // (Literal value must have this datatype, like range)
+  //sh.dataType
+  //
+  //sh.optional
+  //
+  //sh.path
+  // (values must have this node type. Choose from:  sh:NodeKind: sh:BlankNode,sh:IRI, sh:Literal, sh:BlankNodeOrIRI, sh:BlankNodeOrLiteral or sh:IRIOrLiteral)
+  //sh.nodeKind
+  // (cardinality, number, required properties would have minCount 1)
+  //sh.minCount
+  // (if only 1 value possible maxCount =1. Probably common)
+  //sh.maxCount
+  // (numbers)
+  //sh.minExclusive
+  //
+  //sh.minInclusive
+  //
+  //sh.maxExclusive
+  //
+  //sh.maxInclusive
+  // (must have exactly this value)
+  //sh.hasValue
+  // (specify possible values)
+  //sh.in
+  // (2 props must have different value)
+  //sh.disjoin
+  // (2 props must have same value)
+  //sh.equals
+}
