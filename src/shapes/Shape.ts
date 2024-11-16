@@ -20,7 +20,12 @@ import {QuadSet} from '../collections/QuadSet';
 import {NodeShape} from './SHACL';
 import {LinkedDataDeclaration, LinkedDataResponse, LinkedDataSetDeclaration} from '../interfaces/Component';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet';
-import {getMostSpecificShapes, getShapeOrSubShape, getSubShapesClasses} from '../utils/ShapeClass';
+import {
+  getMostSpecificShapes,
+  getMostSpecificShapesByType,
+  getShapeOrSubShape,
+  getSubShapesClasses,
+} from '../utils/ShapeClass';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -134,9 +139,11 @@ export abstract class Shape implements IShape {
    */
   getOneAs<S extends Shape = Shape>(property, shape: typeof Shape, allowSubShapes: boolean = false): S {
     if (this.hasProperty(property)) {
-      let value = this.getOne(property);
+      const value = this.getOne(property);
       if (allowSubShapes) {
-        shape = getMostSpecificShapes(value as NamedNode, shape)[0];
+        //get the most specific shape that the value is an instance of, that also extends the base shape
+        //or if no shape was given, just get the most specific shape of the value
+        shape = (shape ? (getMostSpecificShapes(value as NamedNode, shape)[0] || shape) : getMostSpecificShapesByType(value as NamedNode)[0]) || Shape;
       }
       return new (shape as any)(value) as S;
     }
