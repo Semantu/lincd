@@ -366,7 +366,7 @@ export abstract class LinkedStorage {
   }
 
   static getGraphForNode(subject: NamedNode, checkShapes: boolean = true): Graph {
-    if (checkShapes && this.nodeShapesToGraph.size > 0) {
+    if (checkShapes && (!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.nodeShapesToGraph.size > 0) {
       const subjectShapes = NodeShape.getShapesOf(subject,true);
 
       //see if any of these shapes has a specific target graph
