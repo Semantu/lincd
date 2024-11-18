@@ -51,8 +51,8 @@ export abstract class LinkedFileStorage {
 }
 
 /**
- *  Get the full path of an asset based on the way LinkedFileStorage is configured
- *
+ * Get the full path of an asset based on the way LinkedFileStorage is configured
+ * Returns accessURL + directory (/public by default) + path
  * @param path asset path
  * @param directory asset directory (optional, default is /public)
  * @returns asset url. e.g. https://cdn.example.com/public/image.png

@@ -28,7 +28,7 @@ import {
   GetQueryResponseType,
   LinkedQuery,
   PatchedQueryPromise,
-  QueryBuildFn,
+  QueryBuildFn,QueryResponseToEndValues,
   QueryResponseToResultType,
 } from '../utils/LinkedQuery.js';
 import {
@@ -36,6 +36,7 @@ import {
   staticImplements,
 } from '../interfaces/IStorageController.js';
 import { TestNode } from '../utils/TraceShape.js';
+import { LinkedUpdateQuery,UpdatePartial,WithId } from '../utils/queries/LinkedUpdateQuery';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -50,6 +51,7 @@ type AccessPropertiesShape<T extends Shape> = {
   [P in keyof T]: PropertyShape
 };
 type PropertyShapeMapFunction<T extends Shape, ResponseType> = (p:AccessPropertiesShape<T>) => ResponseType;
+
 
 /**
  * The base class of all classes that represent a rdfs:Class in the graph.
@@ -288,6 +290,19 @@ export abstract class Shape implements IShape {
     return query.patchResultPromise<ResultType>(p);
 
     // return StorageHelper.query<ResultType>(query);
+  }
+
+  static update<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(
+    this: {new (node: Node): ShapeType; targetClass: any},
+    id:string|{id:string}|{uri:string},
+    updateObjectOrFn?: U,
+  ): Promise<WithId<U>> {
+    // return Promise.resolve(true) as any;
+    const query = new LinkedUpdateQuery<ShapeType, U>(this as any, id,updateObjectOrFn);
+    return StorageHelper.update(query);
   }
 
   static mapPropertyShapes<
@@ -1074,7 +1089,15 @@ export class StorageHelper {
     return this.storageController.query(query);
   }
 
-
+  static update<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(
+    query: LinkedUpdateQuery<ShapeType,U>
+  ): Promise<WithId<U>> {
+    this.checkSetup();
+    return this.storageController.updateQuery(query);
+  }
 
   private static checkSetup() {
     if (!this.storageController) {

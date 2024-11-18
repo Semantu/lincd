@@ -7,6 +7,7 @@ import {CoreSet} from '../collections/CoreSet.js';
 import {LinkedComponent, LinkedSetComponent} from './LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import { getPropertyShapeByLabel } from './ShapeClass.js';
+import { ShapeValuesSet } from '../collections/ShapeValuesSet';
 
 /**
  * ###################################
@@ -471,6 +472,8 @@ export type QueryResponseToEndValues<T> = T extends SetSize
             : T extends Evaluation
               ? boolean[]
               : T;
+
+
 
 /**
  * ###################################

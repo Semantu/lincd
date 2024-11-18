@@ -1207,6 +1207,66 @@ test('linked set components with pagination with sources from other linked compo
   });
 });
 
+test('update query with object argument', async () => {
+  const res = await Person.update(p1,{
+    hobby: 'Gaming',
+    friends: [{
+      name: 'Jinx',
+      friends:[{
+        name:'Friend 1',
+        friends:[{
+          name:'Nested friend'
+        }]
+      },{
+        name:'Friend 2'
+      },]
+      // name2:'asdf',
+      // clone: true,
+      // targetClass:Person,
+      // namedNode:null,
+    }]
+  });
+  expect(res.id).toBeDefined()
+  expect(res.hobby).toBeDefined()
+  expect(res['name']).toBeUndefined()
+  expect(res.friends[0].id).toBeDefined()
+  expect(res.friends[0].name).toBeDefined()
+
+  let qRes = await Person.select((p) => [p.name,p.hobby]).where(p => p.name.equals('Semmy'));
+  expect(qRes[0].name).toBe('Semmy');
+  expect(qRes[0].hobby).toBe('Gaming');
+
+  //now change again
+  await Person.update(p1.uri,{
+    hobby: 'Jogging'
+  });
+  let res2 = await Person.select((p) => [p.name,p.hobby]).where(p => p.name.equals('Semmy'));
+  expect(res2[0].hobby).toBe('Jogging');
+});
+
+test('update query with update function', async () => {
+  // const res = await Person.update(p1,p => {
+  //   p.hobby = 'Gaming';
+  //   p.friends.add
+  // });
+  // expect(res.id).toBeDefined()
+  // expect(res.hobby).toBeDefined()
+  // expect(res['name']).toBeUndefined()
+  // expect(res.friends[0].id).toBeDefined()
+  // expect(res.friends[0].name).toBeDefined()
+  //
+  // let qRes = await Person.select((p) => [p.name,p.hobby]).where(p => p.name.equals('Semmy'));
+  // expect(qRes[0].name).toBe('Semmy');
+  // expect(qRes[0].hobby).toBe('Gaming');
+  //
+  // //now change again
+  // await Person.update(p1.uri,{
+  //   hobby: 'Jogging'
+  // });
+  // let res2 = await Person.select((p) => [p.name,p.hobby]).where(p => p.name.equals('Semmy'));
+  // expect(res2[0].hobby).toBe('Jogging');
+});
+
 //});
 
 //NEXT:

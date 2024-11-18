@@ -13,6 +13,7 @@ import {
 import { LinkedDataRequest } from '../utils/TraceShape.js';
 import { QuadArray } from '../collections/QuadArray.js';
 import { ShapeSet } from '../collections/ShapeSet.js';
+import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery';
 
 export interface IQuadStore {
   /**
@@ -24,6 +25,10 @@ export interface IQuadStore {
     toAdd: ICoreIterable<Quad>,
     toRemove: ICoreIterable<Quad>,
   ): Promise<any>;
+
+  updateQuery<RType>(
+    q:UpdateQuery<RType>
+  ): Promise<RType>
 
   add(quad: Quad): Promise<any>;
 
