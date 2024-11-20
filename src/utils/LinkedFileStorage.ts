@@ -1,4 +1,5 @@
 import {IFileStore} from '../interfaces/IFileStore';
+import type {Readable} from 'stream';
 
 export abstract class LinkedFileStorage {
   private static defaultStore: IFileStore;
@@ -41,11 +42,11 @@ export abstract class LinkedFileStorage {
     return this.defaultStore.getFile(filePath);
   }
 
-  static listFiles(recursive?: boolean): Promise<string[]> {
-    return this.defaultStore.listFiles(recursive);
+  static listFiles(prefix:string): Promise<string[]> {
+    return this.defaultStore.listFiles(prefix);
   }
 
-  static saveFile(filePath: string, fileContent: Buffer,mimeType?:string): Promise<string> {
+  static saveFile(filePath: string, fileContent: string | Uint8Array | Buffer | Readable,mimeType?:string): Promise<string> {
     return this.defaultStore.saveFile(filePath, fileContent,mimeType);
   }
 }
