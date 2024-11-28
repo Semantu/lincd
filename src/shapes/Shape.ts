@@ -125,9 +125,9 @@ export abstract class Shape extends EventEmitter implements IShape
   getAllAs<T extends Shape>(
     property: NamedNode,
     shapeClass: typeof Shape,
-  ): ShapeValuesSet<T>
-  {
-    return new ShapeValuesSet<T>(this.namedNode,property,shapeClass as any);
+    allowSubShapes: boolean = false,
+  ): ShapeSet<T> {
+    return (shapeClass as any).getSetOf(this.getAll(property),allowSubShapes);
   }
 
   /**
