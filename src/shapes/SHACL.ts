@@ -37,6 +37,7 @@ export class SHACL_Shape extends Shape {
 //Note: this shape is linked in Module.ts to avoid cyclical dependencies
 export class NodeShape extends SHACL_Shape {
   static targetClass: NamedNode = shacl.NodeShape;
+  private static _instances: ShapeSet<NodeShape>;
 
   get targetNode(): NamedNode {
     return this.getOne(shacl.targetNode) as NamedNode;
@@ -81,6 +82,10 @@ export class NodeShape extends SHACL_Shape {
     return this._validateNode(node);
   }
 
+  validateNodeByType(node: Node): boolean {
+    return node.has(rdf.type,this.targetClass);
+  }
+
   protected _validateNode(
     node: Node,
     validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean | null>(),
@@ -123,9 +128,15 @@ export class NodeShape extends SHACL_Shape {
     return true;
   }
 
+  static get instances() {
+    if(!this._instances) {
+      this._instances = this.getLocalInstancesByType()
+    }
+    return this._instances;
+  }
   static getShapesOf(node: Node,onlyByTargetType:boolean=false): ShapeSet<NodeShape> {
     if(onlyByTargetType) {
-      return this.getLocalInstances().filter((shape) => {
+      return this.instances.filter((shape) => {
         return ForwardReasoning.hasType(node as NamedNode,shape.targetClass);
       });
     }

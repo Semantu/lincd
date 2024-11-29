@@ -127,8 +127,8 @@ export abstract class Shape implements IShape {
     property: NamedNode,
     shapeClass: typeof Shape,
     allowSubShapes: boolean = false,
-  ): ShapeValuesSet<T> {
-    return new ShapeValuesSet<T>(this.namedNode, property, shapeClass as any, allowSubShapes);
+  ): ShapeSet<T> {
+    return (shapeClass as any).getSetOf(this.getAll(property),allowSubShapes);
   }
 
   /**

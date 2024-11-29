@@ -12,7 +12,8 @@ import {QuadArray} from '../collections/QuadArray';
 import {CoreSet} from '../collections/CoreSet';
 import {ShapeSet} from '../collections/ShapeSet';
 import {LinkedDataRequest, TransformedLinkedDataResponse} from '../interfaces/Component';
-import {getShapeClass, getSuperShapesClasses} from './ShapeClass';
+import {getMostSpecificShapesByType,getShapeClass,getSubShapesClasses,getSuperShapesClasses} from './ShapeClass';
+import {rdf} from '../ontologies/rdf';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
@@ -20,6 +21,7 @@ export abstract class LinkedStorage {
   private static graphToStore: CoreMap<Graph, IQuadStore> = new CoreMap();
   private static shapesToGraph: CoreMap<typeof Shape, Graph> = new CoreMap();
   private static nodeShapesToGraph: CoreMap<NamedNode, Graph> = new CoreMap();
+  private static graphToTargetClasses: CoreMap<Graph,NodeSet<NamedNode>> = new CoreMap();
   private static defaultStorageGraph: Graph;
   private static processingPromise: {
     promise: Promise<void>;
@@ -200,6 +202,17 @@ export abstract class LinkedStorage {
     shapeClasses.forEach((shapeClass) => {
       this.shapesToGraph.set(shapeClass, graph);
       if (shapeClass['shape']) {
+        if(!this.graphToTargetClasses.has(graph)) {
+          this.graphToTargetClasses.set(graph,new NodeSet());
+        }
+        this.graphToTargetClasses.get(graph).add(shapeClass['shape'].targetClass);
+        //we also add any shape class that extends this shape class
+        //For example, if storage is configured for Thing, then we want to also list all the shapes that extend Thing
+        //because the types of all those super shapes should be pointing towards the same graph
+        getSuperShapesClasses(shapeClass).forEach(subShape => {
+          this.graphToTargetClasses.get(graph).add(subShape['shape'].targetClass);
+        })
+
         this.nodeShapesToGraph.set(shapeClass['shape'].namedNode, graph);
       }
     });
@@ -366,15 +379,20 @@ export abstract class LinkedStorage {
   }
 
   static getGraphForNode(subject: NamedNode, checkShapes: boolean = true): Graph {
-    if (checkShapes && (!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.nodeShapesToGraph.size > 0) {
-      const subjectShapes = NodeShape.getShapesOf(subject,true);
-
-      //see if any of these shapes has a specific target graph
-      for (const shape of subjectShapes) {
-        if (this.nodeShapesToGraph.has(shape.namedNode)) {
-          //currently, the target graph of the very first shape that has a target graph is returned
-          return this.nodeShapesToGraph.get(shape.namedNode);
-        }
+    // if (checkShapes && (!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.nodeShapesToGraph.size > 0) {
+    //   const subjectShapes = NodeShape.getShapesOf(subject,true);
+    //
+    //   //see if any of these shapes has a specific target graph
+    //   for (const shape of subjectShapes) {
+    //     if (this.nodeShapesToGraph.has(shape.namedNode)) {
+    //       //currently, the target graph of the very first shape that has a target graph is returned
+    //       return this.nodeShapesToGraph.get(shape.namedNode);
+    //     }
+    //   }
+    // }
+    for(const [graph, targetClasses] of this.graphToTargetClasses) {
+      if(subject.getAll(rdf.type).some(type => targetClasses.has(type as NamedNode))) {
+        return graph;
       }
     }
 
@@ -559,11 +577,15 @@ export abstract class LinkedStorage {
       //   graphMap.set(targetGraph,new QuadArray(...graphMap.get(targetGraph).concat(quads)));
       // } catch (e) {
       //   console.log(e);
+
         const t = graphMap.get(targetGraph);
-        const t2 = t.concat(quads);
-        const t3 = new QuadArray();
-        t2.forEach((q) => t3.push(q));
-        graphMap.set(targetGraph,t3);
+        quads.forEach(q => {
+          t.push(q);
+        });
+        // const t2 = t.concat(quads);
+        // const t3 = new QuadArray();
+        // t2.forEach((q) => t3.push(q));
+        // graphMap.set(targetGraph,t3);
       // }
     });
     return graphMap;
