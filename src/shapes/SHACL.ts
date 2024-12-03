@@ -62,6 +62,9 @@ export class NodeShape extends SHACL_Shape {
   getPropertyShapes(): ShapeSet<PropertyShape> {
     return PropertyShape.getSetOf(this.getAll(shacl.property));
   }
+  getPropertyShape(label:string){
+    return this.getPropertyShapes().find((shape) => shape.name === label);
+  }
 
   /**
    * Returns all the classes and properties that are references by this shape

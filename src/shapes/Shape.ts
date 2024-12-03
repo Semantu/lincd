@@ -904,9 +904,9 @@ export abstract class Shape implements IShape {
       throw new Error('No nodes provided to create shape instances of');
     }
 
-    if (nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode) {
-      return new ShapeValuesSet(nodes.subject, nodes.property, this as any, allowSubShapes);
-    }
+    // if (nodes instanceof NodeValuesSet && nodes.subject instanceof NamedNode) {
+    //   return new ShapeValuesSet(nodes.subject, nodes.property, this as any, allowSubShapes);
+    // }
     return new ShapeSet<T>(
       nodes.map((node) => {
         return allowSubShapes ? getShapeOrSubShape(node, this as any) : new this(node);

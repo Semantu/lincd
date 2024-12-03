@@ -20,6 +20,15 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
     return res;
   }
 
+  reduce<U>(fn: (previousValue: U, currentValue: R, currentIndex: number, thisInstance: any) => U, initialValue: U): U {
+    let i = 0;
+    let res = initialValue;
+    for (let item of this) {
+      res = fn(res, item, i++, this);
+    }
+    return res;
+  }
+
   /**
    * Returns the value of the first element in the Set where predicate is true, and undefined
    * otherwise.
