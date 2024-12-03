@@ -224,6 +224,7 @@ const _linkedProperty = (
       shape,
       defaultNodeKind,
     );
+
     if (!shape) {
       //but if it was not yet available, then store property shapes in a temporary array in the constructor
       //this is picked up in Module.ts and put into the Shape when its ready
@@ -363,4 +364,16 @@ export function registerLinkedProperty(
   //sh.disjoin
   // (2 props must have same value)
   //sh.equals
+}
+
+export function onShapeSetup(target: any, callback: (shape: NodeShape) => void) {
+  let constructor = target.constructor;
+  if (constructor.hasOwnProperty('shape')) {
+    callback(constructor.shape);
+  } else {
+    if (!constructor['shapeCallbacks']) {
+      constructor['shapeCallbacks'] = [];
+    }
+    constructor['shapeCallbacks'].push(callback);
+  }
 }

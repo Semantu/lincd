@@ -676,6 +676,14 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         });
         //and remove the temporary key
         delete constructor.propertyShapes;
+
+        //TODO replace the above with this newer more general method:
+        if(constructor.shapeCallbacks){
+          constructor.shapeCallbacks.forEach((callback) => {
+            callback(shape);
+          });
+          delete constructor.shapeCallbacks;
+        }
       }
 
       //if property shapes referred to this node shape as the required shape for their values
