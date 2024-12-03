@@ -63,7 +63,7 @@ export class NodeShape extends SHACL_Shape {
     return PropertyShape.getSetOf(this.getAll(shacl.property));
   }
   getPropertyShape(label:string){
-    return this.getPropertyShapes().find((shape) => shape.name === label);
+    return this.getPropertyShapes().find((shape) => shape.label === label);
   }
 
   /**
