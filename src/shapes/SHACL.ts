@@ -13,6 +13,7 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {rdf} from '../ontologies/rdf.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ForwardReasoning} from '../utils/ForwardReasoning.js';
+import {getShapeClass} from '../utils/ShapeClass';
 
 export class SHACL_Shape extends Shape {
   static targetClass: NamedNode = shacl.Shape;
@@ -62,8 +63,16 @@ export class NodeShape extends SHACL_Shape {
   getPropertyShapes(): ShapeSet<PropertyShape> {
     return PropertyShape.getSetOf(this.getAll(shacl.property));
   }
-  getPropertyShape(label:string){
-    return this.getPropertyShapes().find((shape) => shape.label === label);
+  getPropertyShape(label:string,checkSubShapes:boolean=true): PropertyShape {
+
+    //look at this nodeShape, but also the nodeshapes of the parent classes of the class that created this nodeshape
+    let shapeClass = getShapeClass(this.namedNode).prototype;
+    let res
+    while(!res && shapeClass) {
+      res = shapeClass.nodeShape.getPropertyShapes().find((shape) => shape.label === label);
+      shapeClass = checkSubShapes ? Object.getPrototypeOf(shapeClass) : null;
+    }
+    return res;
   }
 
   /**
