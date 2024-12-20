@@ -302,7 +302,7 @@ export abstract class Shape implements IShape {
   ): Promise<WithId<U>> {
     // return Promise.resolve(true) as any;
     const query = new LinkedUpdateQuery<ShapeType, U>(this as any, id,updateObjectOrFn);
-    return StorageHelper.update(query);
+    return StorageHelper.updateQuery(query);
   }
 
   static mapPropertyShapes<
@@ -1089,7 +1089,7 @@ export class StorageHelper {
     return this.storageController.query(query);
   }
 
-  static update<
+  static updateQuery<
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(

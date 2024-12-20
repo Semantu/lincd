@@ -20,6 +20,7 @@ var decimal: NamedNode = NamedNode.getOrCreate(base + 'decimal');
 var gYear: NamedNode = NamedNode.getOrCreate(base + 'gYear');
 var Bytes: NamedNode = NamedNode.getOrCreate(base + 'Bytes');
 var long: NamedNode = NamedNode.getOrCreate(base + 'long');
+var dateTime: NamedNode = NamedNode.getOrCreate(base + 'dateTime');
 
 //not yet required by core so why define it?
 //export var boolean:NamedNode = nodes.getOrCreate(base+"boolean");
@@ -36,4 +37,5 @@ export const xsd = {
   gYear,
   Bytes,
   long,
+  dateTime
 };

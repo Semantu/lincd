@@ -26,8 +26,163 @@ import {Shape} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
+import {
+  NodeDescriptionValue,
+  NodeReferenceValue,
+  PropUpdateValue,
+  UpdateNodePropertyValue,
+  UpdateQuery,
+} from './queries/LinkedUpdateQuery';
+import { NamedNode,Node } from '../models';
+import { getShapeClass } from './ShapeClass';
+import { Literal } from 'rdflib';
+import { xsd } from '../ontologies/xsd';
+import { PropertyShape } from '../shapes/SHACL';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
+
+export function updateLocal<ResultType>(query: UpdateQuery<ResultType>):ResultType {
+  // console.log(query);
+  if (query.type === 'update')
+  {
+    let subject = NamedNode.getNamedNode(query.id);
+    if (!subject)
+    {
+      throw new Error('No subject found for id: ' + query.id);
+    }
+    // let shapeClass = getShapeClass(query.shape.namedNode);
+    // let shape = new (shapeClass as any)(subject);
+    for (let field of query.updates.fields)
+    {
+      if(field['id']) {
+        throw new Error('Top level update object cannot contain id');
+      }
+      let propShape = (field as UpdateNodePropertyValue).prop;
+      let pathProperty = propShape.path;
+
+      if (Array.isArray((field as UpdateNodePropertyValue).val))
+      {
+        //TODO: set multiple values
+        //check if multiple values are allowed
+        let values = ((field as UpdateNodePropertyValue).val as any[]).map(singleVal => {
+          return convertValue(propShape,singleVal) as Node;
+        });
+        subject.mset(pathProperty,values);
+      }
+      // else if (typeof field.val === 'object' && !(field.val instanceof Date))
+      // {
+      //   //TODO: create a new instance of the propShape shape and set the values
+      //   //This requires the propertyShape to have nodekind of shacl.Node || shacl.BlankNode
+      // }
+      else
+      {
+        //default, single value
+        let value = this.convertValue(propShape,(field as UpdateNodePropertyValue).val);
+
+        //TODO: check propShape for how many values are allowed
+
+        //Note, we are using SET here, to ADD a value.
+        //If there are multiple values possible and the user wants to overwrite all the values,
+        //they need to use an update function instead of an update object
+        subject.set(pathProperty,value)
+      }
+    }
+    return null;
+  }
+}
+function convertValue(propShape: PropertyShape, value: any):(Literal|NamedNode) {
+  if(propShape.nodeKind === shacl.Literal) {
+    return convertLiteral(propShape,value);
+
+  } else if(propShape.nodeKind === shacl.BlankNodeOrIRI || propShape.nodeKind === shacl.BlankNode || propShape.nodeKind === shacl.IRI) {
+    return convertNamedNode(propShape,value);
+  } else {
+    //we currently don't support other node kinds, like shacl.BlankNodeOrLiteral and shacl.BlankNodeOrIRI
+    //so in this case, we allow all types of values,
+    //next we look at datatype and shapeValue to determine the correct type of value
+    if(propShape.datatype) {
+      return convertLiteral(propShape,value);
+    } else if(propShape.valueShape) {
+      return convertNamedNode(propShape,value);
+    }
+    //these are clearly meant to be literals
+    if(typeof value === 'number' || typeof value === 'boolean' || value instanceof Date || typeof value === 'string') {
+      return convertLiteral(propShape,value);
+    }
+    //arrays mean it's an array of field+value objects
+    else if(Array.isArray(value)) {
+      return convertNamedNode(propShape,value as any);
+    }
+    throw new Error('Unknown value type for property: ' + propShape.label);
+
+  }
+}
+function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|NodeReferenceValue):NamedNode
+{
+  //value is expected to be an array of fields
+  if ((value as NodeReferenceValue).id)
+  {
+    return NamedNode.getOrCreate((value as NodeReferenceValue).id);
+  }
+  else
+  {
+    return convertNodeDescription(propShape,value as NodeDescriptionValue);
+  }
+}
+function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue):NamedNode {
+  if(!value.shape || !value.fields) {
+    throw new Error('Expected a node description for property: ' + propShape.label);
+  }
+  //TODO: check how we convert an id field,
+  //if the array of fields contains an id, then we know which node is referred to
+  //and it should have no further fields
+
+  let node = NamedNode.create();
+  value.fields.forEach(field => {
+    let property = field.prop.path;
+    let value = convertValue(field.prop,field.val);
+    node.set(property,value as Node);
+
+  });
+  return null;
+}
+
+function convertLiteral(propShape: PropertyShape, value: any) {
+  if(typeof value === 'object' && !(value instanceof Date)) {
+    throw new Error('Object values are not allowed for property: ' + propShape.label);
+  }
+  let dataType = propShape.datatype;
+  if(dataType) {
+    if(dataType.equals(xsd.integer)) {
+      if(typeof value === 'number') {
+        return new Literal(value.toString(),null,xsd.integer);
+      } else {
+        throw new Error('Expected a number value for property: ' + propShape.label);
+      }
+    }
+    if(dataType.equals(xsd.boolean)) {
+      if(typeof value === 'boolean')
+      {
+        return Boolean_toLiteral(value);
+      } else {
+        throw new Error('Expected boolean value for property: ' + propShape.label);
+      }
+    }
+    if(dataType.equals(xsd.date)) {
+      //check if value is a date
+      if(value instanceof Date) {
+        return XSDDate_fromNativeDate(value);
+      } else {
+        throw new Error('Expected date value for property: ' + propShape.label);
+      }
+    }
+  }
+  if(typeof value !== 'string') {
+    throw new Error('Expected string value for property: ' + propShape.label);
+  }
+  //datatype could be null or any other datatype
+  return new Literal(value,null,dataType);
+}
 
 /**
  * Resolves the query locally, by searching the graph in local memory, without using stores.
@@ -838,4 +993,16 @@ function resolveQueryStepForShapesEndResults(
     );
     return whereResult;
   }
+}
+
+function XSDDate_fromNativeDate(nativeDate: Date) {
+  if (!nativeDate) return null;
+
+  var value = nativeDate.toISOString();
+  let literal = new Literal(value, null,xsd.dateTime);
+  return literal;
+
+}
+function Boolean_toLiteral(value: boolean) {
+  return new Literal(value.toString(), null, xsd.boolean);
 }

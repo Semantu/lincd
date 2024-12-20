@@ -9,6 +9,7 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
 import {List} from '../shapes/List.js';
+import { URI } from './URI';
 
 export interface NodeShapeConfig {
   /**
@@ -210,35 +211,40 @@ const _linkedProperty = (
     propertyKey: string,
     descriptor: PropertyDescriptor,
   ) {
-    //if the shape has already been initiated (with linkedShape)
-    //Note that the constructor may have shape defined if the class that it extends is already decorated with linkedShape
-    //so we need to check hasOwnProperty
-    let shape: NodeShape = target.constructor.hasOwnProperty('shape')
-      ? target.constructor
-      : null;
 
     //then we pass the shape and it will be used to register the property shape
-    let propertyShape = registerLinkedProperty(
+    let propertyShape = createPropertyShape(
       config,
       propertyKey,
-      shape,
       defaultNodeKind,
     );
-    if (!shape) {
-      //but if it was not yet available, then store property shapes in a temporary array in the constructor
-      //this is picked up in Module.ts and put into the Shape when its ready
-      if (!target.constructor['propertyShapes']) {
-        target.constructor['propertyShapes'] = [];
-      }
-      target.constructor['propertyShapes'].push(propertyShape);
-    }
+
+    //once the NodeShape is available, we can add the property shape to it
+    onShapeSetup(target.constructor, (shape: NodeShape) => {
+      registerPropertyShape(shape, propertyShape);
+    });
   };
 };
 
-export function registerLinkedProperty(
+export function registerPropertyShape(
+  shape: NodeShape,
+  propertyShape: PropertyShape,
+) {
+  let uri = `${shape.namedNode.uri}/${propertyShape.label}`;
+  //with react hot reload, sometimes the same code gets loaded twice, recreating the same property shape
+  //so if this URI already existed, we can ignore the new one, since its already registered
+  if(!NamedNode.getNamedNode(uri))
+  {
+    //update the URI (by extending the URI of the shape)
+    propertyShape.namedNode.uri = uri;
+
+    //then add it directly
+    shape.addPropertyShape(propertyShape);
+  }
+}
+export function createPropertyShape(
   config: PropertyShapeConfig,
   propertyKey: string,
-  shape: NodeShape,
   defaultNodeKind: NamedNode = null,
 ) {
   let propertyShape = new PropertyShape();
@@ -291,19 +297,10 @@ export function registerLinkedProperty(
   }
   //we accept a shape configuration, which translates to a sh:nodeShape
   if (config.shape) {
-    //if this shape class has already got a NodeShape connected to it
-    if (config.shape['shape']) {
-      //then we can use this NodeShape now as the value of nodeShape for this property shape
-      propertyShape.valueShape = config.shape['shape'];
-    } else {
-      //however the shape class may not have run its decorators yet
-      //so in that case we temporarily store a reference
-      //which gets processed in Module:linkedShape()
-      if (!config.shape['nodeShapeOf']) {
-        config.shape['nodeShapeOf'] = [];
-      }
-      config.shape['nodeShapeOf'].push(propertyShape);
-    }
+    //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
+    onShapeSetup(config.shape, (nodeShape: NodeShape) => {
+      propertyShape.valueShape = nodeShape;
+    });
   }
 
   if (config.in) {
@@ -321,14 +318,14 @@ export function registerLinkedProperty(
   // 	target.constructor.shape = new NodeShape();
   // }
 
-  //see above why shape may not be provided
-  if (shape) {
-    //update the URI (by extending the URI of the shape)
-    propertyShape.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;
-
-    //then add it directly
-    shape.addPropertyShape(propertyShape);
-  }
+  // //see above why shape may not be provided
+  // if (shape) {
+  //   //update the URI (by extending the URI of the shape)
+  //   propertyShape.namedNode.uri = shape.namedNode.uri + `/${propertyKey}`;
+  //
+  //   //then add it directly
+  //   shape.addPropertyShape(propertyShape);
+  // }
   return propertyShape;
 
   //
@@ -363,4 +360,14 @@ export function registerLinkedProperty(
   //sh.disjoin
   // (2 props must have same value)
   //sh.equals
+}
+export function onShapeSetup(shapeClass: typeof Shape, callback: (shape: NodeShape) => void) {
+  if (shapeClass.hasOwnProperty('shape')) {
+    callback(shapeClass.shape);
+  } else {
+    if (!shapeClass['shapeCallbacks']) {
+      shapeClass['shapeCallbacks'] = [];
+    }
+    shapeClass['shapeCallbacks'].push(callback);
+  }
 }

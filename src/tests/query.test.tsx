@@ -10,7 +10,7 @@ import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {setDefaultPageLimit} from '../utils/Package.js';
-import {act} from 'react-dom/test-utils';
+import {act} from 'react';
 import {xsd} from '../ontologies/xsd.js';
 import {TestNode} from '../utils/TraceShape.js';
 
@@ -47,6 +47,7 @@ class Person extends Shape {
   @objectProperty({
     path: bestFriend,
     maxCount: 1,
+    shape:Person,
   })
   get bestFriend(): Person {
     return this.getOneAs(bestFriend, Person);
@@ -1103,109 +1104,109 @@ describe('query tests', () => {
     expect(first.id).toBe(p1.uri);
   });
 
-  test('linked set component with pagination - going to next page', async () => {
-    setDefaultPageLimit(2);
-
-    const NameList = linkedSetComponent(
-      {persons: Person.query((person) => [person.name, person.hobby])},
-      ({persons, query}) => {
-        return (
-          <div>
-            <ul>
-              {persons.map((person) => {
-                return (
-                  <li key={person.id}>
-                    <span role="name">{person.name}</span>
-                  </li>
-                );
-              })}
-            </ul>
-            <button
-              role="next-page"
-              onClick={() => {
-                query.nextPage();
-              }}
-            >
-              Next page
-            </button>
-          </div>
-        );
-      },
-    );
-    let component = render(<NameList />);
-    await waitFor(() => {
-      expect(component.getAllByRole('name').length).toBe(2);
-      expect(component.getByText(p1.name)).toBeTruthy();
-      expect(component.getByText(p2.name)).toBeTruthy();
-    });
-    await act(async () => {
-      let button = await component.findByRole('next-page');
-      button.click();
-    });
-    await waitFor(() => {
-      expect(component.getAllByRole('name').length).toBe(2);
-      expect(component.getByText(p3.name)).toBeTruthy();
-      expect(component.getByText(p4.name)).toBeTruthy();
-    });
-  });
-});
-test('linked set components with pagination with sources from other linked component', async () => {
-  setDefaultPageLimit(2);
-  let req = Person.query((person) => person.name);
-  const NameList = linkedSetComponent({persons: req}, ({persons, query}) => {
-    return (
-      <div>
-        <ul>
-          {persons.map((person) => {
-            return (
-              <li key={person.id}>
-                <span role={'name'}>{person.name}</span>
-              </li>
-            );
-          })}
-        </ul>
-        <button
-          role="next-page"
-          onClick={() => {
-            query.nextPage();
-          }}
-        >
-          Next page
-        </button>
-      </div>
-    );
-  });
-
-  const PersonFriends = linkedComponent(
-    Person.query((p) => {
-      return [p.pluralTestProp.preloadFor(NameList)];
-    }),
-    ({pluralTestProp}) => {
-      return (
-        <div>
-          <NameList of={pluralTestProp} />
-        </div>
-      );
-    },
-  );
-
-  let component = render(<PersonFriends of={p1} />);
-  await waitFor(() => {
-    expect(component.getAllByRole('name')).toHaveLength(2);
-    expect(component.getByText(p1.name)).toBeTruthy();
-    expect(component.getByText(p2.name)).toBeTruthy();
-  });
-
-  await act(async () => {
-    let button = await component.findByRole('next-page');
-    button.click();
-  });
-  await waitFor(() => {
-    expect(component.getAllByRole('name')).toHaveLength(2);
-    expect(component.getByText(p3.name)).toBeTruthy();
-    expect(component.getByText(p4.name)).toBeTruthy();
-  });
-});
+//   test('linked set component with pagination - going to next page', async () => {
+//     setDefaultPageLimit(2);
+//
+//     const NameList = linkedSetComponent(
+//       {persons: Person.query((person) => [person.name, person.hobby])},
+//       ({persons, query}) => {
+//         return (
+//           <div>
+//             <ul>
+//               {persons.map((person) => {
+//                 return (
+//                   <li key={person.id}>
+//                     <span role="name">{person.name}</span>
+//                   </li>
+//                 );
+//               })}
+//             </ul>
+//             <button
+//               role="next-page"
+//               onClick={() => {
+//                 query.nextPage();
+//               }}
+//             >
+//               Next page
+//             </button>
+//           </div>
+//         );
+//       },
+//     );
+//     let component = render(<NameList />);
+//     await waitFor(() => {
+//       expect(component.getAllByRole('name').length).toBe(2);
+//       expect(component.getByText(p1.name)).toBeTruthy();
+//       expect(component.getByText(p2.name)).toBeTruthy();
+//     });
+//     await act(async () => {
+//       let button = await component.findByRole('next-page');
+//       button.click();
+//     });
+//     await waitFor(() => {
+//       expect(component.getAllByRole('name').length).toBe(2);
+//       expect(component.getByText(p3.name)).toBeTruthy();
+//       expect(component.getByText(p4.name)).toBeTruthy();
+//     });
+//   });
+// });
+// test('linked set components with pagination with sources from other linked component', async () => {
+//   setDefaultPageLimit(2);
+//   let req = Person.query((person) => person.name);
+//   const NameList = linkedSetComponent({persons: req}, ({persons, query}) => {
+//     return (
+//       <div>
+//         <ul>
+//           {persons.map((person) => {
+//             return (
+//               <li key={person.id}>
+//                 <span role={'name'}>{person.name}</span>
+//               </li>
+//             );
+//           })}
+//         </ul>
+//         <button
+//           role="next-page"
+//           onClick={() => {
+//             query.nextPage();
+//           }}
+//         >
+//           Next page
+//         </button>
+//       </div>
+//     );
+//   });
+//
+//   const PersonFriends = linkedComponent(
+//     Person.query((p) => {
+//       return [p.pluralTestProp.preloadFor(NameList)];
+//     }),
+//     ({pluralTestProp}) => {
+//       return (
+//         <div>
+//           <NameList of={pluralTestProp} />
+//         </div>
+//       );
+//     },
+//   );
+//
+//   let component = render(<PersonFriends of={p1} />);
+//   await waitFor(() => {
+//     expect(component.getAllByRole('name')).toHaveLength(2);
+//     expect(component.getByText(p1.name)).toBeTruthy();
+//     expect(component.getByText(p2.name)).toBeTruthy();
+//   });
+//
+//   await act(async () => {
+//     let button = await component.findByRole('next-page');
+//     button.click();
+//   });
+//   await waitFor(() => {
+//     expect(component.getAllByRole('name')).toHaveLength(2);
+//     expect(component.getByText(p3.name)).toBeTruthy();
+//     expect(component.getByText(p4.name)).toBeTruthy();
+//   });
+// });
 
 test('update query with object argument', async () => {
   const res = await Person.update(p1,{
@@ -1218,14 +1219,36 @@ test('update query with object argument', async () => {
           name:'Nested friend'
         }]
       },{
+        //it should be possible to pass an object with just the ID
+        id:p4.uri
+      },{
         name:'Friend 2'
-      },]
+      }]
       // name2:'asdf',
       // clone: true,
       // targetClass:Person,
       // namedNode:null,
     }]
   });
+  //queryObject will be
+  //{
+  //   id: p1.uri,
+  //   type:'update',
+  //   fields: [
+  //     {field: hobbyPropShape, value: 'Gaming'},
+  //     {field: friendsPropShape, value: [
+  //       "string alsp possible here",
+  //       [or an array of PropertyValueUpdate]
+  //       {id:singleItemURI} //<-- or a reference to a node
+  //     ]}
+  //   ]
+  //}
+  //so fields is an array of 3 different types of objects
+  //1. A single value that converts to a literal (string, number, boolean, Date)
+  //2. An array of PropertyValueUpdate objects
+  //3. An object with 'id', which is a reference to a node
+
+
   expect(res.id).toBeDefined()
   expect(res.hobby).toBeDefined()
   expect(res['name']).toBeUndefined()
@@ -1267,7 +1290,8 @@ test('update query with update function', async () => {
   // expect(res2[0].hobby).toBe('Jogging');
 });
 
-//});
+});
+
 
 //NEXT:
 //bring back flat

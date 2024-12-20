@@ -18,6 +18,8 @@ import {
   SelectQuery,
 } from '../utils/LinkedQuery.js';
 import {resolveLocal} from '../utils/LocalQueryResolver.js';
+import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery';
+import { updateLocal } from '../utils/LocalQueryResolver';
 
 export class InMemoryStore extends Shape implements IQuadStore {
   protected contents: QuadSet;
@@ -52,6 +54,12 @@ export class InMemoryStore extends Shape implements IQuadStore {
    */
   getContents(): QuadSet {
     return this.contents;
+  }
+
+  updateQuery?<RType>(
+    query:UpdateQuery<RType>
+  ): Promise<RType> {
+    return Promise.resolve(updateLocal(query));
   }
 
   update(

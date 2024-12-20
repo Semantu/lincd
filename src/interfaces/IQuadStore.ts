@@ -26,7 +26,7 @@ export interface IQuadStore {
     toRemove: ICoreIterable<Quad>,
   ): Promise<any>;
 
-  updateQuery<RType>(
+  updateQuery?<RType>(
     q:UpdateQuery<RType>
   ): Promise<RType>
 
