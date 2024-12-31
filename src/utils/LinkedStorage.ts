@@ -390,12 +390,16 @@ export abstract class LinkedStorage {
     //     }
     //   }
     // }
-    for(const [graph, targetClasses] of this.graphToTargetClasses) {
-      if(subject.getAll(rdf.type).some(type => targetClasses.has(type as NamedNode))) {
-        return graph;
+    if(!subject.isTemporaryNode)
+    {
+      for (const [graph,targetClasses] of this.graphToTargetClasses)
+      {
+        if (subject.getAll(rdf.type).some(type => targetClasses.has(type as NamedNode)))
+        {
+          return graph;
+        }
       }
     }
-
     //if it's not a temporary node, and we have a default graph for permanent storage, then use that
     if ((!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.defaultStorageGraph) {
       return this.defaultStorageGraph;
