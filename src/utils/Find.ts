@@ -131,7 +131,9 @@ export class Find {
         potentialQuads = subjects.getQuads(searchProp);
       } else {
         //if not, then we look through ALL LOCALLY KNOWN USAGES of this property
-        potentialQuads = searchProp.getAsPredicateQuads();
+        //TODO: this has been deprecated, probably in new LINCD this is not necessary anymore
+        throw new Error("Deprecated. Using find is discouraged.");
+        // potentialQuads = searchProp.getAsPredicateQuads();
       }
       if (!potentialQuads) return;
 
