@@ -46,8 +46,8 @@ export abstract class LinkedFileStorage {
     return this.defaultStore.listFiles(prefix);
   }
 
-  static saveFile(filePath: string, fileContent: string | Uint8Array | Buffer | Readable,mimeType?:string): Promise<string> {
-    return this.defaultStore.saveFile(filePath, fileContent,mimeType);
+  static saveFile(filePath: string, fileContent: string | Uint8Array | Buffer | Readable,mimeType?:string,preventDuplicates:boolean=false): Promise<string> {
+    return this.defaultStore.saveFile(filePath, fileContent,mimeType,preventDuplicates);
   }
 }
 

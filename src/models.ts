@@ -624,6 +624,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     var quadMap: QuadMap = this.asSubject.get(predicate);
     if (quadMap) {
       let valueQuads = quadMap.get(quad.object);
+      if(!valueQuads) return;
       valueQuads.delete(quad);
       //if we no longer hold any quads for this object
       if (valueQuads.size == 0) {
@@ -677,6 +678,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     var quadMap: QuadMap = this.asObject.get(quad.predicate);
     if (quadMap) {
       let quadSet = quadMap.get(quad.subject);
+      if(!quadSet) return;
       //remove this quad
       quadSet.delete(quad);
       //if we no longer hold any quads for this subject
