@@ -27,7 +27,8 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
       }
     });
 
-    //listen for changes in the property set
+    //TODO: review, turned off for now due to memory leak
+    /*//listen for changes in the property set
     subject.onChange(property, (quads) => {
       quads.forEach((q) => {
         if (q.isRemoved) {
@@ -53,7 +54,7 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
           }
         }
       });
-    });
+    });*/
   }
   /**
    * When cloned (by .filter() or .sort()) we switch to a ShapeSet of all the values
