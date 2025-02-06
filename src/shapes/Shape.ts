@@ -3,7 +3,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {EventEmitter} from '../events/EventEmitter';
 import {Literal, NamedNode, Node, Quad} from '../models';
 import {rdf} from '../ontologies/rdf';
 import {NodeValuesSet} from '../collections/NodeValuesSet';
@@ -246,9 +245,9 @@ export abstract class Shape implements IShape {
     }
 
     //@TODO: do this for RdfsLiteral as well if they implement events at some point?
-    if (this._node instanceof NamedNode) {
-      this._node.on(NamedNode.NODE_REMOVED, this.destruct.bind(this));
-    }
+    // if (this._node instanceof NamedNode) {
+    //   this._node.on(NamedNode.NODE_REMOVED, this.destruct.bind(this));
+    // }
   }
 
   /**
