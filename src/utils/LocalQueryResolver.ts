@@ -66,8 +66,18 @@ function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode)
 
     if (Array.isArray(field.val))
     {
-      if(propShape.maxCount && propShape.maxCount < 2) {
-        throw new Error('Multiple values not allowed for property: ' + propShape.label);
+      if(propShape.maxCount) {
+        if(field.val.length > propShape.maxCount) {
+          throw new Error(`Too many values for property: ${propShape.label}. Max count is: ${propShape.maxCount}, got ${field.val.length}`);
+        } else if(propShape.maxCount < 2)
+        {
+          throw new Error('Multiple values not allowed for property: ' + propShape.label);
+        }
+      }
+      if(propShape.minCount) {
+        if(field.val.length < propShape.minCount) {
+          throw new Error(`Too few values for property: ${propShape.label}. Min count is: ${propShape.minCount}, got ${field.val.length}`);
+        }
       }
 
       let values = [];
@@ -77,23 +87,40 @@ function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode)
         plainValueArr.push(res.plainValue);
         values.push(res.value);
       });
-      plainValues[propShape.label] = plainValueArr;
-      subject.moverwrite(pathProperty,values);
+      if(values.every(v => typeof v === 'undefined')) {
+        plainValues[propShape.label] = undefined;
+        subject.unsetAll(pathProperty)
+      }
+      else if(values.some(v => typeof v === 'undefined')) {
+        throw new Error('Invalid use of undefined for property: ' + propShape.label+'. You cannot mix undefined with defined values');
+      }
+      else {
+        plainValues[propShape.label] = plainValueArr;
+        subject.moverwrite(pathProperty,values);
+      }
     }
     else
     {
-      //default, single value
+      //single value is provided.
+
+      //is that allowed?
+      if(propShape.minCount > 1) {
+        throw new Error('Multiple values required for property: ' + propShape.label);
+      }
       let res = convertValue(propShape,(field as UpdateNodePropertyValue).val);
 
-      //save the plain value for the result
-      plainValues[propShape.label] = res.plainValue;
-
-      //TODO: check propShape for how many values are allowed
-
-      //Note, we are using SET here, to ADD a value.
-      //If there are multiple values possible and the user wants to overwrite all the values,
-      //they need to use an update function instead of an update object
-      subject.overwrite(pathProperty,res.value);
+      if(typeof res.value === 'undefined') {
+        subject.unsetAll(pathProperty);
+        plainValues[propShape.label] = undefined;
+      } else {
+        //TODO: check propShape for how many values are allowed
+        //save the plain value for the result
+        plainValues[propShape.label] = res.plainValue;
+        //Note, we are using SET here, to ADD a value.
+        //If there are multiple values possible and the user wants to overwrite all the values,
+        //they need to use an update function instead of an update object
+        subject.overwrite(pathProperty,res.value);
+      }
     }
   }
 
@@ -210,12 +237,24 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
       }
     }
   }
+  if(typeof value === 'undefined') {
+    return {
+      value:undefined,
+      plainValue:undefined
+    }
+  }
+  if(value === null) {
+    throw new Error('Value cannot be null. If you want to unset a value, use undefined');
+  }
+  //else expecting string
   if(typeof value !== 'string') {
     throw new Error('Expected string value for property: ' + propShape.label);
   }
+  //if no datatype is given, then we assume the value is a string
   if(!res)
   {
-    //datatype could be null or any other datatype
+    //and we convert the string to a literal
+    //Note: datatype could be null or any other datatype
     res = new Literal(value,dataType);
   }
   return {

@@ -161,12 +161,14 @@ export type UpdateQuery<ResponseType=null> = {
   shape:NodeShape,
   updates:NodeDescriptionValue;
 }
+type UnsetValue = undefined;
 export type LiteralUpdateValue = string | number | boolean | Date;
 export type PropUpdateValue = SinglePropertyUpdateValue | SinglePropertyUpdateValue[];
 export type SinglePropertyUpdateValue =
   NodeDescriptionValue
   | NodeReferenceValue
-  | LiteralUpdateValue;
+  | LiteralUpdateValue
+  | UnsetValue;
 export type NodeDescriptionValue = {
   shape:NodeShape
   fields:UpdateNodePropertyValue[]
@@ -261,6 +263,10 @@ export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<S
         }
         return this.convertNodeDescription(value,propShape.valueShape);
       }
+    } else if (typeof value === 'undefined') {
+      return value;
+    } else if(value === null) {
+      throw new Error('Value cannot be null. If you want to unset a value, use undefined');
     }
     throw new Error(`Unsupported update value type: ${typeof value}`);
   }

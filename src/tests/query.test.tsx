@@ -1300,32 +1300,32 @@ test('update query 1 - with simple object argument', async () => {
 
   });
 
-  // test('update query 3 - unset a single value property', async () => {
-  //   const originalHobby = p1.hobby;
-  //
-  //   const res = await Person.update(p1, {
-  //     hobby: undefined
-  //   });
-  //
-  //   // Check result object
-  //   expect(res.id).toBeDefined();
-  //   expect(res.id).toEqual(p1.uri);
-  //   expect(res.hobby).toBeUndefined();
-  //
-  //   // Check database
-  //   let qRes = await Person.select(p1,p => p.hobby)
-  //     // .where((p) => p.uri.equals(p1.uri));
-  //   expect(qRes[0]).toBeDefined();
-  //   expect(qRes[0].hobby).toBeUndefined();
-  //
-  //   // Restore original value
-  //   await Person.update(p1, { hobby: originalHobby });
-  //
-  //   let qRes2 = await Person.select(p1, p => p.hobby)
-  //     // .where((p) => p.uri.equals(p1.uri));
-  //   expect(qRes[0]).toBeDefined();
-  //   expect(qRes[0].hobby).toBeUndefined();
-  // });
+  test('update query 3 - unset a single value property', async () => {
+    const originalHobby = p1.hobby;
+
+    const res = await Person.update(p1, {
+      hobby: undefined
+    });
+
+    // Check result object
+    expect(res.id).toBeDefined();
+    expect(res.id).toEqual(p1.uri);
+    expect(res.hobby).toBeUndefined();
+
+    // Check database
+    let qRes = await Person.select(p1,p => p.hobby)
+      // .where((p) => p.uri.equals(p1.uri));
+    expect(qRes).toBeDefined();
+    expect(qRes.hobby).toBeUndefined();
+
+    // Restore original value
+    await Person.update(p1, { hobby: originalHobby });
+
+    let qRes2 = await Person.select(p1, p => p.hobby)
+      // .where((p) => p.uri.equals(p1.uri));
+    expect(qRes2).toBeDefined();
+    expect(qRes2.hobby).toEqual(originalHobby);
+  });
 
 
 
