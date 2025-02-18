@@ -29,15 +29,15 @@ import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
   NodeDescriptionValue,
   NodeReferenceValue,
-  PropUpdateValue,
+  PropUpdateValue,SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
   UpdateQuery,
 } from './queries/LinkedUpdateQuery';
-import { NamedNode,Node } from '../models';
+import { NamedNode,Node,Literal } from '../models';
 import { getShapeClass } from './ShapeClass';
-import { Literal } from 'rdflib';
 import { xsd } from '../ontologies/xsd';
-import { PropertyShape } from '../shapes/SHACL';
+import { PropertyShape,ValidationReport } from '../shapes/SHACL';
+import { rdf } from '../ontologies/rdf';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -52,48 +52,56 @@ export function updateLocal<ResultType>(query: UpdateQuery<ResultType>):ResultTy
     }
     // let shapeClass = getShapeClass(query.shape.namedNode);
     // let shape = new (shapeClass as any)(subject);
-    for (let field of query.updates.fields)
-    {
-      if(field['id']) {
-        throw new Error('Top level update object cannot contain id');
-      }
-      let propShape = (field as UpdateNodePropertyValue).prop;
-      let pathProperty = propShape.path;
-
-      if (Array.isArray((field as UpdateNodePropertyValue).val))
-      {
-        //TODO: set multiple values
-        //check if multiple values are allowed
-        let values = ((field as UpdateNodePropertyValue).val as any[]).map(singleVal => {
-          return convertValue(propShape,singleVal) as Node;
-        });
-        subject.mset(pathProperty,values);
-      }
-      // else if (typeof field.val === 'object' && !(field.val instanceof Date))
-      // {
-      //   //TODO: create a new instance of the propShape shape and set the values
-      //   //This requires the propertyShape to have nodekind of shacl.Node || shacl.BlankNode
-      // }
-      else
-      {
-        //default, single value
-        let value = this.convertValue(propShape,(field as UpdateNodePropertyValue).val);
-
-        //TODO: check propShape for how many values are allowed
-
-        //Note, we are using SET here, to ADD a value.
-        //If there are multiple values possible and the user wants to overwrite all the values,
-        //they need to use an update function instead of an update object
-        subject.set(pathProperty,value)
-      }
-    }
-    return null;
+    let plainResults = applyFieldUpdates(query.updates.fields,subject);
+    plainResults['id'] = query.id;
+    return plainResults as ResultType;
   }
 }
-function convertValue(propShape: PropertyShape, value: any):(Literal|NamedNode) {
+function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode) {
+  let plainValues = {};
+  for (let field of fields)
+  {
+    let propShape = field.prop;
+    let pathProperty = propShape.path;
+
+    if (Array.isArray(field.val))
+    {
+      if(propShape.maxCount && propShape.maxCount < 2) {
+        throw new Error('Multiple values not allowed for property: ' + propShape.label);
+      }
+
+      let values = [];
+      let plainValueArr = [];
+      (field.val as SinglePropertyUpdateValue[]).forEach(singleVal => {
+        let res = convertValue(propShape,singleVal);
+        plainValueArr.push(res.plainValue);
+        values.push(res.value);
+      });
+      plainValues[propShape.label] = plainValueArr;
+      subject.moverwrite(pathProperty,values);
+    }
+    else
+    {
+      //default, single value
+      let res = convertValue(propShape,(field as UpdateNodePropertyValue).val);
+
+      //save the plain value for the result
+      plainValues[propShape.label] = res.plainValue;
+
+      //TODO: check propShape for how many values are allowed
+
+      //Note, we are using SET here, to ADD a value.
+      //If there are multiple values possible and the user wants to overwrite all the values,
+      //they need to use an update function instead of an update object
+      subject.overwrite(pathProperty,res.value);
+    }
+  }
+
+  return plainValues;
+}
+function convertValue(propShape: PropertyShape, value: any):{value:(Literal|NamedNode),plainValue:any} {
   if(propShape.nodeKind === shacl.Literal) {
     return convertLiteral(propShape,value);
-
   } else if(propShape.nodeKind === shacl.BlankNodeOrIRI || propShape.nodeKind === shacl.BlankNode || propShape.nodeKind === shacl.IRI) {
     return convertNamedNode(propShape,value);
   } else {
@@ -114,22 +122,28 @@ function convertValue(propShape: PropertyShape, value: any):(Literal|NamedNode) 
       return convertNamedNode(propShape,value as any);
     }
     throw new Error('Unknown value type for property: ' + propShape.label);
-
   }
 }
-function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|NodeReferenceValue):NamedNode
+function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|NodeReferenceValue):{
+  value:NamedNode,
+  plainValue:any
+}
 {
-  //value is expected to be an array of fields
+  //value is expected to be an array of fields, or an object with an id for a direct node reference
   if ((value as NodeReferenceValue).id)
   {
-    return NamedNode.getOrCreate((value as NodeReferenceValue).id);
+    return {
+      value:NamedNode.getOrCreate((value as NodeReferenceValue).id),
+      //return an object only with the ID (a NodeReferenceValue should always only have an id field)
+      plainValue:{id:(value as NodeReferenceValue).id}
+    };
   }
   else
   {
     return convertNodeDescription(propShape,value as NodeDescriptionValue);
   }
 }
-function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue):NamedNode {
+function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue):{value:NamedNode,plainValue:any} {
   if(!value.shape || !value.fields) {
     throw new Error('Expected a node description for property: ' + propShape.label);
   }
@@ -138,24 +152,43 @@ function convertNodeDescription(propShape: PropertyShape, value: NodeDescription
   //and it should have no further fields
 
   let node = NamedNode.create();
-  value.fields.forEach(field => {
-    let property = field.prop.path;
-    let value = convertValue(field.prop,field.val);
-    node.set(property,value as Node);
+  let plainResults = applyFieldUpdates(value.fields,node);
+  plainResults['id'] = node.uri;
 
-  });
-  return null;
+  //if this property comes with a restriction that all values need to be of a certain shape
+  if(propShape.valueShape) {
+    //if that shape comes with a target class
+    if(propShape.valueShape.targetClass)
+    {
+      //then we set the type of the node to the target class
+      //this is a "free" automatic property that we set for the user, so they dont need to always manually type it into the create() or update() queries
+      node.set(rdf.type,propShape.valueShape.targetClass);
+    }
+    //However... for other restrictions of the shape, the user needs to make sure that the node is valid
+    //So lets check if the node is valid according to the shape
+    if(!propShape.valueShape.validateNode(node)) {
+      let report = ValidationReport.forNodeAgainstShape(node,propShape.valueShape).toString();
+      throw new Error(`Property: ${propShape.label} expects all values to be valid instances of shape ${propShape.valueShape.label}. Validation failed: ${report}`);
+    }
+  }
+
+
+  return {
+    value:node,
+    plainValue:plainResults
+  };
 }
 
-function convertLiteral(propShape: PropertyShape, value: any) {
+function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,plainValue:any} {
   if(typeof value === 'object' && !(value instanceof Date)) {
     throw new Error('Object values are not allowed for property: ' + propShape.label);
   }
   let dataType = propShape.datatype;
+  let res:Literal;
   if(dataType) {
     if(dataType.equals(xsd.integer)) {
       if(typeof value === 'number') {
-        return new Literal(value.toString(),null,xsd.integer);
+        res = new Literal(value.toString(),xsd.integer);
       } else {
         throw new Error('Expected a number value for property: ' + propShape.label);
       }
@@ -163,7 +196,7 @@ function convertLiteral(propShape: PropertyShape, value: any) {
     if(dataType.equals(xsd.boolean)) {
       if(typeof value === 'boolean')
       {
-        return Boolean_toLiteral(value);
+        res = Boolean_toLiteral(value);
       } else {
         throw new Error('Expected boolean value for property: ' + propShape.label);
       }
@@ -171,7 +204,7 @@ function convertLiteral(propShape: PropertyShape, value: any) {
     if(dataType.equals(xsd.date)) {
       //check if value is a date
       if(value instanceof Date) {
-        return XSDDate_fromNativeDate(value);
+        res = XSDDate_fromNativeDate(value);
       } else {
         throw new Error('Expected date value for property: ' + propShape.label);
       }
@@ -180,8 +213,15 @@ function convertLiteral(propShape: PropertyShape, value: any) {
   if(typeof value !== 'string') {
     throw new Error('Expected string value for property: ' + propShape.label);
   }
-  //datatype could be null or any other datatype
-  return new Literal(value,null,dataType);
+  if(!res)
+  {
+    //datatype could be null or any other datatype
+    res = new Literal(value,dataType);
+  }
+  return {
+    value:res,
+    plainValue:value
+  };
 }
 
 /**
@@ -999,10 +1039,10 @@ function XSDDate_fromNativeDate(nativeDate: Date) {
   if (!nativeDate) return null;
 
   var value = nativeDate.toISOString();
-  let literal = new Literal(value, null,xsd.dateTime);
+  let literal = new Literal(value, xsd.dateTime);
   return literal;
 
 }
 function Boolean_toLiteral(value: boolean) {
-  return new Literal(value.toString(), null, xsd.boolean);
+  return new Literal(value.toString(), xsd.boolean);
 }

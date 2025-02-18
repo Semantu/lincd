@@ -36,7 +36,7 @@ import {
   staticImplements,
 } from '../interfaces/IStorageController.js';
 import { TestNode } from '../utils/TraceShape.js';
-import { LinkedUpdateQuery,UpdatePartial,WithId } from '../utils/queries/LinkedUpdateQuery';
+import { LinkedUpdateQuery,UpdatePartial,AddId } from '../utils/queries/LinkedUpdateQuery';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -266,6 +266,8 @@ export abstract class Shape implements IShape {
   static select<
     ShapeType extends Shape,
     S = unknown,
+    // ResultType =
+    //   GetQueryResponseType<LinkedQuery<ShapeType, S>>,
     ResultType = QueryResponseToResultType<
       GetQueryResponseType<LinkedQuery<ShapeType, S>>,
       ShapeType
@@ -299,7 +301,7 @@ export abstract class Shape implements IShape {
     this: {new (node: Node): ShapeType; targetClass: any},
     id:string|{id:string}|{uri:string},
     updateObjectOrFn?: U,
-  ): Promise<WithId<U>> {
+  ): Promise<AddId<U>> {
     // return Promise.resolve(true) as any;
     const query = new LinkedUpdateQuery<ShapeType, U>(this as any, id,updateObjectOrFn);
     return StorageHelper.updateQuery(query);
@@ -1094,7 +1096,7 @@ export class StorageHelper {
     U extends UpdatePartial<ShapeType>,
   >(
     query: LinkedUpdateQuery<ShapeType,U>
-  ): Promise<WithId<U>> {
+  ): Promise<AddId<U>> {
     this.checkSetup();
     return this.storageController.updateQuery(query);
   }

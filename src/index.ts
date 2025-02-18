@@ -36,7 +36,6 @@ import * as ForwardReasoning from './utils/ForwardReasoning.js';
 import * as NameSpace from './utils/NameSpace.js';
 import * as Hooks from './utils/Hooks.js';
 import * as ShapeClass from './utils/ShapeClass.js';
-import * as ShapeDecorators from './utils/ShapeDecorators.js';
 import * as ClassNames from './utils/ClassNames.js';
 import * as List from './shapes/List.js';
 import * as IGraphObject from './interfaces/IGraphObject.js';
@@ -91,7 +90,6 @@ export function initModularApp() {
     Prefix,
     NQuads,
     Boolean,
-    ShapeDecorators,
     Package,
     IGraphObject,
     IGraphObjectSet,

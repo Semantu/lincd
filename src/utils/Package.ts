@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import { defaultGraph,Literal,NamedNode,Quad } from '../models.js';
-import { NodeShape,PropertyShape } from '../shapes/SHACL.js';
+import { NodeShape,PropertyShape,ValidationReport,ValidationResult } from '../shapes/SHACL.js';
 import { Shape } from '../shapes/Shape.js';
 import { Prefix } from './Prefix.js';
 import { CoreSet } from '../collections/CoreSet.js';
@@ -20,7 +20,7 @@ import {
   LinkedComponentFactoryFn,
   LinkedSetComponentFactoryFn,
 } from '../utils/LinkedComponent.js';
-import { createPropertyShape,registerPropertyShape } from './ShapeDecorators.js';
+import { createPropertyShape,registerPropertyShape } from '../shapes/SHACL.js';
 import { shacl } from '../ontologies/shacl.js';
 import { rdfs } from '../ontologies/rdfs.js';
 
@@ -570,9 +570,12 @@ export function initTree()
 //when this file is used, make sure the tree is initialized
 initTree();
 
+//now that this file is set up, we can link linked shapes in the LINCD module itself
 let lincdPackage = linkedPackage('lincd');
 lincdPackage.linkedShape(NodeShape);
 lincdPackage.linkedShape(PropertyShape);
+lincdPackage.linkedShape(ValidationReport);
+lincdPackage.linkedShape(ValidationResult);
 
 //ALL the following is to support Shape having get/set methods with property shapes
 //and Shape itself having a nodeShape

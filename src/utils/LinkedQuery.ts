@@ -15,7 +15,8 @@ import { ShapeValuesSet } from '../collections/ShapeValuesSet';
  * ###################################
  */
 
-export type JSPrimitive = string | number | boolean | Date | null | undefined;
+export type JSPrimitive = JSNonNullPrimitive | null | undefined;
+export type JSNonNullPrimitive = string | number | boolean | Date
 
 /**
  * All the possible types that a regular get/set method of a Shape can return
@@ -154,15 +155,25 @@ export type ToQueryBuilderObject<
     ? QShapeSet<ShapeSetType, Source, Property>
     : T extends Shape
       ? QShape<T, Source, Property>
-      : T extends string
-        ? QueryString<Source, Property>
-        : T extends number
-          ? QueryNumber<Source, Property>
-          : T extends Date
-            ? QueryDate<Source, Property>
-            : T extends boolean
-              ? QueryBoolean
-              : QueryBuilderObject<T>;
+      : T extends string|number|Date|boolean
+        ? ToQueryPrimitive<T,Source,Property>
+              // : QueryBuilderObject<T,Source,Property>;
+              : T extends Array<infer AT>
+                ? AT extends Date | string | number
+                  ? QueryPrimitiveSet<ToQueryPrimitive<AT,Source,Property>>
+                  : AT extends boolean
+                    ? QueryBoolean
+                    : AT[]
+                : QueryBuilderObject<T,Source,Property>;
+
+export type ToQueryPrimitive<T extends string | number | Date | boolean,Source,Property extends string | number | symbol = ''> = T extends string
+  ? QueryString<Source, Property>
+  : T extends number
+  ? QueryNumber<Source, Property>
+  : T extends Date
+  ? QueryDate<Source, Property>
+  : T extends boolean
+  ? QueryBoolean : never;
 
 export type WherePath = WhereEvaluationPath | WhereAndOr;
 
@@ -229,17 +240,19 @@ export type QueryResponseToResultType<
   T,
   QShapeType extends Shape = null,
   SourceOverwrite = null,
+  // PreserveArray = false,
 > = T extends QueryBuilderObject
   ? GetQueryObjectResultType<T, {}, SourceOverwrite>
   : T extends LinkedQuery<any, infer Response, infer Source>
     ? GetNestedQueryResultType<Response, Source, SourceOverwrite>
     : T extends Array<infer Type>
       ? UnionToIntersection<QueryResponseToResultType<Type>>
+      // ? PreserveArray extends true ? QueryResponseToResultType<Type,null,null,true>[] : UnionToIntersection<QueryResponseToResultType<Type,null,null,true>>
       : T extends Evaluation
         ? boolean
         : T extends Object
           ? QResult<QShapeType, ObjectToPlainResult<T>>
-          : T;
+          : never;
 
 /**
  * Turns a QueryBuilderObject into a plain JS object
@@ -247,20 +260,23 @@ export type QueryResponseToResultType<
  * @param SubProperties to add extra properties into the result object (used to merge arrays into objects for example)
  * @param SourceOverwrite if the source of the query value should be overwritten
  */
+//QV QueryBuilderObject<string[],QShape<Person,null,''>,'nickNames'>[]
+//SubProperties = {}
 export type GetQueryObjectResultType<
   QV,
   SubProperties = {},
   SourceOverwrite = null,
+  PrimitiveArray = false
 > =
   QV extends QueryString<infer Source, infer Property>
-    ? CreateQResult<GetSource<Source, SourceOverwrite>, string, Property>
+    ? CreateQResult<GetSource<Source, SourceOverwrite>, PrimitiveArray extends true ? string[] : string, Property>
     : //note: count needs to be above number
       QV extends SetSize<infer Source>
       ? SetSizeToQueryResult<GetSource<Source, SourceOverwrite>>
       : QV extends QueryNumber<infer Source, infer Property>
-        ? CreateQResult<GetSource<Source, SourceOverwrite>, number, Property>
+        ? CreateQResult<GetSource<Source, SourceOverwrite>, PrimitiveArray extends true ? number[] : number, Property>
         : QV extends QueryDate<infer Source, infer Property>
-          ? CreateQResult<GetSource<Source, SourceOverwrite>, Date, Property>
+          ? CreateQResult<GetSource<Source, SourceOverwrite>, PrimitiveArray extends true ? Date[] : Date, Property>
           : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
             ? CreateQResult<
                 GetSource<Source, SourceOverwrite>,
@@ -281,9 +297,11 @@ export type GetQueryObjectResultType<
                     Property,
                     SubProperties
                   >
-                : QV extends Array<infer Type>
-                  ? UnionToIntersection<QueryResponseToResultType<Type>>
-                  : never;
+                : QV extends QueryPrimitiveSet<infer QPrim extends QueryPrimitive<any>> ?
+                    GetQueryObjectResultType<QPrim,null,null,true>
+                  : QV extends Array<infer Type>
+                    ? UnionToIntersection<QueryResponseToResultType<Type>>
+                    : never;
 
 export type GetShapesResultTypeWithSource<Source> =
   Source extends QueryShape<infer ShapeType, infer Source, infer Property>
@@ -517,6 +535,8 @@ export class QueryBuilderObject<
       return new QueryNumber(originalValue, property, subject);
     } else if (originalValue instanceof Date) {
       return new QueryDate(originalValue, property, subject);
+    } else if (Array.isArray(originalValue)) {
+      return new QueryPrimitiveSet(originalValue, property, subject);
     } else if ((originalValue as any) instanceof TestNode) {
       throw new Error(
         subject.getOriginalValue().nodeShape.label +
@@ -524,6 +544,8 @@ export class QueryBuilderObject<
           property.label +
           ': A property accessor should return a Shape or a primitive value. Returning a NamedNode is currently not supported.',
       );
+    } else {
+      throw new Error('Unknown query path result type: ' + originalValue);
     }
   }
 
@@ -553,7 +575,7 @@ export class QueryBuilderObject<
     if (endValue instanceof QueryPrimitiveSet) {
       return new ShapeSet(
         endValue.contents.map(
-          (endValue) => this.getOriginalSource(endValue) as Shape,
+          (endValue) => this.getOriginalSource(endValue) as any as Shape,
         ),
       ) as ShapeSet;
     }
@@ -621,6 +643,7 @@ export class QueryBuilderObject<
     return path;
   }
 }
+
 
 const processWhereClause = (
   validation: WhereClause<any>,
@@ -775,7 +798,7 @@ export class QueryShapeSet<
     //if we expect the accessor to return a Primitive (string,number,boolean,Date)
     if (propertyShape.nodeKind === shacl.Literal) {
       //then return a Set of QueryPrimitives
-      result = new QueryPrimitiveSet(propertyShape, this);
+      result = new QueryPrimitiveSet(null,propertyShape, this);
     } else {
       // result = QueryValueSetOfSets.create(propertyShape, this); //QueryShapeSet.create(null, propertyShape, this);
       result = QueryShapeSet.create(null, propertyShape, this);
@@ -1062,6 +1085,7 @@ export abstract class QueryPrimitive<
   }
 }
 
+//@TODO: QueryString, QueryNumber, QueryBoolean, QueryDate can all be replaced with QueryPrimitive, and we can infer the original type, no need for these extra classes
 export class QueryString<
   Source = any,
   Property extends string | number | symbol = '',
@@ -1077,13 +1101,15 @@ export class QueryNumber<
   Property extends string | number | symbol = any,
 > extends QueryPrimitive<number, Source, Property> {}
 
-export class QueryPrimitiveSet<P = any> {
-  public contents: CoreSet<QueryPrimitive<P>>;
+export class QueryPrimitiveSet<QPrimitive extends QueryPrimitive<any>=null> extends QueryBuilderObject<any,any,any> {
+  public contents: CoreSet<QPrimitive>;
   constructor(
+    public originalValue?: JSNonNullPrimitive[],
     public property?: PropertyShape,
     public subject?: QueryShapeSet<any> | QueryShape<any>,
     items?,
   ) {
+    super(property,subject);
     this.contents = new CoreSet(items);
   }
 
@@ -1105,7 +1131,7 @@ export class QueryPrimitiveSet<P = any> {
 
   //TODO: see if we can merge these methods of QueryString and QueryPrimitiveSet and soon other things like QueryNumber
   // so that they're only defined once
-  equals(other: P) {
+  equals(other) {
     return new Evaluation(this, WhereMethods.EQUALS, [other]);
   }
 
@@ -1135,7 +1161,7 @@ export class QueryPrimitiveSet<P = any> {
 
   //countable, resultKey?: string
   size(): SetSize<this> {
-    return new SetSize(this);
+    return new SetSize(this as QueryPrimitiveSet);
     //countable, resultKey
   }
 }

@@ -5,7 +5,7 @@ import {
 } from '../utils/LinkedQuery.js';
 import { Shape } from '../shapes/Shape.js';
 import { Node } from '../models';
-import { LinkedUpdateQuery,UpdatePartial,WithId } from '../utils/queries/LinkedUpdateQuery';
+import { LinkedUpdateQuery,UpdatePartial,AddId } from '../utils/queries/LinkedUpdateQuery';
 
 export interface IStorageController {
 
@@ -21,7 +21,7 @@ export interface IStorageController {
     U extends UpdatePartial<ShapeType>,
   >(
     query:LinkedUpdateQuery<ShapeType,U>
-  ): Promise<WithId<U>>;
+  ): Promise<AddId<U>>;
 }
 
 

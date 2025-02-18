@@ -20,7 +20,7 @@ import {
 } from './LinkedQuery.js';
 import { LinkedDataRequest } from './TraceShape.js';
 import { IStorageController,staticImplements } from '../interfaces/IStorageController.js';
-import { LinkedUpdateQuery,UpdatePartial,WithId } from './queries/LinkedUpdateQuery';
+import { LinkedUpdateQuery,UpdatePartial,AddId } from './queries/LinkedUpdateQuery';
 
 @staticImplements<IStorageController>() /* this class implements this interface with static methods */
 export abstract class LinkedStorage {
@@ -389,7 +389,7 @@ export abstract class LinkedStorage {
   static updateQuery<
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
-  >(query:LinkedUpdateQuery<ShapeType,U>):Promise<WithId<U>> {
+  >(query:LinkedUpdateQuery<ShapeType,U>):Promise<AddId<U>> {
     let quadStore: IQuadStore = this.getStoreForShapeClass(query.shapeClass);
     let queryObject = query.getQueryObject();
     return quadStore.updateQuery(queryObject);

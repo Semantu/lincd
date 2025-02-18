@@ -9,22 +9,142 @@ export type Prettify<T> = T extends infer R
     [K in keyof R]: R[K];
   }
   : never;
+type BoolIsObj = {}[]  extends Object ? true : false;
+type StrIsObj = {}[] extends null ? 'yes' : false;
+type StrIsObj2 = {}[] extends String ? true : false;
+type ArrayIsObj2 = {}[] extends Array<any> ? true : false;
+type ArrayIsObj3s = { } extends Number ? true : false;
+type ArrayIsObj3d = { } extends Date ? true : false;
+type ArrayIsObj3 = {} extends undefined ? true : false;
+type ArrayIsObj4 = {} extends null ? true : false;
+type ArrayIsObj5 = null extends null ? true : false;
+type ArrayIsObj6 = undefined extends null ? true : false;
+type ArrayIsObj56 = undefined extends Array<any> ? true : false;
+type ArrayIsObj56a = null extends Array<any> ? true : false;
+type ArrayIsObj56b = "asdf" extends Array<any> ? true : false;
+type ArrayIsObj56bc = 4 extends Array<any> ? true : false;
 
-export type WithId<U> = Prettify<{
-  [K in keyof U]: U[K] extends Array<infer T> ? Array<WithId<T>> :
-    U[K] extends String ? U[K] :
-      U[K] extends Number ? U[K] :
-        U[K] extends Boolean ? U[K] :
-          WithId<U[K]>
-} & {id:string}>;
+/**
+ * {
+ *     hobby: string;
+ *     friends: {
+ *         name: string;
+ *         friends: ({
+ *             name: string;
+ *             friends: {
+ *                 name: string;
+ *             }[];
+ *             id?: undefined;
+ *         } | {
+ *             id: string;
+ *             name?: undefined;
+ *             friends?: undefined;
+ *         } | {
+ *             name: string;
+ *             friends?: undefined;
+ *             id?: undefined;
+ *         })[];
+ *     }[];
+ * }
+ */
+//TODO: 1) is there another way to exclude everything except plain objects {}?
+//Note: I was not able to prettify this (getting rid of "AddId") without losing information of deeply nested properties.
+/**
+ * Adds an id property to the object.
+ */
+// export type AddId<U> = U;
 
+/**
+ * Recursively adds an id property to all objects in the object.
+ * Also makes all keys optional.
+ */
+type _AddId<U> = U extends string | number | boolean | Date | null | undefined
+  ? U
+  : U extends Array<infer T>
+    ? Array<_AddId<T>>
+    : WithId<U>;
+
+type WithId<U> = {
+  [K in keyof U]-?: _AddId<U[K]>; // Make all fields required
+} & { id: string };
+
+type UnionToIntersection<U> = (
+  U extends any ? (k: U) => void : never
+  ) extends (k: infer I) => void
+  ? I
+  : never;
+
+type CombineTypes<T> = {
+  [K in keyof UnionToIntersection<T>]: T extends { [P in K]?: infer V }
+    ? _AddId<V>
+    : never;
+};
+
+// Recursive transformation with required fields
+type RecursiveTransform<T> = T extends { friends: infer F }
+  ? {
+  [K in keyof T]-?: K extends "friends"
+    ? RecursiveTransform<F>
+    : _AddId<T[K]>;
+} & { id: string }
+  : T extends Array<infer U>
+    ? Array<RecursiveTransform<U>>
+    : _AddId<T>;
+
+export type AddId<T> = Prettify<RecursiveTransform<T>>;
+// export type AddId<T> = Prettify<_AddId<T>>;
+// type _AddId<T> = T extends Array<infer U>
+//   ? Array<AddId<U>>
+//   : T extends Record<string, any> // Record checks for plain objects, hence we exclude dates and other objects that extend Object
+//     ? WithId<T>
+//     : T;
+//
+//
+// /**
+//  * Makes all keys optional and adds an id property.
+//  */
+// type WithId<T> = {
+//   [K in keyof T]-?: AddId<T[K]>; // Recursively apply AddId to all properties
+// } & { id: string };
+
+
+// export type AddId<U> = Prettify<U extends String ? U :
+//     U extends Number ? U :
+//       U extends Date ? U :
+//        U extends Boolean ? U :
+//        U extends null ? U :
+//        U extends undefined ? U :
+//          U extends Array<infer T> ? Array<AddId<CombineTypes<T>>> : WithId<U>>;
+//
+//
+// type WithId<U> = {[K in keyof U]: AddId<U[K]>} & {id:string};
+//
+// type UnionToIntersection<U> =
+//   (U extends any ? (k: U) => void : never) extends
+//     ((k: infer I) => void) ? I : never;
+//
+//
+// type CombineTypes<T> = {
+//   [K in keyof UnionToIntersection<T>]: T extends { [P in K]?: infer V }
+//     ? AddId<V>
+//     : never;
+// };
+// type CombineTypes<T> = Partial<{
+//   [K in keyof UnionToIntersection<T>]: T extends { [P in K]?: infer V } ? V : never;
+// }>;
+
+// type Prettify<T> = { [K in keyof T]: T[K] };
+
+// type RemoveUndefinedKeys<T> = {
+//   [K in keyof T as T[K] extends undefined ? never : K]: T[K];
+// };
 
 // type UpdatePartial<Shape> = WithoutFunctions<Shape>;
 export type UpdatePartial<Shape> = Partial<Omit<{
   // type UpdatePartial<Shape> = Partial<{
   // [P in keyof WithoutFunctions<Shape>]: ShapePropertyToUpdatePartial<WithoutFunctions<Shape>[P]>
   // [P in keyof WithoutFunctions<Shape>]: WithoutFunctions<Shape>[P]
-  [P in KeysWithoutFunctions<Shape>]: ShapePropertyToUpdatePartial<Shape[P]>
+  [P in KeysWithoutFunctions<Shape>]: ShapePropValueToUpdatePartial<Shape[P]>
 },'node'|'nodeShape'|'namedNode'|'targetClass'>>;
 // type AvailableUpdateKeys<Shape> = Omit<KeysWithoutFunctions<Shape>,'nodeShape'|'node'|'namedNode'>
 type KeysWithoutFunctions<T> = {
@@ -32,7 +152,7 @@ type KeysWithoutFunctions<T> = {
 }[keyof T];
 
 // type ShapePropertyToUpdatePartial<ShapeProperty> = ShapeProperty;
-type ShapePropertyToUpdatePartial<ShapeProperty> = ShapeProperty extends Shape ? UpdatePartial<ShapeProperty> :
+type ShapePropValueToUpdatePartial<ShapeProperty> = ShapeProperty extends Shape ? UpdatePartial<ShapeProperty> :
   ShapeProperty extends ShapeValuesSet<infer SSType> ? UpdatePartial<SSType>[] : ShapeProperty;
 
 export type UpdateQuery<ResponseType=null> = {
@@ -144,7 +264,7 @@ export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<S
     }
     throw new Error(`Unsupported update value type: ${typeof value}`);
   }
-  getQueryObject():UpdateQuery<WithId<U>> {
+  getQueryObject():UpdateQuery<AddId<U>> {
     return {
       type:'update',
       id:this.id,
