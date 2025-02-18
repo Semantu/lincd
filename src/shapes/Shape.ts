@@ -266,18 +266,60 @@ export abstract class Shape implements IShape {
   static select<
     ShapeType extends Shape,
     S = unknown,
-    // ResultType =
-    //   GetQueryResponseType<LinkedQuery<ShapeType, S>>,
     ResultType = QueryResponseToResultType<
       GetQueryResponseType<LinkedQuery<ShapeType, S>>,
       ShapeType
     >[],
   >(
     this: {new (node: Node): ShapeType; targetClass: any},
-    // this: typeof Shape,
+    selectFn: QueryBuildFn<ShapeType, S>,
+  ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      ShapeType
+    >,
+  >(
+    this: {new (node: Node): ShapeType; targetClass: any},
+    subjects?: ShapeType ,
+    selectFn?: QueryBuildFn<ShapeType, S>,
+  ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      ShapeType
+    >[],
+  >(
+    this: {new (node: Node): ShapeType; targetClass: any},
+    subjects?: ICoreIterable<ShapeType>,
+    selectFn?: QueryBuildFn<ShapeType, S>,
+  ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      ShapeType
+    >[],
+  >(
+    this: {new (node: Node): ShapeType; targetClass: any},
+    targetOrSelectFn: ShapeType | QueryBuildFn<ShapeType, S>,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType> {
-    const query = new LinkedQuery<ShapeType, S>(this as any, selectFn);
+    let _selectFn;
+    let subject;
+    if(targetOrSelectFn instanceof Shape){
+      _selectFn = selectFn;
+      subject = targetOrSelectFn;
+    } else {
+      _selectFn = targetOrSelectFn;
+    }
+
+    const query = new LinkedQuery<ShapeType, S>(this as any, _selectFn,subject);
     let p = new Promise<ResultType>((resolve, reject) => {
       nextTick(() => {
         StorageHelper.query(query)

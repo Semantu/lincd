@@ -148,204 +148,210 @@ LinkedStorage.setQuadsLoaded(quads);
 store.addMultiple(quads);
 
 describe('query tests', () => {
-//   test('can select a literal property of all instances', async () => {
-//     //  x:LinkedQuery<Person, QueryString<Person, "name">>
-//     let names = await Person.select((p) => {
-//       let res = p.name;
-//       return res;
-//     });
-//     // let names = resolveLocal(x);
-//     /**
-//      * Expected result:
-//      * [{
-//      *   "id:"..."
-//      *   "shape": a Person
-//      *   "name:"Semmy"
-//      * },{
-//      *   "name":"Moa",
-//      * },... ]
-//      */
-//
-//     expect(Array.isArray(names)).toBe(true);
-//     expect(names.length).toBe(4);
-//     expect(typeof names[0] === 'object').toBe(true);
-//     expect(names[0].hasOwnProperty('name')).toBe(true);
-//     expect(names[0].name).toBe('Semmy');
-//   });
-//
-//   test('can select an object property of all instances', async () => {
-//     //  x:LinkedQuery<Person, QueryString<Person, "name">>
-//     // QueryShapeSet<Person, Person, "friends"> & ToQueryShapeSetValue<QueryShapeSet<Person, Person, "friends">, Person, "friends">
-//     //Needs to become:
-//
-//     // -> QResult<Person, {friends: QResult<Person, {}>[]}>[]
-//
-//     //From person the property friends is requested.
-//     //The results is a shapeset of persons, with source Person
-//     //S / ShapeType: Person
-//     //Source:Person
-//     //Property: "friends"
-//
-//     //Shapeset turns into QResult<Person,{friends:QResult<Person,{}>[]}> ... thats just the shapeset
-//     //then
-//
-//     let personFriends = await Person.select((p) => {
-//       return p.friends;
-//     });
-//     /**
-//      * Expected result:
-//      * [{
-//      *   "id:"..."
-//      *   "shape": a Person
-//      *   "friends:[{
-//      *      "id"...,
-//      *      "shape": a Person
-//      *    },...]
-//      * },... ]
-//      */
-//
-//     let firstResult = personFriends[0];
-//     expect(Array.isArray(personFriends)).toBe(true);
-//     expect(personFriends.length).toBe(4);
-//     expect(typeof personFriends[0] === 'object').toBe(true);
-//     expect(firstResult.hasOwnProperty('id')).toBe(true);
-//     expect(firstResult.id).toBe(p1.uri);
-//     expect(firstResult.friends.length).toBe(2);
-//     expect(firstResult.friends[0].id).toBe(p2.uri);
-//     expect(firstResult.friends[1].id).toBe(p3.uri);
-//   });
-//
-//   test('can select a date', async () => {
-//     let birthDates = await Person.select((p) => {
-//       return [p.birthDate, p.name];
-//     });
-//
-//     let firstResult = birthDates[0];
-//     expect(Array.isArray(birthDates)).toBe(true);
-//     expect(birthDates.length).toBe(4);
-//     expect(typeof firstResult.birthDate === 'object').toBe(true);
-//     expect(firstResult.birthDate.toString()).toBe(p1.birthDate.toString());
-//   });
-//
-//   test('can select sub properties of a first property that returns a set', async () => {
-//     let namesOfFriends = await Person.select((p) => {
-//       //  QueryString<QueryShapeSet<Person, Person, "friends">, "name">
-//       //step 1) --> QResult<QueryShapeSet<Person, Person, "friends">, {name: string}>[][]
-//       //step 2) --> QResult<Person, {friends: QResult<Person, {name: string}>}>[][]
-//       //--> QResult<Person, {friends: QResult<Person, {name:string}>}>[]
-//
-//       //QueryString<QueryShapeSet<Person, Person, "friends">, "name">
-//       //Source : QueryShapeSet<Person, Person, "friends">
-//       //Property: "name"
-//
-//       // QueryShapeSet<Person, Person, "friends">
-//       //  ShapeType : Person
-//       //  Source: Person
-//       //  Property: "friends
-//       // in other words. Person.friends is a set of persons
-//       //which needs to be converted to QResult<Person (Source), friends: is a QResult<Person (ShapeType),{name:string}> array
-//
-//       let res = p.friends.name;
-//       return res;
-//     });
-//     let first = namesOfFriends[0];
-//     expect(Array.isArray(namesOfFriends)).toBe(true);
-//     expect(namesOfFriends.length).toBe(4);
-//     expect(first.id).toBe(p1.uri);
-//     expect(first.friends.length).toBe(2);
-//     expect(first.friends[0].id).toBe(p2.uri);
-//     expect(first.friends[0].name).toBe('Moa');
-//     expect(first.friends[0]['hobby']).toBeUndefined();
-//   });
-//
-//   test('can select a nested set of shapes', async () => {
-//     // QResult<Person, {friends: QResult<Person, {friends: QResult<Person,{}>}>[]}>[]
-//     let friendsOfFriends = await Person.select((p) => {
-//       return p.friends.friends;
-//     });
-//
-//     expect(Array.isArray(friendsOfFriends)).toBe(true);
-//     let first = friendsOfFriends[0];
-//     expect(friendsOfFriends.length).toBe(4);
-//     expect(first.friends.length).toBe(2);
-//     //p1 (first) is friends with p2 and p3. And p2 (first.friends[0]) is friends with p3 and p4
-//     expect(first.friends[0].friends.some((f) => f.id == p3.uri)).toBe(true);
-//     expect(first.friends[0].friends.some((f) => f.id == p4.uri)).toBe(true);
-//     expect(first.friends[1].friends.length).toBe(0);
-//     expect(friendsOfFriends[3].friends.length).toBe(0);
-//   });
-//   test('can select multiple property paths', async () => {
-//     //{name: string} & {id: string, shape: Person} & {friends: QResult<Person, {}>[]})[]
-//     //({id: string, shape: Person} & string)[]
-//     let result = await Person.select((p) => {
-//       let res = [p.name, p.friends, p.bestFriend.name];
-//       return res;
-//     });
-//
-//     //expected result:
-//     /**
-//      * [
-//      * {
-//      * "id": "p1",
-//      * "name": "Semmy",
-//      * "friends": [{id: "p2"}, {id: "p3"}]
-//      * },
-//      * ...
-//      * ]
-//      */
-//
-//     expect(Array.isArray(result)).toBe(true);
-//     expect(result.length).toBe(4);
-//
-//     //let first: {name: string} & {id: string, shape: Person} & {friends: true} & {bestFriend: QResult<Person, {name: string}>}
-//     let first = result[0];
-//
-//     expect(first.name).toBe('Semmy');
-//     expect(Array.isArray(first.friends)).toBe(true);
-//     expect(first.friends.length).toBe(2);
-//     expect(first.friends.some((f) => f.id === p2.uri)).toBe(true);
-//     expect(first.friends.some((f) => f.id === p4.uri)).toBe(false);
-//   });
-//
-//   test('can select property of single shape value', async () => {
-//     //(
-//     // QResult<Person, {bestFriend: QResult<Person, {name: string}>}> |
-//     // QResult<Shape, {}> |
-//     // QResult<...>[]
-//     // )[]
-//
-//     //QResult<Person, {bestFriend: QResult<Person>}>[]
-//     //QResult<Person, {bestFriend: QResult<Person, {name: string}>}>
-//     // |QResult<Shape, {}> |QResult<...>[])[]QResult<Person, {bestFriend: QResult<Person>}>[]
-//     let result = await Person.select((p) => {
-//       // QShape<Person, QShape<Person, null, "">, "bestFriend">
-//       let r = p.bestFriend.name;
-//       // let r3 = [p.bestFriend];
-//       // let r2 = [p.friends.friends.name];
-//       return r;
-//     });
-//
-//     //expected result:
-//     /**
-//      * [
-//      * {
-//      * "id": "p1",
-//      * "bestFriend": {
-//      *   "id": "p3",
-//      *   "name": "Jinx"
-//      * }
-//      * ...
-//      * ]
-//      */
-//
-//     expect(Array.isArray(result)).toBe(true);
-//     expect(result.length).toBe(4);
-//
-//     let second = result[1];
-//
-//     expect(second.bestFriend.id).toBe(p3.uri);
-//   });
-//
+  test('can select a literal property of all instances', async () => {
+    //  x:LinkedQuery<Person, QueryString<Person, "name">>
+    let names = await Person.select((p) => {
+      let res = p.name;
+      return res;
+    });
+    // let names = resolveLocal(x);
+    /**
+     * Expected result:
+     * [{
+     *   "id:"..."
+     *   "shape": a Person
+     *   "name:"Semmy"
+     * },{
+     *   "name":"Moa",
+     * },... ]
+     */
+
+    expect(Array.isArray(names)).toBe(true);
+    expect(names.length).toBe(4);
+    expect(typeof names[0] === 'object').toBe(true);
+    expect(names[0].hasOwnProperty('name')).toBe(true);
+    expect(names[0].name).toBe('Semmy');
+  });
+
+  test('can select an object property of all instances', async () => {
+    //  x:LinkedQuery<Person, QueryString<Person, "name">>
+    // QueryShapeSet<Person, Person, "friends"> & ToQueryShapeSetValue<QueryShapeSet<Person, Person, "friends">, Person, "friends">
+    //Needs to become:
+
+    // -> QResult<Person, {friends: QResult<Person, {}>[]}>[]
+
+    //From person the property friends is requested.
+    //The results is a shapeset of persons, with source Person
+    //S / ShapeType: Person
+    //Source:Person
+    //Property: "friends"
+
+    //Shapeset turns into QResult<Person,{friends:QResult<Person,{}>[]}> ... thats just the shapeset
+    //then
+
+    let personFriends = await Person.select((p) => {
+      return p.friends;
+    });
+    /**
+     * Expected result:
+     * [{
+     *   "id:"..."
+     *   "shape": a Person
+     *   "friends:[{
+     *      "id"...,
+     *      "shape": a Person
+     *    },...]
+     * },... ]
+     */
+
+    let firstResult = personFriends[0];
+    expect(Array.isArray(personFriends)).toBe(true);
+    expect(personFriends.length).toBe(4);
+    expect(typeof personFriends[0] === 'object').toBe(true);
+    expect(firstResult.hasOwnProperty('id')).toBe(true);
+    expect(firstResult.id).toBe(p1.uri);
+    expect(firstResult.friends.length).toBe(2);
+    expect(firstResult.friends[0].id).toBe(p2.uri);
+    expect(firstResult.friends[1].id).toBe(p3.uri);
+  });
+
+  test('can select a date', async () => {
+    let birthDates = await Person.select((p) => {
+      return [p.birthDate, p.name];
+    });
+
+    let firstResult = birthDates[0];
+    expect(Array.isArray(birthDates)).toBe(true);
+    expect(birthDates.length).toBe(4);
+    expect(typeof firstResult.birthDate === 'object').toBe(true);
+    expect(firstResult.birthDate.toString()).toBe(p1.birthDate.toString());
+  });
+
+  test('can select sub properties of a first property that returns a set', async () => {
+    let namesOfFriends = await Person.select((p) => {
+      //  QueryString<QueryShapeSet<Person, Person, "friends">, "name">
+      //step 1) --> QResult<QueryShapeSet<Person, Person, "friends">, {name: string}>[][]
+      //step 2) --> QResult<Person, {friends: QResult<Person, {name: string}>}>[][]
+      //--> QResult<Person, {friends: QResult<Person, {name:string}>}>[]
+
+      //QueryString<QueryShapeSet<Person, Person, "friends">, "name">
+      //Source : QueryShapeSet<Person, Person, "friends">
+      //Property: "name"
+
+      // QueryShapeSet<Person, Person, "friends">
+      //  ShapeType : Person
+      //  Source: Person
+      //  Property: "friends
+      // in other words. Person.friends is a set of persons
+      //which needs to be converted to QResult<Person (Source), friends: is a QResult<Person (ShapeType),{name:string}> array
+
+      let res = p.friends.name;
+      return res;
+    });
+    let first = namesOfFriends[0];
+    expect(Array.isArray(namesOfFriends)).toBe(true);
+    expect(namesOfFriends.length).toBe(4);
+    expect(first.id).toBe(p1.uri);
+    expect(first.friends.length).toBe(2);
+    expect(first.friends[0].id).toBe(p2.uri);
+    expect(first.friends[0].name).toBe('Moa');
+    expect(first.friends[0]['hobby']).toBeUndefined();
+  });
+
+  test('can select a nested set of shapes', async () => {
+    // QResult<Person, {friends: QResult<Person, {friends: QResult<Person,{}>}>[]}>[]
+    let friendsOfFriends = await Person.select((p) => {
+      return p.friends.friends;
+    });
+
+    expect(Array.isArray(friendsOfFriends)).toBe(true);
+    let first = friendsOfFriends[0];
+    expect(friendsOfFriends.length).toBe(4);
+    expect(first.friends.length).toBe(2);
+    //p1 (first) is friends with p2 and p3. And p2 (first.friends[0]) is friends with p3 and p4
+    expect(first.friends[0].friends.some((f) => f.id == p3.uri)).toBe(true);
+    expect(first.friends[0].friends.some((f) => f.id == p4.uri)).toBe(true);
+    expect(first.friends[1].friends.length).toBe(0);
+    expect(friendsOfFriends[3].friends.length).toBe(0);
+  });
+  test('can select multiple property paths', async () => {
+    //{name: string} & {id: string, shape: Person} & {friends: QResult<Person, {}>[]})[]
+    //({id: string, shape: Person} & string)[]
+    let result = await Person.select((p) => {
+      let res = [p.name, p.friends, p.bestFriend.name];
+      return res;
+    });
+
+    //expected result:
+    /**
+     * [
+     * {
+     * "id": "p1",
+     * "name": "Semmy",
+     * "friends": [{id: "p2"}, {id: "p3"}]
+     * },
+     * ...
+     * ]
+     */
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(4);
+
+    //let first: {name: string} & {id: string, shape: Person} & {friends: true} & {bestFriend: QResult<Person, {name: string}>}
+    let first = result[0];
+
+    expect(first.name).toBe('Semmy');
+    expect(Array.isArray(first.friends)).toBe(true);
+    expect(first.friends.length).toBe(2);
+    expect(first.friends.some((f) => f.id === p2.uri)).toBe(true);
+    expect(first.friends.some((f) => f.id === p4.uri)).toBe(false);
+  });
+
+  test('can select property of single shape value', async () => {
+    //(
+    // QResult<Person, {bestFriend: QResult<Person, {name: string}>}> |
+    // QResult<Shape, {}> |
+    // QResult<...>[]
+    // )[]
+
+    //QResult<Person, {bestFriend: QResult<Person>}>[]
+    //QResult<Person, {bestFriend: QResult<Person, {name: string}>}>
+    // |QResult<Shape, {}> |QResult<...>[])[]QResult<Person, {bestFriend: QResult<Person>}>[]
+    let result = await Person.select((p) => {
+      // QShape<Person, QShape<Person, null, "">, "bestFriend">
+      let r = p.bestFriend.name;
+      // let r3 = [p.bestFriend];
+      // let r2 = [p.friends.friends.name];
+      return r;
+    });
+
+    //expected result:
+    /**
+     * [
+     * {
+     * "id": "p1",
+     * "bestFriend": {
+     *   "id": "p3",
+     *   "name": "Jinx"
+     * }
+     * ...
+     * ]
+     */
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(4);
+
+    let second = result[1];
+
+    expect(second.bestFriend.id).toBe(p3.uri);
+  });
+
+  test('can select properties of a specific subject', async () => {
+    let qRes = await Person.select(p1,p => p.name)
+    expect(qRes.name).toBe(p1.name)
+    expect(qRes.id).toBe(p1.uri)
+  })
+
 //   test('can select 3 level deep nested paths', async () => {
 //     let level3Friends = await Person.select((p) => {
 //       return p.friends.friends.friends;
@@ -1233,36 +1239,36 @@ describe('query tests', () => {
 //
 // })
 test('update query 1 - with simple object argument', async () => {
-  //
-  // const originalHobby = p1.hobby || 'Dancing';
-  // const res = await Person.update(p1,{
-  //   hobby: 'Gaming',
-  // });
-  //
-  // //check that the result object is correct
-  // expect(res.id).toBeDefined()
-  // expect(typeof res.id).toBe('string')
-  // expect(res.id).toEqual(p1.uri)
-  // expect(res.hobby).toBeDefined()
-  // expect(res['name']).toBeUndefined();
-  //
-  // //check that it's indeed changed in the database
-  // let qRes = await Person.select((p) => [p.hobby,p.name]).where(p => p.name.equals('Semmy'));
-  // expect(qRes[0]).toBeDefined();
-  // // expect((qRes[0] as any).name).toBe(undefined);
-  // expect(qRes[0].id).toBe(p1.uri);
-  // expect(qRes[0].hobby).toBe('Gaming');
-  //
-  // //now change back again
-  // let updateRes2 = await Person.update(p1,{
-  //   hobby: originalHobby
-  // });
-  // expect(updateRes2.hobby).toBe(originalHobby);
-  //
-  // //and check result in db
-  // let qRes2 = await Person.select((p) => [p.hobby,p.name]).where(p => p.name.equals('Semmy'));
-  // expect(qRes2[0]).toBeDefined();
-  // expect(qRes2[0].hobby).toBe(originalHobby);
+
+  const originalHobby = p1.hobby || 'Dancing';
+  const res = await Person.update(p1,{
+    hobby: 'Gaming',
+  });
+
+  //check that the result object is correct
+  expect(res.id).toBeDefined()
+  expect(typeof res.id).toBe('string')
+  expect(res.id).toEqual(p1.uri)
+  expect(res.hobby).toBeDefined()
+  expect(res['name']).toBeUndefined();
+
+  //check that it's indeed changed in the database
+  let qRes = await Person.select((p) => [p.hobby,p.name]).where(p => p.name.equals('Semmy'));
+  expect(qRes[0]).toBeDefined();
+  // expect((qRes[0] as any).name).toBe(undefined);
+  expect(qRes[0].id).toBe(p1.uri);
+  expect(qRes[0].hobby).toBe('Gaming');
+
+  //now change back again
+  let updateRes2 = await Person.update(p1,{
+    hobby: originalHobby
+  });
+  expect(updateRes2.hobby).toBe(originalHobby);
+
+  //and check result in db
+  let qRes2 = await Person.select((p) => [p.hobby,p.name]).where(p => p.name.equals('Semmy'));
+  expect(qRes2[0]).toBeDefined();
+  expect(qRes2[0].hobby).toBe(originalHobby);
 });
 
   test('update query 2 - overwrite a set', async () => {
@@ -1293,6 +1299,35 @@ test('update query 1 - with simple object argument', async () => {
     expect(qRes2[0].friends[0].name).toBe('NewFriend');
 
   });
+
+  // test('update query 3 - unset a single value property', async () => {
+  //   const originalHobby = p1.hobby;
+  //
+  //   const res = await Person.update(p1, {
+  //     hobby: undefined
+  //   });
+  //
+  //   // Check result object
+  //   expect(res.id).toBeDefined();
+  //   expect(res.id).toEqual(p1.uri);
+  //   expect(res.hobby).toBeUndefined();
+  //
+  //   // Check database
+  //   let qRes = await Person.select(p1,p => p.hobby)
+  //     // .where((p) => p.uri.equals(p1.uri));
+  //   expect(qRes[0]).toBeDefined();
+  //   expect(qRes[0].hobby).toBeUndefined();
+  //
+  //   // Restore original value
+  //   await Person.update(p1, { hobby: originalHobby });
+  //
+  //   let qRes2 = await Person.select(p1, p => p.hobby)
+  //     // .where((p) => p.uri.equals(p1.uri));
+  //   expect(qRes[0]).toBeDefined();
+  //   expect(qRes[0].hobby).toBeUndefined();
+  // });
+
+
 
 // test('update query with object argument', async () => {
 //   const res = await Person.update(p1,{

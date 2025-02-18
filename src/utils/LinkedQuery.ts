@@ -240,6 +240,7 @@ export type QueryResponseToResultType<
   T,
   QShapeType extends Shape = null,
   SourceOverwrite = null,
+
   // PreserveArray = false,
 > = T extends QueryBuilderObject
   ? GetQueryObjectResultType<T, {}, SourceOverwrite>
