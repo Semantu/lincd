@@ -1,6 +1,5 @@
 import {Buffer} from 'buffer';
 import React from 'react';
-import {act} from 'react-dom/test-utils';
 import {linkedComponent, linkedSetComponent, linkedShape} from '../package.js';
 import {Shape} from '../shapes/Shape.js';
 import {it, afterEach, beforeEach, describe, expect} from '@jest/globals';

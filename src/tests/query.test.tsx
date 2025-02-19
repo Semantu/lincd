@@ -10,7 +10,6 @@ import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {setDefaultPageLimit} from '../utils/Package.js';
-import {act} from 'react';
 import {xsd} from '../ontologies/xsd.js';
 import {TestNode} from '../utils/TraceShape.js';
 import { literalProperty,objectProperty } from '../shapes/SHACL';
