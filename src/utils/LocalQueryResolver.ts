@@ -41,7 +41,7 @@ import { rdf } from '../ontologies/rdf';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
-export function updateLocal<ResultType>(query: UpdateQuery<ResultType>):ResultType {
+export async function updateLocal<ResultType>(query: UpdateQuery<ResultType>):Promise<ResultType> {
   // console.log(query);
   if (query.type === 'update')
   {
@@ -52,12 +52,12 @@ export function updateLocal<ResultType>(query: UpdateQuery<ResultType>):ResultTy
     }
     // let shapeClass = getShapeClass(query.shape.namedNode);
     // let shape = new (shapeClass as any)(subject);
-    let plainResults = applyFieldUpdates(query.updates.fields,subject);
+    let plainResults = await applyFieldUpdates(query.updates.fields,subject);
     plainResults['id'] = query.id;
     return plainResults as ResultType;
   }
 }
-function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode) {
+async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode) {
   let plainValues = {};
   for (let field of fields)
   {
@@ -82,11 +82,11 @@ function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode)
 
       let values = [];
       let plainValueArr = [];
-      (field.val as SinglePropertyUpdateValue[]).forEach(singleVal => {
-        let res = convertValue(propShape,singleVal);
+      for(let singleVal of (field.val as SinglePropertyUpdateValue[])) {
+        let res = await convertValue(propShape,singleVal);
         plainValueArr.push(res.plainValue);
         values.push(res.value);
-      });
+      }
       if(values.every(v => typeof v === 'undefined')) {
         plainValues[propShape.label] = undefined;
         subject.unsetAll(pathProperty)
@@ -107,7 +107,7 @@ function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode)
       if(propShape.minCount > 1) {
         throw new Error('Multiple values required for property: ' + propShape.label);
       }
-      let res = convertValue(propShape,(field as UpdateNodePropertyValue).val);
+      let res = await convertValue(propShape,(field as UpdateNodePropertyValue).val);
 
       if(typeof res.value === 'undefined') {
         subject.unsetAll(pathProperty);
@@ -126,11 +126,11 @@ function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode)
 
   return plainValues;
 }
-function convertValue(propShape: PropertyShape, value: any):{value:(Literal|NamedNode),plainValue:any} {
+async function convertValue(propShape: PropertyShape, value: any):Promise<{value:(Literal|NamedNode),plainValue:any}> {
   if(propShape.nodeKind === shacl.Literal) {
     return convertLiteral(propShape,value);
   } else if(propShape.nodeKind === shacl.BlankNodeOrIRI || propShape.nodeKind === shacl.BlankNode || propShape.nodeKind === shacl.IRI) {
-    return convertNamedNode(propShape,value);
+    return await convertNamedNode(propShape,value);
   } else {
     //we currently don't support other node kinds, like shacl.BlankNodeOrLiteral and shacl.BlankNodeOrIRI
     //so in this case, we allow all types of values,
@@ -138,7 +138,7 @@ function convertValue(propShape: PropertyShape, value: any):{value:(Literal|Name
     if(propShape.datatype) {
       return convertLiteral(propShape,value);
     } else if(propShape.valueShape) {
-      return convertNamedNode(propShape,value);
+      return await convertNamedNode(propShape,value);
     }
     //these are clearly meant to be literals
     if(typeof value === 'number' || typeof value === 'boolean' || value instanceof Date || typeof value === 'string') {
@@ -146,31 +146,31 @@ function convertValue(propShape: PropertyShape, value: any):{value:(Literal|Name
     }
     //arrays mean it's an array of field+value objects
     else if(Array.isArray(value)) {
-      return convertNamedNode(propShape,value as any);
+      return await convertNamedNode(propShape,value as any);
     }
     throw new Error('Unknown value type for property: ' + propShape.label);
   }
 }
-function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|NodeReferenceValue):{
+function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|NodeReferenceValue):Promise<{
   value:NamedNode,
   plainValue:any
-}
+}>
 {
   //value is expected to be an array of fields, or an object with an id for a direct node reference
   if ((value as NodeReferenceValue).id)
   {
-    return {
+    return Promise.resolve({
       value:NamedNode.getOrCreate((value as NodeReferenceValue).id),
       //return an object only with the ID (a NodeReferenceValue should always only have an id field)
       plainValue:{id:(value as NodeReferenceValue).id}
-    };
+    });
   }
   else
   {
     return convertNodeDescription(propShape,value as NodeDescriptionValue);
   }
 }
-function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue):{value:NamedNode,plainValue:any} {
+async function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue):Promise<{value:NamedNode,plainValue:any}> {
   if(!value.shape || !value.fields) {
     throw new Error('Expected a node description for property: ' + propShape.label);
   }
@@ -179,8 +179,7 @@ function convertNodeDescription(propShape: PropertyShape, value: NodeDescription
   //and it should have no further fields
 
   let node = NamedNode.create();
-  let plainResults = applyFieldUpdates(value.fields,node);
-  plainResults['id'] = node.uri;
+  let plainResults = await applyFieldUpdates(value.fields,node);
 
   //if this property comes with a restriction that all values need to be of a certain shape
   if(propShape.valueShape) {
@@ -199,6 +198,8 @@ function convertNodeDescription(propShape: PropertyShape, value: NodeDescription
     }
   }
 
+  await node.save();
+  plainResults['id'] = node.uri;
 
   return {
     value:node,

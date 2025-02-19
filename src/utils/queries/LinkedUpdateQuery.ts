@@ -140,10 +140,8 @@ export type AddId<T> = Prettify<RecursiveTransform<T>>;
 // };
 
 // type UpdatePartial<Shape> = WithoutFunctions<Shape>;
-export type UpdatePartial<Shape> = Partial<Omit<{
-  // type UpdatePartial<Shape> = Partial<{
-  // [P in keyof WithoutFunctions<Shape>]: ShapePropertyToUpdatePartial<WithoutFunctions<Shape>[P]>
-  // [P in keyof WithoutFunctions<Shape>]: WithoutFunctions<Shape>[P]
+export type UpdatePartial<Shape> = UpdateNodeDescription<Shape> | NodeReferenceValue;
+type UpdateNodeDescription<Shape> = Partial<Omit<{
   [P in KeysWithoutFunctions<Shape>]: ShapePropValueToUpdatePartial<Shape[P]>
 },'node'|'nodeShape'|'namedNode'|'targetClass'>>;
 // type AvailableUpdateKeys<Shape> = Omit<KeysWithoutFunctions<Shape>,'nodeShape'|'node'|'namedNode'>

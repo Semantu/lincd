@@ -262,7 +262,12 @@ export abstract class Shape implements IShape {
     return query;
   }
 
-  //Shape.select(selectFn:(p:QueryShape)=>QueryValue[])
+  /**
+   * Select properties of instances of this shape.
+   * Returns a single result if a single subject is provided, or an array of results if no subjects are provided.
+   * The select function (first or second argument) receives a proxy of the shape that allows you to virtually access any property you want up to any level of depth.
+   * @param selectFn
+   */
   static select<
     ShapeType extends Shape,
     S = unknown,
@@ -273,6 +278,16 @@ export abstract class Shape implements IShape {
   >(
     this: {new (node: Node): ShapeType; targetClass: any},
     selectFn: QueryBuildFn<ShapeType, S>,
+  ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      ShapeType
+    >[],
+  >(
+    this: {new (node: Node): ShapeType; targetClass: any},
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
     ShapeType extends Shape,
@@ -307,7 +322,7 @@ export abstract class Shape implements IShape {
     >[],
   >(
     this: {new (node: Node): ShapeType; targetClass: any},
-    targetOrSelectFn: ShapeType | QueryBuildFn<ShapeType, S>,
+    targetOrSelectFn?: ShapeType | QueryBuildFn<ShapeType, S>,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType> {
     let _selectFn;
