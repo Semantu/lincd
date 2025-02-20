@@ -17,7 +17,7 @@ class Person extends Shape {
     shape: Person,
     required: true,
   })
-  get knows(): ShapeValuesSet {
+  get knows() {
     return this.getAllAs(knows, Person);
   }
 }

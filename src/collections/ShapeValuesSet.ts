@@ -13,8 +13,8 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
   constructor(
     private subject: NamedNode,
     private property: NamedNode,
-    private shapeClass: typeof Shape,
-    private allowSubShapes: boolean = false,
+    shapeClass: typeof Shape,
+    allowSubShapes: boolean = false,
   ) {
     //we have to construct the set empty because the native Set constructor will call 'this.add()', which wont work since subject & property are not set yet
     super();
@@ -72,10 +72,10 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
    * @param value the node to add
    */
   add(value: S): this {
-    if (!this.subject.has(this.property, value.node)) {
-      this.subject.set(this.property, value.node);
-      return super.add(value);
+    if(value && value.node && !this.subject.has(this.property,value.node)) {
+      this.subject.set(this.property,value.node);
     }
+    return super.add(value);
   }
 
   /**
@@ -85,7 +85,9 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
    * @param value the node to remove
    */
   delete(value: S): boolean {
-    this.subject.unset(this.property, value.node);
+    if(value && value.node) {
+      this.subject.unset(this.property, value.node);
+    }
     return super.delete(value);
   }
 

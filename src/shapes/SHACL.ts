@@ -13,7 +13,7 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {rdf} from '../ontologies/rdf.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ForwardReasoning} from '../utils/ForwardReasoning.js';
-import { addNodeShapeToShapeClass,getShapeOrSubShape } from '../utils/ShapeClass';
+import { addNodeShapeToShapeClass,getShapeClass,getShapeOrSubShape } from '../utils/ShapeClass';
 import { rdfs } from '../ontologies/rdfs';
 import { linkedPackage } from '../utils/Package';
 import { ShapeValuesSet } from '../collections/ShapeValuesSet';
@@ -406,6 +406,7 @@ export class SHACL_Shape extends Shape {
 //Note: this shape is linked in Module.ts to avoid cyclical dependencies
 export class NodeShape extends SHACL_Shape {
   static targetClass: NamedNode = shacl.NodeShape;
+  private static _instances: ShapeSet<NodeShape>;
 
   get targetNode(): NamedNode {
     return this.getOne(shacl.targetNode) as NamedNode;
@@ -423,18 +424,23 @@ export class NodeShape extends SHACL_Shape {
     this.overwrite(shacl.targetClass, value);
   }
 
-  static getShapesOf(node: Node) {
-    return this.getLocalInstances().filter((shape) => {
-      return shape.validateNode(node);
-    });
-  }
-
   addPropertyShape(property: PropertyShape) {
     this.set(shacl.property, property.namedNode);
   }
 
   getPropertyShapes(): ShapeSet<PropertyShape> {
     return PropertyShape.getSetOf(this.getAll(shacl.property));
+  }
+  getPropertyShape(label:string,checkSubShapes:boolean=true): PropertyShape {
+
+    //look at this nodeShape, but also the nodeshapes of the parent classes of the class that created this nodeshape
+    let shapeClass = getShapeClass(this.namedNode).prototype;
+    let res
+    while(!res && shapeClass) {
+      res = shapeClass.nodeShape.getPropertyShapes().find((shape) => shape.label === label);
+      shapeClass = checkSubShapes ? Object.getPrototypeOf(shapeClass) : null;
+    }
+    return res;
   }
 
   /**
@@ -454,6 +460,9 @@ export class NodeShape extends SHACL_Shape {
 
   validateNode(node: Node): boolean {
     return this._validateNode(node);
+  }
+  validateNodeByType(node: Node): boolean {
+    return node.has(rdf.type,this.targetClass);
   }
 
   protected _validateNode(
@@ -478,7 +487,7 @@ export class NodeShape extends SHACL_Shape {
         return false;
       }
     }
-    let propertyShapes = this.getPropertyShapes();
+    const propertyShapes = this.getPropertyShapes();
     if (propertyShapes.size > 0) {
       if (node instanceof Literal) {
         validated.set(node, false);
@@ -496,6 +505,23 @@ export class NodeShape extends SHACL_Shape {
     }
     // validated.set(node,true);
     return true;
+  }
+
+  /**
+   * Because (currently) all NodeShapes are initialized immediately upon initialisation
+   * We can cache the instances of NodeShapes to speed up frequent methods used in Storage
+   */
+  static get instances() {
+    if(!this._instances) {
+      this._instances = this.getLocalInstancesByType()
+    }
+    return this._instances;
+  }
+
+  static getShapesOf(node: Node) {
+    return this.getLocalInstances().filter((shape) => {
+      return shape.validateNode(node);
+    });
   }
 }
 
@@ -520,10 +546,7 @@ export class PropertyShape extends SHACL_Shape {
    */
   //@NOTE: If the name valueShape is an issue we could always rename `get nodeShape` to `get shaclShape` in Shape.ts
   get valueShape(): NodeShape {
-    return this.hasProperty(shacl.node)
-      ? NodeShape.getOf(this.getOne(shacl.node))
-      : null;
-  }
+    return this.hasProperty(shacl.node) ? new NodeShape(this.getOne(shacl.node)) : null;  }
 
   set valueShape(value: NodeShape) {
     this.overwrite(shacl.node, value.node);
@@ -624,7 +647,7 @@ export class PropertyShape extends SHACL_Shape {
    */
   getOntologyEntities(): NodeSet<NamedNode> {
     //start with values of those properties that have a NamedNode as value
-    let entities = new NodeSet<NamedNode>(
+    const entities = new NodeSet<NamedNode>(
       [this.class, this.path, this.datatype].filter((value) => value && true),
     );
     //this caused loops!
@@ -649,8 +672,8 @@ export class PropertyShape extends SHACL_Shape {
     validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
   ): boolean {
     //TODO: make property nodes support property paths beyond a single property
-    let property = this.path;
-    let values = node instanceof NamedNode ? node.getAll(property) : null;
+    const property = this.path;
+    const values = node instanceof NamedNode ? node.getAll(property) : null;
     if (this.class) {
       if (
         !values.every(
@@ -673,7 +696,7 @@ export class PropertyShape extends SHACL_Shape {
     }
     if (this.valueShape) {
       //every value should be a valid instance of this nodeShape
-      let nodeShape = this.valueShape;
+      const nodeShape = this.valueShape;
       if (
         !values.every((value) => {
           //nodes referring to each other or to themselves may cause loops here

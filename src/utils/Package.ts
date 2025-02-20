@@ -403,6 +403,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
       //and connect it back to the module
       shapeClass.set(lincdOntology.module,packageNode);
 
+      //TODO replace any remaining usages of the above with this newer more general method:
       if (constructor.shapeCallbacks)
       {
         constructor.shapeCallbacks.forEach((callback) => {

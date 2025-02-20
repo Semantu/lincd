@@ -51,7 +51,7 @@ export interface IQuadStore {
 
   getDefaultGraph?(): Graph;
 
-  removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
+  removeNodes(nodes: ICoreIterable<NamedNode>,quads?:QuadSet): Promise<any>;
 
   // query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
   //   GetQueryResponseType<LinkedQuery<ShapeType, ResponseType>>,

@@ -8,6 +8,7 @@ import {NodeSet} from './NodeSet.js';
 
 //TODO: test performance of QuadArray vs QuadSet and probably remove QuadArray
 export class QuadArray extends Array<Quad> {
+
   removeAll(alteration: boolean = false) {
     this.forEach((quad) => quad.remove(alteration));
   }
@@ -48,6 +49,10 @@ export class QuadArray extends Array<Quad> {
       res.add(quad.object);
     }
     return res;
+  }
+
+  map<S>(callbackfn: (value: Quad, index: number, array: Quad[]) => S): S[] {
+    return super.map(callbackfn);
   }
 
   getExplicit() {

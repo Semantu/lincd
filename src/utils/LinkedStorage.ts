@@ -21,6 +21,7 @@ import {
 import { LinkedDataRequest } from './TraceShape.js';
 import { IStorageController,staticImplements } from '../interfaces/IStorageController.js';
 import { LinkedUpdateQuery,UpdatePartial,AddId } from './queries/LinkedUpdateQuery';
+import { rdf } from '../ontologies/rdf';
 
 @staticImplements<IStorageController>() /* this class implements this interface with static methods */
 export abstract class LinkedStorage {
@@ -29,6 +30,7 @@ export abstract class LinkedStorage {
   private static graphToStore: CoreMap<Graph, IQuadStore> = new CoreMap();
   private static shapesToGraph: CoreMap<typeof Shape, Graph> = new CoreMap();
   private static nodeShapesToGraph: CoreMap<NamedNode, Graph> = new CoreMap();
+  private static graphToTargetClasses: CoreMap<Graph,NodeSet<NamedNode>> = new CoreMap();
   private static defaultStorageGraph: Graph;
   private static processingPromise: {
     promise: Promise<void>;
@@ -195,6 +197,16 @@ export abstract class LinkedStorage {
     shapeClasses.forEach((shapeClass) => {
       this.shapesToGraph.set(shapeClass, graph);
       if (shapeClass['shape']) {
+        if(!this.graphToTargetClasses.has(graph)) {
+          this.graphToTargetClasses.set(graph,new NodeSet());
+        }
+        this.graphToTargetClasses.get(graph).add(shapeClass['shape'].targetClass);
+        //we also add any shape class that extends this shape class
+        //For example, if storage is configured for Thing, then we want to also list all the shapes that extend Thing
+        //because the types of all those super shapes should be pointing towards the same graph
+        getSuperShapesClasses(shapeClass).forEach(subShape => {
+          this.graphToTargetClasses.get(graph).add(subShape['shape'].targetClass);
+        })
         this.nodeShapesToGraph.set(shapeClass['shape'].namedNode, graph);
       }
     });
@@ -269,14 +281,24 @@ export abstract class LinkedStorage {
     subject: NamedNode,
     checkShapes: boolean = true,
   ): Graph {
-    if (checkShapes) {
-      let subjectShapes = NodeShape.getShapesOf(subject);
-
-      //see if any of these shapes has a specific target graph
-      for (let shape of subjectShapes) {
-        if (this.nodeShapesToGraph.has(shape.namedNode)) {
-          //currently, the target graph of the very first shape that has a target graph is returned
-          return this.nodeShapesToGraph.get(shape.namedNode);
+    // if (checkShapes && (!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.nodeShapesToGraph.size > 0) {
+    //   const subjectShapes = NodeShape.getShapesOf(subject,true);
+    //
+    //   //see if any of these shapes has a specific target graph
+    //   for (const shape of subjectShapes) {
+    //     if (this.nodeShapesToGraph.has(shape.namedNode)) {
+    //       //currently, the target graph of the very first shape that has a target graph is returned
+    //       return this.nodeShapesToGraph.get(shape.namedNode);
+    //     }
+    //   }
+    // }
+    if(!subject.isTemporaryNode)
+    {
+      for (const [graph,targetClasses] of this.graphToTargetClasses)
+      {
+        if (subject.getAll(rdf.type).some(type => targetClasses.has(type as NamedNode)))
+        {
+          return graph;
         }
       }
     }
@@ -327,6 +349,12 @@ export abstract class LinkedStorage {
       IQuadStore,
       Shape[]
     >;
+  }
+
+  static getShapeToStoreMap(): CoreMap<typeof Shape, IQuadStore> {
+    return this.shapesToGraph.map(graph => {
+      return this.getStoreForGraph(graph);
+    }) as any;
   }
 
   static async setURIs(
@@ -780,11 +808,12 @@ export abstract class LinkedStorage {
   ) {
     //quads may have been removed since they have been created and emitted filter that out here
     let addMap, removeMap;
-    if (quadsCreated) {
+    if (quadsCreated && (quadsCreated.size || quadsCreated['length'])) {
       quadsCreated = quadsCreated.filter((q) => !q.isRemoved);
 
       //first see if any new quads need to move to the right graphs (note that this will possibly add "mimicked" quads (with the previous graph as their graph) to quadsRemoved)
       //true, signals that we want to remove the quads from quadsCreated if they get moved
+      //the new quads will be going through the event loop again and end up here again, but then they will not be removed from quadsCreated
       this.assignQuadsToGraph(quadsCreated, true);
       if (baseStoreOnSubject) {
         addMap = this.getStoreMapForNodes(quadsCreated.getSubjects());
@@ -793,12 +822,13 @@ export abstract class LinkedStorage {
         addMap = this.getTargetStoreMap(quadsCreated);
       }
     }
-    if (quadsRemoved) {
+    if (quadsRemoved && (quadsRemoved.size || quadsRemoved['length'])) {
+      //TODO: we may not need this baseStoreOnSubject anymore, the second call with "true" param is more accurate?
       if (baseStoreOnSubject) {
         removeMap = this.getStoreMapForNodes(quadsRemoved.getSubjects());
       } else {
         //default: get the right stores based on the graph of the quads
-        removeMap = this.getTargetStoreMap(quadsRemoved);
+        removeMap = this.getTargetStoreMap(quadsRemoved,true);
       }
     }
 
@@ -925,13 +955,20 @@ export abstract class LinkedStorage {
         return store.setURIs(nodeUriMap).then((uriUpdates) => {
           //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
           uriUpdates.forEach(([oldUri, newUri]) => {
-            let currentNode = NamedNode.getNamedNode(oldUri);
+            const currentNode = NamedNode.getNamedNode(oldUri);
+            const alreadyExistingNode = NamedNode.getNamedNode(newUri);
+            if(alreadyExistingNode) {
+              console.warn(`Node with URI ${newUri} already exists in the store. This is an error in the store ${store.toString()}`,currentNode.print(),alreadyExistingNode.print());
+              return;
+            }
             //currently, when a node is saved and removed in the same event cycle, it will not be in the store anymore
             if (currentNode) {
               currentNode.uri = newUri;
             }
           });
-        });
+        }).catch(err => {
+          console.warn(`Error during URI update for store ${store.toString()}: `, err);
+        })
       }),
     );
 
@@ -983,7 +1020,21 @@ export abstract class LinkedStorage {
     quadsBySubject.forEach((quads, subjectNode) => {
       let targetGraph = this.getGraphForNode(subjectNode);
       if (!graphMap.has(targetGraph)) {
-        graphMap.set(targetGraph, new QuadArray());
+        // try
+        // {
+        //   graphMap.set(targetGraph,new QuadArray(...graphMap.get(targetGraph).concat(quads)));
+        // } catch (e) {
+        //   console.log(e);
+
+        const t = graphMap.get(targetGraph);
+        quads.forEach(q => {
+          t.push(q);
+        });
+        // const t2 = t.concat(quads);
+        // const t3 = new QuadArray();
+        // t2.forEach((q) => t3.push(q));
+        // graphMap.set(targetGraph,t3);
+        // }
       }
       graphMap.set(
         targetGraph,
@@ -1012,12 +1063,17 @@ export abstract class LinkedStorage {
 
   private static getTargetStoreMap(
     quads: ICoreIterable<Quad>,
+    basedOnSubject:boolean=false
   ): CoreMap<IQuadStore, QuadArray> {
     let storeMap: CoreMap<IQuadStore, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
-      let store = this.getStoreForGraph(quad.graph);
-      //if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
-      if (store) {
+      //if basedOnSubject and the quad is not in the default graph, then we find the store for the subject of the quad
+      //this is used for removing properties of a node, who's quads are in the default graph but should be stored in the graph of the default store
+      // const store = basedOnSubject && quad.graph === defaultGraph ? this.getStoreForNode(quad.subject) : this.getStoreForGraph(quad.graph);
+      // if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
+      //UPDATE2: the above caused issues when saving a new shape/node, because the new quads were MOVED (removed from old graph) and then stored in the target graph,
+      // but the removed quads were also sent to the same store with the code above, causing nothing to be saved
+      const store = this.getStoreForGraph(quad.graph);      if (store) {
         if (!storeMap.has(store)) {
           storeMap.set(store, new QuadArray());
         }
