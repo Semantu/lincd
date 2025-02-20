@@ -397,7 +397,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * array of Quads in which this node occurs as predicate
    * @internal
    */
-  private asPredicate: QuadArray;
+  // private asPredicate: QuadSet;
 
   /**
    * map of QuadMaps indexed by property (where this node occurs as subject)
@@ -414,8 +414,8 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
   private alteredProperties: CoreMap<NamedNode, QuadSet>;
   private changedInverseProperties: CoreMap<NamedNode, QuadSet>;
   private alteredInverseProperties: CoreMap<NamedNode, QuadSet>;
-  private changedAsPredicate: QuadArray;
-  private alteredAsPredicate: QuadArray;
+  // private changedAsPredicate: QuadArray;
+  // private alteredAsPredicate: QuadArray;
 
   //keep track of promises so that we only do loading/removing/saving once
   private savePromise: {
@@ -601,17 +601,17 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * Called when this node occurs as predicate in a quad
    * @internal
    */
-  registerAsPredicate(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
-    //asPredicate is not always initialised because only properties can occur as predicate
-    if (!this.asPredicate) {
-      this.asPredicate = new QuadArray();
-    }
-    this.asPredicate.push(quad);
-
-    if (emitEvents) {
-      this.registerPredicateChange(quad, alteration);
-    }
-  }
+  // registerAsPredicate(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
+  //   //asPredicate is not always initialised because only properties can occur as predicate
+  //   if (!this.asPredicate) {
+  //     this.asPredicate = new QuadSet();
+  //   }
+  //   this.asPredicate.add(quad);
+  //
+  //   if (emitEvents) {
+  //     this.registerPredicateChange(quad, alteration);
+  //   }
+  // }
 
   /**
    * This method is used by the class Quad to communicate with its nodes
@@ -624,6 +624,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     var quadMap: QuadMap = this.asSubject.get(predicate);
     if (quadMap) {
       let valueQuads = quadMap.get(quad.object);
+      if(!valueQuads) return;
       valueQuads.delete(quad);
       //if we no longer hold any quads for this object
       if (valueQuads.size == 0) {
@@ -677,6 +678,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
     var quadMap: QuadMap = this.asObject.get(quad.predicate);
     if (quadMap) {
       let quadSet = quadMap.get(quad.subject);
+      if(!quadSet) return;
       //remove this quad
       quadSet.delete(quad);
       //if we no longer hold any quads for this subject
@@ -705,36 +707,36 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * This method is used by the class Quad to communicate with its nodes
    * @internal
    */
-  unregisterAsPredicate(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
-    this.asPredicate.splice(this.asPredicate.indexOf(quad), 1);
-
-    if (emitEvents) {
-      this.registerPredicateChange(quad, alteration);
-    }
-  }
-
-  private registerPredicateChange(quad: Quad, alteration: boolean) {
-    eventBatcher.register(this);
-    if (!this.changedAsPredicate) {
-      this.changedAsPredicate = new QuadArray();
-    }
-    this.changedAsPredicate.push(quad);
-    if (alteration) {
-      if (!this.alteredAsPredicate) {
-        this.alteredAsPredicate = new QuadArray();
-      }
-      this.alteredAsPredicate.push(quad);
-    }
-  }
+  // unregisterAsPredicate(quad: Quad, alteration: boolean = false, emitEvents: boolean = true) {
+  //   this.asPredicate.delete(quad);
+  //
+  //   if (emitEvents) {
+  //     this.registerPredicateChange(quad, alteration);
+  //   }
+  // }
+  //
+  // private registerPredicateChange(quad: Quad, alteration: boolean) {
+  //   eventBatcher.register(this);
+  //   if (!this.changedAsPredicate) {
+  //     this.changedAsPredicate = new QuadArray();
+  //   }
+  //   this.changedAsPredicate.push(quad);
+  //   if (alteration) {
+  //     if (!this.alteredAsPredicate) {
+  //       this.alteredAsPredicate = new QuadArray();
+  //     }
+  //     this.alteredAsPredicate.push(quad);
+  //   }
+  // }
 
   /**
    * Returns a list of quads in which this node is now used as predicate
    * BEFORE these changes are sent as events in the normal event flow
    * Currently used by Reasoner to allow for immediate application of reasoning
    */
-  getPendingPredicateChanges(): QuadArray {
-    return this.changedAsPredicate;
-  }
+  // getPendingPredicateChanges(): QuadArray {
+  //   return this.changedAsPredicate;
+  // }
 
   /**
    * Returns a list of quads in which this node is now used as object
@@ -1515,7 +1517,7 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
    * @param value - a single node. Can be a NamedNode or Literal
    */
   hasInverse(property: NamedNode, value: Node): boolean {
-    return this.asObject && this.asObject.get(property).some((quad) => quad.subject.equals(value));
+    return this.asObject && this.asObject.get(property)?.some((quad) => quad.subject.equals(value));
   }
 
   /**
@@ -1742,23 +1744,23 @@ export class NamedNode extends Node implements IGraphObject, BatchedEventEmitter
       map.clear();
     });
 
-    if (this.changedAsPredicate) {
-      this.emit(NamedNode.AS_PREDICATE_CHANGED, this.changedAsPredicate, this);
-      this.changedAsPredicate = null;
-    }
-    if (this.alteredAsPredicate) {
-      this.emit(NamedNode.AS_PREDICATE_ALTERED, this.alteredAsPredicate, this);
-      this.alteredAsPredicate = null;
-    }
+    // if (this.changedAsPredicate) {
+    //   this.emit(NamedNode.AS_PREDICATE_CHANGED, this.changedAsPredicate, this);
+    //   this.changedAsPredicate = null;
+    // }
+    // if (this.alteredAsPredicate) {
+    //   this.emit(NamedNode.AS_PREDICATE_ALTERED, this.alteredAsPredicate, this);
+    //   this.alteredAsPredicate = null;
+    // }
   }
 
   getAsSubjectQuads() {
     return this.asSubject;
   }
 
-  getAsPredicateQuads() {
-    return this.asPredicate;
-  }
+  // getAsPredicateQuads() {
+  //   return this.asPredicate;
+  // }
 
   getAsObjectQuads() {
     return this.asObject;
@@ -2696,7 +2698,7 @@ export class Quad extends EventEmitter {
     //first, we overwrite the property this.object with the result of register because a Literal may return a clone
     this.object = this.object.registerInverseProperty(this, alteration);
     this.subject.registerProperty(this, alteration);
-    this.predicate.registerAsPredicate(this, alteration);
+    // this.predicate.registerAsPredicate(this, alteration);
     this._graph.registerQuad(this, alteration);
 
     if (emitEvents) {
@@ -2778,7 +2780,7 @@ export class Quad extends EventEmitter {
    */
   turnOff() {
     this.subject.unregisterProperty(this, false, false);
-    this.predicate.unregisterAsPredicate(this, false, false);
+    // this.predicate.unregisterAsPredicate(this, false, false);
     this.object.unregisterInverseProperty(this, false, false);
     this.graph.unregisterQuad(this, false, false);
   }
@@ -2789,7 +2791,7 @@ export class Quad extends EventEmitter {
    */
   turnOn() {
     this.subject.registerProperty(this, false, false);
-    this.predicate.registerAsPredicate(this, false, false);
+    // this.predicate.registerAsPredicate(this, false, false);
     this.object.registerInverseProperty(this, false, false);
     this.graph.registerQuad(this, false, false);
   }
@@ -2898,7 +2900,7 @@ export class Quad extends EventEmitter {
     this._removed = true;
 
     this.subject.unregisterProperty(this);
-    this.predicate.unregisterAsPredicate(this);
+    // this.predicate.unregisterAsPredicate(this);
     this.object.unregisterInverseProperty(this);
     this.graph.unregisterQuad(this, alteration);
 

@@ -3,8 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models';
-import {Prefix} from '../utils/Prefix';
+import {NamedNode} from '../models.js';
+import {Prefix} from '../utils/Prefix.js';
 
 var base: string = 'http://www.w3.org/ns/shacl#';
 export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);
@@ -17,11 +17,15 @@ var declare: NamedNode = NamedNode.getOrCreate(base + 'declare');
 var _in: NamedNode = NamedNode.getOrCreate(base + 'in');
 var maxCount: NamedNode = NamedNode.getOrCreate(base + 'maxCount');
 var minCount: NamedNode = NamedNode.getOrCreate(base + 'minCount');
+var inList: NamedNode = NamedNode.getOrCreate(base + 'inList');
+var editInline: NamedNode =  NamedNode.getOrCreate(base + 'editInline');
 var name: NamedNode = NamedNode.getOrCreate(base + 'name');
 var NodeShape: NamedNode = NamedNode.getOrCreate(base + 'NodeShape');
 var optional: NamedNode = NamedNode.getOrCreate(base + 'optional');
 var Parameter: NamedNode = NamedNode.getOrCreate(base + 'Parameter');
-var PrefixDeclaration: NamedNode = NamedNode.getOrCreate(base + 'PrefixDeclaration');
+var PrefixDeclaration: NamedNode = NamedNode.getOrCreate(
+  base + 'PrefixDeclaration',
+);
 var path: NamedNode = NamedNode.getOrCreate(base + 'path');
 var property: NamedNode = NamedNode.getOrCreate(base + 'property');
 var prefix: NamedNode = NamedNode.getOrCreate(base + 'prefix');
@@ -36,7 +40,9 @@ var BlankNode: NamedNode = NamedNode.getOrCreate(base + 'BlankNode');
 var IRI: NamedNode = NamedNode.getOrCreate(base + 'IRI');
 var Literal: NamedNode = NamedNode.getOrCreate(base + 'Literal');
 var BlankNodeOrIRI: NamedNode = NamedNode.getOrCreate(base + 'BlankNodeOrIRI');
-var BlankNodeOrLiteral: NamedNode = NamedNode.getOrCreate(base + 'BlankNodeOrLiteral');
+var BlankNodeOrLiteral: NamedNode = NamedNode.getOrCreate(
+  base + 'BlankNodeOrLiteral',
+);
 var IRIOrLiteral: NamedNode = NamedNode.getOrCreate(base + 'IRIOrLiteral');
 
 //make sure every node is also exported here
@@ -67,4 +73,6 @@ export const shacl = {
   BlankNodeOrLiteral,
   IRIOrLiteral,
   nodeKind,
+  inList,
+  editInline,
 };

@@ -3,7 +3,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {EventEmitter} from '../events/EventEmitter';
 import {Literal, NamedNode, Node, Quad} from '../models';
 import {rdf} from '../ontologies/rdf';
 import {NodeValuesSet} from '../collections/NodeValuesSet';
@@ -20,7 +19,12 @@ import {QuadSet} from '../collections/QuadSet';
 import {NodeShape} from './SHACL';
 import {LinkedDataDeclaration, LinkedDataResponse, LinkedDataSetDeclaration} from '../interfaces/Component';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet';
-import {getMostSpecificShapes, getShapeOrSubShape, getSubShapesClasses} from '../utils/ShapeClass';
+import {
+  getMostSpecificShapes,
+  getMostSpecificShapesByType,
+  getShapeOrSubShape,
+  getSubShapesClasses,
+} from '../utils/ShapeClass';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -124,6 +128,7 @@ export abstract class Shape implements IShape {
     allowSubShapes: boolean = false,
   ): ShapeValuesSet<T> {
     return new ShapeValuesSet<T>(this.namedNode, property, shapeClass as any, allowSubShapes);
+    // return (shapeClass as any).getSetOf(this.getAll(property),allowSubShapes);
   }
 
   /**
@@ -134,7 +139,7 @@ export abstract class Shape implements IShape {
    */
   getOneAs<S extends Shape = Shape>(property, shape: typeof Shape, allowSubShapes: boolean = false): S {
     if (this.hasProperty(property)) {
-      let value = this.getOne(property);
+      const value = this.getOne(property);
       if (allowSubShapes) {
         //get the most specific shape that the value is an instance of, that also extends the base shape
         //or if no shape was given, just get the most specific shape of the value
@@ -789,6 +794,15 @@ export abstract class Shape implements IShape {
     }
   }
 
+  /**
+   * Finds all the instances whos rdf:type matches the targetClass of this shape
+   * Ignores if the nodes are valid instances of the shape
+   * Returns a set of shape instances.
+   * This is helpful when using partly loaded data
+   */
+  static getLocalInstancesByType<T extends Shape>(this:ShapeLike<T>):ShapeSet<T> {
+    return this.getSetOf(this.targetClass.getAllInverse(rdf.type))
+  }
   static getLocalInstances<T extends Shape>(this: ShapeLike<T>, explicitInstancesOnly: boolean = false): ShapeSet<T> {
     //'this' is listed as a parameter ti be able to return a set of instances with the type of the actual class that extends Shape
     // https://www.typescriptlang.org/docs/handbook/generics.html#using-class-types-in-generics

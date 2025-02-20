@@ -50,6 +50,10 @@ export class QuadArray extends Array<Quad> {
     return res;
   }
 
+  map<S>(callbackfn: (value: Quad, index: number, array: Quad[]) => S): S[] {
+    return super.map(callbackfn);
+  }
+
   getExplicit() {
     return this.filter((quad) => !quad.implicit);
   }

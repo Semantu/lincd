@@ -35,7 +35,7 @@ export interface IQuadStore {
 
   getDefaultGraph?(): Graph;
 
-  removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any>;
+  removeNodes(nodes: ICoreIterable<NamedNode>,quads?:QuadSet): Promise<any>;
 
   loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
 
