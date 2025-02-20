@@ -143,7 +143,10 @@ export abstract class Shape implements IShape {
       if (allowSubShapes) {
         //get the most specific shape that the value is an instance of, that also extends the base shape
         //or if no shape was given, just get the most specific shape of the value
-        shape = (shape ? (getMostSpecificShapes(value as NamedNode, shape)[0] || shape) : getMostSpecificShapesByType(value as NamedNode)[0]) || Shape;
+        shape =
+          (shape
+            ? getMostSpecificShapes(value as NamedNode, shape)[0] || shape
+            : getMostSpecificShapes(value as NamedNode)[0]) || Shape;
       }
       return new (shape as any)(value) as S;
     }
