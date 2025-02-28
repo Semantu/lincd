@@ -2,12 +2,15 @@ import {BlankNode, defaultGraph as _default, Graph, Literal, NamedNode, Quad, No
 import {Term} from 'rdflib/lib/tf-types';
 import {NodeURIMappings} from './collections/NodeURIMappings';
 import {QuadSet} from './collections/QuadSet';
+import {CoreSet} from './collections/CoreSet';
+import {CoreMap} from './collections/CoreMap';
 interface DataFactoryConfig {
   preventNewQuads?: boolean;
   emitEvents?: boolean;
   triggerStorage?: boolean;
   nodeMap?: NodeURIMappings;
   targetGraph?: Graph;
+  overwriteData?: boolean;
 }
 export class Datafactory {
   private nodeMap;
@@ -16,17 +19,22 @@ export class Datafactory {
   private emitEvents: boolean = true;
   private triggerStorage: boolean = false;
   private targetGraph: Graph;
+  private clearedProps: CoreMap<NamedNode, CoreSet<NamedNode>>;
+  private overwriteData: boolean;
   constructor(config?: DataFactoryConfig) {
     for (let key in config) {
       this[key] = config[key];
     }
-    if(!config?.nodeMap) {
+    if (!config?.nodeMap) {
       this.nodeMap = new NodeURIMappings();
     }
     this.quad = this.quad.bind(this);
     this.blankNode = this.blankNode.bind(this);
     this.namedNode = this.namedNode.bind(this);
     this.literal = this.literal.bind(this);
+    if (config?.overwriteData) {
+      this.clearedProps = new CoreMap<NamedNode, CoreSet<NamedNode>>();
+    }
   }
   // startBlanknodeSpace() {
   //   this.nodeMap = new NodeURIMappings();
@@ -62,10 +70,9 @@ export class Datafactory {
   quad(subject: Term, predicate: Term, object: Term, graph: Term) {
     //if a target graph is given, we always use that, regardless of whether there was any graph present in the data
     //else if a graph was in the data, use that, or fall back to default graph
-    if(this.targetGraph) {
+    if (this.targetGraph) {
       graph = this.targetGraph;
-    }
-    else if (!graph) {
+    } else if (!graph) {
       graph = _default;
     }
 
@@ -74,6 +81,22 @@ export class Datafactory {
     if (graph instanceof NamedNode) {
       graph = Graph.getOrCreate(graph.uri);
     }
+
+    //sometimes we want to update the graph with new data coming in from JSONLD
+    //so if overwrite data is true, we clear old data for any subj/pred combination we find
+    if (
+      this.overwriteData &&
+      (!this.clearedProps.has(subject as NamedNode) ||
+        !this.clearedProps.get(subject as NamedNode).has(predicate as NamedNode))
+    ) {
+      //remove without triggering storage events
+      (subject as NamedNode).getQuads(predicate as NamedNode).removeAll(false);
+      if (!this.clearedProps.has(subject as NamedNode)) {
+        this.clearedProps.set(subject as NamedNode, new CoreSet<NamedNode>());
+      }
+      this.clearedProps.get(subject as NamedNode).add(predicate as NamedNode);
+    }
+
     let quad;
     if (this.preventNewQuads) {
       quad = Quad.get(subject as NamedNode, predicate as NamedNode, object as Node, graph as Graph);

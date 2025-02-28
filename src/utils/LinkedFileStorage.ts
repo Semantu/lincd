@@ -42,12 +42,17 @@ export abstract class LinkedFileStorage {
     return this.defaultStore.getFile(filePath);
   }
 
-  static listFiles(prefix:string): Promise<string[]> {
+  static listFiles(prefix?: string): Promise<string[]> {
     return this.defaultStore.listFiles(prefix);
   }
 
-  static saveFile(filePath: string, fileContent: string | Uint8Array | Buffer | Readable,mimeType?:string,preventDuplicates:boolean=false): Promise<string> {
-    return this.defaultStore.saveFile(filePath, fileContent,mimeType,preventDuplicates);
+  static saveFile(
+    filePath: string,
+    fileContent: string | Uint8Array | Buffer | Readable,
+    mimeType?: string,
+    preventDuplicates: boolean = false,
+  ): Promise<string> {
+    return this.defaultStore.saveFile(filePath, fileContent, mimeType, preventDuplicates);
   }
 }
 

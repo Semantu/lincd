@@ -1,3 +1,4 @@
+import React from 'react';
 import {Node} from '../models';
 import {Shape} from '../shapes/Shape';
 import {PropertyShape} from '../shapes/SHACL';
