@@ -4,8 +4,7 @@ import {
   QueryResponseToResultType,
 } from '../utils/LinkedQuery.js';
 import { Shape } from '../shapes/Shape.js';
-import { Node } from '../models';
-import { LinkedUpdateQuery,UpdatePartial,AddId } from '../utils/queries/LinkedUpdateQuery';
+import { LinkedUpdateQuery,UpdatePartial,AddId } from '../utils/queries/LinkedUpdateQuery.js';
 
 export interface IStorageController {
 

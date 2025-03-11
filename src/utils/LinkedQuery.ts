@@ -1,4 +1,4 @@
-import {Shape, StorageHelper} from '../shapes/Shape.js';
+import { Shape,ShapeType,StorageHelper } from '../shapes/Shape.js';
 import {TestNode} from './TraceShape.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
@@ -7,7 +7,7 @@ import {CoreSet} from '../collections/CoreSet.js';
 import {LinkedComponent, LinkedSetComponent} from './LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import { getPropertyShapeByLabel } from './ShapeClass.js';
-import { ShapeValuesSet } from '../collections/ShapeValuesSet';
+import { ClassOf,InstanceOf } from './Types';
 
 /**
  * ###################################
@@ -57,13 +57,13 @@ export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
  * It can be sent across the network.
  * @see LinkedQueryObject
  */
-export type SelectQuery<ShapeType extends Shape> = {
+export type SelectQuery<S extends Shape = Shape> = {
   select: SelectPath;
   where?: WherePath;
-  subject?: ShapeType;
+  subject?: S;
   limit?: number;
   offset?: number;
-  shape?:ShapeType;
+  shape?:ShapeType<S>;
 };
 /**
  * Much like a querypath, except it can only contain QuerySteps
@@ -1168,7 +1168,7 @@ export class QueryPrimitiveSet<QPrimitive extends QueryPrimitive<any>=null> exte
 }
 
 export class LinkedQuery<
-  ShapeType extends Shape,
+  S extends Shape,
   ResponseType = any,
   Source = any,
 > {
@@ -1184,9 +1184,9 @@ export class LinkedQuery<
   private wherePath: WherePath;
 
   constructor(
-    public shape: ShapeType,
-    private queryBuildFn?: QueryBuildFn<ShapeType, ResponseType>,
-    private subject?: ShapeType | ShapeSet<ShapeType>,
+    public shape: ShapeType<S>,
+    private queryBuildFn?: QueryBuildFn<S, ResponseType>,
+    private subject?: S | ShapeSet<S>,
   ) {
     let dummyNode = new TestNode();
     let queryShape: QueryBuilderObject;
@@ -1231,7 +1231,7 @@ export class LinkedQuery<
   //   return new LinkedQuery(this.shape, this.queryBuildFn, subject);
   // }
 
-  where(validation: WhereClause<ShapeType>): this {
+  where(validation: WhereClause<S>): this {
     this.wherePath = processWhereClause(validation, this.shape);
     return this;
   }
@@ -1243,7 +1243,7 @@ export class LinkedQuery<
   /**
    * Turns the LinkedQuery into a SelectQuery, which is a plain JS object that can be serialized to JSON
    */
-  getQueryObject(): SelectQuery<ShapeType> {
+  getQueryObject(): SelectQuery<S> {
     let queryPaths = this.getQueryPaths();
     let selectQuery = {
       select: queryPaths,
@@ -1251,7 +1251,7 @@ export class LinkedQuery<
       limit: this.limit,
       offset: this.offset,
       shape: this.shape,
-    } as SelectQuery<ShapeType>;
+    } as SelectQuery<S>;
     if (this.wherePath) {
       selectQuery.where = this.wherePath;
     }
@@ -1345,20 +1345,20 @@ export class LinkedQuery<
 
   patchResultPromise<ResultType>(
     p: Promise<ResultType>,
-  ): PatchedQueryPromise<ResultType, ShapeType> {
-    let pAdjusted = p as PatchedQueryPromise<ResultType, ShapeType>;
+  ): PatchedQueryPromise<ResultType, S> {
+    let pAdjusted = p as PatchedQueryPromise<ResultType, S>;
     p['where'] = (
-      validation: WhereClause<ShapeType>,
-    ): PatchedQueryPromise<ResultType, ShapeType> => {
+      validation: WhereClause<S>,
+    ): PatchedQueryPromise<ResultType, S> => {
       // preventExec();
       this.where(validation);
       return pAdjusted;
     };
-    p['limit'] = (lim: number): PatchedQueryPromise<ResultType, ShapeType> => {
+    p['limit'] = (lim: number): PatchedQueryPromise<ResultType, S> => {
       this.setLimit(lim);
       return pAdjusted;
     };
-    return p as PatchedQueryPromise<ResultType, ShapeType>;
+    return p as PatchedQueryPromise<ResultType, S>;
   }
 
   private isValidQueryPathsResult(qResult: QResult<any>, select: QueryPath[]) {

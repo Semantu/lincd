@@ -1,8 +1,6 @@
-import { Shape } from '../../shapes/Shape';
-import { ShapeValuesSet } from '../../collections/ShapeValuesSet';
-import { SelectQuery } from '../LinkedQuery';
-import { NodeShape,PropertyShape } from '../../shapes/SHACL';
-import { NamedNode } from '../../models';
+import { Shape } from '../../shapes/Shape.js';
+import { ShapeValuesSet } from '../../collections/ShapeValuesSet.js';
+import { NodeShape,PropertyShape } from '../../shapes/SHACL.js';
 
 export type Prettify<T> = T extends infer R
   ? {

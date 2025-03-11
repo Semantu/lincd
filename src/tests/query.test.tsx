@@ -1,7 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import {Literal, NamedNode} from '../models.js';
 import {Shape} from '../shapes/Shape.js';
-// import {literalProperty, objectProperty} from '../utils/ShapeDecorators.js';
 import {linkedComponent, linkedSetComponent, linkedShape} from '../package.js';
 import {InMemoryStore} from './storage.test.js';
 import {QuadSet} from '../collections/QuadSet.js';
@@ -12,7 +11,7 @@ import {ShapeSet} from '../collections/ShapeSet.js';
 import {setDefaultPageLimit} from '../utils/Package.js';
 import {xsd} from '../ontologies/xsd.js';
 import {TestNode} from '../utils/TraceShape.js';
-import { literalProperty,objectProperty } from '../shapes/SHACL';
+import { literalProperty,objectProperty } from '../shapes/SHACL.js';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -425,6 +424,11 @@ describe('query tests', () => {
     expect(second.friends.length).toBe(1);
     expect(second.friends[0].id).toBe(p3.uri);
   });
+  test('select all', async () => {
+    let all = await Person.select();
+    expect(Array.isArray(all)).toBe(true);
+    expect(all.length).toBe(4);
+  })
   test('empty select with where ', async () => {
     let filteredNoProps = await Person.select().where((p) => {
       return p.name.equals(p1.name);
@@ -1071,7 +1075,7 @@ describe('query tests', () => {
     });
   });
 
-  test('linked set component with limit', async () => {
+  test('linked set component with default page limit', async () => {
     setDefaultPageLimit(2);
 
     const NameList = linkedSetComponent(

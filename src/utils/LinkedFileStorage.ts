@@ -42,7 +42,7 @@ export abstract class LinkedFileStorage {
     return this.defaultStore.getFile(filePath);
   }
 
-  static listFiles(prefix:string): Promise<string[]> {
+  static listFiles(prefix?:string): Promise<string[]> {
     return this.defaultStore.listFiles(prefix);
   }
 

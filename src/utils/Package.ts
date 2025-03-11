@@ -470,7 +470,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     registerInPackageTree(prefixAndFileName,exportsCopy);
     // });
 
-    if (autoLoadOntologyData)
+    if (_autoLoadOntologyData)
     {
       loadData().catch((err) => {
         console.warn(

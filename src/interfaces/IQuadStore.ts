@@ -13,7 +13,7 @@ import {
 import { LinkedDataRequest } from '../utils/TraceShape.js';
 import { QuadArray } from '../collections/QuadArray.js';
 import { ShapeSet } from '../collections/ShapeSet.js';
-import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery';
+import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery.js';
 
 export interface IQuadStore {
   /**

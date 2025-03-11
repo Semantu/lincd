@@ -5,7 +5,7 @@
  */
 import {NamedNode} from '../models.js';
 import {Prefix} from '../utils/Prefix.js';
-import { createNameSpace } from '../utils/NameSpace';
+import { createNameSpace } from '../utils/NameSpace.js';
 
 var base: string = 'http://www.w3.org/ns/shacl#';
 export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);

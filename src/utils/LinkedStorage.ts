@@ -3,11 +3,10 @@ import {defaultGraph, Graph, NamedNode, Node, Quad} from '../models.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {NodeSet} from '../collections/NodeSet.js';
-import {Shape, StorageHelper} from '../shapes/Shape.js';
+import { Shape,ShapeType,StorageHelper } from '../shapes/Shape.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {eventBatcher} from '../events/EventBatcher.js';
-import nextTick from 'next-tick';
 import {QuadArray} from '../collections/QuadArray.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
@@ -20,8 +19,9 @@ import {
 } from './LinkedQuery.js';
 import { LinkedDataRequest } from './TraceShape.js';
 import { IStorageController,staticImplements } from '../interfaces/IStorageController.js';
-import { LinkedUpdateQuery,UpdatePartial,AddId } from './queries/LinkedUpdateQuery';
-import { rdf } from '../ontologies/rdf';
+import { LinkedUpdateQuery,UpdatePartial,AddId } from './queries/LinkedUpdateQuery.js';
+import { rdf } from '../ontologies/rdf.js';
+import nextTick from 'next-tick';
 
 @staticImplements<IStorageController>() /* this class implements this interface with static methods */
 export abstract class LinkedStorage {
@@ -393,11 +393,10 @@ export abstract class LinkedStorage {
     });
   }
 
-  static queryRaw<ShapeType extends Shape,ResultType>(
-    query: SelectQuery<ShapeType>,
-    shapeClass: typeof Shape,
+  static queryRaw<S extends Shape,ResultType>(
+    query: SelectQuery<S>,
   ): Promise<ResultType> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(shapeClass);
+    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape);
     return quadStore.query(query);
   }
   // static query<ResultType>(
@@ -1026,10 +1025,11 @@ export abstract class LinkedStorage {
         // } catch (e) {
         //   console.log(e);
 
-        const t = graphMap.get(targetGraph);
-        quads.forEach(q => {
-          t.push(q);
-        });
+        graphMap.set(targetGraph, new QuadArray());
+        // const t = graphMap.get(targetGraph);
+        // quads.forEach(q => {
+        //   t.push(q);
+        // });
         // const t2 = t.concat(quads);
         // const t3 = new QuadArray();
         // t2.forEach((q) => t3.push(q));

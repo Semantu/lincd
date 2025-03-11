@@ -9,7 +9,6 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
 import {List} from '../shapes/List.js';
-import { URI } from './URI';
 
 export interface NodeShapeConfig {
   /**

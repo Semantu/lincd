@@ -13,11 +13,8 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {rdf} from '../ontologies/rdf.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ForwardReasoning} from '../utils/ForwardReasoning.js';
-import { addNodeShapeToShapeClass,getShapeClass,getShapeOrSubShape } from '../utils/ShapeClass';
-import { rdfs } from '../ontologies/rdfs';
-import { linkedPackage } from '../utils/Package';
-import { ShapeValuesSet } from '../collections/ShapeValuesSet';
-import { linkedShape } from '../package';
+import { getShapeClass,getShapeOrSubShape } from '../utils/ShapeClass.js';
+import { ShapeValuesSet } from '../collections/ShapeValuesSet.js';
 
 
 
@@ -857,19 +854,19 @@ export class ValidationResult extends Shape {
       if (propertyShape.valueShape) {
         //every value should be a valid instance of propertyShape nodeShape
         let nodeShape = propertyShape.valueShape;
-        //TODO: / NOTE: in SHACL.ts in LINCD we save validation results to avoid infinite loops
+        //TODO: / NOTE: for validation else where in this file we save validation results to avoid infinite loops
         // we don't do that yet here, so we may get loops when shapes refer to each other
+        let valueIsSelf = value === focusNode && propertyShape.parentNodeShape.equals(nodeShape);
         if (
-          !(
-            value === focusNode &&
-            propertyShape.parentNodeShape.equals(nodeShape)
-          ) ||
-          (nodeShape as any)._validateNode(value)
+          !valueIsSelf && !(nodeShape as any)._validateNode(value)
         ) {
+          //get extra information why the value doesnt match the shape
+          let valueReport = ValidationReport.forNodeAgainstShape(value, nodeShape);
+
           validationResult.sourceConstraintComponent =
             shacl.NodeConstraintComponent;
           validationResult.validatedValue = value;
-          validationResult.message = `Value does not conform to the required shape ${propertyShape.valueShape.uri}`;
+          validationResult.message = `Value does not conform to the required shape ${propertyShape.valueShape.uri}:\n\t${valueReport.toString().replace(/\n/g, '\n\t')}`;
           return validationResult;
         }
       }
@@ -978,6 +975,7 @@ export class ValidationReport extends Shape {
         // validationResult.sourceShape = shape;
         // validationResult.message = `Value does not have the required class ${propertyShape.class.uri}`;
         // validationResult.sourceConstraintComponent = shacl.ClassConstraintComponent;
+        // report.validationResults.add(validationResult);
         console.log(
           `${focusNode.toString()} does not have target type: ${
             shape.targetClass.uri
@@ -993,25 +991,6 @@ export class ValidationReport extends Shape {
 
     let propertyShapes = shape.getPropertyShapes();
     if (propertyShapes.size > 0) {
-      if (shape.targetClass) {
-        //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
-        //this would not be needed if a Forwards reasoning engine was in place
-        if (
-          !(
-            focusNode instanceof NamedNode &&
-            ForwardReasoning.hasType(focusNode, this.targetClass)
-          )
-        ) {
-          // let validationResult = new ValidationResult();
-          // validationResult.focusNode = focusNode;
-          // validationResult.sourceShape = shape;
-          // validationResult.message = `Value does not have the required class ${propertyShape.class.uri}`;
-          // validationResult.sourceConstraintComponent = shacl.ClassConstraintComponent;
-          console.log(
-            `Not an error but this node does not have target type: ${shape.targetClass.uri}`,
-          );
-        }
-      }
       if (focusNode instanceof Literal) {
         //literals can not match NodeShapes (?)
         //TODO: this is not fully standard compliant? for now we do a custom message to match the way LINCD does it
@@ -1046,12 +1025,17 @@ export class ValidationReport extends Shape {
       ' instances of ' +
       shape.targetClass.uri,
     );
+    let allConfirm = true;
     potentialNodes.forEach((node) => {
       let report = ValidationReport.forNodeAgainstShape(node, shape.shape);
       if (!report.conforms) {
         console.log(report.toString());
+        allConfirm = false;
       }
     });
+    if(allConfirm) {
+      console.log('All instances conform to the shape');
+    }
   }
 
   toString() {

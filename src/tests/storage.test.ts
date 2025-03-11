@@ -18,8 +18,8 @@ import {
   SelectQuery,
 } from '../utils/LinkedQuery.js';
 import {resolveLocal} from '../utils/LocalQueryResolver.js';
-import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery';
-import { updateLocal } from '../utils/LocalQueryResolver';
+import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery.js';
+import { updateLocal } from '../utils/LocalQueryResolver.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {
   protected contents: QuadSet;

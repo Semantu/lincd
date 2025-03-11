@@ -36,7 +36,8 @@ import {
   staticImplements,
 } from '../interfaces/IStorageController.js';
 import { TestNode } from '../utils/TraceShape.js';
-import { LinkedUpdateQuery,UpdatePartial,AddId } from '../utils/queries/LinkedUpdateQuery';
+import { LinkedUpdateQuery,UpdatePartial,AddId } from '../utils/queries/LinkedUpdateQuery.js';
+import { ClassOf } from '../utils/Types';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -183,11 +184,11 @@ export abstract class Shape implements IShape {
 
 
   static create<T extends Shape>(
-    this: ShapeLike<T>,
+    this: ShapeType<T>,
     data: Partial<T>,
     uri?: string,
   ): T {
-    const x = uri ? this.getFromURI(uri) : new this();
+    const x = uri ? this.getFromURI(uri) : new (this as ClassOf<T>)();
     for (const k in data) {
       const key = k as keyof typeof this;
       x[key] = data[key];
@@ -438,7 +439,7 @@ export abstract class Shape implements IShape {
 
     let set = new ShapeSet<T>();
     for (var node of quads.getSubjects()) {
-      set.add(new this(node));
+      set.add(new (this as ClassOf<T>)(node));
     }
     return set;
   }
@@ -465,12 +466,12 @@ export abstract class Shape implements IShape {
    * Returns a set of shape instances.
    * This is helpful when using partly loaded data
    */
-  static getLocalInstancesByType<T extends Shape>(this:ShapeLike<T>):ShapeSet<T> {
+  static getLocalInstancesByType<T extends Shape>(this:ShapeType<T>):ShapeSet<T> {
     return this.getSetOf(this.targetClass.getAllInverse(rdf.type))
   }
 
   static getLocalInstances<T extends Shape>(
-    this: ShapeLike<T>,
+    this: ShapeType<T>,
     explicitInstancesOnly: boolean = false,
   ): ShapeSet<T> {
     //'this' is listed as a parameter ti be able to return a set of instances with the type of the actual class that extends Shape
@@ -521,8 +522,8 @@ export abstract class Shape implements IShape {
    * @deprecated
    * @param node
    */
-  static getOf<T extends Shape>(this: ShapeLike<T>, node: Node): T {
-    return new this(node);
+  static getOf<T extends Shape>(this: ShapeType<T>, node: Node): T {
+    return new (this as ClassOf<T>)(node);
   }
 
   /**
@@ -536,21 +537,21 @@ export abstract class Shape implements IShape {
    * @param isTemporaryNodeIfNew
    */
   static getFromURI<T extends Shape>(
-    this: ShapeLike<T>,
+    this: ShapeType<T>,
     uri: string,
     isTemporaryNodeIfNew: boolean = true,
   ): T {
     let node = NamedNode.getNamedNode(uri);
     if (node) {
-      return new this(node);
+      return new (this as ClassOf<T>)(node);
     } else {
       node = NamedNode.getOrCreate(uri, isTemporaryNodeIfNew);
       if (this.targetClass) {
         node.set(rdf.type, this.targetClass);
       }
-      return new this(node);
+      return new (this as ClassOf<T>)(node);
     }
-    return new this(NamedNode.getOrCreate(uri));
+    return new (this as ClassOf<T>)(NamedNode.getOrCreate(uri));
   }
 
   /**
@@ -562,7 +563,7 @@ export abstract class Shape implements IShape {
    * @param uniqueParams
    */
   static getFromParams<T extends Shape>(
-    this: ShapeLike<T>,
+    this: ShapeType<T>,
     prefixURI: string,
     ...uniqueParams: any[]
   ): T {
@@ -578,19 +579,19 @@ export abstract class Shape implements IShape {
   }
 
   static getSetOf<T extends Shape>(
-    this: ShapeLike<T>,
+    this: ShapeType<T>,
     nodes: NodeValuesSet,
     allowSubShapes?: boolean,
   ): ShapeValuesSet<T>;
 
   static getSetOf<T extends Shape>(
-    this: ShapeLike<T>,
+    this: ShapeType<T>,
     nodes: ICoreIterable<Node>,
     allowSubShapes?: boolean,
   ): ShapeSet<T>;
 
   static getSetOf<T extends Shape>(
-    this: ShapeLike<T>,
+    this: ShapeType<T>,
     nodes: NodeValuesSet | ICoreIterable<Node>,
     allowSubShapes: boolean = false,
   ): ShapeSet<T> | ShapeValuesSet<T> {
@@ -610,7 +611,7 @@ export abstract class Shape implements IShape {
       nodes.map((node) => {
         return allowSubShapes
           ? getShapeOrSubShape(node, this as any)
-          : new this(node);
+          : new (this as ClassOf<Shape>)(node);
       }),
     );
   }
@@ -1175,3 +1176,9 @@ export class StorageHelper {
     }
   }
 }
+
+/**
+ * A class that represent the class of a shape.
+ */
+export type ShapeType<S extends Shape = Shape> = ClassOf<S> & typeof Shape;
+

@@ -32,12 +32,11 @@ import {
   PropUpdateValue,SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
   UpdateQuery,
-} from './queries/LinkedUpdateQuery';
-import { NamedNode,Node,Literal } from '../models';
-import { getShapeClass } from './ShapeClass';
-import { xsd } from '../ontologies/xsd';
-import { PropertyShape,ValidationReport } from '../shapes/SHACL';
-import { rdf } from '../ontologies/rdf';
+} from './queries/LinkedUpdateQuery.js';
+import { NamedNode,Literal } from '../models.js';
+import { xsd } from '../ontologies/xsd.js';
+import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
+import { rdf } from '../ontologies/rdf.js';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -270,7 +269,7 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
  * The results will be the end point reached by the query
  */
 export function resolveLocal<ResultType>(
-  query: SelectQuery<any>,
+  query: SelectQuery,
   // shape: typeof Shape,
 ): ResultType {
   //TODO: review if we need the shape here or if we can get it from the query
@@ -280,7 +279,9 @@ export function resolveLocal<ResultType>(
 
   let subject = query.subject
     ? query.subject
-    : (query.shape as any).getLocalInstances();
+    : query.shape.getLocalInstances();
+  // let subject2 = query.subject ? query.subject : query.shape.getLocalInstancesByType();
+  // console.log(ValidationReport.printForShapeInstances(query.shape));
 
   if (query.where) {
     subject = filterResults(subject, query.where);
@@ -294,10 +295,10 @@ export function resolveLocal<ResultType>(
 
   let resultObjects =
     query.subject instanceof ShapeSet
-      ? shapeSetToResultObjects(subject)
+      ? shapeSetToResultObjects(subject as ShapeSet)
       : query.subject instanceof Shape
-        ? shapeToResultObject(subject)
-        : shapeSetToResultObjects(subject);
+        ? shapeToResultObject(subject as Shape)
+        : shapeSetToResultObjects(subject as ShapeSet);
 
   if (Array.isArray(query.select)) {
     query.select.forEach((queryPath) => {
@@ -312,7 +313,7 @@ export function resolveLocal<ResultType>(
           ? resultObjects.get(singleShape.uri)
           : resultObjects,
       );
-    query.subject ? r(subject) : subject.map(r);
+    query.subject ? r(subject) : (subject as ShapeSet).map(r);
   }
   return (
     resultObjects instanceof Map ? [...resultObjects.values()] : resultObjects
