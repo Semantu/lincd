@@ -471,19 +471,21 @@ export class NodeShape extends SHACL_Shape {
     }
     //whilst validating, if a connected node wants to validate THIS node, we consider this node to be valid until proven otherwise below
     validated.set(node, true);
-    if (this.targetClass) {
-      //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
-      //this would not be needed if a Forwards reasoning engine was in place
-      if (
-        !(
-          node instanceof NamedNode &&
-          ForwardReasoning.hasType(node, this.targetClass)
-        )
-      ) {
-        validated.set(node, false);
-        return false;
-      }
-    }
+
+    //EDIT: targetClass is just for selecting nodes. It's not an enforcement, for that shacl:class should be used.
+    // if (this.targetClass) {
+    //   //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
+    //   //this would not be needed if a Forwards reasoning engine was in place
+    //   if (
+    //     !(
+    //       node instanceof NamedNode &&
+    //       ForwardReasoning.hasType(node, this.targetClass)
+    //     )
+    //   ) {
+    //     validated.set(node, false);
+    //     return false;
+    //   }
+    // }
     const propertyShapes = this.getPropertyShapes();
     if (propertyShapes.size > 0) {
       if (node instanceof Literal) {
