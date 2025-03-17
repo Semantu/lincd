@@ -37,6 +37,7 @@ import { NamedNode,Literal } from '../models.js';
 import { xsd } from '../ontologies/xsd.js';
 import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
 import { rdf } from '../ontologies/rdf.js';
+import { NodeSet } from '../collections/NodeSet';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -88,14 +89,14 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
       }
       if(values.every(v => typeof v === 'undefined')) {
         plainValues[propShape.label] = undefined;
-        subject.unsetAll(pathProperty)
+        unsetPropertyPath(subject,pathProperty);
       }
       else if(values.some(v => typeof v === 'undefined')) {
         throw new Error('Invalid use of undefined for property: ' + propShape.label+'. You cannot mix undefined with defined values');
       }
       else {
         plainValues[propShape.label] = plainValueArr;
-        subject.moverwrite(pathProperty,values);
+        overwritePropertyPathMultipleValues(subject,pathProperty,values);
       }
     }
     else
@@ -109,7 +110,7 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
       let res = await convertValue(propShape,(field as UpdateNodePropertyValue).val);
 
       if(typeof res.value === 'undefined') {
-        subject.unsetAll(pathProperty);
+        unsetPropertyPath(subject,pathProperty);
         plainValues[propShape.label] = undefined;
       } else {
         //TODO: check propShape for how many values are allowed
@@ -118,12 +119,82 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
         //Note, we are using SET here, to ADD a value.
         //If there are multiple values possible and the user wants to overwrite all the values,
         //they need to use an update function instead of an update object
-        subject.overwrite(pathProperty,res.value);
+        overwritePropertyPathSingleValue(subject,pathProperty,res.value);
       }
     }
   }
 
   return plainValues;
+}
+function overwritePropertyPathMultipleValues(subject: NamedNode, path: NamedNode|NamedNode[],values:NamedNode[]) {
+  if(Array.isArray(path)) {
+    //NOTE: for now we are removing the entire path, not just the last part of the path
+    // Not sure yet if we need to distinguish between the two
+    console.warn(`Overwriting each end values in property path (${path.map(p => p.uri).join(' -> ')}) with multiple values ${values.map(v => v.uri).join(", ")}. Is that expected behaviour?`);
+
+    let lastPath = path.pop();
+    let target:NamedNode|NodeSet = subject;
+    for(let p of path) {
+      target = target.getAll(p);
+    }
+
+    (target as NodeSet).forEach(node => {
+      node.moverwrite(lastPath,values);
+    });
+  } else {
+    subject.moverwrite(path as NamedNode,values);
+  }
+}
+function overwritePropertyPathSingleValue(subject: NamedNode, path: NamedNode|NamedNode[],value:NamedNode|Literal) {
+  if(Array.isArray(path)) {
+    //NOTE: for now we are removing the entire path, not just the last part of the path
+    // Not sure yet if we need to distinguish between the two
+    console.warn(`Overwriting each end values in property path (${path.map(p => p.uri).join(' -> ')}) with single value ${value.toString()}. Is that expected behaviour? `);
+
+    let lastPath = path.pop();
+    let target:NamedNode|NodeSet = subject;
+    for(let p of path) {
+      target = target.getAll(p);
+    }
+
+    (target as NodeSet).forEach(node => {
+      node.overwrite(lastPath,value);
+    });
+  } else {
+    subject.overwrite(path as NamedNode,value);
+  }
+}
+function unsetPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]) {
+  if(Array.isArray(path)) {
+    //NOTE: for now we are removing the entire path, not just the last part of the path
+    // Not sure yet if we need to distinguish between the two
+    console.warn('Unsetting entire property path. Is that expected behaviour? : '+path.map(p => p.uri).join(' -> '));
+    //track the path for each index in the path array
+    let targets:Map<number,NamedNode|NodeSet> = new Map();
+    // targets.set(0,subject);
+    for(let key in path) {
+      let index = parseInt(key);
+      let p = path[index];
+      let target = index === 0 ? subject : targets.get(index - 1);
+      let nextTargets = target.getAll(p);
+      targets.set(index,nextTargets);
+    }
+    //now we have all the targets, we can remove all the named nodes at each step
+    for(let [index,target] of targets) {
+      if(target instanceof NamedNode) {
+        target.remove();
+      } else {
+        (target as NodeSet).forEach(node => {
+          if(node instanceof NamedNode) {
+            node.remove();
+          }
+        });
+      }
+    }
+  } else {
+    subject.unsetAll(path);
+  }
+
 }
 async function convertValue(propShape: PropertyShape, value: any):Promise<{value:(Literal|NamedNode),plainValue:any}> {
   if(propShape.nodeKind === shacl.Literal) {
@@ -277,9 +348,16 @@ export function resolveLocal<ResultType>(
   //   shape = query.subject
   // }
 
-  let subject = query.subject
-    ? query.subject
-    : query.shape.getLocalInstances();
+  let subject:Shape|ShapeSet;
+  if(query.subject) {
+    if((query.subject as QResult<any>).id) {
+      subject = query.shape.getFromURI((query.subject as QResult<any>).id) as Shape;
+    } else {
+      subject = query.subject as Shape;
+    }
+  } else {
+    subject = query.shape.getLocalInstances();
+  }
   // let subject2 = query.subject ? query.subject : query.shape.getLocalInstancesByType();
   // console.log(ValidationReport.printForShapeInstances(query.shape));
 
@@ -293,12 +371,21 @@ export function resolveLocal<ResultType>(
     );
   }
 
-  let resultObjects =
-    query.subject instanceof ShapeSet
-      ? shapeSetToResultObjects(subject as ShapeSet)
-      : query.subject instanceof Shape
-        ? shapeToResultObject(subject as Shape)
-        : shapeSetToResultObjects(subject as ShapeSet);
+  let resultObjects;
+  if(query.subject instanceof ShapeSet) {
+    resultObjects = shapeSetToResultObjects(subject as ShapeSet);
+  } else if(query.subject instanceof Shape) {
+    resultObjects = shapeToResultObject(subject as Shape);
+  } else if(query.subject && query.subject.id) {
+    //when a query subject is given as an object with an id, probably from a previous query result
+    resultObjects = {
+      id: query.subject.id,
+      shape: query.subject.shape || query.shape,
+    }
+  } else {
+    //TODO: review, this happens when an array is given?
+    resultObjects = shapeSetToResultObjects(subject as ShapeSet);
+  }
 
   if (Array.isArray(query.select)) {
     query.select.forEach((queryPath) => {

@@ -60,7 +60,7 @@ export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 export type SelectQuery<S extends Shape = Shape> = {
   select: SelectPath;
   where?: WherePath;
-  subject?: S;
+  subject?: S | QResult<S>;
   limit?: number;
   offset?: number;
   shape?:ShapeType<S>;
@@ -1423,7 +1423,8 @@ export class LinkedQuery<
         return false;
       }
       let path: QueryPath = step[key];
-      return this.isValidQueryPathResult(qResult[key], path);
+      return this.isValidQueryPathResult(qResult, path);
+      // return this.isValidQueryPathResult(qResult[key], path);
     }
   }
 }

@@ -250,12 +250,26 @@ export class InMemoryStore extends Shape implements IQuadStore {
         propertyShape = propertyRequest;
       }
       if (propertyShape) {
-        if (source instanceof QuadSet) {
-          propertyShapeSource = (source as QuadSet)
-            .getObjects()
-            .getQuads(propertyShape.path);
-        } else if (source instanceof Shape) {
-          propertyShapeSource = (source as Shape).getQuads(propertyShape.path);
+        let path = propertyShape.path;
+        if(path instanceof NamedNode ) {
+          if (source instanceof QuadSet) {
+            propertyShapeSource = (source as QuadSet)
+              .getObjects()
+              .getQuads(path);
+          } else if (source instanceof Shape) {
+            propertyShapeSource = (source as Shape).getQuads(path);
+          }
+        } else {
+          propertyShapeSource = source;
+          for(let i = 0; i < path.length; i++) {
+            if(propertyShapeSource instanceof QuadSet) {
+              propertyShapeSource = (propertyShapeSource as QuadSet)
+                .getObjects()
+                .getQuads(path[i]);
+            } else if (propertyShapeSource instanceof Shape) {
+              propertyShapeSource = (propertyShapeSource as Shape).getQuads(path[i]);
+            }
+          }
         }
         (propertyShapeSource as QuadSet).forEach((q) => quads.push(q));
       }

@@ -107,7 +107,7 @@ export interface PropertyShapeConfig {
    *
    * Provide a NamedNode that has is a `rdf:Property`
    */
-  path: NamedNode;
+  path: NamedNode|NamedNode[];
 
   /**
    * Indicates that this property must exist.
@@ -601,12 +601,17 @@ export class PropertyShape extends SHACL_Shape {
     this.overwrite(shacl.optional, new Literal(value, xsd.boolean));
   }
 
-  get path(): NamedNode {
-    return this.getOne(shacl.path) as NamedNode;
+  get path(): NamedNode|NamedNode[] {
+    let propertyPath = this.getAll(shacl.path);
+    if(propertyPath.size === 1) {
+      return propertyPath.first() as NamedNode;
+    } else {
+      return [...propertyPath] as NamedNode[];
+    }
   }
 
-  set path(value: NamedNode) {
-    this.overwrite(shacl.path, value);
+  set path(value: NamedNode|NamedNode[]) {
+    (value instanceof NamedNode) ? this.overwrite(shacl.path, value) : this.moverwrite(shacl.path, value);
   }
 
   get in(): NamedNode {
@@ -645,9 +650,15 @@ export class PropertyShape extends SHACL_Shape {
    * Returns all the classes and properties that are references by this shape
    */
   getOntologyEntities(): NodeSet<NamedNode> {
+    let pathNodes:NamedNode[];
+    if(this.path instanceof NamedNode) {
+      pathNodes = [this.path];
+    } else {
+      pathNodes = this.path;
+    }
     //start with values of those properties that have a NamedNode as value
     const entities = new NodeSet<NamedNode>(
-      [this.class, this.path, this.datatype].filter((value) => value && true),
+      [this.class, ...pathNodes, this.datatype].filter((value) => value && true),
     );
     //this caused loops!
     // if (this.nodeShape) {
@@ -663,16 +674,34 @@ export class PropertyShape extends SHACL_Shape {
 
   resolveFor(node: NamedNode) {
     //TODO: support more complex property paths
-    return node.getAll(this.path);
+    let path = this.path;
+    if(path instanceof NamedNode) {
+      return node.getAll(path);
+    } else {
+      let target:NamedNode|NodeSet = node
+      for(let prop of path) {
+        target = target.getAll(prop);
+      }
+      return target;
+    }
   }
 
   protected _validateNode(
     node: NamedNode,
     validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
   ): boolean {
-    //TODO: make property nodes support property paths beyond a single property
-    const property = this.path;
-    const values = node instanceof NamedNode ? node.getAll(property) : null;
+    const path = this.path;
+    let values;
+    if(path instanceof NamedNode) {
+      values = node.getAll(path);
+    } else {
+      let target:NamedNode|NodeSet = node
+      for(let prop of path) {
+        target = target.getAll(prop);
+      }
+      values = target;
+    }
+    //validate shacl:class
     if (this.class) {
       if (
         !values.every(
@@ -683,6 +712,7 @@ export class PropertyShape extends SHACL_Shape {
         return false;
       }
     }
+    //validate shacl:datatype
     if (this.datatype) {
       if (
         !values.every(
@@ -693,6 +723,7 @@ export class PropertyShape extends SHACL_Shape {
         return false;
       }
     }
+    //validate shacl:node
     if (this.valueShape) {
       //every value should be a valid instance of this nodeShape
       const nodeShape = this.valueShape;
@@ -713,11 +744,13 @@ export class PropertyShape extends SHACL_Shape {
         return false;
       }
     }
+    //validate shacl:minCount
     if (this.minCount) {
       if (values.size < this.minCount) {
         return false;
       }
     }
+    //validate shacl:maxCount
     if (this.maxCount) {
       if (values.size > this.maxCount) {
         return false;
@@ -770,12 +803,17 @@ export class ValidationResult extends Shape {
     path: shacl.resultPath,
     maxCount: 1,
   })
-  get resultPath(): NamedNode {
-    return this.getOne(shacl.resultPath) as NamedNode;
+  get resultPath(): NamedNode|NamedNode[] {
+    let propertyPath = this.getAll(shacl.resultPath);
+    if(propertyPath.size === 1) {
+      return propertyPath.first() as NamedNode;
+    } else {
+      return [...propertyPath] as NamedNode[];
+    }
   }
 
-  set resultPath(value: NamedNode) {
-    this.overwrite(shacl.resultPath, value);
+  set resultPath(value: NamedNode|NamedNode[]) {
+    (value instanceof NamedNode) ? this.overwrite(shacl.resultPath, value) : this.moverwrite(shacl.resultPath, value);
   }
 
   @objectProperty({
@@ -820,11 +858,18 @@ export class ValidationResult extends Shape {
     validationResult.resultSeverity = shacl.Violation;
     validationResult.resultPath = propertyShape.path;
 
-    //TODO: make property nodes support property paths beyond a single property
-    let property = propertyShape.path;
-    let values =
-      focusNode instanceof NamedNode ? focusNode.getAll(property) : null;
+    let path = propertyShape.path;
+    let values;
+    if(path instanceof NamedNode) {
+      values = focusNode instanceof NamedNode ? focusNode.getAll(path) : null;
+    } else {
+      values = focusNode;
+      for(let prop of path) {
+        values = values.getAll(prop);
+      }
+    }
     for (let value of values) {
+      //validate shacl:class
       if (propertyShape.class) {
         if (
           !(
@@ -839,6 +884,7 @@ export class ValidationResult extends Shape {
           return validationResult;
         }
       }
+      //validate shacl:datatype
       if (propertyShape.datatype) {
         if (
           !(
@@ -853,6 +899,7 @@ export class ValidationResult extends Shape {
           return validationResult;
         }
       }
+      //validate shacl:node
       if (propertyShape.valueShape) {
         //every value should be a valid instance of propertyShape nodeShape
         let nodeShape = propertyShape.valueShape;
@@ -862,7 +909,7 @@ export class ValidationResult extends Shape {
         if (
           !valueIsSelf && !(nodeShape as any)._validateNode(value)
         ) {
-          //get extra information why the value doesnt match the shape
+          //get extra information why the value doesn't match the shape
           let valueReport = ValidationReport.forNodeAgainstShape(value, nodeShape);
 
           validationResult.sourceConstraintComponent =
@@ -873,6 +920,7 @@ export class ValidationResult extends Shape {
         }
       }
     }
+    //validate shacl:minCount
     if (propertyShape.minCount) {
       if (values.size < propertyShape.minCount) {
         validationResult.message = `Minimum ${
@@ -885,6 +933,7 @@ export class ValidationResult extends Shape {
         return validationResult;
       }
     }
+    //validate shacl:maxCount
     if (propertyShape.maxCount) {
       if (values.size > propertyShape.maxCount) {
         validationResult.message = `Maximum ${
@@ -905,11 +954,19 @@ export class ValidationResult extends Shape {
     // if(this.sourceShape) {
     //   result += '\tSource Shape:\t'+this.sourceShape.uri + '\n';
     // }
+    let resultPathStr = '';
+    let resultPath = this.resultPath;
+    if(resultPath instanceof NamedNode) {
+      resultPathStr = resultPath.uri;
+    } else
+    {
+      resultPathStr = resultPath.map((path) => path.uri).join(' -> ');
+    }
     if (this.focusNode) {
       result += '\tFocus Node:\t' + this.focusNode.toString() + '\n';
     }
     if (this.resultPath) {
-      result += '\tPath:\t\t' + this.resultPath.uri + '\n';
+      result += '\tPath:\t\t' + resultPathStr + '\n';
     }
     if (this.validatedValue) {
       result += '\tValue:\t' + this.validatedValue.toString() + '\n';
@@ -981,7 +1038,7 @@ export class ValidationReport extends Shape {
         console.log(
           `${focusNode.toString()} does not have target type: ${
             shape.targetClass.uri
-          }. Although it's not a SHACL validation error, it does mean this node will not be created as an instance of the ${
+          }. Although it's not a SHACL validation error, it does mean this node will not be selected when getting instances of the ${
             shape.label
           } shape.}`,
         );

@@ -122,7 +122,7 @@ export function useWatchProperty(
             });
           if (matchingPropertyShape) {
             //TODO: if path can be multiple props, we need to watch the whole path
-            property = matchingPropertyShape.path;
+            property = matchingPropertyShape.path as NamedNode;
             break;
           }
         }

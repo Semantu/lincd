@@ -42,7 +42,7 @@ export abstract class LinkedStorage {
     Node,
     CoreMap<NamedNode, true | Promise<any>>
   > = new CoreMap();
-  private static propShapeMap: Map<NamedNode, PropertyShape[]>;
+  private static propShapeMap: Map<string, PropertyShape[]>;
 
   static init() {
     if (!this._initialized) {
@@ -651,9 +651,9 @@ export abstract class LinkedStorage {
       }
       let currentPropShapes = subjectToPropShapes.get(quad.subject);
       //get all the property shapes that match this predicate and add them to the property shapes of this subject
-      if (propShapeMap.has(quad.predicate)) {
+      if (propShapeMap.has(quad.predicate.uri)) {
         propShapeMap
-          .get(quad.predicate)
+          .get(quad.predicate.uri)
           .forEach((propShape) => currentPropShapes.push(propShape));
       }
     });
@@ -1084,16 +1084,18 @@ export abstract class LinkedStorage {
   }
 
   private static getPredicateToPropertyShapesMap(): Map<
-    NamedNode,
+    string,
     PropertyShape[]
   > {
     if (!this.propShapeMap) {
       this.propShapeMap = new Map();
       PropertyShape.getLocalInstances().forEach((propertyShape) => {
-        if (!this.propShapeMap.has(propertyShape.path)) {
-          this.propShapeMap.set(propertyShape.path, []);
+        let path = propertyShape.path;
+        let pathString = path instanceof NamedNode ? path.uri : path.map((p) => p.uri).join(',');
+        if (!this.propShapeMap.has(pathString)) {
+          this.propShapeMap.set(pathString, []);
         }
-        this.propShapeMap.get(propertyShape.path).push(propertyShape);
+        this.propShapeMap.get(pathString).push(propertyShape);
       });
     }
     return this.propShapeMap;
