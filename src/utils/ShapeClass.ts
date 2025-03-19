@@ -8,28 +8,42 @@ let subShapesSpecificityCache: Map<string, (typeof Shape)[][]> = new Map();
 let subShapesCache: Map<string, (typeof Shape)[]> = new Map();
 let mostSpecificSubShapesCache: Map<string, (typeof Shape)[]> = new Map();
 let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
+let shouldResetCache = false;
 export function addNodeShapeToShapeClass(nodeShape: NodeShape, shapeClass: typeof Shape) {
   nodeShapeToShapeClass.set(nodeShape.namedNode, shapeClass);
+  //make sure that the cache is reset after the next event loop
+  if (!shouldResetCache) {
+    shouldResetCache = true;
+    setTimeout(() => {
+      subShapesSpecificityCache.clear();
+      subShapesCache.clear();
+      mostSpecificSubShapesCache.clear();
+      shouldResetCache = false;
+    }, 0);
+  }
 }
 export function getShapeClass(nodeShape: NamedNode): typeof Shape {
   return nodeShapeToShapeClass.get(nodeShape);
 }
 
-export function getSubShapesClasses(shape: typeof Shape | (typeof Shape)[],_internalKey?:string): (typeof Shape)[]
-{
-  let key = _internalKey || (Array.isArray(shape) ? shape.map(s => s.name).join(',') : shape.name);
-  if (!subShapesCache.has(key))
-  {
+export function getSubShapesClasses(shape: typeof Shape | (typeof Shape)[], _internalKey?: string): (typeof Shape)[] {
+  let key = _internalKey || getKey(shape);
+
+  if (!subShapesCache.has(key)) {
     //make sure we have a real class
     shape = ensureShapeConstructor(shape);
     //apply the hasSuperclass function to the shape
-    let filterFunction = applyFnToShapeOrArray(shape,hasSubClass);
+    let filterFunction = applyFnToShapeOrArray(shape, hasSubClass);
     //filter and then sort the results based on their inheritance (most specific classes first, so we use hasSuperClass for the sorting)
-    subShapesCache.set(key,filterShapeClasses(filterFunction).sort((a,b) => {
-      return hasSubClass(a,b) ? 1 : -1;
-    }));
+    subShapesCache.set(
+      key,
+      filterShapeClasses(filterFunction).sort((a, b) => {
+        return hasSubClass(a, b) ? 1 : -1;
+      }),
+    );
   }
-  return subShapesCache.get(key);
+  //return a copy of the array to prevent it from being modified
+  return [...subShapesCache.get(key)];
 
   // let extendsGivenShapeClass = Array.isArray(shape) ? (shapeClass) => {
   //     return shape.some(s => shapeClass.constructor.prototype instanceof s);
@@ -121,12 +135,12 @@ export function getMostSpecificSubShapes(shape: typeof Shape | (typeof Shape)[])
   if (!Array.isArray(shape)) {
     shape = [shape];
   }
-  let key = shape.map(s => s.name).join(',');
-  if(!mostSpecificSubShapesCache.has(key)) {
+  let key = shape.map((s) => s.name).join(',');
+  if (!mostSpecificSubShapesCache.has(key)) {
     //get the subshapes of the given shapes
-    let subShapes: (typeof Shape)[] = getSubShapesClasses(shape,key);
+    let subShapes: (typeof Shape)[] = getSubShapesClasses(shape, key);
     //filter them down to the most specific ones (that are not extended by any other shape)
-    mostSpecificSubShapesCache.set(key,filterShapesToMostSpecific(subShapes));
+    mostSpecificSubShapesCache.set(key, filterShapesToMostSpecific(subShapes));
   }
   return mostSpecificSubShapesCache.get(key);
 }
@@ -197,58 +211,54 @@ export function getShapeOrSubShape<S extends Shape = Shape>(node, shape: typeof 
 export function getMostSpecificShapes(
   node: NamedNode,
   baseShape: typeof Shape | (typeof Shape)[] = Shape,
-): (typeof Shape)[]
-{
-  return _getMostSpecificShapes(baseShape,(subShape) => subShape.shape.validateNode(node));
+): (typeof Shape)[] {
+  return _getMostSpecificShapes(baseShape, (subShape) => subShape.shape.validateNode(node));
 }
 export function getMostSpecificShapesByType(
   node: NamedNode,
   baseShape: typeof Shape | (typeof Shape)[] = Shape,
-): (typeof Shape)[]
-{
-  return _getMostSpecificShapes(baseShape,(subShape) => node.has(rdf.type,subShape.targetClass));
+): (typeof Shape)[] {
+  return _getMostSpecificShapes(baseShape, (subShape) => node.has(rdf.type, subShape.targetClass));
 }
-function getKey(shape:typeof Shape | (typeof Shape)[]) {
-  return Array.isArray(shape) ? shape.map(s => s.name).join(',') : shape.name;
+function getKey(shape: typeof Shape | (typeof Shape)[]) {
+  return Array.isArray(shape) ? shape.map((s) => getShapeKey(s)).join(',') : getShapeKey(shape);
 }
-function getSubShapesClassesSortedBySpecificity(baseShape:typeof Shape | (typeof Shape)[] = Shape) {
+function getShapeKey(shape: typeof Shape) {
+  //return a unique string for each shape
+  return shape.targetClass?.uri || shape.name + shape.prototype.constructor.toString().substring(0, 80);
+}
+function getSubShapesClassesSortedBySpecificity(baseShape: typeof Shape | (typeof Shape)[] = Shape) {
   let key = getKey(baseShape);
-  if(!subShapesSpecificityCache.has(key))
-  {
-    let subShapes: (typeof Shape)[] = getSubShapesClasses(baseShape,key);
-    let specificityGroups:(typeof Shape)[][] = [];
-    while(subShapes.length > 0) {
+  if (!subShapesSpecificityCache.has(key)) {
+    let subShapes: (typeof Shape)[] = getSubShapesClasses(baseShape, key);
+    let specificityGroups: (typeof Shape)[][] = [];
+    while (subShapes.length > 0) {
       let mostSpecificSubShapes = filterShapesToMostSpecific(subShapes);
       specificityGroups.push(mostSpecificSubShapes);
       mostSpecificSubShapes.forEach((mostSpecificSubShape) => {
-        subShapes.splice(subShapes.indexOf(mostSpecificSubShape),1);
+        subShapes.splice(subShapes.indexOf(mostSpecificSubShape), 1);
       });
     }
-    subShapesSpecificityCache.set(key,specificityGroups);
+    subShapesSpecificityCache.set(key, specificityGroups);
   }
   return subShapesSpecificityCache.get(key);
-
 }
-function _getMostSpecificShapes(baseShape:typeof Shape | (typeof Shape)[] = Shape,shapeValidationFn)
-{
+function _getMostSpecificShapes(baseShape: typeof Shape | (typeof Shape)[] = Shape, shapeValidationFn) {
   //get the subshapes of the given base shape(s)
   let subShapes = getSubShapesClassesSortedBySpecificity(baseShape);
 
   let res;
   //for each group of most specific subshapes (before going to the next group of less specific subshapes)
-  for (let subShapeGroup of subShapes)
-  {
+  for (let subShapeGroup of subShapes) {
     //filter them down to the ones that this node is a valid instance of
     let shapesThatMatchNode = subShapeGroup.filter(shapeValidationFn);
     //if any of them can create a valid instance for this node, then return that
-    if (shapesThatMatchNode.length > 0)
-    {
+    if (shapesThatMatchNode.length > 0) {
       res = shapesThatMatchNode;
       break;
     }
   }
-  if (!res)
-  {
+  if (!res) {
     res = [];
   }
   return res;
