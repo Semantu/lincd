@@ -245,14 +245,13 @@ export type ToQueryResultSet<T> =
 export type QueryResponseToResultType<
   T,
   QShapeType extends Shape = null,
-  SourceOverwrite = null,
   HasName = false,
 
   // PreserveArray = false,
 > = T extends QueryBuilderObject
-  ? GetQueryObjectResultType<T, {}, SourceOverwrite,false,HasName>
+  ? GetQueryObjectResultType<T, {},false,HasName>
   : T extends LinkedQuery<any, infer Response, infer Source>
-    ? GetNestedQueryResultType<Response, Source, SourceOverwrite>
+    ? GetNestedQueryResultType<Response, Source>
     : T extends Array<infer Type>
       ? UnionToIntersection<QueryResponseToResultType<Type>>
       // ? PreserveArray extends true ? QueryResponseToResultType<Type,null,null,true>[] : UnionToIntersection<QueryResponseToResultType<Type,null,null,true>>
@@ -273,22 +272,21 @@ export type QueryResponseToResultType<
 export type GetQueryObjectResultType<
   QV,
   SubProperties = {},
-  SourceOverwrite = null,
   PrimitiveArray = false,
   HasName = false,
 > =
   QV extends QueryString<infer Source, infer Property>
-    ? CreateQResult<GetSource<Source, SourceOverwrite>, PrimitiveArray extends true ? string[] : string, Property>
+    ? CreateQResult<Source, PrimitiveArray extends true ? string[] : string, Property>
     : //note: count needs to be above number
       QV extends SetSize<infer Source>
-      ? SetSizeToQueryResult<GetSource<Source, SourceOverwrite>,HasName>
+      ? SetSizeToQueryResult<Source,HasName>
       : QV extends QueryNumber<infer Source, infer Property>
-        ? CreateQResult<GetSource<Source, SourceOverwrite>, PrimitiveArray extends true ? number[] : number, Property>
+        ? CreateQResult<Source, PrimitiveArray extends true ? number[] : number, Property>
         : QV extends QueryDate<infer Source, infer Property>
-          ? CreateQResult<GetSource<Source, SourceOverwrite>, PrimitiveArray extends true ? Date[] : Date, Property>
+          ? CreateQResult<Source, PrimitiveArray extends true ? Date[] : Date, Property>
           : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
             ? CreateQResult<
-                GetSource<Source, SourceOverwrite>,
+                Source,
                 ShapeType,
                 Property
               >
@@ -302,7 +300,7 @@ export type GetQueryObjectResultType<
                   >
                 ? CreateShapeSetQResult<
                     ShapeType,
-                    GetSource<Source, SourceOverwrite>,
+                    Source,
                     Property,
                     SubProperties
                   >
@@ -344,12 +342,12 @@ export type SetSizeToQueryResult<Source,HasName=false> =
     infer SourceProperty
   >
     ? HasName extends false
-      ? //for counted for each element in a shapeset, the result is the same as the result was before count() was called
-      //except that the value type is now a number
-      //hence we use parent source and sourceProperty to get the original result
-      // number
+      ?
+      //when we count something and we already know what the name of the variable of the resulting number is, then we return a number
+      //But if we count a shapeset and its NOT in a custom object where a key (name) is already known, then we return a QResult
+      //This QResult will be the same as it would be if there was no .count() statement. Except now it returns a number (hence we send number as value type)
       CreateQResult<ParentSource, number, SourceProperty>
-    : // : {count: number};
+    :
       number : number;
 
 /**
@@ -446,20 +444,20 @@ export type CreateShapeSetQResult<
 export type ObjectToPlainResult<T> = {
   //passing true as sourceOverwrite will mean that the original source is ignored and so the converted value will not be wrapped in a QResult
   // [P in keyof T]: QueryResponseToResultType<T[P], null, true>;
-  [P in keyof T]: QueryResponseToResultType<T[P],null,null,true>;
+  [P in keyof T]: QueryResponseToResultType<T[P],null,true>;
 };
 
 export type GetSource<Source, Overwrite> = Overwrite extends null
   ? Source
   : Overwrite;
 
-type GetNestedQueryResultType<Response, Source, SourceOverwrite> =
+type GetNestedQueryResultType<Response, Source> =
   Source extends QueryBuilderObject
     ? //if the linked query originates from within another query (like with select())
       //then we turn the source into a result, and pass the selected properties as "SubProperties"
       //regardless of whether the response type is an array or object, its gets converted into a result value object
       GetQueryObjectResultType<
-        GetSource<Source, SourceOverwrite>,
+        Source,
         ResponseToObject<Response>
       >
     : //by default: we just convert the response type into a result value object
