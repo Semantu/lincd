@@ -175,6 +175,11 @@ export interface PropertyShapeConfig {
    * Value of the property must be boolean
    */
   editInline?: boolean;
+
+  /**
+   * Values of the configured property path are sorted by the values of this property path.
+   */
+  sortBy?: NamedNode|NamedNode[];
 }
 
 export interface ParameterConfig {

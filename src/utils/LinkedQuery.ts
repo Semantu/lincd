@@ -38,6 +38,10 @@ export type QueryWrapperObject<ShapeType extends Shape = any> = {
 export type CustomQueryObject = {[key: string]: QueryPath};
 
 export type SelectPath = QueryPath[] | CustomQueryObject;
+export type SortByPath = {
+  paths:QueryPath[],
+  direction:'ASC'|'DESC'
+};
 /**
  * A LinkedQuery is used to build a query, when complete it can be turned into a LinkedQueryObject
  * that is used to send across the network as it can be serialized to JSON
@@ -60,6 +64,7 @@ export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 export type SelectQuery<S extends Shape = Shape> = {
   select: SelectPath;
   where?: WherePath;
+  sortBy?: SortByPath;
   subject?: S | QResult<S>;
   limit?: number;
   offset?: number;
@@ -218,6 +223,7 @@ export type PatchedQueryPromise<ResultType, ShapeType extends Shape> = {
     validation: WhereClause<ShapeType>,
   ): PatchedQueryPromise<ResultType, ShapeType>;
   limit(lim: number): PatchedQueryPromise<ResultType, ShapeType>;
+  sortBy(sortParam:any,direction?:'ASC'|'DESC'):PatchedQueryPromise<ResultType,ShapeType>;
 } & Promise<ResultType>;
 
 export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
@@ -240,10 +246,11 @@ export type QueryResponseToResultType<
   T,
   QShapeType extends Shape = null,
   SourceOverwrite = null,
+  HasName = false,
 
   // PreserveArray = false,
 > = T extends QueryBuilderObject
-  ? GetQueryObjectResultType<T, {}, SourceOverwrite>
+  ? GetQueryObjectResultType<T, {}, SourceOverwrite,false,HasName>
   : T extends LinkedQuery<any, infer Response, infer Source>
     ? GetNestedQueryResultType<Response, Source, SourceOverwrite>
     : T extends Array<infer Type>
@@ -267,13 +274,14 @@ export type GetQueryObjectResultType<
   QV,
   SubProperties = {},
   SourceOverwrite = null,
-  PrimitiveArray = false
+  PrimitiveArray = false,
+  HasName = false,
 > =
   QV extends QueryString<infer Source, infer Property>
     ? CreateQResult<GetSource<Source, SourceOverwrite>, PrimitiveArray extends true ? string[] : string, Property>
     : //note: count needs to be above number
       QV extends SetSize<infer Source>
-      ? SetSizeToQueryResult<GetSource<Source, SourceOverwrite>>
+      ? SetSizeToQueryResult<GetSource<Source, SourceOverwrite>,HasName>
       : QV extends QueryNumber<infer Source, infer Property>
         ? CreateQResult<GetSource<Source, SourceOverwrite>, PrimitiveArray extends true ? number[] : number, Property>
         : QV extends QueryDate<infer Source, infer Property>
@@ -329,17 +337,20 @@ type QueryValueIntersectionToObject<Items> = {
   [Type in Items as GetQueryObjectProperty<Type>]: GetQueryObjectOriginal<Type>;
 };
 
-export type SetSizeToQueryResult<Source> =
+export type SetSizeToQueryResult<Source,HasName=false> =
   Source extends QueryShapeSet<
     infer ShapeType,
     infer ParentSource,
     infer SourceProperty
   >
-    ? //for counted shapesets, the result is the same as the result was before count() was called
-      //hence we use parent source and sourceProperty, but the value type is now a number
+    ? HasName extends false
+      ? //for counted for each element in a shapeset, the result is the same as the result was before count() was called
+      //except that the value type is now a number
+      //hence we use parent source and sourceProperty to get the original result
+      // number
       CreateQResult<ParentSource, number, SourceProperty>
     : // : {count: number};
-      number;
+      number : number;
 
 /**
  * If the source is an object (it extends shape)
@@ -434,7 +445,8 @@ export type CreateShapeSetQResult<
  */
 export type ObjectToPlainResult<T> = {
   //passing true as sourceOverwrite will mean that the original source is ignored and so the converted value will not be wrapped in a QResult
-  [P in keyof T]: QueryResponseToResultType<T[P], null, true>;
+  // [P in keyof T]: QueryResponseToResultType<T[P], null, true>;
+  [P in keyof T]: QueryResponseToResultType<T[P],null,null,true>;
 };
 
 export type GetSource<Source, Overwrite> = Overwrite extends null
@@ -628,6 +640,7 @@ export class QueryBuilderObject<
   limit(lim: number) {
     console.log(lim);
   }
+
 
   /**
    * Returns the path of properties that were requested to reach this value
@@ -1178,6 +1191,8 @@ export class LinkedQuery<
    * @private
    */
   public traceResponse: ResponseType;
+  public sortResponse: any;
+  public sortDirection: string;
   public parentQueryPath: QueryPath;
   private limit: number;
   private offset: number;
@@ -1188,23 +1203,34 @@ export class LinkedQuery<
     private queryBuildFn?: QueryBuildFn<S, ResponseType>,
     private subject?: S | ShapeSet<S>,
   ) {
-    let dummyNode = new TestNode();
-    let queryShape: QueryBuilderObject;
-    //if the given class already extends QueryValue
-    if (shape instanceof QueryBuilderObject) {
-      //then we're likely dealing with QueryPrimitives (end values like strings)
-      //and we can use the given query value directly for the query evaluation
-      queryShape = shape;
-    } else {
-      //else a shape class is given, and we need to create a dummy node to apply and trace the query
-      let dummyShape = new (shape as any)(dummyNode);
-      queryShape = QueryShape.create(dummyShape);
-    }
+    let queryShape = this.getQueryShape();
 
     if (queryBuildFn) {
       let queryResponse = this.queryBuildFn(queryShape as any, this);
       this.traceResponse = queryResponse;
     }
+  }
+
+  /**
+   * Returns the dummy shape instance who's properties can be accessed freely inside a queryBuildFn
+   * It is used to trace the properties that are accessed in the queryBuildFn
+   * @private
+   */
+  private getQueryShape() {
+    let dummyNode = new TestNode();
+    let queryShape: QueryBuilderObject;
+    //if the given class already extends QueryValue
+    if (this.shape instanceof QueryBuilderObject) {
+      //then we're likely dealing with QueryPrimitives (end values like strings)
+      //and we can use the given query value directly for the query evaluation
+      queryShape = this.shape;
+    } else {
+      //else a shape class is given, and we need to create a dummy node to apply and trace the query
+      let dummyShape = new (this.shape as any)(dummyNode);
+      queryShape = QueryShape.create(dummyShape);
+    }
+    return queryShape;
+
   }
 
   setLimit(limit: number) {
@@ -1251,6 +1277,7 @@ export class LinkedQuery<
       limit: this.limit,
       offset: this.offset,
       shape: this.shape,
+      sortBy: this.getSortByPath(),
     } as SelectQuery<S>;
     if (this.wherePath) {
       selectQuery.where = this.wherePath;
@@ -1258,45 +1285,54 @@ export class LinkedQuery<
     return selectQuery;
   }
 
+  private getSortByPath() {
+    if(!this.sortResponse) return null;
+    //TODO: we should put more restrictions on sortBy and getting query paths from the response
+    // currently it reuses much of the select logic, but for example using .where() should probably not be allowed in a sortBy function?
+    return {
+      paths:this.getQueryPaths(this.sortResponse),
+      direction:this.sortDirection
+    }
+  }
   /**
    * Returns an array of query paths
    * A single query can request multiple things in multiple "query paths" (For example this is using 2 paths: Shape.select(p => [p.name, p.friends.name]))
    * Each query path is returned as array of the property paths requested, with potential where clauses (together called a QueryStep)
    */
-  getQueryPaths(): CustomQueryObject | QueryPath[] {
+  getQueryPaths(response=this.traceResponse): CustomQueryObject | QueryPath[] {
     let queryPaths: QueryPath[] = [];
     let queryObject: CustomQueryObject;
     //if the trace response is an array, then multiple paths were requested
     if (
-      this.traceResponse instanceof QueryBuilderObject ||
-      this.traceResponse instanceof QueryPrimitiveSet
+      response instanceof QueryBuilderObject ||
+      response instanceof QueryPrimitiveSet
     ) {
       //if it's a single value, then only one path was requested, and we can add it directly
-      queryPaths.push(this.traceResponse.getPropertyPath());
+      queryPaths.push(response.getPropertyPath());
     } else if (
-      Array.isArray(this.traceResponse) ||
-      this.traceResponse instanceof Set
+      Array.isArray(response) ||
+      response instanceof Set
     ) {
-      this.traceResponse.forEach((endValue: QueryBuilderObject) => {
+      response.forEach((endValue: QueryBuilderObject) => {
         queryPaths.push(endValue.getPropertyPath());
       });
-    } else if (this.traceResponse instanceof Evaluation) {
-      queryPaths.push(this.traceResponse.getWherePath());
-    } else if (this.traceResponse instanceof LinkedQuery) {
+    } else if (response instanceof Evaluation) {
+      queryPaths.push(response.getWherePath());
+    } else if (response instanceof LinkedQuery) {
       queryPaths.push(
-        (this.traceResponse as LinkedQuery<any, any>).getQueryPaths() as any,
+        (response as LinkedQuery<any, any>).getQueryPaths() as any,
       );
-    } else if (!this.traceResponse) {
+    } else if (!response) {
       //that's totally fine. For example Person.select().where(p => p.name.equals('John'))
       //will return all persons with the name John, but no properties are selected for these persons
     }
     //if it's an object
-    else if (typeof this.traceResponse === 'object') {
+    else if (typeof response === 'object') {
       queryObject = {};
       //then loop over all the keys
-      Object.getOwnPropertyNames(this.traceResponse).forEach((key) => {
+      Object.getOwnPropertyNames(response).forEach((key) => {
         //and add the property paths for each key
-        const value = this.traceResponse[key];
+        const value = response[key];
         //TODO: we could potentially make Evaluation extend QueryValue, and rename getPropertyPath to something more generic,
         //that way we can simplify the code perhaps? Or would we loose type clarity? (QueryStep is the generic one for QueryValue, and Evaluation can just return WherePath right?)
         if (
@@ -1358,7 +1394,18 @@ export class LinkedQuery<
       this.setLimit(lim);
       return pAdjusted;
     };
+    p['sortBy'] = (sortFn: QueryBuildFn<S, any>,direction:string='ASC'): PatchedQueryPromise<ResultType, S> => {
+      this.sortBy(sortFn,direction);
+      return pAdjusted;
+    }
     return p as PatchedQueryPromise<ResultType, S>;
+  }
+  sortBy<R>(sortFn: QueryBuildFn<S, R>,direction) {
+    let queryShape = this.getQueryShape();
+    if (sortFn) {
+      this.sortResponse = sortFn(queryShape as any, this);
+      this.sortDirection = direction;
+    }
   }
 
   private isValidQueryPathsResult(qResult: QResult<any>, select: QueryPath[]) {

@@ -246,6 +246,8 @@ describe('query tests', () => {
       let res = p.friends.name;
       return res;
     });
+    // QueryString<QueryShapeSet<Person,QShape<Person,null,''>,'friends'>,'name'>
+    // QueryString<QueryShapeSet<ListItem<Action>,QShape<ItemList<Action>,null,''>,'itemListElements'>,'label'>
     let first = namesOfFriends[0];
     expect(Array.isArray(namesOfFriends)).toBe(true);
     expect(namesOfFriends.length).toBe(4);
@@ -641,15 +643,6 @@ describe('query tests', () => {
   // });
   test('labeling the key of count()', async () => {
     //count the number of friends that each person has
-    //QResult<Person, {friends: number}>[]
-    // let numberOfFriends = await Person.select((p) => {
-    //   let res = p.count(p.friends, 'friends');
-    //   return res;
-    // });
-    // let numberOfFriends2 = await Person.select((p) => {
-    //   let res = p.count(p.friends).as('friends');
-    //   return res;
-    // });
     let numberOfFriends3 = await Person.select((p) => {
       let res = p.friends.select((f) => ({numFriends: f.friends.size()}));
       return res;
@@ -658,20 +651,24 @@ describe('query tests', () => {
     /**
      * [{
      *   id: "p1",
-     *   friends: 2
+     *   friends: [
+     *     {numFriends: 2,id: "p2"},
+     *     {numFriends: 0,id: "p3"}
+     *   ]
      * },{
      *   id: "p2",
-     *   friends: 2
+     *   friends: [
+     *     {numFriends: 0,id: "p3"},
+     *     {numFriends: 0,id: "p4"}
+     *   ]
      * },...]
      */
-
-    // expect(numberOfFriends[0].hasOwnProperty('friends')).toBe(true);
-    // expect(numberOfFriends2[0].hasOwnProperty('friends')).toBe(true);
-    // expect(numberOfFriends[0].hasOwnProperty('count')).toBe(false);
-    // expect(numberOfFriends2[0].hasOwnProperty('count')).toBe(false);
-
+    //We want outcome to be {numFriends: number}
+    //So ObjectToPlainResult should convert the SetSize to a number
+      //if Source (SetSize<Source>) extends QueryShapeSet, then its an object, else a number
     let first = numberOfFriends3[0];
     let firstNumFriends: number = first.friends[0].numFriends;
+    // let firstNumFriends: number = first.friends;
     expect(first.hasOwnProperty('friends')).toBe(true);
     expect(first.hasOwnProperty('count')).toBe(false);
     expect(firstNumFriends).toBe(2);
@@ -702,6 +699,32 @@ describe('query tests', () => {
   //   expect(numberOfFriends[2].count).toBe(0);
   //   expect(numberOfFriends[3].count).toBe(0);
   // });
+
+  test('nested object property', async () => {
+
+    //NOTE: this test is currently just here for typescript types.
+    let res = await Person.select((p) => {
+      let res = {
+        friends:p.friends,
+        bestFriends:p.friends.bestFriend
+      };
+      return res;
+    });
+
+    //has to be an array of objects
+    let friends = res[0].friends;
+    //bestFriends should be a PATH, but it's not. Its a end result only
+    let bestFriends = res[0].bestFriends;
+
+    let res2 = await Person.select((p) => {
+      let res = p.friends.bestFriend;
+      return res;
+    });
+    //This works, friends is an array and bestFriend is a single shape
+    let firstBestFriend = res2[0].friends[0].bestFriend;
+
+  });
+
   test('sub select custom', async () => {
     let namesAndHobbiesOfFriends = await Person.select((p) => {
       let res = p.friends.select((f) => {
@@ -744,13 +767,13 @@ describe('query tests', () => {
       };
       return res;
     });
-    let first = customResult[0];
+    let {nameIsMoa,name,id} = customResult[0];
     let second = customResult[1];
 
     expect(Array.isArray(customResult)).toBe(true);
-    expect(first.id).toBe(p1.uri);
-    expect(first.nameIsMoa).toBe(false);
-    expect(typeof first.name).toBe('string');
+    expect(id).toBe(p1.uri);
+    expect(nameIsMoa).toBe(false);
+    expect(typeof name).toBe('string');
     expect(second.id).toBe(p2.uri);
     expect(second.nameIsMoa).toBe(true);
 
@@ -940,7 +963,7 @@ describe('query tests', () => {
     const Component2 = linkedComponent(query2, ({hobby, bestFriend}) => {
       return (
         <>
-          <span>{hobby}</span>
+          <span>{hobby.toString()}</span>
           <Component1 of={bestFriend} />
         </>
       );
@@ -1117,6 +1140,45 @@ describe('query tests', () => {
     expect(limitedNames).toHaveLength(1);
     expect(first.id).toBe(p1.uri);
   });
+
+  test('sort by 1 property - ASC (default)', async () => {
+    let sorted = await Person.select((p) => {
+      return p.name;
+    }).sortBy((p) => p.name);
+
+    //Jinx, Moa, Quinn, Semmy
+
+    expect(Array.isArray(sorted)).toBe(true);
+    expect(sorted).toHaveLength(4);
+    expect(sorted[0].id).toBe(p3.uri);
+    expect(sorted[0].name).toBe('Jinx');
+    expect(sorted[1].id).toBe(p2.uri);
+    expect(sorted[1].name).toBe('Moa');
+    expect(sorted[2].id).toBe(p4.uri);
+    expect(sorted[2].name).toBe('Quinn');
+    expect(sorted[3].id).toBe(p1.uri);
+    expect(sorted[3].name).toBe('Semmy');
+  });
+
+  test('sort by 1 property - DESC', async () => {
+    let sorted = await Person.select((p) => {
+      return p.name;
+    }).sortBy((p) => p.name, 'DESC');
+
+    //Semmy, Quinn, Moa, Jinx
+
+    expect(Array.isArray(sorted)).toBe(true);
+    expect(sorted).toHaveLength(4);
+    expect(sorted[0].id).toBe(p1.uri);
+    expect(sorted[0].name).toBe('Semmy');
+    expect(sorted[1].id).toBe(p4.uri);
+    expect(sorted[1].name).toBe('Quinn');
+    expect(sorted[2].id).toBe(p2.uri);
+    expect(sorted[2].name).toBe('Moa');
+    expect(sorted[3].id).toBe(p3.uri);
+    expect(sorted[3].name).toBe('Jinx');
+  });
+
 
 //   test('linked set component with pagination - going to next page', async () => {
 //     setDefaultPageLimit(2);
@@ -1398,7 +1460,10 @@ test('update query 1 - with simple object argument', async () => {
     expect(f3.name).toEqual('New Friend');
 
     //check that it's indeed changed in the database
-    let res2 = await Person.select(tp,(p) => [p.bestFriend,p.friends.name]);
+    let res2 = await Person.select(tp,(p) => [
+      p.bestFriend,
+      p.friends.name,
+    ]);
     expect(res2.id).toBe(tp.uri);
     expect(res2.bestFriend).toBeDefined();
     expect(res2.bestFriend.id).toEqual(p2.uri);
@@ -1412,6 +1477,7 @@ test('update query 1 - with simple object argument', async () => {
     expect(f3b.name).toEqual('New Friend');
 
   });
+
 
 // test('update query with object argument', async () => {
 //   const res = await Person.update(p1,{

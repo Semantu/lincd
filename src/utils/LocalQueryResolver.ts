@@ -19,7 +19,7 @@ import {
   WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
-  WherePath,
+  WherePath,SortByPath,
 } from './LinkedQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
@@ -361,9 +361,15 @@ export function resolveLocal<ResultType>(
   // let subject2 = query.subject ? query.subject : query.shape.getLocalInstancesByType();
   // console.log(ValidationReport.printForShapeInstances(query.shape));
 
+  //filter the instances down based on the where clause
   if (query.where) {
     subject = filterResults(subject, query.where);
   }
+  //sort the instances before slicing
+  if(query.sortBy) {
+    subject = sortResults(subject,query.sortBy);
+  }
+  //slice the instances based on the limit and offset
   if (query.limit && subject instanceof ShapeSet) {
     subject = subject.slice(
       query.offset || 0,
@@ -387,6 +393,7 @@ export function resolveLocal<ResultType>(
     resultObjects = shapeSetToResultObjects(subject as ShapeSet);
   }
 
+  //SELECT - go over the select path and resolve the values
   if (Array.isArray(query.select)) {
     query.select.forEach((queryPath) => {
       resolveQueryPath(subject, queryPath, resultObjects);
@@ -534,6 +541,34 @@ function evaluateWhere(shape: Shape, method: string, args: any[]): boolean {
   return filterMethod.apply(null, [shape, ...args]);
 }
 
+function sortResults(subject: ShapeSet|Shape, sortBy: SortByPath) {
+
+  if(subject instanceof Shape) return subject;
+
+  //SORTING - how it works
+  //If a query is sorted by 2 paths (e.g. sort by lastName then by firstName), it will first sort by the first, then by the second if the first one didn't give a result
+
+  let ascending = sortBy.direction === 'ASC';
+  let sorted = [...subject].sort((a, b) => {
+    //go over each sort path (sortBy contains an array with 1 or more paths to sort by)
+    for(let sortPath of sortBy.paths) {
+      //resolve the value of the sort path for both a and b
+      let aValue = resolveQueryPathEndResults(a, sortPath);
+      let bValue = resolveQueryPathEndResults(b, sortPath);
+      //if the values are different, we can return the result
+      if (aValue < bValue) {
+        return ascending ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return ascending ? 1 : -1;
+      }
+      //else sort by the next path
+    }
+    //if we reach the end of the loop, then the values are equal by all paths
+    return 0;
+  });
+  return new ShapeSet(sorted);
+}
 /**
  * Filters down the given subjects to only those what match the where clause
  * @param subject
