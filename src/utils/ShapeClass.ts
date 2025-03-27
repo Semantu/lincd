@@ -315,7 +315,8 @@ function _getMostSpecificShapes(baseShape:typeof Shape | (typeof Shape)[] = Shap
     //filter them down to the ones that this node is a valid instance of
     let shapesThatMatchNode = subShapeGroup.filter(shapeValidationFn);    //if any of them can create a valid instance for this node, then return that
 
-    //if any of them can create a valid instance for this node, then return that    if (shapesThatMatchNode.length > 0)
+    //if any of them can create a valid instance for this node, then return that
+    if (shapesThatMatchNode.length > 0)
     {
       res = shapesThatMatchNode;
       break;

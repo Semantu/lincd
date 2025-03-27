@@ -20,7 +20,7 @@ import {QuadSet} from '../collections/QuadSet.js';
 import { NodeShape,PropertyShape } from './SHACL.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
-  getMostSpecificShapes,getPropertyShapeByLabel,
+  getMostSpecificShapes,getMostSpecificShapesByType,getPropertyShapeByLabel,
   getShapeOrSubShape,
   getSubShapesClasses,
 } from '../utils/ShapeClass.js';
@@ -659,7 +659,7 @@ export abstract class Shape implements IShape {
     if (this.hasProperty(property)) {
       const value = this.getOne(property);
       if (allowSubShapes) {
-        shape = getMostSpecificShapes(value as NamedNode, shape)[0];
+        shape = getMostSpecificShapesByType(value as NamedNode, shape)[0];
       }
       return new (shape as any)(value) as S;
     }

@@ -8,6 +8,7 @@ import {LinkedComponent, LinkedSetComponent} from './LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import { getPropertyShapeByLabel } from './ShapeClass.js';
 import { ClassOf,InstanceOf } from './Types';
+import { Prettify } from './queries/LinkedUpdateQuery';
 
 /**
  * ###################################
@@ -258,7 +259,7 @@ export type QueryResponseToResultType<
       : T extends Evaluation
         ? boolean
         : T extends Object
-          ? QResult<QShapeType, ObjectToPlainResult<T>>
+          ? QResult<QShapeType, Prettify<ObjectToPlainResult<T>>>
           : never;
 
 /**
@@ -276,19 +277,21 @@ export type GetQueryObjectResultType<
   HasName = false,
 > =
   QV extends QueryString<infer Source, infer Property>
-    ? CreateQResult<Source, PrimitiveArray extends true ? string[] : string, Property>
+    ? CreateQResult<Source, PrimitiveArray extends true ? string[] : string, Property,{},HasName>
     : //note: count needs to be above number
       QV extends SetSize<infer Source>
       ? SetSizeToQueryResult<Source,HasName>
       : QV extends QueryNumber<infer Source, infer Property>
-        ? CreateQResult<Source, PrimitiveArray extends true ? number[] : number, Property>
+        ? CreateQResult<Source, PrimitiveArray extends true ? number[] : number, Property,{},HasName>
         : QV extends QueryDate<infer Source, infer Property>
-          ? CreateQResult<Source, PrimitiveArray extends true ? Date[] : Date, Property>
+          ? CreateQResult<Source, PrimitiveArray extends true ? Date[] : Date, Property,{},HasName>
           : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
             ? CreateQResult<
                 Source,
                 ShapeType,
-                Property
+                Property,
+                {},
+                HasName
               >
             : //   CreateQResult<Source, ShapeType, Property>
               QV extends BoundComponent<infer Source, infer ShapeType>
@@ -302,7 +305,8 @@ export type GetQueryObjectResultType<
                     ShapeType,
                     Source,
                     Property,
-                    SubProperties
+                    SubProperties,
+                    HasName
                   >
                 : QV extends QueryPrimitiveSet<infer QPrim extends QueryPrimitive<any>> ?
                     GetQueryObjectResultType<QPrim,null,null,true>
@@ -359,14 +363,20 @@ export type CreateQResult<
   Value = undefined,
   Property extends string | number | symbol = '',
   SubProperties = {},
+  HasName = false
 > =
   Source extends QueryShape<
     infer SourceShapeType,
     infer ParentSource,
     infer SourceProperty
   >
+    //if the parent source is null, that means this is the final source-node in the query
     ? ParentSource extends null
-      ? QResult<
+      //HERE:
+      ? HasName extends true ? Value :
+      //hence we create a single QResult, but do not use CreateQResult (which will keep creating nested QResults)
+      // ?
+        QResult<
           SourceShapeType,
           {
             //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
@@ -384,7 +394,9 @@ export type CreateQResult<
               [P in Property]: CreateQResult<Value, Value>;
             } & SubProperties
           >,
-          SourceProperty
+          SourceProperty,
+          {},
+          HasName
         >
     : Source extends QueryShapeSet<
           infer ShapeType,
@@ -402,7 +414,9 @@ export type CreateQResult<
               [P in Property]: CreateQResult<Value, Value>;
             }
           >[],
-          SourceProperty
+          SourceProperty,
+          {},
+          HasName
         >
       : //this needs to be value amongst other things for .select({customKeys}) and ObjectToPlainResult
         Value extends Shape
@@ -414,11 +428,18 @@ export type CreateShapeSetQResult<
   Source = undefined,
   Property extends string | number | symbol = '',
   SubProperties = {},
+  HasName=false
 > =
-  Source extends QueryShape<infer SourceShapeType>
-    ? QResult<
+  Source extends QueryShape<infer SourceShapeType,infer ParentSource>
+    //if HasName is true and source is a QueryShape, but ITS source (ParentSource) is null
+    //then we don't want to create a nested QResult, but instead we ignore this last property and we return an array of QResults of this source
+    //This is used by custom object keys with values like: p.friends, which should return an array of QResult<Person> Objects, not a {friends:...} QResult
+    //NOTE: this notation check if 2 statements are true: HasName is true, and ParentSource is null
+    ? [HasName,ParentSource] extends [true,null] ?
+        CreateQResult<Source, null, null>[]
+      : QResult<
         SourceShapeType,
-        {[P in Property]: CreateQResult<Source, null, null, SubProperties>[]}
+        {[P in Property]: CreateQResult<Source, null, null,SubProperties>[]}
       >
     : Source extends QueryShapeSet<
           infer ShapeType,
@@ -434,7 +455,9 @@ export type CreateShapeSetQResult<
               [P in Property]: CreateQResult<ShapeType>[];
             }
           >[],
-          SourceProperty
+          SourceProperty,
+          {},
+          HasName
         >
       : CreateQResult<ShapeType>;
 
@@ -476,7 +499,7 @@ type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
 type ResponseToObject<R> =
   R extends Array<infer Type extends QueryBuilderObject>
     ? QueryValueIntersectionToObject<Type>
-    : ObjectToPlainResult<R>;
+    : Prettify<ObjectToPlainResult<R>>;
 
 export type GetQueryResponseType<Q> =
   Q extends LinkedQuery<any, infer ResponseType> ? ResponseType : Q;
@@ -1404,6 +1427,7 @@ export class LinkedQuery<
       this.sortResponse = sortFn(queryShape as any, this);
       this.sortDirection = direction;
     }
+    return this;
   }
 
   private isValidQueryPathsResult(qResult: QResult<any>, select: QueryPath[]) {

@@ -12,6 +12,7 @@ import {setDefaultPageLimit} from '../utils/Package.js';
 import {xsd} from '../ontologies/xsd.js';
 import {TestNode} from '../utils/TraceShape.js';
 import { literalProperty,objectProperty } from '../shapes/SHACL.js';
+import { QResult } from '../utils/LinkedQuery';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -737,6 +738,40 @@ describe('query tests', () => {
       return res;
     });
 
+    //
+    //LinkedQuery<Person,{
+    // _name: QueryString<QShape<Person,null,''>,'name'>
+    // _hobby: QueryString<QShape<Person,null,''>,'hobby'>
+    //},QueryShapeSet<...>>
+    //QShapeSet<Person,QShape<Person,null,''>,'friends'>
+
+    //GetNestedQueryResultType<
+    // Response = {name,hobby},
+    // Source = QShapeSet<Person,QShape<Person,null,''>,'friends'>
+    //>
+    // --> GetQueryObjectResultType<
+    //         Source = QShapeSet<Person,QShape<Person,null,''>,'friends'>,
+    //         SubProperties = ResponseToObject<{
+    //          _name: QueryString<QShape<Person,null,''>,'name'>,
+    //          _hobby: QueryString<QShape<Person,null,''>,'hobby'>
+    //         }>
+    //       >
+
+    //--> QV extends QueryShapeSet.. ->
+    // CreateShapeSetQResult<
+    //   ShapeType = Person,
+    //   Source = QShape<Person,null,''>,
+    //   Property = 'friends',
+    //   SubProperties = {}
+    //   HasName = false? (we're currently not passing this in GetNestedQueryResultType)
+    //>
+
+    //-> QResult<
+    //  Source = SourceShapeType = Person,
+    //  {'friends': CreateQResult< Person, null, null, {_name: string, _hobby: string}>[]}
+    // (had to pass SubProperties, it works now)
+
+
     /**
      * Expected result:
      * [{
@@ -763,17 +798,85 @@ describe('query tests', () => {
     let customResult = await Person.select((p) => {
       let res = {
         nameIsMoa: p.name.equals('Moa'),
+        friendNames: p.friends.name,
+        friends: p.friends,
         name: p.name,
       };
       return res;
     });
-    let {nameIsMoa,name,id} = customResult[0];
+    let {nameIsMoa,name,friends,friendNames,id} = customResult[0];
     let second = customResult[1];
+    //just a typescript check here
+    let stringName:string = name;
+    // QueryString<
+    //   QueryShapeSet<Person,
+    //     QShape<Person,null,''>
+    //   ,'friends'>
+    // ,'name'>
+    //Should convert to QResult<Person,{name:string}>[]
+    
+    //step by step
+    //1) QueryString -> CreateQResult<
+    //                    Source = QSS<Person,QShape<Person,null,''>,'friends'>,
+    //                    Value = string / string[]
+    //                    Property='name',
+    //                    SubProperties={}
+    //                    HasName=true
+    //                  >[]
+    //1B) Source extends QueryShapeSet,
+    //  ShapeType = Person,
+    //  ParentSource=QShape<Person,null,''>,
+    //  SourceProperty='friends'
+    //-->
+    //2) CreateQResult<
+    //  Source = QShape<Person,null,''>
+    //  Value = QResult< Person, {'friends':CreateQResult<string,string>}>[]
+    //  Property = 'friends'
+    //  SubProperties = {}
+    //  HasName = true
+
+    //Source extends QueryShape
+    //  SourceShapeType = Person,
+    //  ParentSource = null,
+    //  Property = ''
+
+    //-> Value is returned... QResult< Person, {'friends':CreateQResult<string,string>}>[])
+
+    //----
+    // for friends. It should convert
+    //      QShapeSet<Person,QShape<Person,null,''>,'friends'>
+    // into QResult<Person,null>[]
+    //1) GetQueryObjectResultType .. QV extends QueryShapeSet
+    //  ShapeType = Person,
+    //  Source = QShape<Person,null,''>
+    //  Property = 'friends'
+    // -> CreateShapeSetQResult<
+    //     ShapeType = Person,
+    //     Source = QShape<Person,null,''>,
+    //     Property = 'friends',
+    //     SubProperties = {}
+    //  >
+    //  Source extends QueryShape<SourceShapeType = Person>
+    // -> QResult<Person,{friends:CreateQResult<
+    //        Source = QShape<Person>
+    //        Value = null,
+    //       Property = null,
+    //       SubProperties = {}
+    //       HasName = true
+    //     >[]}>
+
+    // NOW -> QResult<Person,{}}>[]
+
+    //CreateQResult
+
+
+    let friends2:QResult<Person>[] = friends;
+    let friends3:QResult<Person,{name: string;}>[] = friendNames;
 
     expect(Array.isArray(customResult)).toBe(true);
     expect(id).toBe(p1.uri);
     expect(nameIsMoa).toBe(false);
-    expect(typeof name).toBe('string');
+    expect(typeof stringName).toBe('string');
     expect(second.id).toBe(p2.uri);
     expect(second.nameIsMoa).toBe(true);
 
@@ -1178,6 +1281,14 @@ describe('query tests', () => {
     expect(sorted[3].id).toBe(p3.uri);
     expect(sorted[3].name).toBe('Jinx');
   });
+
+  //TODO: sort by nested query
+  // test('sort by nested query',async () => {
+  //   const query2 = (ItemList<Action>).query(list => {
+  //     return list.itemListElements.select(l => l.item).sortBy(l => l.position,'ASC');
+  //   });
+  //
+  // })
 
 
 //   test('linked set component with pagination - going to next page', async () => {

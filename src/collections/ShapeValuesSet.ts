@@ -28,32 +28,32 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
     });
 
     //listen for changes in the property set
-    subject.onChange(property, (quads) => {
-      quads.forEach((q) => {
-        if (q.isRemoved) {
-          this.some((shape) => {
-            if (shape.node === q.object) {
-              return super.delete(shape);
-            }
-          });
-        } else {
-          //it may have already been added if this very shapeset was used directly to add an item to
-          //(we need to add it directly as that is expected behaviour when you add something to a set)
-          //so if we don't have an existing shape in here for the added node, then we add it
-          if (
-            !this.some((shape) => {
-              return shape.node === q.object;
-            })
-          ) {
-            if (allowSubShapes) {
-              super.add(getShapeOrSubShape(q.object, shapeClass));
-            } else {
-              super.add(new (shapeClass as any)(q.object));
-            }
-          }
-        }
-      });
-    });
+    // subject.onChange(property, (quads) => {
+    //   quads.forEach((q) => {
+    //     if (q.isRemoved) {
+    //       this.some((shape) => {
+    //         if (shape.node === q.object) {
+    //           return super.delete(shape);
+    //         }
+    //       });
+    //     } else {
+    //       //it may have already been added if this very shapeset was used directly to add an item to
+    //       //(we need to add it directly as that is expected behaviour when you add something to a set)
+    //       //so if we don't have an existing shape in here for the added node, then we add it
+    //       if (
+    //         !this.some((shape) => {
+    //           return shape.node === q.object;
+    //         })
+    //       ) {
+    //         if (allowSubShapes) {
+    //           super.add(getShapeOrSubShape(q.object, shapeClass));
+    //         } else {
+    //           super.add(new (shapeClass as any)(q.object));
+    //         }
+    //       }
+    //     }
+    //   });
+    // });
   }
 
   /**
