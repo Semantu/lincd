@@ -9,12 +9,23 @@ let subShapesSpecificityCache: Map<string, (typeof Shape)[][]> = new Map();
 let subShapesCache: Map<string, (typeof Shape)[]> = new Map();
 let mostSpecificSubShapesCache: Map<string, (typeof Shape)[]> = new Map();
 let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
+let shouldResetCache = false;
 
 export function addNodeShapeToShapeClass(
   nodeShape: NodeShape,
   shapeClass: typeof Shape,
 ) {
   nodeShapeToShapeClass.set(nodeShape.namedNode, shapeClass);
+  //make sure that the cache is reset after the next event loop
+  if (!shouldResetCache) {
+    shouldResetCache = true;
+    setTimeout(() => {
+      subShapesSpecificityCache.clear();
+      subShapesCache.clear();
+      mostSpecificSubShapesCache.clear();
+      shouldResetCache = false;
+    }, 0);
+  }
 }
 
 export function getShapeClass(nodeShape: NamedNode): typeof Shape {
@@ -29,7 +40,7 @@ export function getShapeClass(nodeShape: NamedNode): typeof Shape {
 
 export function getSubShapesClasses(shape: typeof Shape | (typeof Shape)[],_internalKey?:string): (typeof Shape)[]
 {
-  let key = _internalKey || (Array.isArray(shape) ? shape.map(s => s.name).join(',') : shape.name);
+  let key = _internalKey || getKey(shape);
   if (!subShapesCache.has(key))
   {
     //make sure we have a real class
@@ -41,7 +52,9 @@ export function getSubShapesClasses(shape: typeof Shape | (typeof Shape)[],_inte
       return hasSubClass(a,b) ? 1 : -1;
     }));
   }
-  return subShapesCache.get(key);
+  //return a copy of the array to prevent it from being modified
+  return [...subShapesCache.get(key)];
+
   // let extendsGivenShapeClass = Array.isArray(shape) ? (shapeClass) => {
   //     return shape.some(s => shapeClass.constructor.prototype instanceof s);
   //   } : (shapeClass) => {
@@ -283,8 +296,13 @@ export function getMostSpecificShapesByType(
   return _getMostSpecificShapes(baseShape,(subShape) => node.has(rdf.type,subShape.targetClass));
 }
 function getKey(shape:typeof Shape | (typeof Shape)[]) {
-  return Array.isArray(shape) ? shape.map(s => s.name).join(',') : shape.name;
+  return Array.isArray(shape) ? shape.map((s) => getShapeKey(s)).join(',') : getShapeKey(shape);
 }
+function getShapeKey(shape: typeof Shape) {
+  //return a unique string for each shape
+  return shape.targetClass?.uri || shape.name + shape.prototype.constructor.toString().substring(0, 80);
+}
+
 function getSubShapesClassesSortedBySpecificity(baseShape:typeof Shape | (typeof Shape)[] = Shape) {
   let key = getKey(baseShape);
   if(!subShapesSpecificityCache.has(key))

@@ -8,6 +8,19 @@ import {rdf} from '../ontologies/rdf.js';
 import {BlankNode, NamedNode, Node} from '../models.js';
 import {Shape} from './Shape.js';
 
+/**
+ * Class to work with rdf Lists
+ * A list is a way to store an ORDERED array in RDF (so in the graph with triples)
+ * For example:
+ * person.location = ["Portugal","Bali"]
+ * If the order of these 2 items matters then it can be stored as a list in the graph like this:
+ * _:somePerson _:location _:list1
+ * _:list1 rdf:first "Portugal"
+ * _:list1 rdf:rest _:list2 <-- continuation of the list can be found here
+ * _:list2 rdf:first "Bali"
+ * _:list2 rdf:rest rdf:nil <-- end of the list
+ *
+ */
 export class List extends Shape {
   static targetClass: NamedNode = rdf.List;
 

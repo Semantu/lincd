@@ -27,6 +27,7 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
       }
     });
 
+    //TODO: review, turned off for now due to memory leak
     //listen for changes in the property set
     // subject.onChange(property, (quads) => {
     //   quads.forEach((q) => {

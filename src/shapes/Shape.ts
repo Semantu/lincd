@@ -467,7 +467,20 @@ export abstract class Shape implements IShape {
    * This is helpful when using partly loaded data
    */
   static getLocalInstancesByType<T extends Shape>(this:ShapeType<T>):ShapeSet<T> {
-    return this.getSetOf(this.targetClass.getAllInverse(rdf.type))
+    //get all instances of the target class of this shape
+    let nodes = this.targetClass.getAllInverse(rdf.type);
+    //also look for shapes that extend this shape
+    getSubShapesClasses(this as any).forEach((shapeClass) => {
+      //and add instances of those classes as well
+      if (shapeClass.targetClass) {
+        return shapeClass.targetClass.getAllInverse(rdf.type).forEach(node => {
+          nodes.add(node);
+        })
+      }
+    });
+    //return as a set
+    return this.getSetOf(nodes);
+
   }
 
   static getLocalInstances<T extends Shape>(
@@ -659,7 +672,11 @@ export abstract class Shape implements IShape {
     if (this.hasProperty(property)) {
       const value = this.getOne(property);
       if (allowSubShapes) {
-        shape = getMostSpecificShapesByType(value as NamedNode, shape)[0];
+        shape =
+          (shape
+            ? getMostSpecificShapesByType(value as NamedNode, shape)[0] || shape
+            : getMostSpecificShapesByType(value as NamedNode)[0]) || Shape;
+
       }
       return new (shape as any)(value) as S;
     }
@@ -709,9 +726,9 @@ export abstract class Shape implements IShape {
     }
 
     //@TODO: do this for RdfsLiteral as well if they implement events at some point?
-    if (this._node instanceof NamedNode) {
-      this._node.on(NamedNode.NODE_REMOVED, this.destruct.bind(this));
-    }
+    // if (this._node instanceof NamedNode) {
+    //   this._node.on(NamedNode.NODE_REMOVED, this.destruct.bind(this));
+    // }
   }
 
   /**
