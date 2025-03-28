@@ -1447,7 +1447,7 @@ test('update query 1 - with simple object argument', async () => {
   expect(qRes2[0].hobby).toBe(originalHobby);
 });
 
-  test('update query 2 - overwrite a set', async () => {
+  test('update query 2 - overwrite a set (default)', async () => {
 
     let res = await Person.update(p1,{
       friends: [{
@@ -1503,7 +1503,7 @@ test('update query 1 - with simple object argument', async () => {
     expect(qRes2.hobby).toEqual(originalHobby);
   });
 
-  test('update query 4 - with 1 level nested object argument', async () => {
+  test('update query 4 - overwrite a nested object argument', async () => {
 
     let tp = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p5-test-person');
     tp.name = 'Unnamed person';
@@ -1588,6 +1588,170 @@ test('update query 1 - with simple object argument', async () => {
     expect(f3b.name).toEqual('New Friend');
 
   });
+
+  test('update query 6 - $add to Multi-Value Property (friends)', async () => {
+    const res = await Person.update(p1, {
+      friends: {
+        add: { name: 'Friend Added' },
+      },
+    });
+
+    expect(res.id).toBe(p1.uri);
+    expect(res.friends.added.some((f) => f.name === 'Friend Added')).toBe(true);
+
+    // Cleanup
+    await Person.update(p1, {
+      friends: {
+        remove: res.friends.added[0].id,
+      },
+    });
+
+    //check its removed
+    let qRes = await Person.select(p1, (p) => p.friends.name);
+    expect(qRes.friends.some((f) => f.name === 'Friend Added')).toBe(false);
+  });
+  //
+  // test('update query 7 - $remove from Multi-Value Property (friends)', async () => {
+  //   // First, ensure p2 is a friend
+  //   await Person.update(p1, {
+  //     friends: {
+  //       $add: { id: p2.uri },
+  //     },
+  //   });
+  //
+  //   let verifyAdd = await Person.select(p1, (p) => p.friends);
+  //   expect(verifyAdd.friends.some((f) => f.id === p2.uri)).toBe(true);
+  //
+  //   const res = await Person.update(p1, {
+  //     friends: {
+  //       $remove: p2.uri,
+  //     },
+  //   });
+  //
+  //   expect(res.id).toBe(p1.uri);
+  //   expect(res.friends.some((f) => f.id === p2.uri)).toBe(false);
+  // });
+  //
+  // test('update query 8 - $add and $remove in same update', async () => {
+  //   await Person.update(p1, {
+  //     friends: {
+  //       $add: { id: p2.uri },
+  //     },
+  //   });
+  //
+  //   const res = await Person.update(p1, {
+  //     friends: {
+  //       $add: { name: 'Combined Friend' },
+  //       $remove: p2.uri,
+  //     },
+  //   });
+  //
+  //   expect(res.id).toBe(p1.uri);
+  //   expect(res.friends.some((f) => f.name === 'Combined Friend')).toBe(true);
+  //   expect(res.friends.some((f) => f.id === p2.uri)).toBe(false);
+  //
+  //   // Cleanup
+  //   await Person.update(p1, {
+  //     friends: {
+  //       $remove: res.friends.find((f) => f.name === 'Combined Friend')?.id,
+  //     },
+  //   });
+  // });
+  //
+  // test('update query 9 - unset Multi-Value Property with undefined', async () => {
+  //   // First, make sure p1 has some friends
+  //   await Person.update(p1, {
+  //     friends: [
+  //       { id: p2.uri },
+  //       { id: p3.uri },
+  //     ],
+  //   });
+  //
+  //   const res = await Person.update(p1, {
+  //     friends: undefined,
+  //   });
+  //
+  //   expect(res.id).toBe(p1.uri);
+  //   expect(Array.isArray(res.friends)).toBe(true);
+  //   expect(res.friends.length).toBe(0);
+  // });
+
+  // test('update query 6 - function-based set single property', async () => {
+  //   const originalHobby = p1.hobby || 'Swimming';
+  //
+  //   const res = await Person.update(p1, (p) => {
+  //     return [p.hobby = 'Skating'];
+  //   });
+  //
+  //   expect(res.id).toEqual(p1.uri);
+  //   expect(res.hobby).toBe('Skating');
+  //
+  //   const qRes = await Person.select(p1, p => p.hobby);
+  //   expect(qRes.hobby).toBe('Skating');
+  //
+  //   await Person.update(p1, p => [p.hobby = originalHobby]);
+  // });
+  // test('update query 7 - function-based unset single property', async () => {
+  //   const originalHobby = p1.hobby;
+  //
+  //   const res = await Person.update(p1, (p) => {
+  //     return [p.hobby = undefined];
+  //   });
+  //
+  //   expect(res.hobby).toBeUndefined();
+  //
+  //   const qRes = await Person.select(p1, p => p.hobby);
+  //   expect(qRes.hobby).toBeUndefined();
+  //
+  //   await Person.update(p1, p => [p.hobby = originalHobby]);
+  // });
+  //
+  // test('update query 8 - function-based overwrite Multi-Value Property', async () => {
+  //   const res = await Person.update(p1, (p) => {
+  //     return [
+  //       p.friends = [{ name: 'New Pal' }]
+  //     ];
+  //   });
+  //
+  //   expect(res.friends.length).toBe(1);
+  //   expect(res.friends[0].name).toBe('New Pal');
+  //
+  //   const qRes = await Person.select(p1, p => p.friends.name);
+  //   expect(qRes.friends.length).toBe(1);
+  //   expect(qRes.friends[0].name).toBe('New Pal');
+  // });
+  //
+  // test('update query 10 - function-based remove from Multi-Value Property', async () => {
+  //   const resAdd = await Person.update(p1, p => [
+  //     p.friends.add({ name: 'TempRemove' })
+  //   ]);
+  //   const toRemove = resAdd.friends.find(f => f.name === 'TempRemove');
+  //   expect(toRemove).toBeDefined();
+  //
+  //   const res = await Person.update(p1, (p) => {
+  //     return [
+  //       p.friends.remove(toRemove.id)
+  //     ];
+  //   });
+  //
+  //   const qRes = await Person.select(p1, p => p.friends.name);
+  //   expect(qRes.friends.find(f => f.name === 'TempRemove')).toBeUndefined();
+  // });
+  //
+  // test('update query 11 - function-based nested update of bestFriend', async () => {
+  //   let res = await Person.update(p1, (p) => {
+  //     return [
+  //       p.bestFriend = { name: 'Bestie McBestFace' }
+  //     ];
+  //   });
+  //
+  //   expect(res.bestFriend).toBeDefined();
+  //   expect(res.bestFriend.name).toBe('Bestie McBestFace');
+  //
+  //   let qRes = await Person.select(p1, p => p.bestFriend.name);
+  //   expect(qRes.bestFriend.name).toBe('Bestie McBestFace');
+  // });
+
 
 
 // test('update query with object argument', async () => {

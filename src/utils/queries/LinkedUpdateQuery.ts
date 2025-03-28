@@ -78,16 +78,14 @@ type CombineTypes<T> = {
     : never;
 };
 
-// Recursive transformation with required fields
-type RecursiveTransform<T> = T extends { friends: infer F }
-  ? {
-  [K in keyof T]-?: K extends "friends"
-    ? RecursiveTransform<F>
-    : _AddId<T[K]>;
-} & { id: string }
-  : T extends Array<infer U>
-    ? Array<RecursiveTransform<U>>
-    : _AddId<T>;
+type RecursiveTransform<T> =
+  T extends string | number | boolean | Date | null | undefined
+    ? T
+    : T extends Array<infer U>
+      ? Array<RecursiveTransform<U>>
+      : T extends object
+        ? WithId<{ [K in keyof T]-?: RecursiveTransform<T[K]> }>
+        : T;
 
 export type AddId<T> = Prettify<RecursiveTransform<T>>;
 // export type AddId<T> = Prettify<_AddId<T>>;
@@ -149,7 +147,14 @@ type KeysWithoutFunctions<T> = {
 
 // type ShapePropertyToUpdatePartial<ShapeProperty> = ShapeProperty;
 type ShapePropValueToUpdatePartial<ShapeProperty> = ShapeProperty extends Shape ? UpdatePartial<ShapeProperty> :
-  ShapeProperty extends ShapeValuesSet<infer SSType> ? UpdatePartial<SSType>[] : ShapeProperty;
+  ShapeProperty extends ShapeValuesSet<infer SSType> ? SetUpdateValue<SSType> : ShapeProperty;
+
+type SetUpdateValue<SSType> = UpdatePartial<SSType>[] | SetModification<SSType>;
+
+type SetModification<SSType> = {
+  add?:UpdatePartial<SSType>[]|UpdatePartial<SSType>,
+  remove?:UpdatePartial<SSType>[]|UpdatePartial<SSType>
+};
 
 export type UpdateQuery<ResponseType=null> = {
   type:'update',
