@@ -78,14 +78,59 @@ type CombineTypes<T> = {
     : never;
 };
 
+type IsPlainObject<T> = T extends object
+  ? T extends any[]
+    ? false
+    : T extends Function
+      ? false
+      : T extends Date
+        ? false
+        : T extends RegExp
+          ? false
+          : T extends Error
+            ? false
+            : T extends null
+              ? false
+              : T extends undefined
+                ? false
+                : T extends object
+                  ? true
+                  : false
+  : false;
+
 type RecursiveTransform<T> =
   T extends string | number | boolean | Date | null | undefined
     ? T
     : T extends Array<infer U>
-      ? Array<RecursiveTransform<U>>
-      : T extends object
+      ? UpdatedSet<RecursiveTransform<U>>
+      : IsSetModification<T> extends true
+        ? ModifiedSet<T>
+      : IsPlainObject<T> extends true
         ? WithId<{ [K in keyof T]-?: RecursiveTransform<T[K]> }>
         : T;
+
+type UpdatedSet<U> = {
+  updatedTo:U[]
+}
+type IsSetModification<T> = T extends { add?: any; remove?: any } ? true : false;
+type AddedType<T> =
+  T extends { add: (infer U)[] }
+    ? U
+    : T extends { add: infer U }
+      ? U
+      : never;
+
+type RemovedType<T> =
+  T extends { remove: (infer U)[] }
+    ? U
+    : T extends { remove: infer U }
+      ? U
+      : never;
+
+type ModifiedSet<T> = {
+  added: AddId<AddedType<T>>[];
+  removed: AddId<RemovedType<T>>[];
+};
 
 export type AddId<T> = Prettify<RecursiveTransform<T>>;
 // export type AddId<T> = Prettify<_AddId<T>>;

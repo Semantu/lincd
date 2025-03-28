@@ -95,7 +95,8 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
         throw new Error('Invalid use of undefined for property: ' + propShape.label+'. You cannot mix undefined with defined values');
       }
       else {
-        plainValues[propShape.label] = plainValueArr;
+        // For multi-value properties, return updatedTo structure
+        plainValues[propShape.label] = { updatedTo: plainValueArr };
         overwritePropertyPathMultipleValues(subject,pathProperty,values);
       }
     }

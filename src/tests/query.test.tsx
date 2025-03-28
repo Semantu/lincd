@@ -1459,9 +1459,14 @@ test('update query 1 - with simple object argument', async () => {
     expect(res.id).toBeDefined()
     expect(typeof res.id).toBe('string')
     expect(res.id).toEqual(p1.uri)
-    expect(Array.isArray(res.friends)).toBeTruthy();
-    expect(typeof res.friends[0].id).toEqual('string');
-    expect(res.friends[0].name).toEqual('NewFriend');
+    expect(res.friends).toBeDefined();
+    //check if res.friends is an object (not an array)
+    expect(typeof res.friends).toBe('object');
+    expect(Array.isArray(res.friends)).toBe(false);
+    expect(res.friends.updatedTo).toBeDefined();
+    expect(Array.isArray(res.friends.updatedTo)).toBe(true);
+    expect(typeof res.friends.updatedTo[0].id).toBe('string');
+    expect(res.friends.updatedTo[0].name).toBe('NewFriend');
 
     //reselect the new friend
     let qRes2 = await Person.select((p) => {
@@ -1527,7 +1532,7 @@ test('update query 1 - with simple object argument', async () => {
     expect(res.id).toEqual(tp.uri);
     expect(res['hobby']).toBeUndefined();
     expect(res.friends).toBeDefined();
-    expect(res.friends.length).toEqual(1);
+    expect(res.friends.updatedTo.length).toEqual(1);
     expect(res.friends[0].name).toEqual('Much Friend');
     expect(res.friends[0].id).toBeDefined();
   });
@@ -1559,15 +1564,15 @@ test('update query 1 - with simple object argument', async () => {
     expect(res.bestFriend).toBeDefined();
     expect(res.bestFriend.id).toEqual(p2.uri);
     expect(Array.isArray(res.friends)).toBeTruthy();
-    expect(res.friends.length).toEqual(3);
+    expect(res.friends.updatedTo.length).toEqual(3);
 
-    let f1 = res.friends[0];
+    let f1 = res.friends.updatedTo[0];
     expect(f1.id).toEqual(p2.uri);
 
-    let f2 = res.friends[1];
+    let f2 = res.friends.updatedTo[1];
     expect(f2.id).toEqual(p3.uri);
 
-    let f3 = res.friends[2];
+    let f3 = res.friends.updatedTo[2];
     expect(f3.name).toEqual('New Friend');
 
     //check that it's indeed changed in the database
@@ -1600,11 +1605,15 @@ test('update query 1 - with simple object argument', async () => {
     expect(res.friends.added.some((f) => f.name === 'Friend Added')).toBe(true);
 
     // Cleanup
-    await Person.update(p1, {
+    const res2 = await Person.update(p1, {
       friends: {
-        remove: res.friends.added[0].id,
+        remove: {
+          id: res.friends.added[0].id
+        },
       },
     });
+    //expect removed friend to be returned
+    expect(res2.friends.removed.some((f) => f.id === res.friends.added[0].id)).toBe(true);
 
     //check its removed
     let qRes = await Person.select(p1, (p) => p.friends.name);
