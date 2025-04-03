@@ -1595,7 +1595,7 @@ test('update query 1 - with simple object argument', async () => {
 
   });
 
-  test('update query 6 - add to Multi-Value Property (friends)', async () => {
+  test('update query 6 - add to and remove from Multi-Value Property (friends)', async () => {
     const res = await Person.update(p1, {
       friends: {
         add: { name: 'Friend Added' },
@@ -1620,71 +1620,80 @@ test('update query 1 - with simple object argument', async () => {
     let qRes = await Person.select(p1, (p) => p.friends.name);
     expect(qRes.friends.some((f) => f.name === 'Friend Added')).toBe(false);
   });
-  //
-  // test('update query 7 - $remove from Multi-Value Property (friends)', async () => {
-  //   // First, ensure p2 is a friend
-  //   await Person.update(p1, {
-  //     friends: {
-  //       $add: { id: p2.uri },
-  //     },
-  //   });
-  //
-  //   let verifyAdd = await Person.select(p1, (p) => p.friends);
-  //   expect(verifyAdd.friends.some((f) => f.id === p2.uri)).toBe(true);
-  //
-  //   const res = await Person.update(p1, {
-  //     friends: {
-  //       $remove: p2.uri,
-  //     },
-  //   });
-  //
-  //   expect(res.id).toBe(p1.uri);
-  //   expect(res.friends.some((f) => f.id === p2.uri)).toBe(false);
-  // });
-  //
-  // test('update query 8 - $add and $remove in same update', async () => {
-  //   await Person.update(p1, {
-  //     friends: {
-  //       $add: { id: p2.uri },
-  //     },
-  //   });
-  //
-  //   const res = await Person.update(p1, {
-  //     friends: {
-  //       $add: { name: 'Combined Friend' },
-  //       $remove: p2.uri,
-  //     },
-  //   });
-  //
-  //   expect(res.id).toBe(p1.uri);
-  //   expect(res.friends.some((f) => f.name === 'Combined Friend')).toBe(true);
-  //   expect(res.friends.some((f) => f.id === p2.uri)).toBe(false);
-  //
-  //   // Cleanup
-  //   await Person.update(p1, {
-  //     friends: {
-  //       $remove: res.friends.find((f) => f.name === 'Combined Friend')?.id,
-  //     },
-  //   });
-  // });
-  //
-  // test('update query 9 - unset Multi-Value Property with undefined', async () => {
-  //   // First, make sure p1 has some friends
-  //   await Person.update(p1, {
-  //     friends: [
-  //       { id: p2.uri },
-  //       { id: p3.uri },
-  //     ],
-  //   });
-  //
-  //   const res = await Person.update(p1, {
-  //     friends: undefined,
-  //   });
-  //
-  //   expect(res.id).toBe(p1.uri);
-  //   expect(Array.isArray(res.friends)).toBe(true);
-  //   expect(res.friends.length).toBe(0);
-  // });
+
+  test('update query 7 - remove from Multi-Value Property (friends)', async () => {
+    // First, ensure p2 is a friend of p3 (not the case in the initial set up)
+    await Person.update(p3, {
+      friends: {
+        add: { id: p2.uri },
+      },
+    });
+
+    let verifyAdd = await Person.select(p3, (p) => p.friends);
+    expect(verifyAdd.friends.some((f) => f.id === p2.uri)).toBe(true);
+
+    const res = await Person.update(p3, {
+      friends: {
+        remove: {
+          id:p2.uri
+        },
+      },
+    });
+
+    expect(res.id).toBe(p3.uri);
+    expect(res.friends.removed.some((f) => f.id === p2.uri)).toBe(true);
+  });
+
+  test('update query 8 - $add and $remove in same update', async () => {
+    const res = await Person.update(p1, {
+      friends: {
+        add: { name: 'Combined Friend' },
+        remove: {id:p2.uri},
+      },
+    });
+
+    expect(res.id).toBe(p1.uri);
+    expect(res.friends.added.some((f) => f.name === 'Combined Friend')).toBe(true);
+    expect(res.friends.removed.some((f) => f.id === p2.uri)).toBe(true);
+
+    // Cleanup
+    const res2 = await Person.update(p1, {
+      friends: {
+        remove: {id:res.friends.added.find((f) => f.name === 'Combined Friend')?.id},
+        add:{id:p2.uri}
+      },
+    });
+
+    expect(res2.id).toBe(p1.uri);
+    expect(res2.friends.removed.length).toBe(1);
+    expect(res2.friends.added[0].id).toBe(p2.uri);
+
+  });
+
+  test('update query 9 - unset Multi-Value Property with undefined', async () => {
+    // First, make sure p3 has some friends
+    await Person.update(p3, {
+      friends: [
+        { id: p1.uri },
+        { id: p2.uri },
+      ],
+    });
+    //double check it worked
+    let res1 = await Person.select(p3,p => {
+      return p.friends
+    });
+    expect(res1.friends.some(f => f.id === p1.uri)).toBe(true);
+    expect(res1.friends.some(f => f.id === p2.uri)).toBe(true);
+    expect(res1.friends.length).toBe(2);
+
+    const res = await Person.update(p3, {
+      friends: undefined,
+    });
+
+    expect(res.id).toBe(p3.uri);
+    expect(Array.isArray(res.friends)).toBe(true);
+    expect(res.friends.length).toBe(0);
+  });
 
   // test('update query 6 - function-based set single property', async () => {
   //   const originalHobby = p1.hobby || 'Swimming';

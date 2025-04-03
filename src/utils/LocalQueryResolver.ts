@@ -64,7 +64,18 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
     let propShape = field.prop;
     let propertyPath = propShape.path;
 
-    if (Array.isArray(field.val))
+    if(typeof field.val === 'undefined') {
+      unsetPropertyPath(subject,propertyPath);
+      if(propShape.maxCount >= 1) {
+        //when clearing a single property we return undefined
+        plainValues[propShape.label] = undefined;
+
+      } else {
+        plainValues[propShape.label] = [];
+        //when clearing a set of values we return an empty array
+      }
+    }
+    else if (Array.isArray(field.val))
     {
       checkNewCount(propShape,field.val.length);
 
@@ -77,6 +88,7 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
         values.push(res.value);
       }
       if(values.every(v => typeof v === 'undefined')) {
+        //clearing a property
         plainValues[propShape.label] = undefined;
         unsetPropertyPath(subject,propertyPath);
       }
@@ -143,18 +155,17 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
 
       let res = await convertValue(propShape,(field as UpdateNodePropertyValue).val);
 
-      if(typeof res.value === 'undefined') {
-        unsetPropertyPath(subject,propertyPath);
-        plainValues[propShape.label] = undefined;
-      } else {
-        //TODO: check propShape for how many values are allowed
+      // if(typeof res.value === 'undefined') {
+      //   unsetPropertyPath(subject,propertyPath);
+      //   plainValues[propShape.label] = undefined;
+      // } else {
         //save the plain value for the result
         plainValues[propShape.label] = res.plainValue;
         //Note, we are using SET here, to ADD a value.
         //If there are multiple values possible and the user wants to overwrite all the values,
         //they need to use an update function instead of an update object
         overwritePropertyPathSingleValue(subject,propertyPath,res.value);
-      }
+      // }
     }
   }
 
@@ -219,7 +230,7 @@ function overwritePropertyPathMultipleValues(subject: NamedNode, path: NamedNode
     console.warn(`Overwriting each end values in property path (${path.map(p => p.uri).join(' -> ')}) with multiple values ${values.map(v => v.uri).join(", ")}. Is that expected behaviour?`);
 
     let lastPath = path.pop();
-    let target:NamedNode|NodeSet = subject;
+    let target:NodeSet = new NodeSet([subject]);
     for(let p of path) {
       target = target.getAll(p);
     }
@@ -268,33 +279,22 @@ function unsetPropertyPathValue(subject: NamedNode, path: NamedNode|NamedNode[],
     subject.unset(path as NamedNode,value);
   }
 }
+
+
 function unsetPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]) {
   if(Array.isArray(path)) {
-    //NOTE: for now we are removing the entire path, not just the last part of the path
-    // Not sure yet if we need to distinguish between the two
-    console.warn('Unsetting entire property path. Is that expected behaviour? : '+path.map(p => p.uri).join(' -> '));
-    //track the path for each index in the path array
-    let targets:Map<number,NamedNode|NodeSet> = new Map();
-    // targets.set(0,subject);
-    for(let key in path) {
-      let index = parseInt(key);
-      let p = path[index];
-      let target = index === 0 ? subject : targets.get(index - 1);
-      let nextTargets = target.getAll(p);
-      targets.set(index,nextTargets);
+    //NOTE: for now we are removing the last part of the path, disconnecting the end values from the subject at the final property of the path
+    // If we need to remove the entire path this should likely be done with other structures, like a ItemListElement being dependent on having an item defined and automatically being removed when we remove the item
+    console.warn('Unsetting the final property-value pair of the property path. Is that expected behaviour? : '+path.map(p => p.uri).join(' -> '));
+
+    let lastPath = path.pop();
+    let targets:NodeSet = new NodeSet([subject]);
+    for(let p of path) {
+      targets = targets.getAll(p);
     }
-    //now we have all the targets, we can remove all the named nodes at each step
-    for(let [index,target] of targets) {
-      if(target instanceof NamedNode) {
-        target.remove();
-      } else {
-        (target as NodeSet).forEach(node => {
-          if(node instanceof NamedNode) {
-            node.remove();
-          }
-        });
-      }
-    }
+    targets.forEach(node => {
+      node.unsetAll(lastPath);
+    });
   } else {
     subject.unsetAll(path);
   }
