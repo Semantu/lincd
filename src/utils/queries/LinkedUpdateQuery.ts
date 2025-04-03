@@ -62,9 +62,12 @@ type _AddId<U> = U extends string | number | boolean | Date | null | undefined
     ? Array<_AddId<T>>
     : WithId<U>;
 
-type WithId<U> = {
-  [K in keyof U]-?: _AddId<U[K]>; // Make all fields required
-} & { id: string };
+type RemoveId<U> = Omit<U,'id'>;
+// type WithId<U> = {
+//   [K in keyof U]-?: _AddId<U[K]>; // Make all fields required
+// } & { id: string };
+
+type WithId<U> = U & { id: string };
 
 type UnionToIntersection<U> = (
   U extends any ? (k: U) => void : never
@@ -98,20 +101,35 @@ type IsPlainObject<T> = T extends object
                   : false
   : false;
 
+// type X = [{
+//   id:string
+// },{
+//   id:string
+// },{
+//   name:string
+// }];
+// type OfX<X> = Prettify<{
+//   updatedTo:(X extends Array<infer U> ? U : X)[]
+// }>;
+// type Y = OfX<X>;
+// let x:Y;
+// let name = x.updatedTo[0].name;
+
 type RecursiveTransform<T> =
   T extends string | number | boolean | Date | null | undefined
     ? T
     : T extends Array<infer U>
-      ? UpdatedSet<RecursiveTransform<U>>
+      ? UpdatedSet<Prettify<RecursiveTransform<U>>>
       : IsSetModification<T> extends true
         ? ModifiedSet<T>
       : IsPlainObject<T> extends true
-        ? WithId<{ [K in keyof T]-?: RecursiveTransform<T[K]> }>
-        : T;
+        // ? WithId<{ [K in keyof T]-?: Prettify<RecursiveTransform<T[K]>> }>
+        ? WithId<{ [K in keyof T]: Prettify<RecursiveTransform<T[K]>> }>
+        : T;//<-- should be never?
 
 type UpdatedSet<U> = {
   updatedTo:U[]
-}
+};
 type IsSetModification<T> = T extends { add?: any; remove?: any } ? true : false;
 type AddedType<T> =
   T extends { add: (infer U)[] }
@@ -181,7 +199,7 @@ export type AddId<T> = Prettify<RecursiveTransform<T>>;
 // };
 
 // type UpdatePartial<Shape> = WithoutFunctions<Shape>;
-export type UpdatePartial<Shape> = UpdateNodeDescription<Shape> | NodeReferenceValue;
+export type UpdatePartial<S = Shape> = UpdateNodeDescription<S> | NodeReferenceValue;
 type UpdateNodeDescription<Shape> = Partial<Omit<{
   [P in KeysWithoutFunctions<Shape>]: ShapePropValueToUpdatePartial<Shape[P]>
 },'node'|'nodeShape'|'namedNode'|'targetClass'>>;
@@ -201,6 +219,12 @@ type SetModification<SSType> = {
   remove?:UpdatePartial<SSType>[]|UpdatePartial<SSType>
 };
 
+
+export type SetModificationValue = {
+  $add?:UpdatePartial[],
+  $remove?:NodeReferenceValue[]
+}
+
 export type UpdateQuery<ResponseType=null> = {
   type:'update',
   id:string,
@@ -209,7 +233,7 @@ export type UpdateQuery<ResponseType=null> = {
 }
 type UnsetValue = undefined;
 export type LiteralUpdateValue = string | number | boolean | Date;
-export type PropUpdateValue = SinglePropertyUpdateValue | SinglePropertyUpdateValue[];
+export type PropUpdateValue = SinglePropertyUpdateValue | SinglePropertyUpdateValue[] | SetModificationValue;
 export type SinglePropertyUpdateValue =
   NodeDescriptionValue
   | NodeReferenceValue
@@ -238,28 +262,77 @@ export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<S
   {
     if (typeof obj === 'object' && !(obj instanceof Date))
     {
-      if ('id' in obj)
-      {
-        throw new Error("You cannot use id in the top level of an update object");
-      }
       return this.convertNodeDescription(obj,shape);
     }
     else if (typeof obj === 'function')
     {
       //TODO
+      throw new Error("Update functions are not implemented yet");
     }
     else
     {
       throw new Error("Invalid update object");
     }
   }
+  private isSetModification(obj,shape) {
+    // return obj.add || obj.remove;
+    let hasAdd = obj.add;
+    let hasRemove = obj.remove;
+    let numKeysExpected = (hasAdd ? 1 : 0) + (hasRemove ? 1 : 0);
+    let numKeys = Object.getOwnPropertyNames(obj).length;
+    return hasAdd || hasRemove && numKeysExpected === numKeys
+  }
+
+  private convertSetModification(obj:SetModification<any>,shape:PropertyShape):SetModificationValue {
+    if(!obj.add && !obj.remove) {
+      throw new Error('Set modification should have either add or remove key');
+    }
+    const res:SetModificationValue = {};
+    if(obj.add) {
+      res.$add = this.convertSetAddValue(obj.add,shape);
+    }
+    if(obj.remove) {
+      res.$remove = this.convertSetRemoveValue(obj.remove,shape);
+    }
+    return res;
+  }
+  private convertSetRemoveValue(obj:UpdatePartial|UpdatePartial[],shape:PropertyShape):NodeReferenceValue[] {
+    //the user can either pass an array of node references or a single node reference
+    //either way we should return an array of node reference values
+    if(Array.isArray(obj)) {
+      return obj.map(o => this.convertSingleRemoveValue(o,shape));
+    } else {
+      return [this.convertSingleRemoveValue(obj,shape)];
+    }
+  }
+  private convertSetAddValue(obj:UpdatePartial|UpdatePartial[],shape:PropertyShape):UpdatePartial[] {
+    if(Array.isArray(obj)) {
+      return obj.map(o => this.convertUpdateValue(o,shape) as UpdatePartial);
+    } else {
+      return [this.convertUpdateValue(obj,shape) as UpdatePartial];
+    }
+  }
+  private convertSingleRemoveValue(value,shape:PropertyShape):NodeReferenceValue
+  {
+    if (this.isNodeReference(value))
+    {
+      return this.convertNodeReference(value);
+    }
+    else {
+      throw new Error(`Invalid value for ${shape.label}.$remove. Expected an object with an id as key: {id:string}`);
+    }
+  }
   private convertNodeDescription(obj:Object,shape:NodeShape):NodeDescriptionValue {
+    if ('id' in obj)
+    {
+      throw new Error("You cannot use id in the top level of an update object");
+    }
     const props = shape.getPropertyShapes();
     const fields:UpdateNodePropertyValue[] = [];
     for(var key in obj) {
       let propShape = props.find(p => p.label === key);
       if(!propShape) {
-        console.warn(`Cannot find property shape to update for key: ${key}`);
+        throw Error(`Invalid property key: ${key}. ${shape.label} does not have a property with this name.`);
       } else {
         fields.push(this.createNodePropertyValue(obj[key],propShape));
       }
@@ -287,27 +360,47 @@ export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<S
       if(!allowArrays) {
         throw new Error('Nested arrays are not allowed as values of keys');
       }
-      //then convert each value, but disallow nested arrays
+      //then convert each value, but disallow nested arrays moving forward
       return value.map(o => {
         return this.convertUpdateValue(o,propShape,false);
       }) as SinglePropertyUpdateValue[];
     }
     if(typeof value === 'object') {
-      if('id' in value)
+      if(this.isNodeReference(value))
       {
-        //ensure there are no other properties in the object
-        if(Object.keys(value).length > 1) {
-          throw new Error('Cannot have id and other properties in update object');
-        }
-        return { id: value.id } as NodeReferenceValue;
+        return this.convertNodeReference(value);
       } else {
         //pass the value shape of the property as the node shape of this value
         if(!propShape.valueShape) {
           //TODO: not sure if this should be an error. Does every @linkedObject need to define the shape of the values?
-          //If not, then how do we continue? because currently we use the value shape to look up further property shapes
-          throw new Error('Cannot update properties with plain objects if the shape of the values is not know. See how the @objectProperty is used in the get/set method and make sure it defines the \'shape\' key.');
+          // If not, then how do we continue? because currently we use the value shape to look up further property shapes
+          throw new Error('Cannot update properties with plain objects if the shape of the values is not known. See how the @objectProperty is used in the get/set method and make sure it defines the \'shape\' key.');
         }
-        return this.convertNodeDescription(value,propShape.valueShape);
+
+        if(this.isSetModification(value,propShape)) {
+          return this.convertSetModification(value,propShape);
+        } else {
+          return this.convertNodeDescription(value,propShape.valueShape);
+        }
+        // //check if the property shape allows a single value
+        // if(propShape.maxCount === 1) {
+        //   //if yes, then the object should be seen as a node description
+        //   return this.convertNodeDescription(value,propShape.valueShape);
+        // } else {
+        //   if(this.isSetModification(value,propShape)) {
+        //     //but if multiple values are allowed, the value should either be an Array of node descriptions
+        //     //OR an object with add or remove keys
+        //     return this.convertSetModification(value,propShape);
+        //   } else {
+        //     //it must be a set overwrite, and it must be coming from an array
+        //     if(!allowArrays) {
+        //       return this.convertNodeDescription(value,propShape.valueShape);
+        //     } else {
+        //       throw new Error("Invalid array value. Should be a node reference or node description")
+        //     }
+        //   }
+        // }
+
       }
     } else if (typeof value === 'undefined') {
       return value;
@@ -315,6 +408,16 @@ export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<S
       throw new Error('Value cannot be null. If you want to unset a value, use undefined');
     }
     throw new Error(`Unsupported update value type: ${typeof value}`);
+  }
+  private isNodeReference(obj):obj is NodeReferenceValue {
+    return 'id' in obj;
+  }
+  private convertNodeReference(obj:{id:string}):NodeReferenceValue {
+    //ensure there are no other properties in the object
+    if(Object.keys(obj).length > 1) {
+      throw new Error('Cannot have id and other properties in the same value object');
+    }
+    return {id:obj.id};
   }
   getQueryObject():UpdateQuery<AddId<U>> {
     return {

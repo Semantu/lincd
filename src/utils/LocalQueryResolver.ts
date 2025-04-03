@@ -29,7 +29,7 @@ import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
   NodeDescriptionValue,
   NodeReferenceValue,
-  PropUpdateValue,SinglePropertyUpdateValue,
+  PropUpdateValue,SetModificationValue,SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
   UpdateQuery,
 } from './queries/LinkedUpdateQuery.js';
@@ -62,26 +62,15 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
   for (let field of fields)
   {
     let propShape = field.prop;
-    let pathProperty = propShape.path;
+    let propertyPath = propShape.path;
 
     if (Array.isArray(field.val))
     {
-      if(propShape.maxCount) {
-        if(field.val.length > propShape.maxCount) {
-          throw new Error(`Too many values for property: ${propShape.label}. Max count is: ${propShape.maxCount}, got ${field.val.length}`);
-        } else if(propShape.maxCount < 2)
-        {
-          throw new Error('Multiple values not allowed for property: ' + propShape.label);
-        }
-      }
-      if(propShape.minCount) {
-        if(field.val.length < propShape.minCount) {
-          throw new Error(`Too few values for property: ${propShape.label}. Min count is: ${propShape.minCount}, got ${field.val.length}`);
-        }
-      }
+      checkNewCount(propShape,field.val.length);
 
       let values = [];
       let plainValueArr = [];
+      //see check above, we already know it's an array, so we can cast it
       for(let singleVal of (field.val as SinglePropertyUpdateValue[])) {
         let res = await convertValue(propShape,singleVal);
         plainValueArr.push(res.plainValue);
@@ -89,7 +78,7 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
       }
       if(values.every(v => typeof v === 'undefined')) {
         plainValues[propShape.label] = undefined;
-        unsetPropertyPath(subject,pathProperty);
+        unsetPropertyPath(subject,propertyPath);
       }
       else if(values.some(v => typeof v === 'undefined')) {
         throw new Error('Invalid use of undefined for property: ' + propShape.label+'. You cannot mix undefined with defined values');
@@ -97,21 +86,65 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
       else {
         // For multi-value properties, return updatedTo structure
         plainValues[propShape.label] = { updatedTo: plainValueArr };
-        overwritePropertyPathMultipleValues(subject,pathProperty,values);
+        overwritePropertyPathMultipleValues(subject,propertyPath,values);
       }
+    }
+    else if(isSetModificationValue(field.val))
+    {
+      //check if the new UPDATED number of properties would be allowed
+      //by getting the current values, and counting how many remain after adding/removing values
+      const currentValues = getPropertyPath(subject,propertyPath);
+      const numCurrentValues = currentValues.size;
+      const numFinalValues = numCurrentValues + (field.val.$add ? field.val.$add.length : 0) - (field.val.$remove ? field.val.$remove.length : 0);
+      checkNewCount(propShape,numFinalValues);
+
+      //prepare object to keep track of the plain values that are added and removed
+      const plainUpdates: { added?,removed? } = {};
+
+      if (field.val.$remove)
+      {
+        let removedPlainValues = [];
+        //remove the values from the property path
+        field.val.$remove.forEach(val => {
+          //convert the node reference value to a real node
+          let nodeToRemove = convertNodeReference(propShape,val,'$remove');
+          //keep track of what's removed
+          removedPlainValues.push(nodeToRemove.plainValue);
+          //remove the value from the property path
+          unsetPropertyPathValue(subject,propertyPath,nodeToRemove.value);
+        });
+        plainUpdates.removed = removedPlainValues;
+      }
+      if (field.val.$add)
+      {
+        let addedPlainValues = [];
+        //add the values to the property path
+        let values = [];
+        for (let singleVal of field.val.$add)
+        {
+          //convert the value (which can be a node reference or a node description)
+          let res = await convertValue(propShape,singleVal);
+          //keep track of what's added
+          addedPlainValues.push(res.plainValue);
+          values.push(res.value);
+        }
+        //add the new values to the set of values at the end of the path
+        addToResultSets(subject,propertyPath,values);
+        //if all that went well, keep track of the added values
+        plainUpdates.added = addedPlainValues;
+      }
+      plainValues[propShape.label] = plainUpdates;
     }
     else
     {
       //single value is provided.
+      //check if that fits with the maxCount and minCount of the property
+      checkNewCount(propShape,1);
 
-      //is that allowed?
-      if(propShape.minCount > 1) {
-        throw new Error('Multiple values required for property: ' + propShape.label);
-      }
       let res = await convertValue(propShape,(field as UpdateNodePropertyValue).val);
 
       if(typeof res.value === 'undefined') {
-        unsetPropertyPath(subject,pathProperty);
+        unsetPropertyPath(subject,propertyPath);
         plainValues[propShape.label] = undefined;
       } else {
         //TODO: check propShape for how many values are allowed
@@ -120,12 +153,64 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
         //Note, we are using SET here, to ADD a value.
         //If there are multiple values possible and the user wants to overwrite all the values,
         //they need to use an update function instead of an update object
-        overwritePropertyPathSingleValue(subject,pathProperty,res.value);
+        overwritePropertyPathSingleValue(subject,propertyPath,res.value);
       }
     }
   }
 
   return plainValues;
+}
+function checkNewCount(propShape: PropertyShape, numValues: number) {
+  if(propShape.maxCount) {
+    if(numValues > propShape.maxCount) {
+      throw new Error(`Too many values for property: ${propShape.label}. Max count is: ${propShape.maxCount}, updated count would be ${numValues}`);
+    }
+  }
+  if(propShape.minCount) {
+    if(numValues < propShape.minCount) {
+      throw new Error(`Too few values for property: ${propShape.label}. Min count is: ${propShape.minCount}, updated count would be ${numValues}`);
+    }
+  }
+}
+function isSetModificationValue(value: any): value is SetModificationValue {
+  if(!(typeof value === 'object')) return false;
+
+  let hasAddKey  = value.$add;
+  let hasRemoveKey = value.$remove;
+  let numKeys = Object.keys(value).length;
+  //has no other keys
+  return (hasAddKey && hasRemoveKey && numKeys === 2) || (hasAddKey && numKeys === 1) || (hasRemoveKey && numKeys === 1);
+}
+
+function getPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]):NodeSet {
+  if(Array.isArray(path)) {
+    let target:NodeSet = new NodeSet([subject]);
+    for(let p of path) {
+      target = target.getAll(p);
+    }
+    return target;
+  } else {
+    return subject.getAll(path);
+  }
+}
+
+function addToResultSets(subject: NamedNode, path: NamedNode|NamedNode[],values:NamedNode[]) {
+  if(Array.isArray(path)) {
+    //save the last property, that's the one we want to add values to
+    let lastPath = path.pop();
+    let target:NamedNode|NodeSet = new NodeSet([subject]);
+    //for the remaining parts, follow the path to the end
+    for(let p of path) {
+      target = target.getAll(p);
+    }
+    //for each node in the target nodes, add the values with the last property from the path as predicate
+    //the existing quads with this subject and predicate will remain, and the new values will be added to the graph
+    target.msetEach(lastPath,values);
+  } else {
+    //if it's a single property, we can just add the values with the given path as predicate
+    //the existing quads with this subject and predicate will remain, and the new values will be added to the graph
+    subject.mset(path as NamedNode,values);
+  }
 }
 function overwritePropertyPathMultipleValues(subject: NamedNode, path: NamedNode|NamedNode[],values:NamedNode[]) {
   if(Array.isArray(path)) {
@@ -163,6 +248,24 @@ function overwritePropertyPathSingleValue(subject: NamedNode, path: NamedNode|Na
     });
   } else {
     subject.overwrite(path as NamedNode,value);
+  }
+}
+function unsetPropertyPathValue(subject: NamedNode, path: NamedNode|NamedNode[],value:NamedNode|Literal){
+  if(Array.isArray(path)) {
+    //NOTE: for unsetting a specific value we are just unsetting the final connection NOT the entire path
+    console.warn(`Unsetting each end value in property path (${path.map(p => p.uri).join(' -> ')}) with value ${value.toString()}. Is that expected behaviour? `);
+
+    let lastPath = path.pop();
+    let target:NodeSet = new NodeSet([subject]);
+    for(let p of path) {
+      target = target.getAll(p);
+    }
+
+    target.forEach(node => {
+      node.unset(lastPath,value);
+    });
+  } else {
+    subject.unset(path as NamedNode,value);
   }
 }
 function unsetPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]) {
@@ -230,15 +333,25 @@ function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|
   //value is expected to be an array of fields, or an object with an id for a direct node reference
   if ((value as NodeReferenceValue).id)
   {
-    return Promise.resolve({
-      value:NamedNode.getOrCreate((value as NodeReferenceValue).id),
-      //return an object only with the ID (a NodeReferenceValue should always only have an id field)
-      plainValue:{id:(value as NodeReferenceValue).id}
-    });
+    return Promise.resolve(convertNodeReference(propShape,value as NodeReferenceValue));
   }
   else
   {
     return convertNodeDescription(propShape,value as NodeDescriptionValue);
+  }
+}
+function convertNodeReference(propShape: PropertyShape, value: NodeReferenceValue,suffixKey?:string):{value:NamedNode,plainValue:any} {
+  if(!value.id) {
+    throw new Error('Expected a node reference for property: ' + propShape.label+(suffixKey ? '.'+suffixKey : ''));
+  }
+  //if other keys are present
+  if(Object.keys(value).length > 1) {
+    throw new Error('Invalid value for property: ' + propShape.label+(suffixKey ? '.'+suffixKey : '')+'. A node reference should only contain the id field.');
+  }
+  return {
+    value:NamedNode.getOrCreate((value as NodeReferenceValue).id),
+    //return an object only with the ID (a NodeReferenceValue should always only have an id field)
+    plainValue:{id:(value as NodeReferenceValue).id}
   }
 }
 async function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue):Promise<{value:NamedNode,plainValue:any}> {

@@ -1533,8 +1533,9 @@ test('update query 1 - with simple object argument', async () => {
     expect(res['hobby']).toBeUndefined();
     expect(res.friends).toBeDefined();
     expect(res.friends.updatedTo.length).toEqual(1);
-    expect(res.friends[0].name).toEqual('Much Friend');
-    expect(res.friends[0].id).toBeDefined();
+    let firstFriend = res.friends.updatedTo[0];
+    expect(firstFriend.name).toEqual('Much Friend');
+    expect(firstFriend.id).toBeDefined();
   });
   test('update query 5 - pass id references', async () => {
     let tp = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'uq5');
@@ -1563,7 +1564,7 @@ test('update query 1 - with simple object argument', async () => {
     expect(res['name']).toBeUndefined();
     expect(res.bestFriend).toBeDefined();
     expect(res.bestFriend.id).toEqual(p2.uri);
-    expect(Array.isArray(res.friends)).toBeTruthy();
+    expect(Array.isArray(res.friends.updatedTo)).toBeTruthy();
     expect(res.friends.updatedTo.length).toEqual(3);
 
     let f1 = res.friends.updatedTo[0];
@@ -1594,7 +1595,7 @@ test('update query 1 - with simple object argument', async () => {
 
   });
 
-  test('update query 6 - $add to Multi-Value Property (friends)', async () => {
+  test('update query 6 - add to Multi-Value Property (friends)', async () => {
     const res = await Person.update(p1, {
       friends: {
         add: { name: 'Friend Added' },
