@@ -327,7 +327,7 @@ export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<S
     {
       throw new Error("You cannot use id in the top level of an update object");
     }
-    const props = shape.getPropertyShapes();
+    const props = shape.getPropertyShapes(true);
     const fields:UpdateNodePropertyValue[] = [];
     for(var key in obj) {
       let propShape = props.find(p => p.label === key);
@@ -370,17 +370,34 @@ export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<S
       {
         return this.convertNodeReference(value);
       } else {
+        let valueShape = propShape.valueShape;
         //pass the value shape of the property as the node shape of this value
         if(!propShape.valueShape) {
-          //TODO: not sure if this should be an error. Does every @linkedObject need to define the shape of the values?
-          // If not, then how do we continue? because currently we use the value shape to look up further property shapes
-          throw new Error('Cannot update properties with plain objects if the shape of the values is not known. See how the @objectProperty is used in the get/set method and make sure it defines the \'shape\' key.');
+          //It's possible to define the shape of the value in the value itself for properties who do not define the shape in their objectProperty
+          if(value.shape) {
+            if(!(value.shape.shape instanceof NodeShape)) {
+              throw new Error(`The value of property "shape" is invalid and should be a class that extends Shape.`);
+            }
+            valueShape = (value.shape as typeof Shape).shape;
+          } else {
+            //TODO: not sure if this should be an error. Does every @linkedObject need to define the shape of the values?
+            // If not, then how do we continue? because currently we use the value shape to look up further property shapes
+            throw new Error(`Cannot update properties with plain objects if the shape of the values is not known. Make sure get/set ${propShape.parentNodeShape.label}.${propShape.label} defines the 'shape' key in its @objectProperty decorator.`);
+          }
+        }
+        //never keep a shape key in the value object
+        if(value.shape) {
+          //double check that IF a shape value is provided, that it matches the shape from the @objectProperty decorator
+          if(!(value.shape as typeof Shape).shape.equals(valueShape)) {
+            throw new Error(`The property 'shape' is reserved in LINCD and should not be used here in this way. The ${propShape.label} property already defines the shape of the value as ${propShape.label}. If you want to use a different shape, use the 'shape' key in the @objectProperty decorator.`);
+          }
+          delete value.shape;
         }
 
         if(this.isSetModification(value,propShape)) {
           return this.convertSetModification(value,propShape);
         } else {
-          return this.convertNodeDescription(value,propShape.valueShape);
+          return this.convertNodeDescription(value,valueShape);
         }
         // //check if the property shape allows a single value
         // if(propShape.maxCount === 1) {

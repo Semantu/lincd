@@ -72,7 +72,7 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
   /**
    * Each literal value of this property must use this datatype
    */
-  dataType?: NamedNode;
+  datatype?: NamedNode;
   /**
    * Each value of the property must occur in this set
    */
@@ -155,7 +155,7 @@ export interface PropertyShapeConfig {
   order?: number;
   group?: string;
   /**
-   * should correlate to the given dataType or class
+   * should correlate to the given datatype or class
    * i.e. if class = foaf.Person you should provide a NamedNode with rdf.type foaf.Person or a Shape instance that has targetClass foaf.Person
    */
   defaultValue?: string | number | Node | Shape;
@@ -259,8 +259,8 @@ export function createPropertyShape(
   if (config.maxCount) {
     propertyShape.maxCount = config.maxCount;
   }
-  if (config['dataType']) {
-    propertyShape.datatype = config['dataType'];
+  if (config['datatype']) {
+    propertyShape.datatype = config['datatype'];
   }
 
   if (config.nodeKind) {
@@ -332,7 +332,7 @@ export function createPropertyShape(
   //  (NamedNode value must have this type, like range but restrictive)
   //sh.class
   // (Literal value must have this datatype, like range)
-  //sh.dataType
+  //sh.datatype
   //
   //sh.optional
   //

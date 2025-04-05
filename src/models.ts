@@ -2410,8 +2410,8 @@ export class Literal extends Node implements IGraphObject, ILiteral {
     if (suffix[0] == '@') {
       return new Literal(literal, null, suffix.substr(1));
     } else if (suffix[0] == '^') {
-      var dataType = NamedNode.fromString(suffix.substr(2));
-      return new Literal(literal, dataType);
+      var datatype = NamedNode.fromString(suffix.substr(2));
+      return new Literal(literal, datatype);
     } else {
       throw new Error('Invalid literal string format: ' + literalString);
     }
@@ -2593,19 +2593,19 @@ export class Literal extends Node implements IGraphObject, ILiteral {
 
     var valueToMatch: string;
     var languageToMatch: string;
-    var dataTypeToMatch: NamedNode;
+    var datatypeToMatch: NamedNode;
 
     if (other instanceof Literal) {
       valueToMatch = other.value;
       languageToMatch = other.language;
-      dataTypeToMatch = other.datatype; //direct access to avoid default, alternatively build a boolean parameter 'returnDefault=true' into getDataType()
+      datatypeToMatch = other.datatype; //direct access to avoid default, alternatively build a boolean parameter 'returnDefault=true' into getDataType()
     } else {
       var type = typeof other;
       if (type == 'string' || type == 'number' || type == 'boolean') {
         //if you don't specify a datatype we accept all
         valueToMatch = other.toString();
         languageToMatch = '';
-        dataTypeToMatch = null;
+        datatypeToMatch = null;
       } else {
         return false;
       }
@@ -2631,7 +2631,7 @@ export class Literal extends Node implements IGraphObject, ILiteral {
         //we check with this.datatype, not this.datatype which can return the default xsd:String
         //a literal without datatypespecified is however considered different from a a literal with a explicit xsd:String datatype
         //that is, like some SPARQL quad stores, you should be able to create two otherwise identical (sub&pred) quads for those two literals
-        return this.datatype === dataTypeToMatch;
+        return this.datatype === datatypeToMatch;
       }
     }
     return false;

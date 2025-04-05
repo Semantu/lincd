@@ -80,7 +80,7 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
   /**
    * Each literal value of this property must use this datatype
    */
-  dataType?: NamedNode;
+  datatype?: NamedNode;
   /**
    * Each value of the property must occur in this set
    */
@@ -163,7 +163,7 @@ export interface PropertyShapeConfig {
   order?: number;
   group?: string;
   /**
-   * should correlate to the given dataType or class
+   * should correlate to the given datatype or class
    * i.e. if class = foaf.Person you should provide a NamedNode with rdf.type foaf.Person or a Shape instance that has targetClass foaf.Person
    */
   defaultValue?: string | number | Node | Shape;
@@ -266,8 +266,8 @@ export function createPropertyShape(
   if (config.maxCount) {
     propertyShape.maxCount = config.maxCount;
   }
-  if (config['dataType']) {
-    propertyShape.datatype = config['dataType'];
+  if (config['datatype']) {
+    propertyShape.datatype = config['datatype'];
   }
 
   if (config.nodeKind) {
@@ -339,7 +339,7 @@ export function createPropertyShape(
   //  (NamedNode value must have this type, like range but restrictive)
   //sh.class
   // (Literal value must have this datatype, like range)
-  //sh.dataType
+  //sh.datatype
   //
   //sh.optional
   //
@@ -430,8 +430,19 @@ export class NodeShape extends SHACL_Shape {
     this.set(shacl.property, property.namedNode);
   }
 
-  getPropertyShapes(): ShapeSet<PropertyShape> {
-    return PropertyShape.getSetOf(this.getAll(shacl.property));
+  getPropertyShapes(includeSuperClasses:boolean=false): ShapeSet<PropertyShape> {
+    let res:NodeSet;
+    if(includeSuperClasses) {
+      res = new NodeSet();
+      let shapeClass = getShapeClass(this.namedNode).prototype;
+      while(shapeClass && shapeClass.nodeShape) {
+        shapeClass.nodeShape.getAll(shacl.property).forEach(res.add.bind(res));
+        shapeClass = Object.getPrototypeOf(shapeClass);
+      }
+    } else {
+      res = this.getAll(shacl.property);
+    }
+    return PropertyShape.getSetOf(res);
   }
   getPropertyShape(label:string,checkSubShapes:boolean=true): PropertyShape {
 
@@ -993,7 +1004,7 @@ export class ValidationReport extends Shape {
 
   @literalProperty({
     path: shacl.conforms,
-    dataType: xsd.boolean,
+    datatype: xsd.boolean,
   })
   get conforms(): boolean {
     return this.getValue(shacl.conforms) === 'true'

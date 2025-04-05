@@ -2,8 +2,8 @@ import {BlankNode, defaultGraph as _default, Graph, Literal, NamedNode, Quad, No
 import {Term} from 'rdflib/lib/tf-types';
 import {NodeURIMappings} from './collections/NodeURIMappings.js';
 import {QuadSet} from './collections/QuadSet.js';
-import { CoreMap } from './collections/CoreMap';
-import { CoreSet } from './collections/CoreSet';
+import { CoreMap } from './collections/CoreMap.js';
+import { CoreSet } from './collections/CoreSet.js';
 interface DataFactoryConfig {
   preventNewQuads?: boolean;
   emitEvents?: boolean;

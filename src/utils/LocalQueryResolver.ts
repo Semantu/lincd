@@ -37,7 +37,7 @@ import { NamedNode,Literal } from '../models.js';
 import { xsd } from '../ontologies/xsd.js';
 import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
 import { rdf } from '../ontologies/rdf.js';
-import { NodeSet } from '../collections/NodeSet';
+import { NodeSet } from '../collections/NodeSet.js';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -395,17 +395,17 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
   if(typeof value === 'object' && !(value instanceof Date)) {
     throw new Error('Object values are not allowed for property: ' + propShape.label);
   }
-  let dataType = propShape.datatype;
+  let datatype = propShape.datatype;
   let res:Literal;
-  if(dataType) {
-    if(dataType.equals(xsd.integer)) {
+  if(datatype) {
+    if(datatype.equals(xsd.integer)) {
       if(typeof value === 'number') {
         res = new Literal(value.toString(),xsd.integer);
       } else {
         throw new Error('Expected a number value for property: ' + propShape.label);
       }
     }
-    if(dataType.equals(xsd.boolean)) {
+    if(datatype.equals(xsd.boolean)) {
       if(typeof value === 'boolean')
       {
         res = Boolean_toLiteral(value);
@@ -413,7 +413,7 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
         throw new Error('Expected boolean value for property: ' + propShape.label);
       }
     }
-    if(dataType.equals(xsd.date)) {
+    if(datatype.equals(xsd.date)) {
       //check if value is a date
       if(value instanceof Date) {
         res = XSDDate_fromNativeDate(value);
@@ -440,7 +440,7 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
   {
     //and we convert the string to a literal
     //Note: datatype could be null or any other datatype
-    res = new Literal(value,dataType);
+    res = new Literal(value,datatype);
   }
   return {
     value:res,
