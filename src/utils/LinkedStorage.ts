@@ -416,7 +416,15 @@ export abstract class LinkedStorage {
   static updateQuery<
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
-  >(query:LinkedUpdateQuery<ShapeType,U>):Promise<AddId<U>> {
+  >(
+    // this: {new (node: Node): ShapeType; targetClass: any},
+    id:string|{id:string}|{uri:string},
+    updateObjectOrFn?: U,
+    // query:LinkedUpdateQuery<ShapeType,U>
+  ):Promise<AddId<U>> {
+    // return Promise.resolve(true) as any;
+    const query = new LinkedUpdateQuery<ShapeType, U>(this as any, id,updateObjectOrFn);
+
     let quadStore: IQuadStore = this.getStoreForShapeClass(query.shapeClass);
     let queryObject = query.getQueryObject();
     return quadStore.updateQuery(queryObject);

@@ -360,9 +360,7 @@ export abstract class Shape implements IShape {
     id:string|{id:string}|{uri:string},
     updateObjectOrFn?: U,
   ): Promise<AddId<U>> {
-    // return Promise.resolve(true) as any;
-    const query = new LinkedUpdateQuery<ShapeType, U>(this as any, id,updateObjectOrFn);
-    return StorageHelper.updateQuery(query);
+    return StorageHelper.updateQuery(id,updateObjectOrFn);
   }
 
   static mapPropertyShapes<
@@ -1181,10 +1179,12 @@ export class StorageHelper {
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(
-    query: LinkedUpdateQuery<ShapeType,U>
+    // this: {new (node: Node): ShapeType; targetClass: any},
+    id:string|{id:string}|{uri:string},
+    updateObjectOrFn?: U,
   ): Promise<AddId<U>> {
     this.checkSetup();
-    return this.storageController.updateQuery(query);
+    return this.storageController.updateQuery(id,updateObjectOrFn);
   }
 
   private static checkSetup() {
