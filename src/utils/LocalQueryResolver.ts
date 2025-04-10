@@ -365,20 +365,21 @@ async function convertNodeDescription(propShape: PropertyShape, value: NodeDescr
   let node = NamedNode.create();
   let plainResults = await applyFieldUpdates(value.fields,node);
 
+  let valueShape = propShape.valueShape || value.shape;
   //if this property comes with a restriction that all values need to be of a certain shape
-  if(propShape.valueShape) {
+  if(valueShape) {
     //if that shape comes with a target class
-    if(propShape.valueShape.targetClass)
+    if(valueShape.targetClass)
     {
       //then we set the type of the node to the target class
-      //this is a "free" automatic property that we set for the user, so they dont need to always manually type it into the create() or update() queries
-      node.set(rdf.type,propShape.valueShape.targetClass);
+      //this is a "free" automatic property that we set for the user, so they don't need to always manually type it into the create() or update() queries
+      node.set(rdf.type,valueShape.targetClass);
     }
     //However... for other restrictions of the shape, the user needs to make sure that the node is valid
     //So lets check if the node is valid according to the shape
-    if(!propShape.valueShape.validateNode(node)) {
-      let report = ValidationReport.forNodeAgainstShape(node,propShape.valueShape).toString();
-      throw new Error(`Property: ${propShape.label} expects all values to be valid instances of shape ${propShape.valueShape.label}. Validation failed: ${report}`);
+    if(!valueShape.validateNode(node)) {
+      let report = ValidationReport.forNodeAgainstShape(node,valueShape).toString();
+      throw new Error(`Property: ${propShape.label} expects all values to be valid instances of shape ${valueShape.label}. Validation failed: ${report}`);
     }
   }
 
@@ -405,7 +406,7 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
         throw new Error('Expected a number value for property: ' + propShape.label);
       }
     }
-    if(datatype.equals(xsd.boolean)) {
+    else if(datatype.equals(xsd.boolean)) {
       if(typeof value === 'boolean')
       {
         res = Boolean_toLiteral(value);
@@ -413,13 +414,16 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
         throw new Error('Expected boolean value for property: ' + propShape.label);
       }
     }
-    if(datatype.equals(xsd.date)) {
+    else if(datatype.equals(xsd.date)) {
       //check if value is a date
       if(value instanceof Date) {
         res = XSDDate_fromNativeDate(value);
       } else {
         throw new Error('Expected date value for property: ' + propShape.label);
       }
+    }
+    else {
+      console.warn(`Unknown datatype :${datatype.toString()}. Assuming it's a string value`);
     }
   }
   if(typeof value === 'undefined') {
@@ -431,15 +435,14 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
   if(value === null) {
     throw new Error('Value cannot be null. If you want to unset a value, use undefined');
   }
-  //else expecting string
-  if(typeof value !== 'string') {
-    throw new Error('Expected string value for property: ' + propShape.label);
-  }
-  //if no datatype is given, then we assume the value is a string
+  //if none of the previous options matched (and therefor res is not set yet), then we assume the value is a string
   if(!res)
   {
+    if(typeof value !== 'string') {
+      throw new Error('Expected string value for property: ' + propShape.label);
+    }
     //and we convert the string to a literal
-    //Note: datatype could be null or any other datatype
+    //Note: datatype could be null or any other unsupported datatype
     res = new Literal(value,datatype);
   }
   return {
