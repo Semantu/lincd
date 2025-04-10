@@ -101,6 +101,12 @@ export interface LinkedComponentProps<ShapeType extends Shape>
    * if a node was given for 'of', linkedComponent() converts that node into an instance of the shape and provides it as 'source'
    */
   source: ShapeType;
+  /**
+   * @beta
+   * Refreshes the data and rerenders the component.
+   * WARNING: this prop will likely be replaced in a next version
+   */
+  _refresh:()=>void
 }
 
 interface LinkedComponentBaseProps<DataResultType = any>
@@ -175,7 +181,7 @@ export type LinkedComponentFactoryFn = <
       //the result of a query is always an object.
       //this maps all the keys of the result object to props
       QueryResponseToResultType<
-        GetQueryResponseType<LinkedQuery<ShapeType, Res>>,
+        Res,
         ShapeType
       >,
     ShapeType
@@ -200,7 +206,7 @@ export function createLinkedComponentFn(
         //the result of a query is always an object.
         //this maps all the keys of the result object to props
         QueryResponseToResultType<
-          GetQueryResponseType<LinkedQuery<ShapeType, Res>>,
+          Res,
           ShapeType
         >,
       ShapeType
@@ -225,6 +231,40 @@ export function createLinkedComponentFn(
           if (ref) {
             linkedProps['ref'] = ref;
           }
+
+          const loadData = () => {
+            let requestQuery = (actualQuery as LinkedQuery<any>).clone();
+            requestQuery.setSubject(linkedProps.source);
+
+            LinkedStorage.query(requestQuery).then((result) => {
+              //store the result to state, this also means we don't need to check cache again.
+              setQueryResult(result);
+            });
+          }
+
+          //temporary quick fix to allow components to reload after refreshing their data
+          //@TODO: A better solutions would likely involve
+          //  sA) a new hook, update = useUpdateData(this) <-- need access to the component somehow
+          //  then we can do update('status',newValue) and it would update the graph & rerender the component without query refresh
+          //  for this it needs to be able to access the property path of the status property of the query
+          //  but that also means again that the inner component is bound to the query. Hmm
+          //  unless the query leaves a trace inside the linked component, and "this" refers to the linked component which knows which query its bound to
+          //  So... it accesses the property path, generates an update query, updates the result state, and hence triggers a rerender
+          //  perhaps it will send a temporary isLoading / isUpdating prop
+          //  B) source can extend Shape, and Shape no longer refers to triples, but is instead a proxy
+          //  when a property of source is updated with source.status = ..., we can update the graph
+          //  similar to A), the proxy/shape instance knows its a result of a query and can find back the property path
+          //  then triggers a Shape.update() query, and updates the inner state (immediately if possible, except any new ID/URI, so it would use a temporary ID!)
+          //  then rerenders again when the update is complete with the URI
+          //  C) queries can be combined and refer to each other
+          //  so a component can be linked with linkedComponent({
+          //    source: Item.query(...)
+          //    toggle: Item.update({someProp:...
+          //  and then calling source.toggle, or just the prop toggle, would automatically refresh the source
+          linkedProps._refresh = () => {
+            loadData();
+          }
+
           //check if the given source is a QResult, and not just that, but also if its structure
           //matches the query of this component. (if not, it could be sent as the source but the parent query did not preload the data of this component)
           let sourceIsValidQResult =
@@ -263,14 +303,7 @@ export function createLinkedComponentFn(
               } else if (cachedRequest === false) {
                 //if we did not request all these properties before then we continue to
                 // load the required PropertyShapes from storage for this specific source
-
-                let requestQuery = (actualQuery as LinkedQuery<any>).clone();
-                requestQuery.setSubject(linkedProps.source);
-
-                LinkedStorage.query(requestQuery).then((result) => {
-                  //store the result to state, this also means we don't need to check cache again.
-                  setQueryResult(result);
-                });
+                loadData();
               } else {
                 //if some requiredProperties are still being loaded
                 //cachedResult will be a promise (there is no other return type)
@@ -570,12 +603,21 @@ export function createLinkedSetComponentFn(
 function getLinkedComponentProps<ShapeType extends Shape, P>(
   props: LinkedComponentInputProps<ShapeType> & P,
   shapeClass,
-): LinkedComponentProps<ShapeType> & P {
+): Omit<LinkedComponentProps<ShapeType>,'_refresh'> & P {
   let newProps = {
     ...props,
     //if a node was given, convert it to a shape instance
     source: getSourceFromInputProps(props, shapeClass),
   };
+  //copy over other properties from parent query
+  if(newProps['of']) {
+    //copy over other props
+    for(let key of Object.getOwnPropertyNames(newProps['of'])) {
+      if (key !== 'shape' && key !== 'id') {
+        newProps[key] = newProps['of'][key];
+      }
+    }
+  }
 
   delete newProps['of'];
   return newProps;

@@ -295,7 +295,7 @@ export type GetQueryObjectResultType<
               >
             : //   CreateQResult<Source, ShapeType, Property>
               QV extends BoundComponent<infer Source, infer ShapeType>
-              ? GetShapesResultTypeWithSource<Source>
+              ? GetQueryObjectResultType<Source,SubProperties,PrimitiveArray,HasName>
               : QV extends QueryShapeSet<
                     infer ShapeType,
                     infer Source,
@@ -314,16 +314,19 @@ export type GetQueryObjectResultType<
                     ? UnionToIntersection<QueryResponseToResultType<Type>>
                     : never;
 
-export type GetShapesResultTypeWithSource<Source> =
-  Source extends QueryShape<infer ShapeType, infer Source, infer Property>
-    ? CreateQResult<Source, ShapeType, Property>
-    : Source extends QueryShapeSet<
-          infer ShapeType,
-          infer Source,
-          infer Property
-        >
-      ? CreateShapeSetQResult<ShapeType, Source, Property>
-      : never;
+//for now, we don't pass result types of nested queries of bound components
+//instead we just pass on the result as it would have been if the query element was not extended with ".preLoadFor()"
+export type GetShapesResultTypeWithSource<Source> = QueryResponseToResultType<Source>;
+// export type GetShapesResultTypeWithSource<Source> =
+//   Source extends QueryShape<infer ShapeType, infer Source, infer Property>
+//     ? CreateQResult<Source, ShapeType, Property>
+//     : Source extends QueryShapeSet<
+//           infer ShapeType,
+//           infer Source,
+//           infer Property
+//         >
+//       ? CreateShapeSetQResult<ShapeType, Source, Property>
+//       : never;
 
 type GetQueryObjectProperty<T> =
   T extends QueryBuilderObject<any, any, infer Property> ? Property : never;
@@ -1436,9 +1439,9 @@ export class LinkedQuery<
     });
   }
 
-  private isValidQueryPathResult(qResult: QResult<any>, path: QueryPath) {
+  private isValidQueryPathResult(qResult: QResult<any>, path: QueryPath,nameOverwrite?:string) {
     if (Array.isArray(path)) {
-      return this.isValidQueryStepResult(qResult, path[0], path.splice(1));
+      return this.isValidQueryStepResult(qResult, path[0], path.splice(1),nameOverwrite);
     } else {
       if ((path as WhereAndOr).firstPath) {
         return this.isValidQueryPathResult(
@@ -1458,14 +1461,19 @@ export class LinkedQuery<
     qResult: QResult<any>,
     step: QueryStep | SubQueryPaths,
     restPath: (QueryStep | SubQueryPaths)[] = [],
+    nameOverwrite?:string,
   ): boolean {
     if ((step as PropertyQueryStep).property) {
-      if (!qResult.hasOwnProperty((step as PropertyQueryStep).property.label)) {
+      //if a name overwrite is given we check if that key exists instead of the property label
+      //this happens with custom objects: for the first property step, the named key will be the accessKey used in the result instead of the first property label.
+      //e.g. {title:item.name} in a query will result in a "title" key in the result, not "name"
+      const accessKey = nameOverwrite || (step as PropertyQueryStep).property.label;
+      if (!qResult.hasOwnProperty(accessKey)) {
         return false;
       }
       if (restPath.length > 0) {
         return this.isValidQueryStepResult(
-          qResult[(step as PropertyQueryStep).property.label],
+          qResult[accessKey],
           restPath[0],
           restPath.splice(1),
         );
@@ -1492,9 +1500,12 @@ export class LinkedQuery<
         return false;
       }
       let path: QueryPath = step[key];
-      return this.isValidQueryPathResult(qResult, path);
+      if(!this.isValidQueryPathResult(qResult, path,key)) {
+        return false;
+      }
       // return this.isValidQueryPathResult(qResult[key], path);
     }
+    return true;
   }
 }
 

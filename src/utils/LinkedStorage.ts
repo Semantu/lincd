@@ -19,7 +19,7 @@ import {
 } from './LinkedQuery.js';
 import { LinkedDataRequest } from './TraceShape.js';
 import { IStorageController,staticImplements } from '../interfaces/IStorageController.js';
-import { LinkedUpdateQuery,UpdatePartial,AddId } from './queries/LinkedUpdateQuery.js';
+import { LinkedUpdateQuery,UpdatePartial,AddId,UpdateQuery } from './queries/LinkedUpdateQuery.js';
 import { rdf } from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
 
@@ -413,17 +413,26 @@ export abstract class LinkedStorage {
     return quadStore.query(queryObject) as any;
   }
 
+  static updateQueryRaw<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(
+    query:UpdateQuery<U>
+  ):Promise<U> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
+    return quadStore.updateQuery(query);
+  }
+
   static updateQuery<
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(
-    // this: {new (node: Node): ShapeType; targetClass: any},
     id:string|{id:string}|{uri:string},
     updateObjectOrFn?: U,
-    // query:LinkedUpdateQuery<ShapeType,U>
+    shapeClass?: typeof Shape,
   ):Promise<AddId<U>> {
     // return Promise.resolve(true) as any;
-    const query = new LinkedUpdateQuery<ShapeType, U>(this as any, id,updateObjectOrFn);
+    const query = new LinkedUpdateQuery<ShapeType, U>(shapeClass, id,updateObjectOrFn);
 
     let quadStore: IQuadStore = this.getStoreForShapeClass(query.shapeClass);
     let queryObject = query.getQueryObject();

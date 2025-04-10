@@ -1695,6 +1695,30 @@ test('update query 1 - with simple object argument', async () => {
     expect(res.friends.length).toBe(0);
   });
 
+  //@TODO: add tests for updating ALL items without passing an id as first param
+  // test('update all items (without id)',async () => {
+  //   //original:
+  //   // p1.birthDate = new Date('1990-01-01');
+  //   const res = await Person.update({
+  //     birthDate: new Date('1990-01-02'),
+  //   });
+  //
+  //   expect(res.length).toBe(4);
+  //   res.forEach((person) => {
+  //     expect(person.birthDate.toISOString()).toBe('1990-01-02T00:00:00.000Z');
+  //   });
+  //
+  //   // Restore original values
+  //   //1) remove the birthDate from all
+  //   await Person.update({
+  //     birthDate: undefined,
+  //   });
+  //   //2) set the original value for p1
+  //   await Person.update(p1,{
+  //     birthDate: new Date('1990-01-01'),
+  //   });
+  // })
+
   // test('update query 6 - function-based set single property', async () => {
   //   const originalHobby = p1.hobby || 'Swimming';
   //

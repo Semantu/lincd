@@ -19,10 +19,9 @@ export interface IStorageController {
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(
-    // this: {new (node: Node): ShapeType; targetClass: any},
     id:string|{id:string}|{uri:string},
-    updateObjectOrFn?: U,
-    // query:LinkedUpdateQuery<ShapeType,U>
+    updateObjectOrFn: U,
+    shapeClass: typeof Shape,
   ): Promise<AddId<U>>;
 }
 

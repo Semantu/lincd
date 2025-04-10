@@ -2653,7 +2653,7 @@ export class Graph implements Term {
   // private static addedQuads: Map<Graph,QuadArray> = new Map();
   // private static removedQuads: Map<Graph,QuadArray> = new Map();
   // private static addedQuadsAlterations: Map<Graph,QuadArray> = new Map();
-  termType: string = 'Graph';
+  termType: string = 'NamedNode';
   private quads: QuadSet;
 
   constructor(
