@@ -290,12 +290,13 @@ export type GetQueryObjectResultType<
                 Source,
                 ShapeType,
                 Property,
-                {},
+                SubProperties,
                 HasName
               >
             : //   CreateQResult<Source, ShapeType, Property>
-              QV extends BoundComponent<infer Source, infer ShapeType>
-              ? GetQueryObjectResultType<Source,SubProperties,PrimitiveArray,HasName>
+              QV extends BoundComponent<infer Source, infer ShapeType,infer ComponentResultType>
+              // ? ComponentResultType
+              ? GetQueryObjectResultType<Source,SubProperties & ComponentResultType,PrimitiveArray,HasName>
               : QV extends QueryShapeSet<
                     infer ShapeType,
                     infer Source,
@@ -414,7 +415,7 @@ export type CreateQResult<
             {
               //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
               //but for all other cases (like string, number, boolean) the value is just passed through
-              [P in Property]: CreateQResult<Value, Value>;
+              [P in Property]: CreateQResult<Value, Value,null,SubProperties>;
             }
           >[],
           SourceProperty,
@@ -423,7 +424,7 @@ export type CreateQResult<
         >
       : //this needs to be value amongst other things for .select({customKeys}) and ObjectToPlainResult
         Value extends Shape
-        ? QResult<Value>
+        ? QResult<Value,SubProperties>
         : Value;
 
 export type CreateShapeSetQResult<
@@ -653,12 +654,12 @@ export class QueryBuilderObject<
     };
   }
 
-  preloadFor<ShapeType extends Shape>(
+  preloadFor<ShapeType extends Shape,CompQueryRes>(
     component:
-      | LinkedComponent<any, ShapeType>
-      | LinkedSetComponent<any, ShapeType>,
-  ): BoundComponent<this, ShapeType> {
-    return new BoundComponent<this, ShapeType>(component, this);
+      | LinkedComponent<any, ShapeType,CompQueryRes>
+      | LinkedSetComponent<any, ShapeType,CompQueryRes>,
+  ): BoundComponent<this, ShapeType,CompQueryRes> {
+    return new BoundComponent<this, ShapeType,CompQueryRes>(component, this);
   }
 
   limit(lim: number) {
@@ -999,11 +1000,12 @@ export class QueryShape<
 export class BoundComponent<
   Source extends QueryBuilderObject,
   ShapeType extends Shape,
+  CompQueryResult = any,
 > extends QueryBuilderObject {
   constructor(
     public originalValue:
-      | LinkedComponent<any, ShapeType>
-      | LinkedSetComponent<any, ShapeType>,
+      | LinkedComponent<any, ShapeType,CompQueryResult>
+      | LinkedSetComponent<any, ShapeType,CompQueryResult>,
     public source: Source, // property?: PropertyShape, // subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
     super(null, null);
