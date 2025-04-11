@@ -2,6 +2,7 @@ import { Shape } from '../shapes/Shape';
 import { NodeShape } from '../shapes/SHACL';
 import { LinkedQueryObject } from './LinkedSelectQuery';
 import { AddId,LinkedQuery,NodeDescriptionValue,UpdatePartial } from './LinkedQuery';
+import { MutationQuery } from './MutationQuery';
 
 export interface CreateQuery<ResponseType=null> extends LinkedQueryObject {
   type:'create',
@@ -12,7 +13,7 @@ export interface CreateQuery<ResponseType=null> extends LinkedQueryObject {
 export class LinkedCreateQuery<
   ShapeType extends Shape,
   U extends UpdatePartial<ShapeType>
-> extends LinkedQuery
+> extends MutationQuery
 {
   readonly id:string;
   readonly description:NodeDescriptionValue;

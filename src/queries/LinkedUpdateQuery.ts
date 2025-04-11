@@ -1,6 +1,7 @@
 import { Shape } from '../shapes/Shape';
 import { AddId,LinkedQuery,NodeDescriptionValue,UpdatePartial } from './LinkedQuery';
 import { NodeShape } from '../shapes/SHACL';
+import { MutationQuery } from './MutationQuery';
 
 export type UpdateQuery<ResponseType = null> = {
   type: 'update',
@@ -9,7 +10,7 @@ export type UpdateQuery<ResponseType = null> = {
   updates: NodeDescriptionValue;
 }
 
-export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<ShapeType>> extends LinkedQuery {
+export class LinkedUpdateQuery<ShapeType extends Shape,U extends UpdatePartial<ShapeType>> extends MutationQuery {
   readonly id:string;
   readonly fields:NodeDescriptionValue;
 
