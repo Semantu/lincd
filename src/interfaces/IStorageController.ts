@@ -1,18 +1,18 @@
 import {
   GetQueryResponseType,
-  LinkedQuery,
+  LinkedSelectQuery,
   QueryResponseToResultType,
-} from '../utils/LinkedQuery.js';
+} from '../utils/queries/LinkedSelectQuery';
 import { Shape } from '../shapes/Shape.js';
-import { LinkedUpdateQuery,UpdatePartial,AddId } from '../utils/queries/LinkedUpdateQuery.js';
+import { UpdatePartial,AddId } from '../utils/queries/LinkedQuery.js';
 
 export interface IStorageController {
 
   query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
-    GetQueryResponseType<LinkedQuery<ShapeType, ResponseType>>,
+    GetQueryResponseType<LinkedSelectQuery<ShapeType, ResponseType>>,
     ShapeType
   >[]>(
-    query: LinkedQuery<ShapeType,ResponseType,Source>
+    query: LinkedSelectQuery<ShapeType,ResponseType,Source>
   ): Promise<ResultType>;
 
   updateQuery<
@@ -20,6 +20,14 @@ export interface IStorageController {
     U extends UpdatePartial<ShapeType>,
   >(
     id:string|{id:string}|{uri:string},
+    updateObjectOrFn: U,
+    shapeClass: typeof Shape,
+  ): Promise<AddId<U>>;
+
+  createQuery<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(
     updateObjectOrFn: U,
     shapeClass: typeof Shape,
   ): Promise<AddId<U>>;

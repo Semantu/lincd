@@ -26,17 +26,17 @@ import {
 } from '../utils/ShapeClass.js';
 import {
   GetQueryResponseType,
-  LinkedQuery,
+  LinkedSelectQuery,
   PatchedQueryPromise,
   QueryBuildFn,QueryResponseToEndValues,
   QueryResponseToResultType,
-} from '../utils/LinkedQuery.js';
+} from '../utils/queries/LinkedSelectQuery';
 import {
   IStorageController,
   staticImplements,
 } from '../interfaces/IStorageController.js';
 import { TestNode } from '../utils/TraceShape.js';
-import { LinkedUpdateQuery,UpdatePartial,AddId } from '../utils/queries/LinkedUpdateQuery.js';
+import { UpdatePartial,AddId } from '../utils/queries/LinkedQuery.js';
 import { ClassOf } from '../utils/Types';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
@@ -182,18 +182,14 @@ export abstract class Shape implements IShape {
     this.overwrite(rdfs.label, new Literal(val));
   }
 
-
-  static create<T extends Shape>(
-    this: ShapeType<T>,
-    data: Partial<T>,
-    uri?: string,
-  ): T {
-    const x = uri ? this.getFromURI(uri) : new (this as ClassOf<T>)();
-    for (const k in data) {
-      const key = k as keyof typeof this;
-      x[key] = data[key];
-    }
-    return x as T;
+  static create<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(
+    this: {new (node: Node): ShapeType; targetClass: any, shape: NodeShape},
+    updateObjectOrFn?: U,
+  ): Promise<AddId<U>> {
+    return StorageHelper.createQuery(updateObjectOrFn,this as any as typeof Shape);
   }
 
   /**
@@ -258,8 +254,8 @@ export abstract class Shape implements IShape {
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
     queryFn: QueryBuildFn<S, R>,
-  ): LinkedQuery<S, R> {
-    const query = new LinkedQuery<S>(this as any, queryFn);
+  ): LinkedSelectQuery<S, R> {
+    const query = new LinkedSelectQuery<S>(this as any, queryFn);
     return query;
   }
 
@@ -284,7 +280,7 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     S = unknown,
     ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      GetQueryResponseType<LinkedSelectQuery<ShapeType, S>>,
       ShapeType
     >[],
   >(
@@ -294,7 +290,7 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     S = unknown,
     ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      GetQueryResponseType<LinkedSelectQuery<ShapeType, S>>,
       ShapeType
     >,
   >(
@@ -306,7 +302,7 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     S = unknown,
     ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      GetQueryResponseType<LinkedSelectQuery<ShapeType, S>>,
       ShapeType
     >[],
   >(
@@ -318,7 +314,7 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     S = unknown,
     ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedQuery<ShapeType, S>>,
+      GetQueryResponseType<LinkedSelectQuery<ShapeType, S>>,
       ShapeType
     >[],
   >(
@@ -335,7 +331,7 @@ export abstract class Shape implements IShape {
       _selectFn = targetOrSelectFn;
     }
 
-    const query = new LinkedQuery<ShapeType, S>(this as any, _selectFn,subject);
+    const query = new LinkedSelectQuery<ShapeType, S>(this as any, _selectFn,subject);
     let p = new Promise<ResultType>((resolve, reject) => {
       nextTick(() => {
         StorageHelper.query(query)
@@ -1166,10 +1162,10 @@ export class StorageHelper {
   //   return this.storageController.query<ResultType>(query);
   // }
   static query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
-    GetQueryResponseType<LinkedQuery<ShapeType, ResponseType>>,
+    GetQueryResponseType<LinkedSelectQuery<ShapeType, ResponseType>>,
     ShapeType
   >[]>(
-    query: LinkedQuery<ShapeType,ResponseType,Source>
+    query: LinkedSelectQuery<ShapeType,ResponseType,Source>
   ): Promise<ResultType> {
     this.checkSetup();
     return this.storageController.query(query);
@@ -1186,6 +1182,17 @@ export class StorageHelper {
   ): Promise<AddId<U>> {
     this.checkSetup();
     return this.storageController.updateQuery(id,updateObjectOrFn,shapeClass);
+  }
+
+  static createQuery<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(
+    updateObjectOrFn: U,
+    shapeClass:typeof Shape,
+  ): Promise<AddId<U>> {
+    this.checkSetup();
+    return this.storageController.createQuery(updateObjectOrFn,shapeClass);
   }
 
   private static checkSetup() {

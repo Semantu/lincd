@@ -13,10 +13,10 @@ import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {
-  GetQueryResponseType,LinkedQuery,
+  GetQueryResponseType,LinkedSelectQuery,
   QueryResponseToResultType,
   SelectQuery,
-} from '../utils/LinkedQuery.js';
+} from '../utils/queries/LinkedSelectQuery';
 import {resolveLocal} from '../utils/LocalQueryResolver.js';
 import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery.js';
 import { updateLocal } from '../utils/LocalQueryResolver.js';

@@ -12,7 +12,7 @@ import {setDefaultPageLimit} from '../utils/Package.js';
 import {xsd} from '../ontologies/xsd.js';
 import {TestNode} from '../utils/TraceShape.js';
 import { literalProperty,objectProperty } from '../shapes/SHACL.js';
-import { QResult } from '../utils/LinkedQuery.js';
+import { QResult } from '../utils/queries/LinkedSelectQuery';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -1447,6 +1447,57 @@ test('update query 1 - with simple object argument', async () => {
   expect(qRes2[0].hobby).toBe(originalHobby);
 });
 
+  test('create query 1 - create simple person with literal fields', async () => {
+    const res = await Person.create({
+      name: 'Test Create',
+      hobby: 'Hiking',
+    });
+
+    // expect(res.id).toBeDefined();
+    // expect(res.name).toBe('Test Create');
+    // expect(res.hobby).toBe('Hiking');
+    //
+    // const qRes = await Person.select(res.id, p => [p.name, p.hobby]);
+    // expect(qRes.name).toBe('Test Create');
+    // expect(qRes.hobby).toBe('Hiking');
+  });
+
+  // test('create query 2 - create person with new and existing friends', async () => {
+  //   const res = await Person.create({
+  //     name: 'Test With Friends',
+  //     friends: [
+  //       { name: 'Brand New Friend' },
+  //       { id: p1.uri }
+  //     ]
+  //   });
+  //
+  //   expect(res.id).toBeDefined();
+  //   expect(Array.isArray(res.friends)).toBe(true);
+  //   expect(res.friends.length).toBe(2);
+  //   expect(res.friends.some(f => f.name === 'Brand New Friend')).toBe(true);
+  //   expect(res.friends.some(f => f.id === p1.uri)).toBe(true);
+  // });
+  //
+  // test('delete query 1 - delete newly created node', async () => {
+  //   const created = await Person.create({
+  //     name: 'To Be Deleted',
+  //     hobby: 'Archery',
+  //   });
+  //
+  //   const id = created.id;
+  //   expect(id).toBeDefined();
+  //
+  //   // make sure it's there
+  //   const check = await Person.select(id, p => p.name);
+  //   expect(check.name).toBe('To Be Deleted');
+  //
+  //   await Person.delete(id);
+  //
+  //   // verify deletion
+  //   const qRes = await Person.select().where(p => p.name.equals('To Be Deleted'));
+  //   expect(qRes.length).toBe(0);
+  // });
+
   test('update query 2 - overwrite a set (default)', async () => {
 
     let res = await Person.update(p1,{
@@ -1718,6 +1769,15 @@ test('update query 1 - with simple object argument', async () => {
   //     birthDate: new Date('1990-01-01'),
   //   });
   // })
+
+  test('remove query - remove a single value property', async () => {
+
+    //create a new person and then delete it
+    const pNew = await Person.create({
+      name: 'New Person',
+      hobby: 'Gaming',
+    })
+  });
 
   // test('update query 6 - function-based set single property', async () => {
   //   const originalHobby = p1.hobby || 'Swimming';

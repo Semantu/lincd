@@ -2,7 +2,7 @@ import {
   GetCustomObjectKeys,
   GetQueryResponseType,
   GetQueryShapeType,
-  LinkedQuery,
+  LinkedSelectQuery,
   LinkedQueryObject,
   QResult,
   QueryController,
@@ -11,7 +11,7 @@ import {
   QueryWrapperObject,
   SelectQuery,
   ToQueryResultSet,
-} from '../utils/LinkedQuery.js';
+} from './queries/LinkedSelectQuery';
 import {Shape} from '../shapes/Shape.js';
 
 import React, {createElement, useEffect, useState} from 'react';
@@ -25,7 +25,7 @@ import {getShapeClass, hasSuperClass} from '../utils/ShapeClass.js';
 type ProcessDataResultType<ShapeType extends Shape> = [
   typeof Shape,
   SelectQuery<ShapeType>,
-  LinkedQuery<ShapeType>,
+  LinkedSelectQuery<ShapeType>,
 ];
 
 export type Component<P = any, ShapeType extends Shape = Shape> =
@@ -48,7 +48,7 @@ export interface LinkedComponent<P, ShapeType extends Shape = Shape,ResultType=a
    * @param source the node or shape that this component should visualise
    */
   original?: LinkableComponent<P, ShapeType>;
-  query?: LinkedQueryObject<any>;
+  query?: SelectQuery<any>;
   shape?: typeof Shape;
 }
 
@@ -66,7 +66,7 @@ export interface LinkedSetComponent<
    * @param source the node or shape that this component should visualise
    */
   original?: LinkableSetComponent<P, ShapeType>;
-  query?: LinkedQueryObject<any>;
+  query?: SelectQuery<any>;
 
   shape?: typeof Shape;
 }
@@ -154,7 +154,7 @@ interface LinkedComponentInputBaseProps extends React.PropsWithChildren {
 }
 
 export type LinkedSetComponentFactoryFn = <
-  QueryType extends LinkedQuery<any> | {[key: string]: LinkedQuery<any>} = null,
+  QueryType extends LinkedSelectQuery<any> | {[key: string]: LinkedSelectQuery<any>} = null,
   CustomProps = {},
   ShapeType extends Shape = GetQueryShapeType<QueryType>,
   Res = ToQueryResultSet<QueryType>,
@@ -169,7 +169,7 @@ export type LinkedSetComponentFactoryFn = <
 ) => LinkedSetComponent<CustomProps, ShapeType,Res>;
 
 export type LinkedComponentFactoryFn = <
-  QueryType extends LinkedQuery<any> = null,
+  QueryType extends LinkedSelectQuery<any> = null,
   CustomProps = {},
   ShapeType extends Shape = GetQueryShapeType<QueryType>,
   Response = GetQueryResponseType<QueryType>,
@@ -194,7 +194,7 @@ export function createLinkedComponentFn(
   registerComponent,
 ) {
   return function linkedComponent<
-    QueryType extends LinkedQuery<any> = null,
+    QueryType extends LinkedSelectQuery<any> = null,
     CustomProps = {},
     ShapeType extends Shape = GetQueryShapeType<QueryType>,
     Res = GetQueryResponseType<QueryType>,
@@ -232,7 +232,7 @@ export function createLinkedComponentFn(
           }
 
           const loadData = () => {
-            let requestQuery = (actualQuery as LinkedQuery<any>).clone();
+            let requestQuery = (actualQuery as LinkedSelectQuery<any>).clone();
             requestQuery.setSubject(linkedProps.source);
 
             LinkedStorage.query(requestQuery).then((result) => {
@@ -389,7 +389,7 @@ export function createLinkedSetComponentFn(
   registerComponent,
 ) {
   return function linkedSetComponent<
-    QueryType extends LinkedQuery<any> = null,
+    QueryType extends LinkedSelectQuery<any> = null,
     CustomProps = {},
     ShapeType extends Shape = GetQueryShapeType<QueryType>,
     Res = GetQueryResponseType<QueryType>,
@@ -400,7 +400,7 @@ export function createLinkedSetComponentFn(
         //the result of a query is always an object.
         //this maps all the keys of the result object to props
         QueryResponseToResultType<
-          GetQueryResponseType<LinkedQuery<ShapeType, Res>>,
+          GetQueryResponseType<LinkedSelectQuery<ShapeType, Res>>,
           ShapeType
         >,
       ShapeType
@@ -427,7 +427,7 @@ export function createLinkedSetComponentFn(
           ShapeType,
           CustomProps &
             QueryResponseToResultType<
-              GetQueryResponseType<LinkedQuery<ShapeType, Res>>,
+              GetQueryResponseType<LinkedSelectQuery<ShapeType, Res>>,
               ShapeType
             >
         >(props, shapeClass, functionalComponent);
@@ -468,7 +468,7 @@ export function createLinkedSetComponentFn(
             }
           }
           //if the passed query parameter was a LinkedQuery
-          if (query instanceof LinkedQuery) {
+          if (query instanceof LinkedSelectQuery) {
             //then the results are passed as `linkedData`
             linkedProps = Object.assign(linkedProps, {
               linkedData: dataResult,
@@ -516,7 +516,7 @@ export function createLinkedSetComponentFn(
               //load the required PropertyShapes from storage for this specific source
               //we bypass cache because already checked cache ourselves above
 
-              let requestQuery = (actualQuery as LinkedQuery<any>).clone();
+              let requestQuery = (actualQuery as LinkedSelectQuery<any>).clone();
               requestQuery.setSubject(linkedProps.sources);
 
               if (limit) {
@@ -623,15 +623,15 @@ function getLinkedComponentProps<ShapeType extends Shape, P>(
 }
 
 function processQuery<ShapeType extends Shape>(
-  requiredData: LinkedQuery<ShapeType> | QueryWrapperObject<ShapeType>,
+  requiredData: LinkedSelectQuery<ShapeType> | QueryWrapperObject<ShapeType>,
   setComponent: boolean = false,
 ): ProcessDataResultType<ShapeType> {
   let shapeClass: typeof Shape;
   let dataRequest: SelectQuery<ShapeType>;
-  let query: LinkedQuery<ShapeType>;
+  let query: LinkedSelectQuery<ShapeType>;
 
   //if a Shape class was given (the actual class that extends Shape)
-  if (requiredData instanceof LinkedQuery) {
+  if (requiredData instanceof LinkedSelectQuery) {
     dataRequest = requiredData.getQueryObject();
     query = requiredData;
     shapeClass = requiredData.shape as any;
@@ -642,7 +642,7 @@ function processQuery<ShapeType extends Shape>(
       );
     }
     for (let key in requiredData) {
-      if (requiredData[key] instanceof LinkedQuery) {
+      if (requiredData[key] instanceof LinkedSelectQuery) {
         dataRequest = requiredData[key].getQueryObject();
         shapeClass = requiredData[key].shape as any;
         query = requiredData[key];

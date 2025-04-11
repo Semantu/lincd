@@ -5,7 +5,7 @@ import {
   Evaluation,
   GetQueryResponseType,
   JSPrimitive,
-  LinkedQuery,
+  LinkedSelectQuery,
   NodeResultMap,
   PropertyQueryStep,
   QResult,
@@ -20,19 +20,21 @@ import {
   WhereEvaluationPath,
   WhereMethods,
   WherePath,SortByPath,
-} from './LinkedQuery.js';
+} from './queries/LinkedSelectQuery';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
-  NodeDescriptionValue,
-  NodeReferenceValue,
-  PropUpdateValue,SetModificationValue,SinglePropertyUpdateValue,
-  UpdateNodePropertyValue,
   UpdateQuery,
 } from './queries/LinkedUpdateQuery.js';
+import {
+  NodeDescriptionValue,
+  NodeReferenceValue,
+  SetModificationValue,SinglePropertyUpdateValue,
+  UpdateNodePropertyValue,
+} from './queries/LinkedQuery.js';
 import { NamedNode,Literal } from '../models.js';
 import { xsd } from '../ontologies/xsd.js';
 import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
@@ -553,7 +555,7 @@ function resolveCustomObject(
   return resultObject;
 }
 
-export function resolveLocalEndResults<S extends LinkedQuery<any>>(
+export function resolveLocalEndResults<S extends LinkedSelectQuery<any>>(
   query: S,
   subject?: ShapeSet | Shape,
   queryPaths?: CustomQueryObject | ComponentQueryPath[],
@@ -585,7 +587,7 @@ export function resolveLocalEndResults<S extends LinkedQuery<any>>(
     return results as any;
   } else if (
     // query.traceResponse instanceof QueryValueSetOfSets ||
-    query.traceResponse instanceof LinkedQuery
+    query.traceResponse instanceof LinkedSelectQuery
   ) {
     return results.shift();
   } else if (

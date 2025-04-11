@@ -13,15 +13,17 @@ import {ShapeSet} from '../collections/ShapeSet.js';
 import { getShapeClass,getSuperShapesClasses } from './ShapeClass.js';
 import {
   GetQueryResponseType,
-  LinkedQuery,
+  LinkedSelectQuery,
   QueryResponseToResultType,
   SelectQuery,
-} from './LinkedQuery.js';
+} from './queries/LinkedSelectQuery';
 import { LinkedDataRequest } from './TraceShape.js';
 import { IStorageController,staticImplements } from '../interfaces/IStorageController.js';
-import { LinkedUpdateQuery,UpdatePartial,AddId,UpdateQuery } from './queries/LinkedUpdateQuery.js';
+import { LinkedUpdateQuery,UpdateQuery } from './queries/LinkedUpdateQuery.js';
+import { UpdatePartial,AddId } from './queries/LinkedQuery.js';
 import { rdf } from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
+import { LinkedCreateQuery } from './queries/LinkedCreateQuery';
 
 @staticImplements<IStorageController>() /* this class implements this interface with static methods */
 export abstract class LinkedStorage {
@@ -403,10 +405,10 @@ export abstract class LinkedStorage {
   //   query: LinkedQuery<any, ResultType>,
   // ): Promise<QueryResponseToResultType<ResultType>> {
   static query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
-    GetQueryResponseType<LinkedQuery<ShapeType, ResponseType>>,
+    GetQueryResponseType<LinkedSelectQuery<ShapeType, ResponseType>>,
     ShapeType
   >[]>(
-    query: LinkedQuery<ShapeType,ResponseType,Source>
+    query: LinkedSelectQuery<ShapeType,ResponseType,Source>
   ): Promise<ResultType> {
     let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape as any);
     let queryObject = query.getQueryObject();
@@ -438,6 +440,24 @@ export abstract class LinkedStorage {
     let queryObject = query.getQueryObject();
     return quadStore.updateQuery(queryObject);
   }
+
+
+  static createQuery<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(
+    updateObjectOrFn?: U,
+    shapeClass?: typeof Shape,
+  ):Promise<AddId<U>> {
+    // return Promise.resolve(true) as any;
+    const query = new LinkedCreateQuery<ShapeType, U>(shapeClass, updateObjectOrFn);
+
+    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shapeClass);
+    let queryObject = query.getQueryObject();
+    return quadStore.createQuery(queryObject);
+  }
+
+
 
   static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void | any> {
     // let storeMap = this.getStoreMapForNodes(toRemove.getSubjects());

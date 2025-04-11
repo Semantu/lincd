@@ -6,14 +6,15 @@ import {Shape} from '../shapes/Shape.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {
   GetQueryResponseType,
-  LinkedQuery,PatchedQueryPromise,QueryBuildFn,
+  LinkedSelectQuery,PatchedQueryPromise,QueryBuildFn,
   QueryResponseToResultType,
   SelectQuery,
-} from '../utils/LinkedQuery.js';
+} from '../utils/queries/LinkedSelectQuery';
 import { LinkedDataRequest } from '../utils/TraceShape.js';
 import { QuadArray } from '../collections/QuadArray.js';
 import { ShapeSet } from '../collections/ShapeSet.js';
 import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery.js';
+import { CreateQuery } from '../utils/queries/LinkedCreateQuery';
 
 export interface IQuadStore {
   /**
@@ -29,6 +30,8 @@ export interface IQuadStore {
   updateQuery?<RType>(
     q:UpdateQuery<RType>
   ): Promise<RType>
+
+  createQuery?<RType>(q:CreateQuery<RType>): Promise<RType>
 
   add(quad: Quad): Promise<any>;
 
