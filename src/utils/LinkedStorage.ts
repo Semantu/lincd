@@ -16,14 +16,14 @@ import {
   LinkedSelectQuery,
   QueryResponseToResultType,
   SelectQuery,
-} from './queries/LinkedSelectQuery';
+} from '../queries/LinkedSelectQuery';
 import { LinkedDataRequest } from './TraceShape.js';
 import { IStorageController,staticImplements } from '../interfaces/IStorageController.js';
-import { LinkedUpdateQuery,UpdateQuery } from './queries/LinkedUpdateQuery.js';
-import { UpdatePartial,AddId } from './queries/LinkedQuery.js';
+import { LinkedUpdateQuery,UpdateQuery } from '../queries/LinkedUpdateQuery.js';
+import { UpdatePartial,AddId } from '../queries/LinkedQuery.js';
 import { rdf } from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
-import { LinkedCreateQuery } from './queries/LinkedCreateQuery';
+import { CreateQuery,LinkedCreateQuery } from '../queries/LinkedCreateQuery';
 
 @staticImplements<IStorageController>() /* this class implements this interface with static methods */
 export abstract class LinkedStorage {
@@ -441,6 +441,15 @@ export abstract class LinkedStorage {
     return quadStore.updateQuery(queryObject);
   }
 
+  static createQueryRaw<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(
+    query:CreateQuery<U>
+  ):Promise<U> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
+    return quadStore.createQuery(query);
+  }
 
   static createQuery<
     ShapeType extends Shape,

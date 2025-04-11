@@ -1,15 +1,14 @@
-import { Shape,ShapeType,StorageHelper } from '../../shapes/Shape.js';
-import {TestNode} from '../TraceShape.js';
-import {PropertyShape} from '../../shapes/SHACL.js';
-import {ShapeSet} from '../../collections/ShapeSet.js';
-import {shacl} from '../../ontologies/shacl.js';
-import {CoreSet} from '../../collections/CoreSet.js';
-import {LinkedComponent, LinkedSetComponent} from '../LinkedComponent.js';
-import {CoreMap} from '../../collections/CoreMap.js';
-import { getPropertyShapeByLabel } from '../ShapeClass.js';
-import { ClassOf,InstanceOf } from '../Types.js';
-import { Prettify } from './LinkedQuery.js';
-import { LinkedQuery } from './LinkedQuery.js';
+import { Shape,ShapeType,StorageHelper } from '../shapes/Shape';
+import {TestNode} from '../utils/TraceShape';
+import {PropertyShape} from '../shapes/SHACL';
+import {ShapeSet} from '../collections/ShapeSet';
+import {shacl} from '../ontologies/shacl';
+import {CoreSet} from '../collections/CoreSet';
+import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent';
+import {CoreMap} from '../collections/CoreMap';
+import { getPropertyShapeByLabel } from '../utils/ShapeClass';
+import { Prettify } from './LinkedQuery';
+import { LinkedQuery } from './LinkedQuery';
 
 /**
  * ###################################
@@ -65,7 +64,7 @@ export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
  * It can be sent across the network.
  * @see LinkedQueryObject
  */
-export interface SelectQuery<S extends Shape = Shape> extends LinkedQueryObject {
+export interface SelectQuery<S extends Shape = Shape,ResultType=any> extends LinkedQueryObject {
   select: SelectPath;
   where?: WherePath;
   sortBy?: SortByPath;
@@ -1302,6 +1301,7 @@ export class LinkedSelectQuery<
   getQueryObject(): SelectQuery<S> {
     let queryPaths = this.getQueryPaths();
     let selectQuery = {
+      type:'select',
       select: queryPaths,
       subject: this.subject,
       limit: this.limit,

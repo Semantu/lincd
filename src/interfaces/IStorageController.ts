@@ -2,9 +2,9 @@ import {
   GetQueryResponseType,
   LinkedSelectQuery,
   QueryResponseToResultType,
-} from '../utils/queries/LinkedSelectQuery';
+} from '../queries/LinkedSelectQuery';
 import { Shape } from '../shapes/Shape.js';
-import { UpdatePartial,AddId } from '../utils/queries/LinkedQuery.js';
+import { UpdatePartial,AddId } from '../queries/LinkedQuery.js';
 
 export interface IStorageController {
 

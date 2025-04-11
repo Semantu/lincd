@@ -1,12 +1,12 @@
-import { Shape } from '../../shapes/Shape.js';
-import { NodeShape } from '../../shapes/SHACL.js';
+import { Shape } from '../shapes/Shape';
+import { NodeShape } from '../shapes/SHACL';
 import { LinkedQueryObject } from './LinkedSelectQuery';
 import { AddId,LinkedQuery,NodeDescriptionValue,UpdatePartial } from './LinkedQuery';
 
 export interface CreateQuery<ResponseType=null> extends LinkedQueryObject {
   type:'create',
   shape:NodeShape,
-  updates:NodeDescriptionValue;
+  description:NodeDescriptionValue;
 }
 
 export class LinkedCreateQuery<
@@ -15,17 +15,17 @@ export class LinkedCreateQuery<
 > extends LinkedQuery
 {
   readonly id:string;
-  readonly fields:NodeDescriptionValue;
+  readonly description:NodeDescriptionValue;
   constructor(public shapeClass: typeof Shape,updateObjectOrFn:U)
   {
     super();
-    this.fields = this.convertUpdateObject(updateObjectOrFn,this.shapeClass.shape);
+    this.description = this.convertUpdateObject(updateObjectOrFn,this.shapeClass.shape);
   }
   getQueryObject():CreateQuery<AddId<U>> {
     return {
       type:'create',
       shape:this.shapeClass.shape,
-      updates:this.fields
+      description:this.description
     }
   }
 }

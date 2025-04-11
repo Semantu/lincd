@@ -9,12 +9,12 @@ import {
   LinkedSelectQuery,PatchedQueryPromise,QueryBuildFn,
   QueryResponseToResultType,
   SelectQuery,
-} from '../utils/queries/LinkedSelectQuery';
+} from '../queries/LinkedSelectQuery';
 import { LinkedDataRequest } from '../utils/TraceShape.js';
 import { QuadArray } from '../collections/QuadArray.js';
 import { ShapeSet } from '../collections/ShapeSet.js';
-import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery.js';
-import { CreateQuery } from '../utils/queries/LinkedCreateQuery';
+import { UpdateQuery } from '../queries/LinkedUpdateQuery.js';
+import { CreateQuery } from '../queries/LinkedCreateQuery';
 
 export interface IQuadStore {
   /**

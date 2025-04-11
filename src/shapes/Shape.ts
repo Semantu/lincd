@@ -30,13 +30,13 @@ import {
   PatchedQueryPromise,
   QueryBuildFn,QueryResponseToEndValues,
   QueryResponseToResultType,
-} from '../utils/queries/LinkedSelectQuery';
+} from '../queries/LinkedSelectQuery';
 import {
   IStorageController,
   staticImplements,
 } from '../interfaces/IStorageController.js';
 import { TestNode } from '../utils/TraceShape.js';
-import { UpdatePartial,AddId } from '../utils/queries/LinkedQuery.js';
+import { UpdatePartial,AddId } from '../queries/LinkedQuery.js';
 import { ClassOf } from '../utils/Types';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;

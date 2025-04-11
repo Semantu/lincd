@@ -16,9 +16,9 @@ import {
   GetQueryResponseType,LinkedSelectQuery,
   QueryResponseToResultType,
   SelectQuery,
-} from '../utils/queries/LinkedSelectQuery';
+} from '../queries/LinkedSelectQuery';
 import {resolveLocal} from '../utils/LocalQueryResolver.js';
-import { UpdateQuery } from '../utils/queries/LinkedUpdateQuery.js';
+import { UpdateQuery } from '../queries/LinkedUpdateQuery.js';
 import { updateLocal } from '../utils/LocalQueryResolver.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {

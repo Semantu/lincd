@@ -11,7 +11,7 @@ import {
   QueryWrapperObject,
   SelectQuery,
   ToQueryResultSet,
-} from './queries/LinkedSelectQuery';
+} from '../queries/LinkedSelectQuery';
 import {Shape} from '../shapes/Shape.js';
 
 import React, {createElement, useEffect, useState} from 'react';

@@ -1,6 +1,6 @@
-import { Shape } from '../../shapes/Shape.js';
+import { Shape } from '../shapes/Shape';
 import { AddId,LinkedQuery,NodeDescriptionValue,UpdatePartial } from './LinkedQuery';
-import { NodeShape } from '../../shapes/SHACL';
+import { NodeShape } from '../shapes/SHACL';
 
 export type UpdateQuery<ResponseType = null> = {
   type: 'update',

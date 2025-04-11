@@ -1,57 +1,13 @@
 import { LinkedQueryObject } from './LinkedSelectQuery';
-import { NodeShape,PropertyShape } from '../../shapes/SHACL';
-import { Shape } from '../../shapes/Shape';
-import { ShapeValuesSet } from '../../collections/ShapeValuesSet';
+import { NodeShape,PropertyShape } from '../shapes/SHACL';
+import { Shape } from '../shapes/Shape';
+import { ShapeValuesSet } from '../collections/ShapeValuesSet';
 
 export type Prettify<T> = T extends infer R
   ? {
     [K in keyof R]: R[K];
   }
   : never;
-type BoolIsObj = {}[] extends Object ? true : false;
-type StrIsObj = {}[] extends null ? 'yes' : false;
-type StrIsObj2 = {}[] extends String ? true : false;
-type ArrayIsObj2 = {}[] extends Array<any> ? true : false;
-type ArrayIsObj3s = {} extends Number ? true : false;
-type ArrayIsObj3d = {} extends Date ? true : false;
-type ArrayIsObj3 = {} extends undefined ? true : false;
-type ArrayIsObj4 = {} extends null ? true : false;
-type ArrayIsObj5 = null extends null ? true : false;
-type ArrayIsObj6 = undefined extends null ? true : false;
-type ArrayIsObj56 = undefined extends Array<any> ? true : false;
-type ArrayIsObj56a = null extends Array<any> ? true : false;
-type ArrayIsObj56b = 'asdf' extends Array<any> ? true : false;
-type ArrayIsObj56bc = 4 extends Array<any> ? true : false;
-
-/**
- * {
- *     hobby: string;
- *     friends: {
- *         name: string;
- *         friends: ({
- *             name: string;
- *             friends: {
- *                 name: string;
- *             }[];
- *             id?: undefined;
- *         } | {
- *             id: string;
- *             name?: undefined;
- *             friends?: undefined;
- *         } | {
- *             name: string;
- *             friends?: undefined;
- *             id?: undefined;
- *         })[];
- *     }[];
- * }
- */
-//TODO: 1) is there another way to exclude everything except plain objects {}?
-//Note: I was not able to prettify this (getting rid of "AddId") without losing information of deeply nested properties.
-/**
- * Adds an id property to the object.
- */
-// export type AddId<U> = U;
 
 /**
  * Recursively adds an id property to all objects in the object.

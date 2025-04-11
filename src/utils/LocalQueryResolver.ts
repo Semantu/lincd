@@ -20,7 +20,7 @@ import {
   WhereEvaluationPath,
   WhereMethods,
   WherePath,SortByPath,
-} from './queries/LinkedSelectQuery';
+} from '../queries/LinkedSelectQuery';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
@@ -28,23 +28,35 @@ import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
   UpdateQuery,
-} from './queries/LinkedUpdateQuery.js';
+} from '../queries/LinkedUpdateQuery.js';
 import {
   NodeDescriptionValue,
   NodeReferenceValue,
   SetModificationValue,SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
-} from './queries/LinkedQuery.js';
+} from '../queries/LinkedQuery.js';
 import { NamedNode,Literal } from '../models.js';
 import { xsd } from '../ontologies/xsd.js';
 import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
 import { rdf } from '../ontologies/rdf.js';
 import { NodeSet } from '../collections/NodeSet.js';
+import { CreateQuery } from '../queries/LinkedCreateQuery';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
+export async function createLocal<ResultType>(query: CreateQuery<ResultType>):Promise<ResultType> {
+  if (query.type === 'create')
+  {
+    //convert the description of the node to create just like in update(),
+    // but this time there is no parent propertyShape, so we use null
+    //this will also set the rdf:type and save() the node.
+    const {value,plainValue} = await convertNodeDescription(null,query.description);
+    return plainValue;
+  } else {
+    throw new Error('Unknown query type: ' + query.type);
+  }
+}
 export async function updateLocal<ResultType>(query: UpdateQuery<ResultType>):Promise<ResultType> {
-  // console.log(query);
   if (query.type === 'update')
   {
     let subject = NamedNode.getNamedNode(query.id);
@@ -57,6 +69,8 @@ export async function updateLocal<ResultType>(query: UpdateQuery<ResultType>):Pr
     let plainResults = await applyFieldUpdates(query.updates.fields,subject);
     plainResults['id'] = query.id;
     return plainResults as ResultType;
+  } else {
+    throw new Error('Unknown query type: ' + query.type);
   }
 }
 async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode) {
@@ -358,7 +372,7 @@ function convertNodeReference(propShape: PropertyShape, value: NodeReferenceValu
 }
 async function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue):Promise<{value:NamedNode,plainValue:any}> {
   if(!value.shape || !value.fields) {
-    throw new Error('Expected a node description for property: ' + propShape.label);
+    throw new Error('Expected a node description for property: ' + propShape?.label);
   }
   //TODO: check how we convert an id field,
   //if the array of fields contains an id, then we know which node is referred to
@@ -367,7 +381,7 @@ async function convertNodeDescription(propShape: PropertyShape, value: NodeDescr
   let node = NamedNode.create();
   let plainResults = await applyFieldUpdates(value.fields,node);
 
-  let valueShape = propShape.valueShape || value.shape;
+  let valueShape = propShape?.valueShape || value.shape;
   //if this property comes with a restriction that all values need to be of a certain shape
   if(valueShape) {
     //if that shape comes with a target class
