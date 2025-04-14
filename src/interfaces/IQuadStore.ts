@@ -5,16 +5,13 @@ import {ICoreIterable} from './ICoreIterable.js';
 import {Shape} from '../shapes/Shape.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {
-  GetQueryResponseType,
-  LinkedSelectQuery,PatchedQueryPromise,QueryBuildFn,
-  QueryResponseToResultType,
   SelectQuery,
-} from '../queries/LinkedSelectQuery';
+} from '../queries/SelectQuery';
 import { LinkedDataRequest } from '../utils/TraceShape.js';
 import { QuadArray } from '../collections/QuadArray.js';
 import { ShapeSet } from '../collections/ShapeSet.js';
-import { UpdateQuery } from '../queries/LinkedUpdateQuery.js';
-import { CreateQuery } from '../queries/LinkedCreateQuery';
+import { UpdateQuery } from '../queries/UpdateQuery.js';
+import { CreateQuery } from '../queries/CreateQuery';
 
 export interface IQuadStore {
   /**
@@ -32,6 +29,10 @@ export interface IQuadStore {
   ): Promise<RType>
 
   createQuery?<RType>(q:CreateQuery<RType>): Promise<RType>
+
+  query<ResultType>(
+    query: SelectQuery<any>
+  ): Promise<ResultType>;
 
   add(quad: Quad): Promise<any>;
 
@@ -55,17 +56,6 @@ export interface IQuadStore {
   getDefaultGraph?(): Graph;
 
   removeNodes(nodes: ICoreIterable<NamedNode>,quads?:QuadSet): Promise<any>;
-
-  // query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
-  //   GetQueryResponseType<LinkedQuery<ShapeType, ResponseType>>,
-  //   ShapeType
-  // >[]>(
-  //   query: LinkedQuery<ShapeType,ResponseType,Source>
-  // ): Promise<ResultType>;
-
-  query<ResultType>(
-    query: SelectQuery<any>
-  ): Promise<ResultType>;
 
   /**
    * Clears all values of specific predicates for specific subjects

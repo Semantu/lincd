@@ -1,4 +1,4 @@
-import { LinkedQueryObject } from './LinkedSelectQuery';
+import { LinkedQuery } from './SelectQuery';
 import { NodeShape,PropertyShape } from '../shapes/SHACL';
 import { Shape } from '../shapes/Shape';
 import { ShapeValuesSet } from '../collections/ShapeValuesSet';
@@ -198,9 +198,9 @@ export type UpdateNodePropertyValue = {
 };
 export type NodeReferenceValue = { id: string };
 
-export abstract class LinkedQuery
+export abstract class QueryFactory
 {
-  getQueryObject(): LinkedQueryObject
+  getQueryObject(): LinkedQuery
   {
     return null;
   }

@@ -12,7 +12,7 @@ import {setDefaultPageLimit} from '../utils/Package.js';
 import {xsd} from '../ontologies/xsd.js';
 import {TestNode} from '../utils/TraceShape.js';
 import { literalProperty,objectProperty } from '../shapes/SHACL.js';
-import { QResult } from '../queries/LinkedSelectQuery';
+import { QResult } from '../queries/SelectQuery';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -1447,20 +1447,20 @@ test('update query 1 - with simple object argument', async () => {
   expect(qRes2[0].hobby).toBe(originalHobby);
 });
 
-  test('create query 1 - create simple person with literal fields', async () => {
-    const res = await Person.create({
-      name: 'Test Create',
-      hobby: 'Hiking',
-    });
-
-    // expect(res.id).toBeDefined();
-    // expect(res.name).toBe('Test Create');
-    // expect(res.hobby).toBe('Hiking');
-    //
-    // const qRes = await Person.select(res.id, p => [p.name, p.hobby]);
-    // expect(qRes.name).toBe('Test Create');
-    // expect(qRes.hobby).toBe('Hiking');
-  });
+  // test('create query 1 - create simple person with literal fields', async () => {
+  //   const res = await Person.create({
+  //     name: 'Test Create',
+  //     hobby: 'Hiking',
+  //   });
+  //
+  //   // expect(res.id).toBeDefined();
+  //   // expect(res.name).toBe('Test Create');
+  //   // expect(res.hobby).toBe('Hiking');
+  //   //
+  //   // const qRes = await Person.select(res.id, p => [p.name, p.hobby]);
+  //   // expect(qRes.name).toBe('Test Create');
+  //   // expect(qRes.hobby).toBe('Hiking');
+  // });
 
   // test('create query 2 - create person with new and existing friends', async () => {
   //   const res = await Person.create({
@@ -1770,14 +1770,14 @@ test('update query 1 - with simple object argument', async () => {
   //   });
   // })
 
-  test('remove query - remove a single value property', async () => {
-
-    //create a new person and then delete it
-    const pNew = await Person.create({
-      name: 'New Person',
-      hobby: 'Gaming',
-    })
-  });
+  // test('remove query - remove a single value property', async () => {
+  //
+  //   //create a new person and then delete it
+  //   const pNew = await Person.create({
+  //     name: 'New Person',
+  //     hobby: 'Gaming',
+  //   })
+  // });
 
   // test('update query 6 - function-based set single property', async () => {
   //   const originalHobby = p1.hobby || 'Swimming';

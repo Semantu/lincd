@@ -1,19 +1,19 @@
 import { Shape } from '../shapes/Shape';
 import { NodeShape } from '../shapes/SHACL';
-import { LinkedQueryObject } from './LinkedSelectQuery';
-import { AddId,LinkedQuery,NodeDescriptionValue,UpdatePartial } from './LinkedQuery';
-import { MutationQuery } from './MutationQuery';
+import { LinkedQuery } from './SelectQuery';
+import { AddId,QueryFactory,NodeDescriptionValue,UpdatePartial } from './QueryFactory';
+import { MutationQueryFactory } from './MutationQuery';
 
-export interface CreateQuery<ResponseType=null> extends LinkedQueryObject {
+export interface CreateQuery<ResponseType=null> extends LinkedQuery {
   type:'create',
   shape:NodeShape,
   description:NodeDescriptionValue;
 }
 
-export class LinkedCreateQuery<
+export class CreateQueryFactory<
   ShapeType extends Shape,
   U extends UpdatePartial<ShapeType>
-> extends MutationQuery
+> extends MutationQueryFactory
 {
   readonly id:string;
   readonly description:NodeDescriptionValue;

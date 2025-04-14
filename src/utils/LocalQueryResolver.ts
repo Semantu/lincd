@@ -5,7 +5,7 @@ import {
   Evaluation,
   GetQueryResponseType,
   JSPrimitive,
-  LinkedSelectQuery,
+  SelectQueryFactory,
   NodeResultMap,
   PropertyQueryStep,
   QResult,
@@ -20,7 +20,7 @@ import {
   WhereEvaluationPath,
   WhereMethods,
   WherePath,SortByPath,
-} from '../queries/LinkedSelectQuery';
+} from '../queries/SelectQuery';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
@@ -28,19 +28,19 @@ import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
   UpdateQuery,
-} from '../queries/LinkedUpdateQuery.js';
+} from '../queries/UpdateQuery.js';
 import {
   NodeDescriptionValue,
   NodeReferenceValue,
   SetModificationValue,SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
-} from '../queries/LinkedQuery.js';
+} from '../queries/QueryFactory.js';
 import { NamedNode,Literal } from '../models.js';
 import { xsd } from '../ontologies/xsd.js';
 import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
 import { rdf } from '../ontologies/rdf.js';
 import { NodeSet } from '../collections/NodeSet.js';
-import { CreateQuery } from '../queries/LinkedCreateQuery';
+import { CreateQuery } from '../queries/CreateQuery';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -569,7 +569,7 @@ function resolveCustomObject(
   return resultObject;
 }
 
-export function resolveLocalEndResults<S extends LinkedSelectQuery<any>>(
+export function resolveLocalEndResults<S extends SelectQueryFactory<any>>(
   query: S,
   subject?: ShapeSet | Shape,
   queryPaths?: CustomQueryObject | ComponentQueryPath[],
@@ -601,7 +601,7 @@ export function resolveLocalEndResults<S extends LinkedSelectQuery<any>>(
     return results as any;
   } else if (
     // query.traceResponse instanceof QueryValueSetOfSets ||
-    query.traceResponse instanceof LinkedSelectQuery
+    query.traceResponse instanceof SelectQueryFactory
   ) {
     return results.shift();
   } else if (

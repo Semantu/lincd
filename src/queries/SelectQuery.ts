@@ -7,8 +7,8 @@ import {CoreSet} from '../collections/CoreSet';
 import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent';
 import {CoreMap} from '../collections/CoreMap';
 import { getPropertyShapeByLabel } from '../utils/ShapeClass';
-import { Prettify } from './LinkedQuery';
-import { LinkedQuery } from './LinkedQuery';
+import { Prettify } from './QueryFactory';
+import { QueryFactory } from './QueryFactory';
 
 /**
  * ###################################
@@ -30,11 +30,11 @@ export type WhereClause<S extends Shape | AccessorReturnValue> =
 
 export type QueryBuildFn<T extends Shape, ResponseType> = (
   p: ToQueryBuilderObject<T>,
-  q: LinkedSelectQuery<T>,
+  q: SelectQueryFactory<T>,
 ) => ResponseType;
 
 export type QueryWrapperObject<ShapeType extends Shape = any> = {
-  [key: string]: LinkedSelectQuery<ShapeType>;
+  [key: string]: SelectQueryFactory<ShapeType>;
 };
 export type CustomQueryObject = {[key: string]: QueryPath};
 
@@ -48,7 +48,8 @@ export type SortByPath = {
  * that is used to send across the network as it can be serialized to JSON
  * @todo add | UpdateQuery and others
  */
-export interface LinkedQueryObject {
+export interface LinkedQuery
+{
   type:string;
 }
 
@@ -62,9 +63,9 @@ export type QueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 /**
  * A plain JS object that represents a LinkedQuery created by a Shape.select(...) call
  * It can be sent across the network.
- * @see LinkedQueryObject
+ * @see LinkedQuery
  */
-export interface SelectQuery<S extends Shape = Shape,ResultType=any> extends LinkedQueryObject {
+export interface SelectQuery<S extends Shape = Shape,ResultType=any> extends LinkedQuery {
   select: SelectPath;
   where?: WherePath;
   sortBy?: SortByPath;
@@ -206,8 +207,8 @@ export type QResult<ShapeType extends Shape, Object = {}> = Object & {
   shape: ShapeType;
 };
 
-export type QueryProps<Q extends LinkedSelectQuery<any>> =
-  Q extends LinkedSelectQuery<infer ShapeType, infer ResponseType>
+export type QueryProps<Q extends SelectQueryFactory<any>> =
+  Q extends SelectQueryFactory<infer ShapeType, infer ResponseType>
     ? QueryResponseToResultType<ResponseType, ShapeType>
     : never;
 
@@ -231,14 +232,14 @@ export type PatchedQueryPromise<ResultType, ShapeType extends Shape> = {
 
 export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
   ? {
-      [P in keyof T]: T[P] extends LinkedSelectQuery<any>
+      [P in keyof T]: T[P] extends SelectQueryFactory<any>
         ? ToQueryResultSet<T[P]>
         : never;
     }
   : [];
 
 export type ToQueryResultSet<T> =
-  T extends LinkedSelectQuery<infer ShapeType, infer ResponseType>
+  T extends SelectQueryFactory<infer ShapeType, infer ResponseType>
     ? QueryResponseToResultType<ResponseType, ShapeType>[]
     : null;
 
@@ -253,7 +254,7 @@ export type QueryResponseToResultType<
   // PreserveArray = false,
 > = T extends QueryBuilderObject
   ? GetQueryObjectResultType<T, {},false,HasName>
-  : T extends LinkedSelectQuery<any, infer Response, infer Source>
+  : T extends SelectQueryFactory<any, infer Response, infer Source>
     ? GetNestedQueryResultType<Response, Source>
     : T extends Array<infer Type>
       ? UnionToIntersection<QueryResponseToResultType<Type>>
@@ -508,16 +509,16 @@ type ResponseToObject<R> =
     : Prettify<ObjectToPlainResult<R>>;
 
 export type GetQueryResponseType<Q> =
-  Q extends LinkedSelectQuery<any, infer ResponseType> ? ResponseType : Q;
+  Q extends SelectQueryFactory<any, infer ResponseType> ? ResponseType : Q;
 
 export type GetQueryShapeType<Q> =
-  Q extends LinkedSelectQuery<infer ShapeType, infer ResponseType>
+  Q extends SelectQueryFactory<infer ShapeType, infer ResponseType>
     ? ShapeType
     : never;
 
 export type QueryResponseToEndValues<T> = T extends SetSize
   ? number[]
-  : T extends LinkedSelectQuery<any, infer Response>
+  : T extends SelectQueryFactory<any, infer Response>
     ? QueryResponseToEndValues<Response>[]
     : T extends QueryShapeSet<infer ShapeType>
       ? ShapeSet<ShapeType>
@@ -892,9 +893,9 @@ export class QueryShapeSet<
 
   select<QF = unknown>(
     subQueryFn: QueryBuildFn<S, QF>,
-  ): LinkedSelectQuery<S, QF, QueryShapeSet<S, Source, Property>> {
+  ): SelectQueryFactory<S, QF, QueryShapeSet<S, Source, Property>> {
     let leastSpecificShape = this.getOriginalValue().getLeastSpecificShape();
-    let subQuery = new LinkedSelectQuery(leastSpecificShape, subQueryFn);
+    let subQuery = new SelectQueryFactory(leastSpecificShape, subQueryFn);
     subQuery.parentQueryPath = this.getPropertyPath();
     return subQuery as any;
   }
@@ -1208,11 +1209,11 @@ export class QueryPrimitiveSet<QPrimitive extends QueryPrimitive<any>=null> exte
   }
 }
 
-export class LinkedSelectQuery<
+export class SelectQueryFactory<
   S extends Shape,
   ResponseType = any,
   Source = any,
-> extends LinkedQuery {
+> extends QueryFactory {
   /**
    * The returned value when the query was initially run.
    * Will likely be an array or object or query values that can be used to trace back which methods/accessors were used in the query.
@@ -1292,7 +1293,7 @@ export class LinkedSelectQuery<
   }
 
   exec(): Promise<QueryResponseToResultType<ResponseType>> {
-    return StorageHelper.query(this);
+    return StorageHelper.selectQuery(this);
   }
 
   /**
@@ -1348,9 +1349,9 @@ export class LinkedSelectQuery<
       });
     } else if (response instanceof Evaluation) {
       queryPaths.push(response.getWherePath());
-    } else if (response instanceof LinkedSelectQuery) {
+    } else if (response instanceof SelectQueryFactory) {
       queryPaths.push(
-        (response as LinkedSelectQuery<any, any>).getQueryPaths() as any,
+        (response as SelectQueryFactory<any, any>).getQueryPaths() as any,
       );
     } else if (!response) {
       //that's totally fine. For example Person.select().where(p => p.name.equals('John'))
@@ -1406,7 +1407,7 @@ export class LinkedSelectQuery<
   }
 
   clone() {
-    return new LinkedSelectQuery(this.shape, this.queryBuildFn, this.subject);
+    return new SelectQueryFactory(this.shape, this.queryBuildFn, this.subject);
   }
 
   patchResultPromise<ResultType>(
@@ -1579,7 +1580,7 @@ export class SetSize<Source = null> extends QueryNumber<Source> {
 export class LinkedWhereQuery<
   S extends Shape,
   ResponseType = any,
-> extends LinkedSelectQuery<S, ResponseType> {
+> extends SelectQueryFactory<S, ResponseType> {
   getResponse() {
     return this.traceResponse as Evaluation;
   }

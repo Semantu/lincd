@@ -29,7 +29,7 @@ import * as URI from './utils/URI.js';
 import * as Find from './utils/Find.js';
 import * as Order from './utils/Order.js';
 import * as NQuads from './utils/NQuads.js';
-import * as LinkedQuery from './queries/LinkedSelectQuery';
+import * as LinkedQuery from './queries/SelectQuery';
 import * as LinkedComponent from './utils/LinkedComponent.js';
 import * as LinkedComponentClass from './utils/LinkedComponentClass.js';
 import * as ForwardReasoning from './utils/ForwardReasoning.js';

@@ -26,17 +26,17 @@ import {
 } from '../utils/ShapeClass.js';
 import {
   GetQueryResponseType,
-  LinkedSelectQuery,
+  SelectQueryFactory,
   PatchedQueryPromise,
   QueryBuildFn,QueryResponseToEndValues,
   QueryResponseToResultType,
-} from '../queries/LinkedSelectQuery';
+} from '../queries/SelectQuery';
 import {
   IStorageController,
   staticImplements,
 } from '../interfaces/IStorageController.js';
 import { TestNode } from '../utils/TraceShape.js';
-import { UpdatePartial,AddId } from '../queries/LinkedQuery.js';
+import { UpdatePartial,AddId } from '../queries/QueryFactory';
 import { ClassOf } from '../utils/Types';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
@@ -254,8 +254,8 @@ export abstract class Shape implements IShape {
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
     queryFn: QueryBuildFn<S, R>,
-  ): LinkedSelectQuery<S, R> {
-    const query = new LinkedSelectQuery<S>(this as any, queryFn);
+  ): SelectQueryFactory<S, R> {
+    const query = new SelectQueryFactory<S>(this as any, queryFn);
     return query;
   }
 
@@ -280,7 +280,7 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     S = unknown,
     ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedSelectQuery<ShapeType, S>>,
+      GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
       ShapeType
     >[],
   >(
@@ -290,7 +290,7 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     S = unknown,
     ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedSelectQuery<ShapeType, S>>,
+      GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
       ShapeType
     >,
   >(
@@ -302,7 +302,7 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     S = unknown,
     ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedSelectQuery<ShapeType, S>>,
+      GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
       ShapeType
     >[],
   >(
@@ -314,7 +314,7 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     S = unknown,
     ResultType = QueryResponseToResultType<
-      GetQueryResponseType<LinkedSelectQuery<ShapeType, S>>,
+      GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
       ShapeType
     >[],
   >(
@@ -331,10 +331,10 @@ export abstract class Shape implements IShape {
       _selectFn = targetOrSelectFn;
     }
 
-    const query = new LinkedSelectQuery<ShapeType, S>(this as any, _selectFn,subject);
+    const query = new SelectQueryFactory<ShapeType, S>(this as any, _selectFn,subject);
     let p = new Promise<ResultType>((resolve, reject) => {
       nextTick(() => {
-        StorageHelper.query(query)
+        StorageHelper.selectQuery(query)
           .then((result) => {
             resolve(result as ResultType);
           })
@@ -1157,18 +1157,14 @@ export interface ShapeLike<M extends Shape> extends Constructor<M> {
 export class StorageHelper {
   static storageController: IStorageController;
 
-  // static query<ResultType = any>(query: LinkedQuery<any>) {
-  //   this.checkSetup();
-  //   return this.storageController.query<ResultType>(query);
-  // }
-  static query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
-    GetQueryResponseType<LinkedSelectQuery<ShapeType, ResponseType>>,
+  static selectQuery<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
+    GetQueryResponseType<SelectQueryFactory<ShapeType, ResponseType>>,
     ShapeType
   >[]>(
-    query: LinkedSelectQuery<ShapeType,ResponseType,Source>
+    query: SelectQueryFactory<ShapeType,ResponseType,Source>
   ): Promise<ResultType> {
     this.checkSetup();
-    return this.storageController.query(query);
+    return this.storageController.selectQuery(query);
   }
 
   static updateQuery<

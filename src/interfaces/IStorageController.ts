@@ -1,18 +1,18 @@
 import {
   GetQueryResponseType,
-  LinkedSelectQuery,
+  SelectQueryFactory,
   QueryResponseToResultType,
-} from '../queries/LinkedSelectQuery';
+} from '../queries/SelectQuery';
 import { Shape } from '../shapes/Shape.js';
-import { UpdatePartial,AddId } from '../queries/LinkedQuery.js';
+import { UpdatePartial,AddId } from '../queries/QueryFactory';
 
 export interface IStorageController {
 
-  query<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
-    GetQueryResponseType<LinkedSelectQuery<ShapeType, ResponseType>>,
+  selectQuery<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
+    GetQueryResponseType<SelectQueryFactory<ShapeType, ResponseType>>,
     ShapeType
   >[]>(
-    query: LinkedSelectQuery<ShapeType,ResponseType,Source>
+    query: SelectQueryFactory<ShapeType,ResponseType,Source>
   ): Promise<ResultType>;
 
   updateQuery<

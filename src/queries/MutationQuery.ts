@@ -1,15 +1,15 @@
 import {
-  LinkedQuery,LiteralUpdateValue,
+  QueryFactory,LiteralUpdateValue,
   NodeDescriptionValue,
   NodeReferenceValue,PropUpdateValue,SetModification,
   SetModificationValue,SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
   UpdatePartial,
-} from './LinkedQuery';
+} from './QueryFactory';
 import { NodeShape,PropertyShape } from '../shapes/SHACL';
 import { Shape } from '../shapes/Shape';
 
-export class MutationQuery extends LinkedQuery {
+export class MutationQueryFactory extends QueryFactory {
 
   protected convertUpdateObject(obj,shape: NodeShape)
   {

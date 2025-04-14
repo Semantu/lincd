@@ -13,12 +13,10 @@ import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {
-  GetQueryResponseType,LinkedSelectQuery,
-  QueryResponseToResultType,
   SelectQuery,
-} from '../queries/LinkedSelectQuery';
+} from '../queries/SelectQuery';
 import {resolveLocal} from '../utils/LocalQueryResolver.js';
-import { UpdateQuery } from '../queries/LinkedUpdateQuery.js';
+import { UpdateQuery } from '../queries/UpdateQuery';
 import { updateLocal } from '../utils/LocalQueryResolver.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {
