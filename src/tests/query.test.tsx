@@ -13,6 +13,7 @@ import {xsd} from '../ontologies/xsd.js';
 import {TestNode} from '../utils/TraceShape.js';
 import { literalProperty,objectProperty } from '../shapes/SHACL.js';
 import { QResult } from '../queries/SelectQuery';
+import { QueryParser } from '../queries/QueryParser';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');

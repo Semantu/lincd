@@ -184,7 +184,7 @@ export class InMemoryStore extends Shape implements IQuadStore {
     return Promise.resolve(true);
   }
 
-  query<ResultType>(
+  selectQuery<ResultType>(
     query: SelectQuery<any>
   ): Promise<ResultType> {
     return Promise.resolve(resolveLocal(query)).catch((e) => {
@@ -313,7 +313,7 @@ export class TestStore implements IQuadStore {
     return null;
   }
 
-  query<ResultType>(
+  selectQuery<ResultType>(
     query: SelectQuery<any>
   ): Promise<ResultType> {
     return null;

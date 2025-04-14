@@ -235,7 +235,7 @@ export function createLinkedComponentFn(
             let requestQuery = (actualQuery as SelectQueryFactory<any>).clone();
             requestQuery.setSubject(linkedProps.source);
 
-            LinkedStorage.selectQuery(requestQuery).then((result) => {
+            Shape.queryParser.selectQuery(requestQuery).then((result) => {
               //store the result to state, this also means we don't need to check cache again.
               setQueryResult(result);
             });
@@ -526,7 +526,7 @@ export function createLinkedSetComponentFn(
                 requestQuery.setOffset(offset);
               }
 
-              LinkedStorage.selectQuery(requestQuery).then((result) => {
+              Shape.queryParser.selectQuery(requestQuery).then((result) => {
                 //store the result to state, this also means we don't need to check cache again.
                 setQueryResult(result);
               });

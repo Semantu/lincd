@@ -32,9 +32,9 @@ import {
   QueryResponseToResultType,
 } from '../queries/SelectQuery';
 import {
-  IStorageController,
+  IQueryParser,
   staticImplements,
-} from '../interfaces/IStorageController.js';
+} from '../interfaces/IQueryParser';
 import { TestNode } from '../utils/TraceShape.js';
 import { UpdatePartial,AddId } from '../queries/QueryFactory';
 import { ClassOf } from '../utils/Types';
@@ -101,6 +101,7 @@ export abstract class Shape implements IShape {
    */
   static targetClass: NamedNode = null;
 
+  static queryParser: IQueryParser;
   /**
    * Tracks which types (named nodes) map to which Shapes
    * @internal
@@ -186,10 +187,10 @@ export abstract class Shape implements IShape {
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(
-    this: {new (node: Node): ShapeType; targetClass: any, shape: NodeShape},
+    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
     updateObjectOrFn?: U,
   ): Promise<AddId<U>> {
-    return StorageHelper.createQuery(updateObjectOrFn,this as any as typeof Shape);
+    return this.queryParser.createQuery(updateObjectOrFn,this as any as typeof Shape);
   }
 
   /**
@@ -273,7 +274,7 @@ export abstract class Shape implements IShape {
       ShapeType
     >[],
   >(
-    this: {new (node: Node): ShapeType; targetClass: any},
+    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
     selectFn: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
@@ -284,7 +285,7 @@ export abstract class Shape implements IShape {
       ShapeType
     >[],
   >(
-    this: {new (node: Node): ShapeType; targetClass: any},
+    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
     ShapeType extends Shape,
@@ -294,7 +295,7 @@ export abstract class Shape implements IShape {
       ShapeType
     >,
   >(
-    this: {new (node: Node): ShapeType; targetClass: any},
+    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
     subjects?: ShapeType ,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
@@ -306,7 +307,7 @@ export abstract class Shape implements IShape {
       ShapeType
     >[],
   >(
-    this: {new (node: Node): ShapeType; targetClass: any},
+    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
     subjects?: ICoreIterable<ShapeType>,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
@@ -318,7 +319,7 @@ export abstract class Shape implements IShape {
       ShapeType
     >[],
   >(
-    this: {new (node: Node): ShapeType; targetClass: any},
+    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
     targetOrSelectFn?: ShapeType | QueryBuildFn<ShapeType, S>,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType> {
@@ -334,7 +335,7 @@ export abstract class Shape implements IShape {
     const query = new SelectQueryFactory<ShapeType, S>(this as any, _selectFn,subject);
     let p = new Promise<ResultType>((resolve, reject) => {
       nextTick(() => {
-        StorageHelper.selectQuery(query)
+        this.queryParser.selectQuery(query)
           .then((result) => {
             resolve(result as ResultType);
           })
@@ -345,18 +346,18 @@ export abstract class Shape implements IShape {
     });
     return query.patchResultPromise<ResultType>(p);
 
-    // return StorageHelper.query<ResultType>(query);
+    // return this.queryParser.query<ResultType>(query);
   }
 
   static update<
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(
-    this: {new (node: Node): ShapeType; targetClass: any, shape: NodeShape},
+    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
     id:string|{id:string}|{uri:string},
     updateObjectOrFn?: U,
   ): Promise<AddId<U>> {
-    return StorageHelper.updateQuery(id,updateObjectOrFn,this as any as typeof Shape);
+    return this.queryParser.updateQuery(id,updateObjectOrFn,this as any as typeof Shape);
   }
 
   static mapPropertyShapes<
@@ -1151,51 +1152,6 @@ export interface ShapeLike<M extends Shape> extends Constructor<M> {
   ): T;
 
   getLocalInstanceNodes(explicitInstancesOnly?: boolean): NodeSet;
-}
-
-@staticImplements<IStorageController>() /* this class implements this interface with static methods */
-export class StorageHelper {
-  static storageController: IStorageController;
-
-  static selectQuery<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
-    GetQueryResponseType<SelectQueryFactory<ShapeType, ResponseType>>,
-    ShapeType
-  >[]>(
-    query: SelectQueryFactory<ShapeType,ResponseType,Source>
-  ): Promise<ResultType> {
-    this.checkSetup();
-    return this.storageController.selectQuery(query);
-  }
-
-  static updateQuery<
-    ShapeType extends Shape,
-    U extends UpdatePartial<ShapeType>,
-  >(
-    // this: {new (node: Node): ShapeType; targetClass: any},
-    id:string|{id:string}|{uri:string},
-    updateObjectOrFn: U,
-    shapeClass:typeof Shape,
-  ): Promise<AddId<U>> {
-    this.checkSetup();
-    return this.storageController.updateQuery(id,updateObjectOrFn,shapeClass);
-  }
-
-  static createQuery<
-    ShapeType extends Shape,
-    U extends UpdatePartial<ShapeType>,
-  >(
-    updateObjectOrFn: U,
-    shapeClass:typeof Shape,
-  ): Promise<AddId<U>> {
-    this.checkSetup();
-    return this.storageController.createQuery(updateObjectOrFn,shapeClass);
-  }
-
-  private static checkSetup() {
-    if (!this.storageController) {
-      throw new Error('LinkedStorage is not configured.');
-    }
-  }
 }
 
 /**

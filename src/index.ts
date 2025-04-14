@@ -8,6 +8,7 @@ import * as Package from './utils/Package.js';
 import * as models from './models.js';
 import * as LinkedErrorLogging from './utils/LinkedErrorLogging.js';
 import * as LinkedFileStorage from './utils/LinkedFileStorage.js';
+import * as QueryParser from './queries/QueryParser.js';
 import * as LinkedStorage from './utils/LinkedStorage.js';
 import * as EventEmitter from './events/EventEmitter.js';
 import * as NodeURIMappings from './collections/NodeURIMappings.js';
@@ -75,6 +76,7 @@ export function initModularApp() {
     LinkedErrorLogging,
     LinkedFileStorage,
     LinkedStorage,
+    QueryParser,
     Shape,
     ShapeSet,
     Debug,

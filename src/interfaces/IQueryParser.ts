@@ -6,7 +6,8 @@ import {
 import { Shape } from '../shapes/Shape.js';
 import { UpdatePartial,AddId } from '../queries/QueryFactory';
 
-export interface IStorageController {
+export interface IQueryParser
+{
 
   selectQuery<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
     GetQueryResponseType<SelectQueryFactory<ShapeType, ResponseType>>,

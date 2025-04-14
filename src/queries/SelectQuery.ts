@@ -1,4 +1,4 @@
-import { Shape,ShapeType,StorageHelper } from '../shapes/Shape';
+import { Shape,ShapeType } from '../shapes/Shape';
 import {TestNode} from '../utils/TraceShape';
 import {PropertyShape} from '../shapes/SHACL';
 import {ShapeSet} from '../collections/ShapeSet';
@@ -1293,7 +1293,7 @@ export class SelectQueryFactory<
   }
 
   exec(): Promise<QueryResponseToResultType<ResponseType>> {
-    return StorageHelper.selectQuery(this);
+    return Shape.queryParser.selectQuery(this);
   }
 
   /**

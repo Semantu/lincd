@@ -3,7 +3,7 @@ import {defaultGraph, Graph, NamedNode, Node, Quad} from '../models.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {NodeSet} from '../collections/NodeSet.js';
-import { Shape,ShapeType,StorageHelper } from '../shapes/Shape.js';
+import { Shape } from '../shapes/Shape.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {eventBatcher} from '../events/EventBatcher.js';
@@ -18,14 +18,14 @@ import {
   QueryResponseToResultType
 } from '../queries/SelectQuery';
 import { LinkedDataRequest } from './TraceShape.js';
-import { IStorageController,staticImplements } from '../interfaces/IStorageController.js';
+import { IQueryParser,staticImplements } from '../interfaces/IQueryParser';
 import { UpdateQuery,UpdateQueryFactory } from '../queries/UpdateQuery';
 import { UpdatePartial,AddId } from '../queries/QueryFactory';
 import { rdf } from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
 import { CreateQuery,CreateQueryFactory } from '../queries/CreateQuery';
+import { QueryParser } from '../queries/QueryParser';
 
-@staticImplements<IStorageController>() /* this class implements this interface with static methods */
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
   private static _initialized: boolean;
@@ -66,9 +66,11 @@ export abstract class LinkedStorage {
         this.onEvent.bind(this, NamedNode.CLEARED_PROPERTIES),
       );
 
-      StorageHelper.storageController = this;
-
       this._initialized = true;
+
+      //we connect Shape to the default QueryParser here, because LinkedStorage is always initialized
+      //Shape cannot automatically refer to QueryParser as it would create a circular dependency
+      Shape.queryParser = QueryParser;
     }
   }
 
@@ -395,27 +397,15 @@ export abstract class LinkedStorage {
     });
   }
 
-  static queryRaw<S extends Shape,ResultType>(
+  static selectQuery<S extends Shape,ResultType>(
     query: SelectQuery<S>,
   ): Promise<ResultType> {
     let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape);
-    return quadStore.query(query);
-  }
-  // static query<ResultType>(
-  //   query: LinkedQuery<any, ResultType>,
-  // ): Promise<QueryResponseToResultType<ResultType>> {
-  static selectQuery<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
-    GetQueryResponseType<SelectQueryFactory<ShapeType, ResponseType>>,
-    ShapeType
-  >[]>(
-    query: SelectQueryFactory<ShapeType,ResponseType,Source>
-  ): Promise<ResultType> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape as any);
-    let queryObject = query.getQueryObject();
-    return quadStore.query(queryObject) as any;
+    return quadStore.selectQuery(query);
   }
 
-  static updateQueryRaw<
+
+  static updateQuery<
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(
@@ -425,23 +415,7 @@ export abstract class LinkedStorage {
     return quadStore.updateQuery(query);
   }
 
-  static updateQuery<
-    ShapeType extends Shape,
-    U extends UpdatePartial<ShapeType>,
-  >(
-    id:string|{id:string}|{uri:string},
-    updateObjectOrFn?: U,
-    shapeClass?: typeof Shape,
-  ):Promise<AddId<U>> {
-    // return Promise.resolve(true) as any;
-    const query = new UpdateQueryFactory<ShapeType, U>(shapeClass, id,updateObjectOrFn);
-
-    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shapeClass);
-    let queryObject = query.getQueryObject();
-    return quadStore.updateQuery(queryObject);
-  }
-
-  static createQueryRaw<
+  static createQuery<
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(
@@ -450,23 +424,6 @@ export abstract class LinkedStorage {
     let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
     return quadStore.createQuery(query);
   }
-
-  static createQuery<
-    ShapeType extends Shape,
-    U extends UpdatePartial<ShapeType>,
-  >(
-    updateObjectOrFn?: U,
-    shapeClass?: typeof Shape,
-  ):Promise<AddId<U>> {
-    // return Promise.resolve(true) as any;
-    const query = new CreateQueryFactory<ShapeType, U>(shapeClass, updateObjectOrFn);
-
-    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shapeClass);
-    let queryObject = query.getQueryObject();
-    return quadStore.createQuery(queryObject);
-  }
-
-
 
   static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void | any> {
     // let storeMap = this.getStoreMapForNodes(toRemove.getSubjects());

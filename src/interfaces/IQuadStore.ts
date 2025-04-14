@@ -30,7 +30,7 @@ export interface IQuadStore {
 
   createQuery?<RType>(q:CreateQuery<RType>): Promise<RType>
 
-  query<ResultType>(
+  selectQuery<ResultType>(
     query: SelectQuery<any>
   ): Promise<ResultType>;
 
