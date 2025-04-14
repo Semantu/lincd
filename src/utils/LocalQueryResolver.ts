@@ -50,7 +50,7 @@ export async function createLocal<ResultType>(query: CreateQuery<ResultType>):Pr
     //convert the description of the node to create just like in update(),
     // but this time there is no parent propertyShape, so we use null
     //this will also set the rdf:type and save() the node.
-    const {value,plainValue} = await convertNodeDescription(null,query.description);
+    const {value,plainValue} = await convertNodeDescription(null,query.description,true);
     return plainValue;
   } else {
     throw new Error('Unknown query type: ' + query.type);
@@ -73,7 +73,7 @@ export async function updateLocal<ResultType>(query: UpdateQuery<ResultType>):Pr
     throw new Error('Unknown query type: ' + query.type);
   }
 }
-async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode) {
+async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode,createQuery:boolean=false) {
   let plainValues = {};
   for (let field of fields)
   {
@@ -99,7 +99,7 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
       let plainValueArr = [];
       //see check above, we already know it's an array, so we can cast it
       for(let singleVal of (field.val as SinglePropertyUpdateValue[])) {
-        let res = await convertValue(propShape,singleVal);
+        let res = await convertValue(propShape,singleVal,createQuery);
         plainValueArr.push(res.plainValue);
         values.push(res.value);
       }
@@ -112,8 +112,8 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
         throw new Error('Invalid use of undefined for property: ' + propShape.label+'. You cannot mix undefined with defined values');
       }
       else {
-        // For multi-value properties, return updatedTo structure
-        plainValues[propShape.label] = { updatedTo: plainValueArr };
+        // For multi-value properties, return updatedTo structure if this is an UPDATE query (if it's a CREATE query we just return the array)
+        plainValues[propShape.label] = createQuery ? plainValueArr : { updatedTo: plainValueArr };
         overwritePropertyPathMultipleValues(subject,propertyPath,values);
       }
     }
@@ -151,7 +151,7 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
         for (let singleVal of field.val.$add)
         {
           //convert the value (which can be a node reference or a node description)
-          let res = await convertValue(propShape,singleVal);
+          let res = await convertValue(propShape,singleVal,createQuery);
           //keep track of what's added
           addedPlainValues.push(res.plainValue);
           values.push(res.value);
@@ -169,7 +169,7 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
       //check if that fits with the maxCount and minCount of the property
       checkNewCount(propShape,1);
 
-      let res = await convertValue(propShape,(field as UpdateNodePropertyValue).val);
+      let res = await convertValue(propShape,(field as UpdateNodePropertyValue).val,createQuery);
 
       // if(typeof res.value === 'undefined') {
       //   unsetPropertyPath(subject,propertyPath);
@@ -316,11 +316,11 @@ function unsetPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]) {
   }
 
 }
-async function convertValue(propShape: PropertyShape, value: any):Promise<{value:(Literal|NamedNode),plainValue:any}> {
+async function convertValue(propShape: PropertyShape, value: any,createQuery:boolean=false):Promise<{value:(Literal|NamedNode),plainValue:any}> {
   if(propShape.nodeKind === shacl.Literal) {
     return convertLiteral(propShape,value);
   } else if(propShape.nodeKind === shacl.BlankNodeOrIRI || propShape.nodeKind === shacl.BlankNode || propShape.nodeKind === shacl.IRI) {
-    return await convertNamedNode(propShape,value);
+    return await convertNamedNode(propShape,value,createQuery);
   } else {
     //we currently don't support other node kinds, like shacl.BlankNodeOrLiteral and shacl.BlankNodeOrIRI
     //so in this case, we allow all types of values,
@@ -328,7 +328,7 @@ async function convertValue(propShape: PropertyShape, value: any):Promise<{value
     if(propShape.datatype) {
       return convertLiteral(propShape,value);
     } else if(propShape.valueShape) {
-      return await convertNamedNode(propShape,value);
+      return await convertNamedNode(propShape,value,createQuery);
     }
     //these are clearly meant to be literals
     if(typeof value === 'number' || typeof value === 'boolean' || value instanceof Date || typeof value === 'string') {
@@ -336,12 +336,12 @@ async function convertValue(propShape: PropertyShape, value: any):Promise<{value
     }
     //arrays mean it's an array of field+value objects
     else if(Array.isArray(value)) {
-      return await convertNamedNode(propShape,value as any);
+      return await convertNamedNode(propShape,value as any,createQuery);
     }
     throw new Error('Unknown value type for property: ' + propShape.label);
   }
 }
-function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|NodeReferenceValue):Promise<{
+function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|NodeReferenceValue,createQuery:boolean=true):Promise<{
   value:NamedNode,
   plainValue:any
 }>
@@ -353,7 +353,7 @@ function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|
   }
   else
   {
-    return convertNodeDescription(propShape,value as NodeDescriptionValue);
+    return convertNodeDescription(propShape,value as NodeDescriptionValue,createQuery);
   }
 }
 function convertNodeReference(propShape: PropertyShape, value: NodeReferenceValue,suffixKey?:string):{value:NamedNode,plainValue:any} {
@@ -370,7 +370,7 @@ function convertNodeReference(propShape: PropertyShape, value: NodeReferenceValu
     plainValue:{id:(value as NodeReferenceValue).id}
   }
 }
-async function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue):Promise<{value:NamedNode,plainValue:any}> {
+async function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue,createQuery:boolean=false):Promise<{value:NamedNode,plainValue:any}> {
   if(!value.shape || !value.fields) {
     throw new Error('Expected a node description for property: ' + propShape?.label);
   }
@@ -379,7 +379,7 @@ async function convertNodeDescription(propShape: PropertyShape, value: NodeDescr
   //and it should have no further fields
 
   let node = NamedNode.create();
-  let plainResults = await applyFieldUpdates(value.fields,node);
+  let plainResults = await applyFieldUpdates(value.fields,node,createQuery);
 
   let valueShape = propShape?.valueShape || value.shape;
   //if this property comes with a restriction that all values need to be of a certain shape

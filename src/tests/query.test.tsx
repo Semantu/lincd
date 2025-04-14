@@ -1448,37 +1448,37 @@ test('update query 1 - with simple object argument', async () => {
   expect(qRes2[0].hobby).toBe(originalHobby);
 });
 
-  // test('create query 1 - create simple person with literal fields', async () => {
-  //   const res = await Person.create({
-  //     name: 'Test Create',
-  //     hobby: 'Hiking',
-  //   });
-  //
-  //   // expect(res.id).toBeDefined();
-  //   // expect(res.name).toBe('Test Create');
-  //   // expect(res.hobby).toBe('Hiking');
-  //   //
-  //   // const qRes = await Person.select(res.id, p => [p.name, p.hobby]);
-  //   // expect(qRes.name).toBe('Test Create');
-  //   // expect(qRes.hobby).toBe('Hiking');
-  // });
+  test('create query 1 - create simple person with literal fields', async () => {
+    const res = await Person.create({
+      name: 'Test Create',
+      hobby: 'Hiking',
+    });
 
-  // test('create query 2 - create person with new and existing friends', async () => {
-  //   const res = await Person.create({
-  //     name: 'Test With Friends',
-  //     friends: [
-  //       { name: 'Brand New Friend' },
-  //       { id: p1.uri }
-  //     ]
-  //   });
-  //
-  //   expect(res.id).toBeDefined();
-  //   expect(Array.isArray(res.friends)).toBe(true);
-  //   expect(res.friends.length).toBe(2);
-  //   expect(res.friends.some(f => f.name === 'Brand New Friend')).toBe(true);
-  //   expect(res.friends.some(f => f.id === p1.uri)).toBe(true);
-  // });
-  //
+    expect(res.id).toBeDefined();
+    expect(res.name).toBe('Test Create');
+    expect(res.hobby).toBe('Hiking');
+
+    const qRes = await Person.select(p => [p.name, p.hobby]).where(p => p.name.equals('Test Create'));
+    expect(qRes[0].name).toBe('Test Create');
+    expect(qRes[0].hobby).toBe('Hiking');
+  });
+
+  test('create query 2 - create person with new and existing friends', async () => {
+    const res = await Person.create({
+      name: 'Test With Friends',
+      friends: [
+        { name: 'Brand New Friend' },
+        { id: p1.uri }
+      ]
+    });
+
+    expect(res.id).toBeDefined();
+    expect(Array.isArray(res.friends)).toBe(true);
+    expect(res.friends.length).toBe(2);
+    expect(res.friends.some(f => f.name === 'Brand New Friend')).toBe(true);
+    expect(res.friends.some(f => f.id === p1.uri)).toBe(true);
+  });
+
   // test('delete query 1 - delete newly created node', async () => {
   //   const created = await Person.create({
   //     name: 'To Be Deleted',

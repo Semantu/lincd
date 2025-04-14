@@ -72,19 +72,20 @@ type IsPlainObject<T> = T extends object
 // let x:Y;
 // let name = x.updatedTo[0].name;
 
-type RecursiveTransform<T> =
+type RecursiveTransform<T,IsCreate=false> =
   T extends string | number | boolean | Date | null | undefined
     ? T
     : T extends Array<infer U>
-      ? UpdatedSet<Prettify<RecursiveTransform<U>>>
+      ? UpdatedSet<Prettify<RecursiveTransform<U>>,IsCreate>
       : IsSetModification<T> extends true
-        ? ModifiedSet<T>
+        ? ModifiedSet<T,IsCreate>
         : IsPlainObject<T> extends true
           // ? WithId<{ [K in keyof T]-?: Prettify<RecursiveTransform<T[K]>> }>
-          ? WithId<{ [K in keyof T]: Prettify<RecursiveTransform<T[K]>> }>
+          ? WithId<{ [K in keyof T]: Prettify<RecursiveTransform<T[K],IsCreate>> }>
           : T;//<-- should be never?
 
-type UpdatedSet<U> = {
+//for update() we use {updatedTo} but for create() we actually just return the array of new values;
+type UpdatedSet<U,IsCreate> = IsCreate extends true ? U[] : {
   updatedTo: U[]
 };
 type IsSetModification<T> = T extends { add?: any;remove?: any } ? true : false;
@@ -102,12 +103,12 @@ type RemovedType<T> =
       ? U
       : never;
 
-type ModifiedSet<T> = {
-  added: AddId<AddedType<T>>[];
-  removed: AddId<RemovedType<T>>[];
+type ModifiedSet<T,IsCreate=false> = {
+  added: AddId<AddedType<T>,IsCreate>[];
+  removed: AddId<RemovedType<T>,IsCreate>[];
 };
 
-export type AddId<T> = Prettify<RecursiveTransform<T>>;
+export type AddId<T,IsCreate=false> = Prettify<RecursiveTransform<T,IsCreate>>;
 // export type AddId<T> = Prettify<_AddId<T>>;
 // type _AddId<T> = T extends Array<infer U>
 //   ? Array<AddId<U>>

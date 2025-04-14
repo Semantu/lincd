@@ -416,11 +416,10 @@ export abstract class LinkedStorage {
   }
 
   static createQuery<
-    ShapeType extends Shape,
-    U extends UpdatePartial<ShapeType>,
+    R
   >(
-    query:CreateQuery<U>
-  ):Promise<U> {
+    query:CreateQuery<R>
+  ):Promise<R> {
     let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
     return quadStore.createQuery(query);
   }

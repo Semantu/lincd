@@ -10,6 +10,8 @@ export interface CreateQuery<ResponseType=null> extends LinkedQuery {
   description:NodeDescriptionValue;
 }
 
+export type CreateResponse<U> = AddId<U,true>;
+
 export class CreateQueryFactory<
   ShapeType extends Shape,
   U extends UpdatePartial<ShapeType>
@@ -22,7 +24,7 @@ export class CreateQueryFactory<
     super();
     this.description = this.convertUpdateObject(updateObjectOrFn,this.shapeClass.shape);
   }
-  getQueryObject():CreateQuery<AddId<U>> {
+  getQueryObject():CreateQuery<AddId<U,true>> {
     return {
       type:'create',
       shape:this.shapeClass.shape,

@@ -5,6 +5,7 @@ import {
 } from '../queries/SelectQuery';
 import { Shape } from '../shapes/Shape.js';
 import { UpdatePartial,AddId } from '../queries/QueryFactory';
+import { CreateResponse } from '../queries/CreateQuery';
 
 export interface IQueryParser
 {
@@ -31,7 +32,7 @@ export interface IQueryParser
   >(
     updateObjectOrFn: U,
     shapeClass: typeof Shape,
-  ): Promise<AddId<U>>;
+  ): Promise<CreateResponse<U>>;
 }
 
 

@@ -4,7 +4,7 @@ import { AddId,UpdatePartial } from './QueryFactory';
 import { Shape } from '../shapes/Shape';
 import { LinkedStorage } from '../utils/LinkedStorage';
 import { UpdateQueryFactory } from './UpdateQuery';
-import { CreateQueryFactory } from './CreateQuery';
+import { CreateQueryFactory,CreateResponse } from './CreateQuery';
 
 Shape.queryParser = this;
 
@@ -40,7 +40,7 @@ export class QueryParser {
   >(
     updateObjectOrFn: U,
     shapeClass:typeof Shape,
-  ): Promise<AddId<U>> {
+  ): Promise<CreateResponse<U>> {
     const query = new CreateQueryFactory<ShapeType, U>(shapeClass, updateObjectOrFn);
     let queryObject = query.getQueryObject();
     return LinkedStorage.createQuery(queryObject);

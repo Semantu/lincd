@@ -38,6 +38,7 @@ import {
 import { TestNode } from '../utils/TraceShape.js';
 import { UpdatePartial,AddId } from '../queries/QueryFactory';
 import { ClassOf } from '../utils/Types';
+import { CreateResponse } from '../queries/CreateQuery';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -189,7 +190,7 @@ export abstract class Shape implements IShape {
   >(
     this: {new (node: Node): ShapeType; queryParser:IQueryParser},
     updateObjectOrFn?: U,
-  ): Promise<AddId<U>> {
+  ): Promise<CreateResponse<U>> {
     return this.queryParser.createQuery(updateObjectOrFn,this as any as typeof Shape);
   }
 
