@@ -6,13 +6,13 @@ import {Shape} from '../shapes/Shape.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {
   SelectQuery,
-} from '../queries/SelectQuery';
+} from '../queries/SelectQuery.js';
 import { LinkedDataRequest } from '../utils/TraceShape.js';
 import { QuadArray } from '../collections/QuadArray.js';
 import { ShapeSet } from '../collections/ShapeSet.js';
 import { UpdateQuery } from '../queries/UpdateQuery.js';
-import { CreateQuery } from '../queries/CreateQuery';
-import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery';
+import { CreateQuery } from '../queries/CreateQuery.js';
+import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery.js';
 
 export interface IQuadStore {
   /**

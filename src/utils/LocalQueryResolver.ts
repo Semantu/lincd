@@ -20,7 +20,7 @@ import {
   WhereEvaluationPath,
   WhereMethods,
   WherePath,SortByPath,
-} from '../queries/SelectQuery';
+} from '../queries/SelectQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
@@ -40,8 +40,8 @@ import { xsd } from '../ontologies/xsd.js';
 import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
 import { rdf } from '../ontologies/rdf.js';
 import { NodeSet } from '../collections/NodeSet.js';
-import { CreateQuery } from '../queries/CreateQuery';
-import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery';
+import { CreateQuery } from '../queries/CreateQuery.js';
+import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery.js';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 

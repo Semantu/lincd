@@ -14,12 +14,12 @@ import {ShapeSet} from '../collections/ShapeSet.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {
   SelectQuery,
-} from '../queries/SelectQuery';
+} from '../queries/SelectQuery.js';
 import { createLocal,deleteLocal,resolveLocal } from '../utils/LocalQueryResolver.js';
-import { UpdateQuery } from '../queries/UpdateQuery';
+import { UpdateQuery } from '../queries/UpdateQuery.js';
 import { updateLocal } from '../utils/LocalQueryResolver.js';
-import { CreateQuery } from '../queries/CreateQuery';
-import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery';
+import { CreateQuery } from '../queries/CreateQuery.js';
+import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {
   protected contents: QuadSet;

@@ -16,16 +16,15 @@ import {
   SelectQueryFactory,
   SelectQuery,
   QueryResponseToResultType
-} from '../queries/SelectQuery';
+} from '../queries/SelectQuery.js';
 import { LinkedDataRequest } from './TraceShape.js';
-import { IQueryParser,staticImplements } from '../interfaces/IQueryParser';
-import { UpdateQuery,UpdateQueryFactory } from '../queries/UpdateQuery';
-import { UpdatePartial,AddId } from '../queries/QueryFactory';
+import { UpdateQuery,UpdateQueryFactory } from '../queries/UpdateQuery.js';
+import { UpdatePartial,AddId } from '../queries/QueryFactory.js';
 import { rdf } from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
-import { CreateQuery,CreateQueryFactory } from '../queries/CreateQuery';
-import { QueryParser } from '../queries/QueryParser';
-import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery';
+import { CreateQuery,CreateQueryFactory } from '../queries/CreateQuery.js';
+import { QueryParser } from '../queries/QueryParser.js';
+import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery.js';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;

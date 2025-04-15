@@ -9,9 +9,9 @@ import {
   SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
   UpdatePartial,
-} from './QueryFactory';
-import { NodeShape,PropertyShape } from '../shapes/SHACL';
-import { Shape } from '../shapes/Shape';
+} from './QueryFactory.js';
+import { NodeShape,PropertyShape } from '../shapes/SHACL.js';
+import { Shape } from '../shapes/Shape.js';
 
 export type NodeId = { id: string } | string;
 

@@ -1,9 +1,9 @@
-import { GetQueryResponseType,QueryResponseToResultType,SelectQueryFactory } from '../queries/SelectQuery';
+import { GetQueryResponseType,QueryResponseToResultType,SelectQueryFactory } from '../queries/SelectQuery.js';
 import { Shape } from '../shapes/Shape.js';
-import { AddId,UpdatePartial } from '../queries/QueryFactory';
-import { CreateResponse } from '../queries/CreateQuery';
-import { NodeId } from '../queries/MutationQuery';
-import { DeleteResponse } from '../queries/DeleteQuery';
+import { AddId,UpdatePartial } from '../queries/QueryFactory.js';
+import { CreateResponse } from '../queries/CreateQuery.js';
+import { NodeId } from '../queries/MutationQuery.js';
+import { DeleteResponse } from '../queries/DeleteQuery.js';
 
 export interface IQueryParser
 {

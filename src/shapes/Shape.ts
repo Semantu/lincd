@@ -30,17 +30,17 @@ import {
   PatchedQueryPromise,
   QueryBuildFn,QueryResponseToEndValues,
   QueryResponseToResultType,
-} from '../queries/SelectQuery';
+} from '../queries/SelectQuery.js';
 import {
   IQueryParser,
   staticImplements,
 } from '../interfaces/IQueryParser';
 import { TestNode } from '../utils/TraceShape.js';
-import { UpdatePartial,AddId } from '../queries/QueryFactory';
-import { ClassOf } from '../utils/Types';
-import { CreateResponse } from '../queries/CreateQuery';
-import { NodeId } from '../queries/MutationQuery';
-import { DeleteResponse } from '../queries/DeleteQuery';
+import { UpdatePartial,AddId } from '../queries/QueryFactory.js';
+import { ClassOf } from '../utils/Types.js';
+import { CreateResponse } from '../queries/CreateQuery.js';
+import { NodeId } from '../queries/MutationQuery.js';
+import { DeleteResponse } from '../queries/DeleteQuery.js';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 

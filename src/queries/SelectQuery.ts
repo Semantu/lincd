@@ -1,14 +1,14 @@
-import { Shape,ShapeType } from '../shapes/Shape';
-import {TestNode} from '../utils/TraceShape';
-import {PropertyShape} from '../shapes/SHACL';
-import {ShapeSet} from '../collections/ShapeSet';
-import {shacl} from '../ontologies/shacl';
-import {CoreSet} from '../collections/CoreSet';
-import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent';
-import {CoreMap} from '../collections/CoreMap';
-import { getPropertyShapeByLabel } from '../utils/ShapeClass';
-import { Prettify } from './QueryFactory';
-import { QueryFactory } from './QueryFactory';
+import { Shape,ShapeType } from '../shapes/Shape.js';
+import {TestNode} from '../utils/TraceShape.js';
+import {PropertyShape} from '../shapes/SHACL.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {shacl} from '../ontologies/shacl.js';
+import {CoreSet} from '../collections/CoreSet.js';
+import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import { getPropertyShapeByLabel } from '../utils/ShapeClass.js';
+import { Prettify } from './QueryFactory.js';
+import { QueryFactory } from './QueryFactory.js';
 
 /**
  * ###################################

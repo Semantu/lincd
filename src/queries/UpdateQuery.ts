@@ -1,7 +1,7 @@
-import { Shape } from '../shapes/Shape';
-import { AddId,NodeDescriptionValue,UpdatePartial } from './QueryFactory';
-import { NodeShape } from '../shapes/SHACL';
-import { MutationQueryFactory } from './MutationQuery';
+import { Shape } from '../shapes/Shape.js';
+import { AddId,NodeDescriptionValue,UpdatePartial } from './QueryFactory.js';
+import { NodeShape } from '../shapes/SHACL.js';
+import { MutationQueryFactory } from './MutationQuery.js';
 
 export type UpdateQuery<ResponseType = null> = {
   type: 'update',
