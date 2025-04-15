@@ -12,6 +12,7 @@ import { QuadArray } from '../collections/QuadArray.js';
 import { ShapeSet } from '../collections/ShapeSet.js';
 import { UpdateQuery } from '../queries/UpdateQuery.js';
 import { CreateQuery } from '../queries/CreateQuery';
+import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery';
 
 export interface IQuadStore {
   /**
@@ -33,6 +34,10 @@ export interface IQuadStore {
   selectQuery<ResultType>(
     query: SelectQuery<any>
   ): Promise<ResultType>;
+
+  deleteQuery?(
+    query: DeleteQuery
+  ): Promise<DeleteResponse>;
 
   add(quad: Quad): Promise<any>;
 

@@ -15,10 +15,11 @@ import {PropertyShape} from '../shapes/SHACL.js';
 import {
   SelectQuery,
 } from '../queries/SelectQuery';
-import { createLocal,resolveLocal } from '../utils/LocalQueryResolver.js';
+import { createLocal,deleteLocal,resolveLocal } from '../utils/LocalQueryResolver.js';
 import { UpdateQuery } from '../queries/UpdateQuery';
 import { updateLocal } from '../utils/LocalQueryResolver.js';
 import { CreateQuery } from '../queries/CreateQuery';
+import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery';
 
 export class InMemoryStore extends Shape implements IQuadStore {
   protected contents: QuadSet;
@@ -64,6 +65,14 @@ export class InMemoryStore extends Shape implements IQuadStore {
   createQuery?<R>(q:CreateQuery<R>): Promise<R> {
     return Promise.resolve(createLocal(q));
   }
+  deleteQuery(
+    query: DeleteQuery
+  ): Promise<DeleteResponse> {
+    return Promise.resolve(
+      deleteLocal(query)
+    ) as Promise<DeleteResponse>;
+  }
+
 
   update(
     toAdd: ICoreIterable<Quad>,

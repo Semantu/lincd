@@ -5,6 +5,8 @@ import { Shape } from '../shapes/Shape';
 import { LinkedStorage } from '../utils/LinkedStorage';
 import { UpdateQueryFactory } from './UpdateQuery';
 import { CreateQueryFactory,CreateResponse } from './CreateQuery';
+import { DeleteQueryFactory,DeleteResponse } from './DeleteQuery';
+import { NodeId } from './MutationQuery';
 
 Shape.queryParser = this;
 
@@ -44,6 +46,15 @@ export class QueryParser {
     const query = new CreateQueryFactory<ShapeType, U>(shapeClass, updateObjectOrFn);
     let queryObject = query.getQueryObject();
     return LinkedStorage.createQuery(queryObject);
+  }
+
+  static deleteQuery(
+    id:NodeId|NodeId[],
+    shapeClass:typeof Shape,
+  ): Promise<DeleteResponse> {
+    const query = new DeleteQueryFactory<Shape, {}>(shapeClass, id);
+    let queryObject = query.getQueryObject();
+    return LinkedStorage.deleteQuery(queryObject);
   }
 
 }

@@ -41,6 +41,7 @@ import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
 import { rdf } from '../ontologies/rdf.js';
 import { NodeSet } from '../collections/NodeSet.js';
 import { CreateQuery } from '../queries/CreateQuery';
+import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -56,6 +57,45 @@ export async function createLocal<ResultType>(query: CreateQuery<ResultType>):Pr
     throw new Error('Unknown query type: ' + query.type);
   }
 }
+
+export async function deleteLocal(query:DeleteQuery):Promise<DeleteResponse> {
+  if (query.type === 'delete')
+  {
+    const response:DeleteResponse ={
+      deleted: [],
+      count:0
+    }
+    const errors:Record<string,string> = {};
+    const failed = []
+    query.ids.forEach(id => {
+      let subject;
+      try {
+        subject = convertNodeReferenceOrId(null,id);
+      } catch(err) {
+        let idString = typeof id === 'string' ? id : id?.id ? id.id : (id && id['uri']) ? id['uri'] : '';
+        if(idString === '') {
+          errors[Object.keys(errors).length] = "Invalid id: " + id;
+          failed.push(id);
+        } else {
+          errors[idString] = "Could not find node with id: " + idString;
+          failed.push(idString);
+        }
+      }
+      //remove the node from the graph
+      subject.value.remove();
+      response.deleted.push(subject.plainValue.id);
+      response.count++;
+    });
+    if(failed.length > 0 ){
+      response.failed = failed;
+      response.errors = errors;
+    }
+  } else {
+    throw new Error('Invalid query type: ' + query.type);
+  }
+  return null;
+}
+
 export async function updateLocal<ResultType>(query: UpdateQuery<ResultType>):Promise<ResultType> {
   if (query.type === 'update')
   {
@@ -70,7 +110,7 @@ export async function updateLocal<ResultType>(query: UpdateQuery<ResultType>):Pr
     plainResults['id'] = query.id;
     return plainResults as ResultType;
   } else {
-    throw new Error('Unknown query type: ' + query.type);
+    throw new Error('Invalid query type: ' + query.type);
   }
 }
 async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode,createQuery:boolean=false) {
@@ -356,9 +396,18 @@ function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|
     return convertNodeDescription(propShape,value as NodeDescriptionValue,createQuery);
   }
 }
+function convertNodeReferenceOrId(propShape: PropertyShape, value: NodeReferenceValue,suffixKey?:string):{value:NamedNode,plainValue:any} {
+  if(typeof value === 'string') {
+    return {
+      value:NamedNode.getNamedNode(value),
+      plainValue:{id:value}
+    };
+  }
+  return convertNodeReference(propShape,value,suffixKey);
+}
 function convertNodeReference(propShape: PropertyShape, value: NodeReferenceValue,suffixKey?:string):{value:NamedNode,plainValue:any} {
   if(!value.id) {
-    throw new Error('Expected a node reference for property: ' + propShape.label+(suffixKey ? '.'+suffixKey : ''));
+    throw new Error('Expected a node reference for property: ' + propShape?.label+(suffixKey ? '.'+suffixKey : ''));
   }
   //if other keys are present
   if(Object.keys(value).length > 1) {
@@ -1061,7 +1110,7 @@ function resolveQueryStepForShape(
       resultObject,
     );
   } else {
-    throw Error('Unknown query step: ' + queryStep);
+    throw Error('Invalid query step: ' + queryStep);
   }
 }
 
@@ -1089,7 +1138,7 @@ function resolveQueryStepForShapeEndResults(
     //   return (queryStep as BoundComponentQueryStep).component.create(subject);
     //   debugger;
   } else {
-    throw Error('Unknown query step: ' + queryStep.toString());
+    throw Error('Invalid query step: ' + queryStep.toString());
   }
 }
 

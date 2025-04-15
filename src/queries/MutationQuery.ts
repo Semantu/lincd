@@ -1,15 +1,22 @@
 import {
-  QueryFactory,LiteralUpdateValue,
+  LiteralUpdateValue,
   NodeDescriptionValue,
-  NodeReferenceValue,PropUpdateValue,SetModification,
-  SetModificationValue,SinglePropertyUpdateValue,
+  NodeReferenceValue,
+  PropUpdateValue,
+  QueryFactory,
+  SetModification,
+  SetModificationValue,
+  SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
   UpdatePartial,
 } from './QueryFactory';
 import { NodeShape,PropertyShape } from '../shapes/SHACL';
 import { Shape } from '../shapes/Shape';
 
-export class MutationQueryFactory extends QueryFactory {
+export type NodeId = { id: string } | string;
+
+export class MutationQueryFactory extends QueryFactory
+{
 
   protected convertUpdateObject(obj,shape: NodeShape)
   {
@@ -233,13 +240,42 @@ export class MutationQueryFactory extends QueryFactory {
     return 'id' in obj;
   }
 
+  protected convertNodeReferences(input: NodeId[]|NodeId): NodeReferenceValue[]
+  {
+    if (Array.isArray(input))
+    {
+      return input.map(o => {
+        return this.convertNodeReferenceOrString(o);
+      });
+    }
+    else
+    {
+      return [this.convertNodeReferenceOrString(input)];
+    }
+  }
+
+  protected convertNodeReferenceOrString(o: { id: string } | string): NodeReferenceValue {
+    if (typeof o === 'string')
+    {
+      return { id: o };
+    }
+    else if (this.isNodeReference(o))
+    {
+      return this.convertNodeReference(o);
+    }
+    else
+    {
+      throw new Error(`Invalid node reference: ${JSON.stringify(o)}`);
+    }
+  }
+
   protected convertNodeReference(obj: { id: string }): NodeReferenceValue
   {
     //ensure there are no other properties in the object
-    if (Object.keys(obj).length > 1)
-    {
-      throw new Error('Cannot have id and other properties in the same value object');
-    }
+    // if (Object.keys(obj).length > 1)
+    // {
+    //   throw new Error('Cannot have id and other properties in the same value object');
+    // }
     return { id: obj.id };
   }
 }

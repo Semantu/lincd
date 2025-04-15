@@ -1479,25 +1479,50 @@ test('update query 1 - with simple object argument', async () => {
     expect(res.friends.some(f => f.id === p1.uri)).toBe(true);
   });
 
-  // test('delete query 1 - delete newly created node', async () => {
-  //   const created = await Person.create({
-  //     name: 'To Be Deleted',
-  //     hobby: 'Archery',
-  //   });
-  //
-  //   const id = created.id;
-  //   expect(id).toBeDefined();
-  //
-  //   // make sure it's there
-  //   const check = await Person.select(id, p => p.name);
-  //   expect(check.name).toBe('To Be Deleted');
-  //
-  //   await Person.delete(id);
-  //
-  //   // verify deletion
-  //   const qRes = await Person.select().where(p => p.name.equals('To Be Deleted'));
-  //   expect(qRes.length).toBe(0);
-  // });
+  test('delete query 1 - delete newly created node', async () => {
+    const created = await Person.create({
+      name: 'To Be Deleted',
+      hobby: 'Archery',
+    });
+
+    const id = created.id;
+    expect(id).toBeDefined();
+
+    // make sure it's there
+    const check = await Person.select(p => p.name).where(p => p.name.equals('To Be Deleted'));
+    expect(check[0].name).toBe('To Be Deleted');
+
+    await Person.delete(id);
+
+    // verify deletion
+    const qRes = await Person.select().where(p => p.name.equals('To Be Deleted'));
+    expect(qRes.length).toBe(0);
+  });
+
+  test ('delete query 2 - delete multiple newly created nodes', async () => {
+    const created1 = await Person.create({
+      name: 'To Be Deleted 1',
+      hobby: 'Archery',
+    });
+
+    const created2 = await Person.create({
+      name: 'To Be Deleted 2',
+      hobby: 'Archery',
+    });
+
+    const ids = [created1.id, created2.id];
+    expect(ids).toBeDefined();
+
+    // make sure they're there
+    const check = await Person.select(p => p.name).where(p => p.name.equals('To Be Deleted 1').or(p.name.equals('To Be Deleted 2')));
+    expect(check.length).toBe(2);
+
+    await Person.delete(ids);
+
+    // verify deletion
+    const qRes = await Person.select().where(p => p.name.equals('To Be Deleted 1').or(p.name.equals('To Be Deleted 2')));
+    expect(qRes.length).toBe(0);
+  });
 
   test('update query 2 - overwrite a set (default)', async () => {
 

@@ -25,6 +25,7 @@ import { rdf } from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
 import { CreateQuery,CreateQueryFactory } from '../queries/CreateQuery';
 import { QueryParser } from '../queries/QueryParser';
+import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
@@ -422,6 +423,13 @@ export abstract class LinkedStorage {
   ):Promise<R> {
     let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
     return quadStore.createQuery(query);
+  }
+
+  static deleteQuery(
+    query:DeleteQuery
+  ):Promise<DeleteResponse> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
+    return quadStore.deleteQuery(query);
   }
 
   static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void | any> {
