@@ -54,5 +54,6 @@ export class QueryParser {
     let queryObject = query.getQueryObject();
     return LinkedStorage.deleteQuery(queryObject);
   }
-
 }
+
+Shape.queryParser = QueryParser;

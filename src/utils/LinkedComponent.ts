@@ -14,7 +14,7 @@ import {
 } from '../queries/SelectQuery.js';
 import {Shape} from '../shapes/Shape.js';
 
-import React, {createElement, useEffect, useState} from 'react';
+import React,{ createElement,useCallback,useEffect,useState } from 'react';
 import {LinkedStorage} from '../utils/LinkedStorage.js';
 import {DEFAULT_LIMIT} from '../utils/Package.js';
 import {NodeSet} from '../collections/NodeSet.js';
@@ -106,7 +106,7 @@ export interface LinkedComponentProps<ShapeType extends Shape>
    * Refreshes the data and rerenders the component.
    * WARNING: this prop will likely be replaced in a next version
    */
-  _refresh:()=>void
+  _refresh:(updatedProps?: any)=>void
 }
 
 interface LinkedComponentBaseProps<DataResultType = any>
@@ -241,6 +241,17 @@ export function createLinkedComponentFn(
             });
           }
 
+          //check if the given source is a QResult, and not just that, but also if its structure
+          //matches the query of this component. (if not, it could be sent as the source but the parent query did not preload the data of this component)
+          let sourceIsValidQResult = isValidQResult(props.of,query);
+
+          //if we have loaded the query or the source is a QResult
+          if (queryResult || sourceIsValidQResult) {
+            //then merge the query result (or the QResult source) directly into the props
+            //NOTE: This means all keys of the object become props of the component
+            linkedProps = Object.assign(linkedProps, queryResult || props.of);
+          }
+
           //temporary quick fix to allow components to reload after refreshing their data
           //@TODO: A better solutions would likely involve
           //  sA) a new hook, update = useUpdateData(this) <-- need access to the component somehow
@@ -260,23 +271,35 @@ export function createLinkedComponentFn(
           //    source: Item.query(...)
           //    toggle: Item.update({someProp:...
           //  and then calling source.toggle, or just the prop toggle, would automatically refresh the source
-          linkedProps._refresh = () => {
-            loadData();
-          }
+          linkedProps._refresh = useCallback((updatedProps) => {
+            //_refresh has the option for the user to provide updated props to prevent a query refresh
+            if(updatedProps) {
+              //if data was loaded through this component,
+              if(queryResult) {
+                // then we can update the result with the new props and prevent a new query
+                setQueryResult({...queryResult, ...updatedProps});
+              } else if(sourceIsValidQResult) {
+                //else if the data of this component was provided through the source prop
+                //then we now switch to using the query result, which will win over the source prop
+                setQueryResult({...props.of, ...updatedProps});
+              }
+            } else {
+              loadData();
+            }
+          },[queryResult, props.of]);
 
-          //check if the given source is a QResult, and not just that, but also if its structure
-          //matches the query of this component. (if not, it could be sent as the source but the parent query did not preload the data of this component)
-          let sourceIsValidQResult =
-            (props.of as QResult<any>)?.shape instanceof Shape &&
-            typeof (props.of as QResult<any>)?.id === 'string' &&
-            query.isValidResult(props.of as QResult<any>);
+          useEffect(() => {
+            //when receiving new data from the parent
+            // then we need to reset query result (its possible both are at play do to _refresh with updatedProps, see above)
+            // so that this component will use the UPDATED props provided by the parent over the internal updated query result
+            setQueryResult(undefined);
+            //if the new props are a valid result, then the new props will be used as linked props immediately
+            //But if it's NOT a valid result, then we also need to load the data again
+            if(!isValidQResult(props.of,query)) {
+              loadData();
+            }
+          },[props.of])
 
-          //if we have loaded the query or the source is a QResult
-          if (queryResult || sourceIsValidQResult) {
-            //then merge the query result (or the QResult source) directly into the props
-            //NOTE: This means all keys of the object become props of the component
-            linkedProps = Object.assign(linkedProps, queryResult || props.of);
-          }
 
           if (!linkedProps.source) {
             console.warn(
@@ -722,6 +745,14 @@ export function getSourceFromInputProps(props, shapeClass) {
         !hasSuperClass(getShapeClass(props.of.nodeShape.namedNode), shapeClass)
       ? new shapeClass(props.of.namedNode)
       : props.of;
+}
+
+function isValidQResult(of,query) {
+  return (of as QResult<any>)?.shape instanceof Shape &&
+  typeof (of as QResult<any>)?.id === 'string' &&
+  query.isValidResult(of as QResult<any>);
+
+
 }
 
 // function linkedComponentClass<ShapeType extends Shape, P = {}>(

@@ -80,6 +80,12 @@ export async function deleteLocal(query:DeleteQuery):Promise<DeleteResponse> {
           errors[idString] = "Could not find node with id: " + idString;
           failed.push(idString);
         }
+        return;
+      }
+      if(!subject.value) {
+        errors[subject.plainValue.id] = "No node found with id: " + subject.plainValue.id;
+        failed.push(subject.plainValue.id);
+        return;
       }
       //remove the node from the graph
       subject.value.remove();
