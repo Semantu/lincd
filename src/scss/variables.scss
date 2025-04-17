@@ -1,50 +1,83 @@
 :root {
-  --ld-ref-font-color: #101010;
-  --ld-ref-font-family: Arial, Helvetica, sans-serif;
-  --ld-ref-font-size-s: 0.75rem;
-  --ld-ref-font-size-m: 0.875rem;
-  --ld-ref-font-size-l: 1rem;
+  /* === SPACING SCALE === */
+  --ld-ref-spacing-0: 0rem;
+  --ld-ref-spacing-0_5: 0.125rem; // 2px
+  --ld-ref-spacing-1: 0.25rem;    // 4px
+  --ld-ref-spacing-1_5: 0.375rem; // 6px
+  --ld-ref-spacing-2: 0.5rem;     // 8px
+  --ld-ref-spacing-2_5: 0.625rem; // 10px
+  --ld-ref-spacing-3: 0.75rem;    // 12px
+  --ld-ref-spacing-4: 1rem;       // 16px
+  --ld-ref-spacing-5: 1.25rem;    // 20px
+  --ld-ref-spacing-6: 1.5rem;     // 24px
+  --ld-ref-spacing-8: 2rem;       // 32px
+  --ld-ref-spacing-10: 2.5rem;    // 40px
+  --ld-ref-spacing-12: 3rem;      // 48px
+  --ld-ref-spacing-16: 4rem;      // 64px
+  --ld-ref-spacing-20: 5rem;      // 80px
+  --ld-ref-spacing-24: 6rem;      // 96px
 
-  //TODO: fill all these in
-  --ld-ref-font-weight-thin: 100;
-  --ld-ref-font-weight-extra-light: 200;
-  --ld-ref-font-weight-light: 300;
+  /* === TYPOGRAPHY === */
+  --ld-ref-font-size-xs: 0.75rem;
+  --ld-ref-font-size-sm: 0.875rem;
+  --ld-ref-font-size-base: 1rem;
+  --ld-ref-font-size-lg: 1.125rem;
+  --ld-ref-font-size-xl: 1.25rem;
+  --ld-ref-font-size-2xl: 1.5rem;
+  --ld-ref-font-size-3xl: 1.875rem;
+  --ld-ref-font-size-4xl: 2.25rem;
+  --ld-ref-font-size-5xl: 3rem;
+
   --ld-ref-font-weight-normal: 400;
   --ld-ref-font-weight-medium: 500;
-  --ld-ref-font-weight-semi-bold: 600;
   --ld-ref-font-weight-bold: 700;
-  --ld-ref-font-weight-extra-bold: 800;
-  --ld-ref-font-weight-blac: 900;
 
-  --ld-ref-line-height: 1.5;
+  --ld-ref-line-height-tight: 1.25;
+  --ld-ref-line-height-normal: 1.5;
+  --ld-ref-line-height-relaxed: 1.75;
 
-  --ld-ref-letter-spacing-none: 0;
-  --ld-ref-letter-spacing-s: 0.5px;
-  --ld-ref-letter-spacing-m: 1px;
-  --ld-ref-letter-spacing-l: 2px;
+  --ld-ref-letter-spacing-normal: 0;
+  --ld-ref-letter-spacing-wide: 0.05em;
+  --ld-ref-letter-spacing-wider: 0.1em;
 
-  //space (aka units, dimension, spacing)
-  --ld-ref-spacing-xs: 2px;
-  --ld-ref-spacing-s: 4px;
-  --ld-ref-spacing-m: 8px;
-  --ld-ref-spacing-l: 16px;
-  --ld-ref-spacing-xl: 32px;
+  /* === COLORS === */
+  --ld-ref-color-primary: #3b82f6;   // blue-500
+  --ld-ref-color-secondary: #9333ea; // purple-600
+  --ld-ref-color-success: #10b981;   // green-500
+  --ld-ref-color-danger: #ef4444;    // red-500
+  --ld-ref-color-warning: #f59e0b;   // amber-500
+  --ld-ref-color-info: #0ea5e9;      // sky-500
 
-  //size (aka sizing)
-  //--ld-ref-border: 1px solid var(--ld-ref-color-primary);
-  --ld-ref-border-radius-xs: 2px;
-  --ld-ref-border-radius-s: 4px;
-  --ld-ref-border-radius-m: 8px;
-  --ld-ref-border-radius-l: 16px;
-  --ld-ref-border-radius-xl: 32px;
+  --ld-ref-color-white: #ffffff;
+  --ld-ref-color-black: #000000;
+  --ld-ref-color-gray-50: #f9fafb;
+  --ld-ref-color-gray-100: #f3f4f6;
+  --ld-ref-color-gray-200: #e5e7eb;
+  --ld-ref-color-gray-300: #d1d5db;
+  --ld-ref-color-gray-400: #9ca3af;
+  --ld-ref-color-gray-500: #6b7280;
+  --ld-ref-color-gray-600: #4b5563;
+  --ld-ref-color-gray-700: #374151;
+  --ld-ref-color-gray-800: #1f2937;
+  --ld-ref-color-gray-900: #111827;
 
-  //@TODO: elevation (aka z-index, layer, layering)
+  /* === SHADOWS === */
+  --ld-ref-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --ld-ref-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  --ld-ref-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --ld-ref-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --ld-ref-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 
-  //@TODO: breakpoints (aka media-query, responsive)
+  /* === TRANSITIONS === */
+  --ld-ref-transition-fast: 150ms;
+  --ld-ref-transition-base: 300ms;
+  --ld-ref-transition-slow: 500ms;
+  --ld-ref-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
 
-  //TODO: add more shadow options
-  //shadow (aka depth)
-  --ld-ref-shadow-s: 0 1px 2px rgba(0, 0, 0, 0.15);
-  --ld-ref-shadow-m: 0 1px 3px rgba(0, 0, 0, 0.2);
-  --ld-ref-shadow-l: 0 1px 5px rgba(0, 0, 0, 0.3);
+  /* === BREAKPOINTS === */
+  --ld-ref-breakpoint-xs: 320px;
+  --ld-ref-breakpoint-sm: 480px;
+  --ld-ref-breakpoint-md: 768px;
+  --ld-ref-breakpoint-lg: 1024px;
+  --ld-ref-breakpoint-xl: 1280px;
 }
