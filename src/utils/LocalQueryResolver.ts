@@ -619,9 +619,16 @@ function resolveCustomObject(
     //wrong... we need to write the result to the resultObject
     //can we find which key was written and take that and use the key?
     let result = resolveQueryPath(subject, query[key]);
-    resultObject[key] = result;
+    writeResultObject(resultObject,key,result);
   }
   return resultObject;
+}
+function writeResultObject(resultObject,key,result) {
+  //convert undefined to null, because JSON.stringify will KEEP keys that have a null value. Which is required for LINCD to work properly with nested queries
+  if(typeof result === 'undefined') {
+    result = null;
+  }
+  resultObject[key] = result;
 }
 
 export function resolveLocalEndResults<S extends SelectQueryFactory<any>>(
@@ -1205,7 +1212,8 @@ function resolvePropertyStep(
         ? resultObjects.get(singleShape.uri)
         : resultObjects;
     //write the result for this property into the result object
-    nodeResult[(queryStep as PropertyQueryStep).property.label] = stepResult;
+    writeResultObject(nodeResult, queryStep.property.label, stepResult);
+    // nodeResult[(queryStep as PropertyQueryStep).property.label] = stepResult;
     return subResultObjects ? nodeResult : stepResult;
   }
   // nodeResult[(queryStep as PropertyQueryStep).property.label] = subResultObjects
@@ -1258,7 +1266,7 @@ function updateResultObjects(
         ? resultObjects.get(singleShape.uri)
         : resultObjects;
     if (nodeResult) {
-      nodeResult[(queryStep as SizeStep).label || defaultLabel] = result;
+      writeResultObject(nodeResult, (queryStep as SizeStep).label || defaultLabel, result);
     }
   }
 }

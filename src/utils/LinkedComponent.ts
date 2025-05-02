@@ -288,17 +288,17 @@ export function createLinkedComponentFn(
             }
           },[queryResult, props.of]);
 
-          useEffect(() => {
-            //when receiving new data from the parent
-            // then we need to reset query result (its possible both are at play do to _refresh with updatedProps, see above)
-            // so that this component will use the UPDATED props provided by the parent over the internal updated query result
-            setQueryResult(undefined);
-            //if the new props are a valid result, then the new props will be used as linked props immediately
-            //But if it's NOT a valid result, then we also need to load the data again
-            if(!isValidQResult(props.of,query)) {
-              loadData();
-            }
-          },[props.of])
+          // useEffect(() => {
+          //   //when receiving new data from the parent
+          //   // then we need to reset query result (its possible both are at play do to _refresh with updatedProps, see above)
+          //   // so that this component will use the UPDATED props provided by the parent over the internal updated query result
+          //   setQueryResult(undefined);
+          //   //if the new props are a valid result, then the new props will be used as linked props immediately
+          //   //But if it's NOT a valid result, then we also need to load the data again
+          //   if(!isValidQResult(props.of,query)) {
+          //     loadData();
+          //   }
+          // },[props.of])
 
 
           if (!linkedProps.source) {
@@ -312,6 +312,15 @@ export function createLinkedComponentFn(
           let usingStorage = LinkedStorage.isInitialised();
 
           useEffect(() => {
+
+            //when receiving new data from the parent
+            // then we need to reset query result (its possible both are at play do to _refresh with updatedProps, see above)
+            // so that this component will use the UPDATED props provided by the parent over the internal updated query result
+            if(queryResult)
+            {
+              setQueryResult(undefined);
+            }
+
             //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
             if (usingStorage && !sourceIsValidQResult) {
               let cachedRequest = LinkedStorage.isLoaded(
@@ -323,8 +332,8 @@ export function createLinkedComponentFn(
                 //then we can set state to loaded straight away
                 setQueryResult(true);
               } else if (cachedRequest === false) {
-                //if we did not request all these properties before then we continue to
-                // load the required PropertyShapes from storage for this specific source
+                //if the source/prop.of changed, and
+                //if we did not request all these properties before then we continue to load them all
                 loadData();
               } else {
                 //if some requiredProperties are still being loaded
@@ -336,7 +345,7 @@ export function createLinkedComponentFn(
                 });
               }
             }
-          }, [linkedProps.source.node]);
+          }, [linkedProps.source.node,props.of]);
 
           //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
           let dataIsLoaded =

@@ -20,11 +20,6 @@ export interface IQuadStore {
    */
   init?(): Promise<any>;
 
-  update(
-    toAdd: ICoreIterable<Quad>,
-    toRemove: ICoreIterable<Quad>,
-  ): Promise<any>;
-
   updateQuery?<RType>(
     q:UpdateQuery<RType>
   ): Promise<RType>
@@ -39,13 +34,18 @@ export interface IQuadStore {
     query: DeleteQuery
   ): Promise<DeleteResponse>;
 
-  add(quad: Quad): Promise<any>;
+  update?(
+    toAdd: ICoreIterable<Quad>,
+    toRemove: ICoreIterable<Quad>,
+  ): Promise<any>;
 
-  addMultiple(quads: QuadSet): Promise<any>;
+  add?(quad: Quad): Promise<any>;
 
-  delete(quad: Quad): Promise<any>;
+  addMultiple?(quads: QuadSet): Promise<any>;
 
-  deleteMultiple(quads: QuadSet): Promise<any>;
+  delete?(quad: Quad): Promise<any>;
+
+  deleteMultiple?(quads: QuadSet): Promise<any>;
 
   /**
    * Determines the right URI for several nodes
@@ -60,14 +60,14 @@ export interface IQuadStore {
 
   getDefaultGraph?(): Graph;
 
-  removeNodes(nodes: ICoreIterable<NamedNode>,quads?:QuadSet): Promise<any>;
+  removeNodes?(nodes: ICoreIterable<NamedNode>,quads?:QuadSet): Promise<any>;
 
   /**
    * Clears all values of specific predicates for specific subjects
    * @param subjectToPredicates a map of subjects as keys and sets of properties (predicates) to clear as the values
    * @return A promise that resolves to true if properties were cleared, or false if no properties were cleared
    */
-  clearProperties(
+  clearProperties?(
     subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>,
   ): Promise<boolean>;
 
@@ -76,13 +76,13 @@ export interface IQuadStore {
    * @param shapeInstance
    * @param shape
    */
-  loadShape(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
+  loadShape?(shapeInstance: Shape, shape: LinkedDataRequest): Promise<QuadArray>;
 
   /**
    * @deprecated
    * @param shapeSet
    * @param shape
    */
-  loadShapes(shapeSet: ShapeSet, shape: LinkedDataRequest): Promise<QuadArray>;
+  loadShapes?(shapeSet: ShapeSet, shape: LinkedDataRequest): Promise<QuadArray>;
 
 }

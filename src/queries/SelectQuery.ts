@@ -1470,11 +1470,17 @@ export class SelectQueryFactory<
     restPath: (QueryStep | SubQueryPaths)[] = [],
     nameOverwrite?:string,
   ): boolean {
+    if(!qResult) {
+      return false;
+    }
     if ((step as PropertyQueryStep).property) {
       //if a name overwrite is given we check if that key exists instead of the property label
       //this happens with custom objects: for the first property step, the named key will be the accessKey used in the result instead of the first property label.
       //e.g. {title:item.name} in a query will result in a "title" key in the result, not "name"
       const accessKey = nameOverwrite || (step as PropertyQueryStep).property.label;
+      //also check if this property needs to have a value (minCount > 0), if not it can be empty and undefined
+      // if (!qResult.hasOwnProperty(accessKey) && (step as PropertyQueryStep).property.minCount > 0) {
+      //the key must be in the object. If there is no value then it should be null (or undefined, but null works better with JSON.stringify, as it keeps the key. Whilst undefined keys get removed)
       if (!qResult.hasOwnProperty(accessKey)) {
         return false;
       }
@@ -1493,6 +1499,11 @@ export class SelectQueryFactory<
         return this.isValidQueryPathResult(qResult, subStep);
       });
     } else if (typeof step === 'object') {
+      if(Array.isArray(qResult)) {
+        return qResult.every(singleResult => {
+          return this.isValidQueryStepResult(singleResult, step);
+        })
+      }
       return this.isValidCustomObjectResult(qResult, step as CustomQueryObject);
     }
   }
