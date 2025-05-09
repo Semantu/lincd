@@ -470,7 +470,7 @@ export abstract class LinkedStorage {
     shapeInstance: Shape,
     shapeOrRequest?: LinkedDataRequest,
     byPassCache: boolean = false,
-  ): Promise<QuadArray> {
+  ): Promise<QuadArray|boolean> {
     //if no shape is requested then we automatically request all properties of the shape
     if (!shapeOrRequest) {
       //TODO: maybe we can optimise requests by not sending all the shapes and letting the backend fill in the property shapes
@@ -520,7 +520,7 @@ export abstract class LinkedStorage {
     shapeSet: ShapeSet,
     shapeOrRequest: LinkedDataRequest,
     byPassCache: boolean = false,
-  ): Promise<QuadArray> {
+  ): Promise<QuadArray|boolean> {
     let nodes = shapeSet.getNodes();
     if (!byPassCache) {
       let cachedResult = this.nodesAreLoaded(nodes, shapeOrRequest);

@@ -225,7 +225,7 @@ export function createLinkedComponentFn(
           let linkedProps: any = getLinkedComponentProps<
             ShapeType,
             CustomProps
-          >(props, shapeClass);
+          >(props as any, shapeClass);
           //if a ref was given, we need to manually add it back to the props, React will extract it and provide is as second argument to React.forwardRef in the linked component itself
           if (ref) {
             linkedProps['ref'] = ref;

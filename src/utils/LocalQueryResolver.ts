@@ -674,7 +674,7 @@ export function resolveLocalEndResults<S extends SelectQueryFactory<any>>(
     //does that also work if there is multiple values?
     //do we need to check the size of the traceresponse
     //why is a CoreSet created? start there
-    return results.length > 0 ? [...results[0]] : ([] as any);
+    return results.length > 0 ? [...results[0]]  as any: ([] as any);
   } else if (typeof query.traceResponse === 'object') {
     throw new Error('Objects are not yet supported');
   }
