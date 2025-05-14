@@ -12,7 +12,7 @@ import { lincd as lincdOntology } from '../ontologies/lincd.js';
 import { npm } from '../ontologies/npm.js';
 import { rdf } from '../ontologies/rdf.js';
 import { URI } from './URI.js';
-import { addNodeShapeToShapeClass } from './ShapeClass.js';
+import { addNodeShapeToShapeClass,getShapeClass } from './ShapeClass.js';
 import {
   Component,
   createLinkedComponentFn,
@@ -182,6 +182,16 @@ export interface LinkedPackageObject
    * @param exportedObject - the exported object (the class, constant, function, etc)
    */
   registerPackageExport: (exportedObject: any) => void;
+
+  /**
+   * A method to get a shape class in this package by its name.
+   * This is helpful to avoid circular dependencies between shapes.
+   * For example see Thing.ts which uses get image():ImageObject.
+   * ImageObject extends Things.
+   * So get image() is implemented with getOneAs(...,getPackageShape('ImageObject'))
+   * @param name
+   */
+  getPackageShape:(name:string) => typeof Shape;
   /**
    * A reference to the modules' object in the LINCD tree.
    * Contains all linked components of the module.
@@ -272,6 +282,11 @@ export function autoLoadOntologyData(value: boolean)
     });
   }
 }
+export function getNodeShapeUri(packageName,shapeName: string):string {
+  return `${LINCD_DATA_ROOT}module/${URI.sanitize(packageName)}/shape/${URI.sanitize(
+    shapeName,
+  )}`;
+}
 
 export function linkedPackage(packageName: string): LinkedPackageObject
 {
@@ -279,6 +294,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     `${LINCD_DATA_ROOT}module/${packageName}`,
     true,
   );
+  let packageNameURI = URI.sanitize(packageName);
+
 
   //set certain values but don't emit change events or alteration events
   new Quad(
@@ -375,14 +392,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     //if no shape object has been attached to the constructor
     if (!Object.getOwnPropertyNames(constructor).includes('shape'))
     {
-      let packageNameURI = URI.sanitize(packageName);
-
       //create a new node shape for this shapeClass
-      let shape: NodeShape = NodeShape.getFromURI(
-        `${LINCD_DATA_ROOT}module/${packageNameURI}/shape/${URI.sanitize(
-          constructor.name,
-        )}`,
-      );
+      let shape: NodeShape = NodeShape.getFromURI(getNodeShapeUri(packageName,constructor.name));
       //connect the typescript class to its NodeShape
       constructor.shape = shape;
       //set the name
@@ -483,6 +494,17 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     }
   };
 
+  /**
+   * This method is used to get a shape class in this package by its name.
+   * This can be used to avoid circular dependencies between shapes.
+   * @param name
+   */
+  let getPackageShape = (name: string): typeof Shape => {
+    //get the named node of the node shape first,
+    //then get the shape class that defines this node shape
+    return getShapeClass(NamedNode.getOrCreate(getNodeShapeUri(packageName,name)));
+  }
+
   //return the declarators so the module can use them
   return {
     linkedComponent,
@@ -492,6 +514,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     linkedOntology,
     registerPackageExport,
     registerPackageModule,
+    getPackageShape,
     packageExports: packageTreeObject,
     packageName: packageName,
   } as LinkedPackageObject;

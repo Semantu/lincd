@@ -9,6 +9,8 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
 import {List} from '../shapes/List.js';
+import { getShapeClass } from './ShapeClass.js';
+import { getNodeShapeUri } from './Package.js';
 
 export interface NodeShapeConfig {
   /**
@@ -125,7 +127,7 @@ export interface PropertyShapeConfig {
    * You need to provide a class that extends Shape.
    * This is LINCDs equivalent of shacl:node
    */
-  shape?: typeof Shape;
+  shape?: typeof Shape | [string,string];
 
   /**
    * Minimum number of values required
@@ -211,7 +213,7 @@ const _linkedProperty = (
     descriptor: PropertyDescriptor,
   ) {
 
-    //then we pass the shape and it will be used to register the property shape
+    //then we pass the shape, and it will be used to register the property shape
     let propertyShape = createPropertyShape(
       config,
       propertyKey,
@@ -299,7 +301,7 @@ export function createPropertyShape(
     //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
     onShapeSetup(config.shape, (nodeShape: NodeShape) => {
       propertyShape.valueShape = nodeShape;
-    });
+    },propertyKey);
   }
 
   if (config.in) {
@@ -360,9 +362,31 @@ export function createPropertyShape(
   // (2 props must have same value)
   //sh.equals
 }
-export function onShapeSetup(shapeClass: typeof Shape, callback: (shape: NodeShape) => void) {
+export function onShapeSetup(shapeClass: typeof Shape | [string,string], callback: (shape: NodeShape) => void,propertyName?:string) {
+  //if a string was provided, then this is a "lazy loaded" shape, probably to avoid circular dependencies
+  if(Array.isArray(shapeClass)) {
+    const [packageName,shapeName] = shapeClass;
+    const nodeShape = NamedNode.getOrCreate(getNodeShapeUri(packageName, shapeName));
+    if(typeof document !== 'undefined') {
+      //wait until the DOM is ready, which is when all modules are loaded
+      window.addEventListener('load', () => {
+        shapeClass = getShapeClass(nodeShape);
+        if(!shapeClass) {
+          console.warn(`Could not find value shape (${packageName}/${shapeName}) for accessor get ${propertyName}(). Likely because it is not bundled.`);
+          return;
+        }
+        callback((shapeClass as typeof Shape).shape);
+      })
+    } else {
+      //for node.js we can wait until the next tick, which is when all modules of THIS package are loaded (as long as they are loaded from index)
+      setTimeout(() => {
+        shapeClass = getShapeClass(nodeShape);
+        callback((shapeClass as typeof Shape).shape);
+      },0);
+    }
+  }
   if (shapeClass.hasOwnProperty('shape')) {
-    callback(shapeClass.shape);
+    callback((shapeClass as typeof Shape).shape);
   } else {
     if (!shapeClass['shapeCallbacks']) {
       shapeClass['shapeCallbacks'] = [];
