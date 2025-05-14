@@ -17,10 +17,12 @@ import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {SearchMap} from '../collections/SearchMap.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {QuadSet} from '../collections/QuadSet.js';
-import { NodeShape,PropertyShape } from './SHACL.js';
+import {NodeShape, PropertyShape} from './SHACL.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
-  getMostSpecificShapes,getMostSpecificShapesByType,getPropertyShapeByLabel,
+  getMostSpecificShapes,
+  getMostSpecificShapesByType,
+  getPropertyShapeByLabel,
   getShapeOrSubShape,
   getSubShapesClasses,
 } from '../utils/ShapeClass.js';
@@ -28,19 +30,17 @@ import {
   GetQueryResponseType,
   SelectQueryFactory,
   PatchedQueryPromise,
-  QueryBuildFn,QueryResponseToEndValues,
+  QueryBuildFn,
+  QueryResponseToEndValues,
   QueryResponseToResultType,
 } from '../queries/SelectQuery.js';
-import {
-  IQueryParser,
-  staticImplements,
-} from '../interfaces/IQueryParser';
-import { TestNode } from '../utils/TraceShape.js';
-import { UpdatePartial,AddId } from '../queries/QueryFactory.js';
-import { ClassOf } from '../utils/Types.js';
-import { CreateResponse } from '../queries/CreateQuery.js';
-import { NodeId } from '../queries/MutationQuery.js';
-import { DeleteResponse } from '../queries/DeleteQuery.js';
+import {IQueryParser, staticImplements} from '../interfaces/IQueryParser';
+import {TestNode} from '../utils/TraceShape.js';
+import {UpdatePartial, AddId} from '../queries/QueryFactory.js';
+import {ClassOf} from '../utils/Types.js';
+import {CreateResponse} from '../queries/CreateQuery.js';
+import {NodeId} from '../queries/MutationQuery.js';
+import {DeleteResponse} from '../queries/DeleteQuery.js';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 
@@ -52,10 +52,11 @@ interface IClassConstruct {
 
 //shape that returns property shapes for its keys
 type AccessPropertiesShape<T extends Shape> = {
-  [P in keyof T]: PropertyShape
+  [P in keyof T]: PropertyShape;
 };
-type PropertyShapeMapFunction<T extends Shape, ResponseType> = (p:AccessPropertiesShape<T>) => ResponseType;
-
+type PropertyShapeMapFunction<T extends Shape, ResponseType> = (
+  p: AccessPropertiesShape<T>,
+) => ResponseType;
 
 /**
  * The base class of all classes that represent a rdfs:Class in the graph.
@@ -186,24 +187,21 @@ export abstract class Shape implements IShape {
     this.overwrite(rdfs.label, new Literal(val));
   }
 
-  static create<
-    ShapeType extends Shape,
-    U extends UpdatePartial<ShapeType>,
-  >(
-    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
+  static create<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
+    this: {new (node: Node): ShapeType; queryParser: IQueryParser},
     updateObjectOrFn?: U,
   ): Promise<CreateResponse<U>> {
-    return this.queryParser.createQuery(updateObjectOrFn,this as any as typeof Shape);
+    return this.queryParser.createQuery(
+      updateObjectOrFn,
+      this as any as typeof Shape,
+    );
   }
 
-  static delete<
-    ShapeType extends Shape,
-    U extends UpdatePartial<ShapeType>,
-  >(
-    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
-    id:NodeId|NodeId[],
+  static delete<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
+    this: {new (node: Node): ShapeType; queryParser: IQueryParser},
+    id: NodeId | NodeId[],
   ): Promise<DeleteResponse> {
-    return this.queryParser.deleteQuery(id,this as any as typeof Shape);
+    return this.queryParser.deleteQuery(id, this as any as typeof Shape);
   }
 
   /**
@@ -282,12 +280,9 @@ export abstract class Shape implements IShape {
   static select<
     ShapeType extends Shape,
     S = unknown,
-    ResultType = QueryResponseToResultType<
-      S,
-      ShapeType
-    >[],
+    ResultType = QueryResponseToResultType<S, ShapeType>[],
   >(
-    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
+    this: {new (node: Node): ShapeType; queryParser: IQueryParser},
     selectFn: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
@@ -297,9 +292,10 @@ export abstract class Shape implements IShape {
       GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
       ShapeType
     >[],
-  >(
-    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
-  ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
+  >(this: {
+    new (node: Node): ShapeType;
+    queryParser: IQueryParser;
+  }): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
     ShapeType extends Shape,
     S = unknown,
@@ -308,8 +304,8 @@ export abstract class Shape implements IShape {
       ShapeType
     >,
   >(
-    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
-    subjects?: ShapeType ,
+    this: {new (node: Node): ShapeType; queryParser: IQueryParser},
+    subjects?: ShapeType,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
@@ -320,7 +316,7 @@ export abstract class Shape implements IShape {
       ShapeType
     >[],
   >(
-    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
+    this: {new (node: Node): ShapeType; queryParser: IQueryParser},
     subjects?: ICoreIterable<ShapeType>,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
@@ -332,23 +328,28 @@ export abstract class Shape implements IShape {
       ShapeType
     >[],
   >(
-    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
+    this: {new (node: Node): ShapeType; queryParser: IQueryParser},
     targetOrSelectFn?: ShapeType | QueryBuildFn<ShapeType, S>,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType> {
     let _selectFn;
     let subject;
-    if(targetOrSelectFn instanceof Shape){
+    if (targetOrSelectFn instanceof Shape) {
       _selectFn = selectFn;
       subject = targetOrSelectFn;
     } else {
       _selectFn = targetOrSelectFn;
     }
 
-    const query = new SelectQueryFactory<ShapeType, S>(this as any, _selectFn,subject);
+    const query = new SelectQueryFactory<ShapeType, S>(
+      this as any,
+      _selectFn,
+      subject,
+    );
     let p = new Promise<ResultType>((resolve, reject) => {
       nextTick(() => {
-        this.queryParser.selectQuery(query)
+        this.queryParser
+          .selectQuery(query)
           .then((result) => {
             resolve(result as ResultType);
           })
@@ -362,24 +363,22 @@ export abstract class Shape implements IShape {
     // return this.queryParser.query<ResultType>(query);
   }
 
-  static update<
-    ShapeType extends Shape,
-    U extends UpdatePartial<ShapeType>,
-  >(
-    this: {new (node: Node): ShapeType; queryParser:IQueryParser},
-    id:string|{id:string}|{uri:string},
+  static update<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
+    this: {new (node: Node): ShapeType; queryParser: IQueryParser},
+    id: string | {id: string} | {uri: string},
     updateObjectOrFn?: U,
   ): Promise<AddId<U>> {
-    return this.queryParser.updateQuery(id,updateObjectOrFn,this as any as typeof Shape);
+    return this.queryParser.updateQuery(
+      id,
+      updateObjectOrFn,
+      this as any as typeof Shape,
+    );
   }
 
-  static mapPropertyShapes<
-    ShapeType extends Shape,
-    ResponseType = unknown,
-  >(
+  static mapPropertyShapes<ShapeType extends Shape, ResponseType = unknown>(
     this: {new (node: Node): ShapeType; targetClass: any},
-    mapFunction?: PropertyShapeMapFunction<ShapeType, ResponseType>
-  ):ResponseType {
+    mapFunction?: PropertyShapeMapFunction<ShapeType, ResponseType>,
+  ): ResponseType {
     let dummyNode = new TestNode();
     let dummyShape = new (this as any)(dummyNode);
     //store the proxy on the shape, so we can access it later
@@ -395,14 +394,19 @@ export abstract class Shape implements IShape {
             }
             //if not, then a method/accessor of the original shape was called
             //then check if we have indexed any property shapes with that name for this shapes NodeShape
-            let propertyShape = getPropertyShapeByLabel(dummyShape.constructor,key.toString());
+            let propertyShape = getPropertyShapeByLabel(
+              dummyShape.constructor,
+              key.toString(),
+            );
             if (propertyShape) {
               //this method does not allow any further chaining, so we return the value of the property
               return propertyShape;
             }
 
             //otherwise return the value of the property on the original shape
-            throw new Error(`${this.name}.${key.toString()} is missing a @linkedProperty decorator. This method can only access decorated get/set methods.`);
+            throw new Error(
+              `${this.name}.${key.toString()} is missing a @linkedProperty decorator. This method can only access decorated get/set methods.`,
+            );
           }
         }
       },
@@ -473,24 +477,32 @@ export abstract class Shape implements IShape {
    * Ignores if the nodes are valid instances of the shape
    * Returns a set of shape instances.
    * This is helpful when using partly loaded data
+   * @deprecated
    */
-  static getLocalInstancesByType<T extends Shape>(this:ShapeType<T>):ShapeSet<T> {
+  static getLocalInstancesByType<T extends Shape>(
+    this: ShapeType<T>,
+  ): ShapeSet<T> {
     //get all instances of the target class of this shape
     let nodes = this.targetClass.getAllInverse(rdf.type);
     //also look for shapes that extend this shape
     getSubShapesClasses(this as any).forEach((shapeClass) => {
       //and add instances of those classes as well
       if (shapeClass.targetClass) {
-        return shapeClass.targetClass.getAllInverse(rdf.type).forEach(node => {
-          nodes.add(node);
-        })
+        return shapeClass.targetClass
+          .getAllInverse(rdf.type)
+          .forEach((node) => {
+            nodes.add(node);
+          });
       }
     });
     //return as a set
     return this.getSetOf(nodes);
-
   }
 
+  /**
+   * @deprecated
+   * @param explicitInstancesOnly
+   */
   static getLocalInstances<T extends Shape>(
     this: ShapeType<T>,
     explicitInstancesOnly: boolean = false,
@@ -502,10 +514,17 @@ export abstract class Shape implements IShape {
   }
 
   //TODO: to find Shape instances we need to not just check type, but all the constraints of this shape class
+  /**
+   * @deprecated
+   */
   static getNumLocalInstances(): number {
     return this.getLocalInstanceNodes().size;
   }
 
+  /**
+   * @deprecated
+   * @param explicitInstancesOnly
+   */
   static getLocalInstanceNodes(
     explicitInstancesOnly: boolean = false,
   ): NodeSet {
@@ -684,7 +703,6 @@ export abstract class Shape implements IShape {
           (shape
             ? getMostSpecificShapesByType(value as NamedNode, shape)[0] || shape
             : getMostSpecificShapesByType(value as NamedNode)[0]) || Shape;
-
       }
       return new (shape as any)(value) as S;
     }
@@ -1171,4 +1189,3 @@ export interface ShapeLike<M extends Shape> extends Constructor<M> {
  * A class that represent the class of a shape.
  */
 export type ShapeType<S extends Shape = Shape> = ClassOf<S> & typeof Shape;
-
