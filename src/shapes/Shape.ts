@@ -822,6 +822,9 @@ export abstract class Shape implements IShape {
     return this.namedNode.remove();
   }
 
+  /**
+   * @deprecated
+   */
   save() {
     return this.namedNode.save();
   }

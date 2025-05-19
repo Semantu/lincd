@@ -7,8 +7,14 @@ import {CoreSet} from '../collections/CoreSet.js';
 import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {getPropertyShapeByLabel} from '../utils/ShapeClass.js';
-import {Prettify} from './QueryFactory.js';
+import {
+  NodeDescriptionValue,
+  NodeReferenceValue,
+  Prettify,
+  SinglePropertyUpdateValue,
+} from './QueryFactory.js';
 import {QueryFactory} from './QueryFactory.js';
+import { NamedNode } from '../models';
 
 /**
  * ###################################
@@ -109,7 +115,7 @@ export type AndOrQueryToken = {
 };
 
 export enum WhereMethods {
-  EQUALS = 'eq',
+  EQUALS = '=',
   SOME = 'some',
   EVERY = 'every',
 }
@@ -1023,6 +1029,11 @@ export class QueryShape<
     });
     return queryShape.proxy;
   }
+
+  equals(otherValue: NodeReferenceValue) {
+    return new Evaluation(this, WhereMethods.EQUALS, [otherValue]);
+  }
+
 
   // count(countable: QueryBuilderObject, resultKey?: string): SetSize<this> {
   //   return new SetSize(this, countable, resultKey);

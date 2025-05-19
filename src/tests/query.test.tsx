@@ -178,6 +178,10 @@ describe('query tests',() => {
      * },... ]
      */
 
+    names.forEach((name) => {
+
+    })
+
     expect(Array.isArray(names)).toBe(true);
     expect(names.length).toBe(4);
     expect(typeof names[0] === 'object').toBe(true);
@@ -260,6 +264,16 @@ describe('query tests',() => {
       let res = p.friends.name;
       return res;
     });
+    //{
+    //  id: string,
+    //  shape: Person,
+    //  friends: {
+    //    id: string,
+    //    shape: Person,
+    //    name: string
+    //  }[]
+    //}[]
+
     // QueryString<QueryShapeSet<Person,QShape<Person,null,''>,'friends'>,'name'>
     // QueryString<QueryShapeSet<ListItem<Action>,QShape<ItemList<Action>,null,''>,'itemListElements'>,'label'>
     let first = namesOfFriends[0];
@@ -405,6 +419,21 @@ describe('query tests',() => {
     expect(first.friends[0].id).toBe(p2.uri);
     expect(second.friends.length).toBe(0);
   });
+
+  test('where object value',async () => {
+    //we select the friends of all persons, but only those friends whose name is moa
+    //this will return an array, where each entry represents the results for a single person.
+    // the entry contains those friends of the person whose name is Moa - (as a set of persons)
+
+    //QResult<Person, {friends: QResult<Person, {}>[]}>[]
+    let hasBestFriend = await Person.select().where(p => {
+      return p.bestFriend.equals({id:p3.uri});
+    });
+
+    expect(Array.isArray(hasBestFriend)).toBe(true);
+    expect(hasBestFriend.length).toBe(1);
+    expect(hasBestFriend[0].id).toBe(p2.uri);
+  })
   test('where and',async () => {
     //we select the friends of all persons, but only those friends whose name is moa
     //this will return an array, where each entry represents the results for a single person.
@@ -428,6 +457,10 @@ describe('query tests',() => {
     let orFriends = await Person.select((p) => {
       return p.friends.where((f) =>
         f.name.equals('Jinx').or(f.hobby.equals('Jogging')),
+        //f.name.equals('Jinx').or().f.hobby.equals('Jogging'),
+        //f.or(f.name.equals('Jinx'),f.hobby.equals('Jogging'))
+        //or(f.name.equals('Jinx'),f.hobby.equals('Jogging'))
+        //f.name === A || f.hobby === B
       );
     });
 
@@ -457,6 +490,9 @@ describe('query tests',() => {
 
   test('where and or and',async () => {
     //we combine AND & OR. AND should be done first, then OR
+
+    //Boolean logic, AND always comes before OR
+    //friend.name === A || friend.hobby === B && friend.name === C
     //Therefor we expect p2 and p3 to match as friends
     //(p3 would not match if the OR was done first)
     let persons = await Person.select((p) => {
@@ -477,6 +513,18 @@ describe('query tests',() => {
           .or(f.hobby.equals('Jogging').and(f.name.equals('Moa'))),
       );
     });
+
+    //(friend.name === A || friend.hobby === B) && friend.name === C
+    // let persons3 = await Person.select((p) => {
+    //   return p.friends.where((f) =>
+    //     f.name.equals('Moa').and(
+    //       f.name.equals('Jinx')
+    //       .or(f.hobby.equals('Jogging')),
+    //     )
+    //   );
+    // });
+    //TODO: implement f.or(A,B)
+
 
     [persons,persons2].forEach((result) => {
       expect(Array.isArray(result)).toBe(true);
@@ -609,6 +657,7 @@ describe('query tests',() => {
     //QResult<Person, {friends: number}>[]
     let numberOfFriends = await Person.select((p) => {
       let res = p.friends.friends.size();
+      //TODO: count() -> let res = p.count(friends.friends); --> would return the total sum of friends of friends
       return res;
     });
     //expected result
@@ -724,6 +773,9 @@ describe('query tests',() => {
       };
       return res;
     });
+    //({firstName,lastName}) => {
+    // return <div>...</div>
+    //}
 
     //has to be an array of objects
     let friends = res[0].friends;
@@ -806,7 +858,7 @@ describe('query tests',() => {
     expect(first.friends[0]._hobby).toBe('Jogging');
   });
 
-  test('custom result object - equals without where',async () => {
+  test('custom result object - equals without where returns a boolean',async () => {
     let customResult = await Person.select((p) => {
       let res = {
         nameIsMoa: p.name.equals('Moa'),
@@ -969,6 +1021,7 @@ describe('query tests',() => {
         return <div>{name}</div>;
       },
     );
+    //{id:string}
     let component = render(<Component of={p1} />);
 
     await waitFor(() => expect(component.getByText('Semmy')).toBeTruthy(),{
@@ -1011,7 +1064,26 @@ describe('query tests',() => {
     // let tree = component.toJSON();
     // expect(tree.children[0]).toBe('Jinx');
     // expect(tree).toMatchSnapshot();
+
+    // let q = Person.query(p => p.address);
+    // cont PersonCard= linkedComponent(q,({address}:{address:QResult<PostalAddress}) => {
+    //   return <div>some component
+    //   <div>
+    //     <AddressCard of={address} />
+    //   </div></div>
+    // });
+    // let q2 = PostalAddress.query(address => address.street);
+    // cont AddressCard= linkedComponent(q2,({street}:{street:string}) => {
+    //   return <div>some component
+    //     <div>
+    //       <AddressCard of={address} />
+    //     </div></div>
+    // });
+
   });
+
+
+
   test('component with custom props',async () => {
     //Typescript has some limitations, which mean we cannot infer the type of the query AND define custom props at the same time
     //https://stackoverflow.com/questions/60377365/typescript-infer-type-of-generic-after-optional-first-generic/60378308#60378308
@@ -1021,6 +1093,11 @@ describe('query tests',() => {
     const query = Person.query(
       (p) => p.friends.where((f) => f.name.equals('Jinx')).name,
     );
+
+    //You need to define the query first
+    // const query = ....
+    //then you can use it as a type parameter (typeof query) and as the first parameter of the linked component
+    // linkedComponent<typeof query,{custom1:boolean}>(query,component);
 
     const ComponentWithCustomProps = linkedComponent<
       //To add custom props, you NEED TO first add typeof query as the first type param
@@ -1047,23 +1124,23 @@ describe('query tests',() => {
 
   test('component requesting data from child components',async () => {
     // LinkedQuery<Person, QueryString<Person, "name">, any>
-    const query1 = Person.query((p) => p.name);
+    const childQuery = Person.query((p) => p.name);
 
     // LinkedFunctionalComponent<{}, Person>
-    const Component1 = linkedComponent(query1,({name}) => {
+    const ChildComponent = linkedComponent(childQuery,({name}) => {
       return <span>{name}</span>;
     });
 
     //And the query result should be
     // QResult<Person, {hobby: string, bestFriend: QResult<Person, {name: string}>}>
-    let query2 = Person.query((p) => {
-      // let res = [p.hobby, p.bestFriend.preloadFor(Component1)];
+    let parentQuery = Person.query((p) => {
+      let res = [p.hobby, p.bestFriend.preloadFor(ChildComponent)];
       // let res = [p.hobby, Component1.of(p.bestFriend)];
       //This would also work
-      let res = {
-        hobby: p.hobby,
-        bestFriend: p.bestFriend,
-      };
+      // let res = {
+      //   hobby: p.hobby,
+      //   bestFriend: p.bestFriend,
+      // };
       return res;
     });
 
@@ -1072,17 +1149,17 @@ describe('query tests',() => {
     // Argument of type 'PropertyQueryStep | CountStep | CustomQueryObject | QueryPath[] | BoundComponentQueryStep'
     // is not assignable to 'PropertyQueryStep | CountStep | CustomQueryObject | QueryPath[]'.
 
-    let query2Object = query2.getQueryPaths(); //typeof query2 extends LinkedQuery<any, infer Response, infer Source> ? GetQueryObjectResultType<Response> : never;
+    let query2Object = parentQuery.getQueryPaths(); //typeof query2 extends LinkedQuery<any, infer Response, infer Source> ? GetQueryObjectResultType<Response> : never;
 
-    const Component2 = linkedComponent(query2,({hobby,bestFriend}) => {
+    const ParentComponent = linkedComponent(parentQuery,({hobby,bestFriend}) => {
       return (
         <>
           <span>{hobby.toString()}</span>
-          <Component1 of={bestFriend} />
+          <ChildComponent of={bestFriend} />
         </>
       );
     });
-    let component = render(<Component2 of={p2} customasd1={true} />);
+    let component = render(<ParentComponent of={p2} customasd1={true} />);
     await waitFor(() => expect(component.getByText('Jinx')).toBeTruthy());
     await waitFor(() => expect(component.getByText('Jogging')).toBeTruthy());
   });

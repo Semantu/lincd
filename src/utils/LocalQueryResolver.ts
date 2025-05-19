@@ -919,7 +919,13 @@ function evaluate(singleShape: Shape, where: WherePath): boolean {
   }
 }
 
-function resolveWhereEquals(queryEndValue, otherValue: string) {
+function resolveWhereEquals(queryEndValue, otherValue: any) {
+  if(queryEndValue instanceof Shape && (otherValue as NodeReferenceValue).id) {
+      return queryEndValue.namedNode.uri === otherValue.id
+  }
+  else if(queryEndValue instanceof NamedNode && (otherValue as NodeReferenceValue).id) {
+    return queryEndValue.uri === otherValue.id;
+  }
   return queryEndValue === otherValue;
 }
 
