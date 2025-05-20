@@ -937,7 +937,6 @@ export const runQueryTests = () => {
       expect(first.bestFriend.hobby).toBeNull();
     });
 
-
     test('sub select plural prop - custom object',async () => {
       let namesAndHobbiesOfFriends = await Person.select((p) => {
         let res = p.friends.select((f) => {
@@ -1004,6 +1003,88 @@ export const runQueryTests = () => {
       expect(first.friends[0]._name).toBe('Moa');
       expect(first.friends[0]._hobby).toBe('Jogging');
     });
+
+    test('double nested sub select',async () => {
+      //Real life requested query:
+      // await RefreshToken.select(t => {
+      //   return t.account.select(account => {
+      //     return [
+      //       account.email,
+      //       account.accountOf.select(user => {
+      //         return [
+      //           user.givenName,
+      //           user.familyName
+      //         ]
+      //       })
+      //     ]
+      //   });
+      // }).where(t => t.token.equals(refreshToken));
+      // const tokenInstance = tokens.shift();
+      //name,friends,[name,hobby]
+      const res = await Person.select((p) => {
+        //TODO: make this work for select().where() (the other way around)
+        // this would require the sub select query to return the where. Or to write the where to the parent when it receives it
+        // or perhaps it can filter the sub query?
+        return p.pluralTestProp.where(pp => {
+          //plularTestProp will return p1,p2,p3,p4, but here we
+          //make sure that we only return name and friends of p2
+          return pp.equals({id:p2.uri})
+        }).select(pp => {
+          return [
+            pp.name,
+            pp.friends.select(f => {
+              return [f.name,f.hobby]
+            })
+          ]
+        })
+      }).where(p => {
+        return p.equals({id:p1.uri})
+      });
+
+      //Expected Result: QResult<Person,{
+      //  bestFriend: QResult<Person, {
+        //    name: string,
+        //    friends: QResult<Person, {
+        //      name: string,
+        //      hobby: string
+        //    }>[]
+        //  }[]
+      //}>[]
+
+      //Should return 1 results, with 1 pluralTestProps (p2)
+      //then that pluralTestProp should have a name and 2 friends (p3,p4)
+      //who each have a name and hobby
+
+      const first = res[0];
+      expect(first.id).toBe(p1.uri);
+
+      const pp = first.pluralTestProp[0];
+      expect(pp.id).toBe(p2.uri);
+
+      const ppName = pp.name;
+      expect(ppName).toBe(p2.name);
+
+      const ppFriends = pp.friends;
+      expect(Array.isArray(ppFriends)).toBe(true);
+      expect(ppFriends.length).toBe(2);
+
+      const ppFriend1 = ppFriends[0];
+      const ppFriend2 = ppFriends[1];
+      expect(ppFriend1.id === p3.uri || ppFriend1.id === p4.uri).toBe(true);
+      expect(ppFriend2.id === p3.uri || ppFriend2.id === p4.uri).toBe(true);
+
+      //check the name and hobby of ppFriend1
+      const ppFriendName = ppFriend1.name;
+      const ppFriendHobby = ppFriend1.hobby;
+      expect(ppFriendName).toBe(p3.name);
+      expect(ppFriendHobby).toBeNull();
+      expect(ppFriend2.name).toBe(p4.name);
+      expect(ppFriend2.hobby).toBeNull();
+    });
+    //
+    // //TODO: selectOne() or select().one()
+    // //TODO: selectWhere()
+    // //TODO: selectWhereOne()
 
     test('custom result object - equals without where returns a boolean',async () => {
       let customResult = await Person.select((p) => {

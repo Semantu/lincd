@@ -16,9 +16,15 @@ export class QueryParser {
     ShapeType
   >[]>(
     query: SelectQueryFactory<ShapeType,ResponseType,Source>
-  ): Promise<ResultType> {
-    let queryObject = query.getQueryObject();
-    return LinkedStorage.selectQuery(queryObject);
+  ): Promise<ResultType>
+  {
+    try
+    {
+      const queryObject = query.getQueryObject();
+      return LinkedStorage.selectQuery(queryObject);
+    } catch (e) {
+      return Promise.reject(e);
+    }
   }
 
   static updateQuery<

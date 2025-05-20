@@ -368,9 +368,12 @@ export type GetShapesResultTypeWithSource<Source> =
 //       : never;
 
 type GetQueryObjectProperty<T> =
-  T extends QueryBuilderObject<any, any, infer Property> ? Property : never;
+  T extends QueryBuilderObject<any, any, infer Property> ? Property :
+    T extends SelectQueryFactory<infer SubShapeType, infer SubResponse,infer SubSource> ? GetQueryObjectProperty<SubSource>
+      : never;
 type GetQueryObjectOriginal<T> =
-  T extends QueryBuilderObject<infer Original> ? Original : never;
+  T extends QueryBuilderObject<infer Original> ? Original : T extends SelectQueryFactory<infer SubShapeType, infer SubResponse,infer SubSource> ? GetNestedQueryResultType<SubResponse, SubSource>
+    : never;
 /**
  * Converts an intersection of QueryBuilderObjects into a plain JS object
  * i.e. QueryString<Person,"name"> | QueryString<Person,"hobby"> --> {name: string, hobby: string}
@@ -378,7 +381,7 @@ type GetQueryObjectOriginal<T> =
  * and, we get the Original type of each QueryBuilderObject, and use it as the value in the resulting object
  */
 type QueryValueIntersectionToObject<Items> = {
-  [Type in Items as GetQueryObjectProperty<Type>]: GetQueryObjectOriginal<Type>;
+  [Type in Items as GetQueryObjectProperty<Type>]: true;//GetQueryObjectOriginal<Type>;
 };
 
 export type SetSizeToQueryResult<Source, HasName = false> =
@@ -535,7 +538,7 @@ type GetNestedQueryResultType<Response, Source> =
     ? //if the linked query originates from within another query (like with select())
       //then we turn the source into a result. And then pass the selected properties as "SubProperties"
       //regardless of whether the response type is an array or object, it gets converted into a result value object
-      GetQueryObjectResultType<Source, ResponseToObject<Response>>
+      GetQueryObjectResultType<Source, QueryResponseToResultType<Response>>
     : //by default: we just convert the response type into a result value object
       QueryResponseToResultType<Response>[];
 
@@ -1364,20 +1367,28 @@ export class SelectQueryFactory<
    * Turns the LinkedQuery into a SelectQuery, which is a plain JS object that can be serialized to JSON
    */
   getQueryObject(): SelectQuery<S> {
-    let queryPaths = this.getQueryPaths();
-    let selectQuery = {
-      type: 'select',
-      select: queryPaths,
-      subject: this.subject,
-      limit: this.limit,
-      offset: this.offset,
-      shape: this.shape,
-      sortBy: this.getSortByPath(),
-    } as SelectQuery<S>;
-    if (this.wherePath) {
-      selectQuery.where = this.wherePath;
+    try
+    {
+      let queryPaths = this.getQueryPaths();
+      let selectQuery = {
+        type: 'select',
+        select: queryPaths,
+        subject: this.subject,
+        limit: this.limit,
+        offset: this.offset,
+        shape: this.shape,
+        sortBy: this.getSortByPath(),
+      } as SelectQuery<S>;
+      if (this.wherePath)
+      {
+        selectQuery.where = this.wherePath;
+      }
+      return selectQuery;
     }
-    return selectQuery;
+    catch (err) {
+        console.error('Error in getQueryObject', err);
+        throw err;
+    }
   }
 
   private getSortByPath() {
@@ -1408,8 +1419,15 @@ export class SelectQueryFactory<
       //if it's a single value, then only one path was requested, and we can add it directly
       queryPaths.push(response.getPropertyPath());
     } else if (Array.isArray(response) || response instanceof Set) {
-      response.forEach((endValue: QueryBuilderObject) => {
-        queryPaths.push(endValue.getPropertyPath());
+      response.forEach((endValue) => {
+        if(endValue instanceof QueryBuilderObject) {
+          queryPaths.push(endValue.getPropertyPath());
+        }
+        else if(endValue instanceof SelectQueryFactory) {
+          queryPaths.push(
+              (endValue as SelectQueryFactory<any>).getQueryPaths() as any,
+          );
+        }
       });
     } else if (response instanceof Evaluation) {
       queryPaths.push(response.getWherePath());
