@@ -28,7 +28,7 @@
     "build": "rimraf ./lib && yarn compile && yarn dual-package && yarn copy-to-lib && echo '✅  Done'",
     "dual-package": "echo '💫 Adding package.json to each lib folder for dual output support' && yarn tsconfig-to-dual-package ./tsconfig-cjs.json ./tsconfig-esm.json",
     "compile": "echo '💫 Compiling CJS' && tsc -p tsconfig-cjs.json && echo '💫 Compiling ESM' && tsc -p tsconfig-esm.json",
-    "copy-to-lib": "echo '💫 Copying assets to lib folder' && yarn copyfiles -u 1 ./src/**/*.scss ./src/**/*.json ./lib/esm && yarn copyfiles -u 1 ./src/**/*.scss ./src/**/*.json ./lib/cjs && yarn copyfiles -u 1 ./lib-template/**/* ./lib",
+    "copy-to-lib": "echo '💫 Copying assets to lib folder' && yarn copyfiles -u 1 ./src/**/*.css ./lib/esm && yarn copyfiles -u 1 ./src/**/*.css ./lib/cjs && yarn copyfiles -u 1 ./lib-template/**/* ./lib",
     "dev": "echo \"continuously compiling to lib folder. ESM ONLY.\" && tsc -p tsconfig-esm.json -w",
     "test": "jest",
     "test-queries": "yarn jest -t \"query tests\"",

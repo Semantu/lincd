@@ -8,13 +8,10 @@ import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {getPropertyShapeByLabel} from '../utils/ShapeClass.js';
 import {
-  NodeDescriptionValue,
   NodeReferenceValue,
   Prettify,
-  SinglePropertyUpdateValue,
 } from './QueryFactory.js';
 import {QueryFactory} from './QueryFactory.js';
-import { NamedNode } from '../models';
 
 /**
  * ###################################

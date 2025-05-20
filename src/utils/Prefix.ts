@@ -59,7 +59,10 @@ export class Prefix {
   static toPrefixed(fullURI: string) {
     let match = this.findMatch(fullURI);
     if (match.length > 0) {
-      return match[1] + ':' + fullURI.substr(match[0].length);
+      const postFix = fullURI.substring(match[0].length);
+      if(!postFix.includes('/')) {
+        return match[1] + ':' + postFix;
+      }
     }
   }
 
