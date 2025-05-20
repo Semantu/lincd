@@ -5,7 +5,7 @@ import { Literal,NamedNode } from '../../models';
 import { xsd } from '../../ontologies/xsd';
 import { TestNode } from '../../utils/TraceShape';
 import { describe,expect,test } from '@jest/globals';
-import { QResult } from '../../queries/SelectQuery';
+import { QResult,QueryBuilderObject } from '../../queries/SelectQuery';
 import { render,waitFor } from '@testing-library/react';
 import { ShapeSet } from '../../collections/ShapeSet';
 import { setDefaultPageLimit } from '../../utils/Package';
@@ -721,6 +721,56 @@ export const runQueryTests = () => {
         //We want outcome to be {numFriends: number}
         //So ObjectToPlainResult should convert the SetSize to a number
         //if Source (SetSize<Source>) extends QueryShapeSet, then its an object, else a number
+
+      //SelectQueryFactory<
+      //  Person,
+      //  {
+      //    numFriends: SetSize<QShapeSet<Person,QShape<Person,null,''>,'friends'>>
+      //  },
+      //  QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
+      //>
+      //
+      //Step 1: QueryResponseToResultType
+        // SelectQueryFactory extends GetNestedQueryResultType<
+          // any
+          // Response = {numFriends: SetSize<QShapeSet<Person,QShape<Person,null,''>,'friends'>>
+          // Source = QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
+        //Step 2: GetNestedQueryResultType
+        //Source extends QueryBuilderObject<Source, Response>
+        //Step 3: GetQueryObjectResultType<
+          //QV = Source = QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
+          //SubProperties = ResponseToObject<Response>
+        //QV extends QueryShapeSet<
+          //ShapeType = Person
+          //Source = QShape<Person,null,''>
+          //Property = 'friends'
+        //Step 4: CreateShapeSetQResult<
+          //ShapeType=ShapeType=Person,
+          //Source=QShape<Person,null,''>,
+          //Property='friends,
+          //SubProperties=ResponseToObject<Response>
+          //HasName=false
+        //>
+        //Source extends QueryShape<
+          //SourceShapeType = Person
+          //ParentSource = null
+        //> -> QResult<
+        //           SourceShapeType=Person,
+        //           {[P in Property='friends']: CreateQResult<Source, null, null, SubProperties>[]}
+        //         >
+        //Step 5: CreateQResult<
+        // Source=QShape<Person,null,''>
+        // Value=null,
+        // Property=null,
+        // SubProperties=ResponseToObject<Response>
+        //>
+        //Source extends QShape<
+        //  SourceShapeType = Person
+        //  ParentSource = null
+        //  SourceProperty = ''
+
+
+
       let first = numberOfFriends3[0];
       let firstNumFriends: number = first.friends[0].numFriends;
       // let firstNumFriends: number = first.friends;
@@ -783,7 +833,112 @@ export const runQueryTests = () => {
 
     });
 
-    test('sub select custom',async () => {
+    test('sub select single prop',async () => {
+      let bestFriendProps = await Person.select((p) => {
+        let res = p.bestFriend.select((f) => {
+          let props = [f.name,f.hobby];
+          return props;
+        });
+        return res;
+      }).where(p => {
+        return p.equals({id:p2.uri})
+      });
+      // SelectQueryFactory<
+      //  Person,
+      //  (
+      //    QueryString<QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">, "name">|
+      //    QueryString<QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">, "hobby">
+      //  )[],
+      //  QueryShape<
+      //    Person,
+      //    QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">,
+      //    "bestFriend"
+      //   >
+      // >
+
+      //step 1: GetNestedQueryResultType<Response, Source>
+        //Response = (
+        //  QueryString<QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">, "name">|
+        //  QueryString<QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">, "hobby">
+        //)[]
+        //Source = QueryShape<
+        //  Person,
+        //  QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">,
+        //  "bestFriend"
+        // >
+      //Source extends QueryBuilderObject
+      //--> step 2: GetQueryObjectResultType<QV=Source, SubProperties=ResponseToObject<Response>
+        //QV extends QueryShape<ShapeType,Source,Property>
+          //ShapeType = Person (value type of property?)
+          //Source = QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">
+          //Property = "bestFriend"
+      //--> step3: CreateQResult<Source,ShapeType,Property,SubProperties,HasName=false>
+        //Source=Source=QueryShape<Person, null, ""> & QueryShapeProps<Person, null, ""> (original request Person.select())
+        //Value=ShapeType=Person (value type of property?)
+        //Property="bestFriend"
+        //SubProperties=ResponseToObject<Response>
+        //HasName=false
+
+        //Source extends QueryShape<SourceShapeType,ParentSource,SourceProperty>
+          //SourceShapeType = Person
+          //ParentSource = null
+          //SourceProperty = ''
+
+      //-->
+      //QResult<
+      //  SourceShapeType=Person
+      //  {
+      //    [P in Property("bestFriend")]: CreateQResult<Value=ShapeType=Person,Value=ShapeType=Person>
+      //  } & SubProperties
+
+      //CONFLICTING
+      //Step 5: CreateQResult<
+      // Source=QShape<Person,null,''>
+      // Value=null,
+      // Property=null,
+      // SubProperties=ResponseToObject<Response>
+      //>
+      //Source extends QShape<
+      //  SourceShapeType = Person
+      //  ParentSource = null
+      //  SourceProperty = ''
+
+
+
+      //We want:
+      //QResult<
+      //  Person,
+      //  {
+      //    bestFriend: QResult<Person, {
+      //    name:string,
+      //    hobby:string
+      //   }>
+      // }
+      //>[]
+      /**
+       * Expected result:
+       * [{
+       *  "id:"..."
+       *  "bestFriend": {
+       *      id:"...",
+       *      name:"Jinx",
+       *      hobby:undefined
+       *    }
+       *  }]
+       */
+
+      let first = bestFriendProps[0];
+      // let name = first.bestFriend.name;
+      expect(Array.isArray(bestFriendProps)).toBe(true);
+      expect(bestFriendProps.length).toBe(1);
+      expect(first.id).toBe(p2.uri);
+      expect(first.bestFriend.id).toBe(p3.uri);
+      expect(first.bestFriend.name).toBe(p3.name);
+      expect(first.bestFriend.hobby).toBeNull();
+    });
+
+
+    test('sub select plural prop - custom object',async () => {
       let namesAndHobbiesOfFriends = await Person.select((p) => {
         let res = p.friends.select((f) => {
           let res2 = {
@@ -1959,7 +2114,7 @@ export const runQueryTests = () => {
     //   let qRes = await Person.select(p1, p => p.bestFriend.name);
     //   expect(qRes.bestFriend.name).toBe('Bestie McBestFace');
     // });
-    
+
     // test('update query with object argument', async () => {
     //   const res = await Person.update(p1,{
     //     hobby: 'Gaming',
@@ -2035,7 +2190,7 @@ export const runQueryTests = () => {
     // });
 
     // test('update query with update function',async () => {
-    //  
+    //
     // })
 
 //NEXT:

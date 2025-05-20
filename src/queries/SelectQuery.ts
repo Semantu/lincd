@@ -6,7 +6,7 @@ import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {getPropertyShapeByLabel} from '../utils/ShapeClass.js';
+import { getPropertyShapeByLabel,getShapeClass } from '../utils/ShapeClass.js';
 import {
   NodeReferenceValue,
   Prettify,
@@ -413,20 +413,34 @@ export type CreateQResult<
   >
     ? //if the parent source is null, that means this is the final source-node in the query
       ParentSource extends null
-      ? //HERE:
-        HasName extends true
+      ? HasName extends true
         ? Value
-        : //hence we create a single QResult, but do not use CreateQResult (which will keep creating nested QResults)
-          // ?
-          QResult<
-            SourceShapeType,
-            {
-              //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
-              //but for all other cases (like string, number, boolean) the value is just passed through
-              [P in Property]: CreateQResult<Value, Value>;
-            } & SubProperties
-          >
-      : CreateQResult<
+
+        //TODO: this must be simplified and rewritten
+        // it is likely the most complex part of the type system currently
+        // It turns out that sub-.select() on a QueryShapeSet ends up here with Value being null, and sub properties need to be added to the QResult itself
+        // Whilst sub-.select() on a single QueryShape ends up here with Value being defined, in which case the SubProperties need to be included in the inner QResult
+        : Value extends null ?
+            //hence we create a single QResult, but do not use CreateQResult (which will keep creating nested QResults)
+            QResult<
+              SourceShapeType,
+              {
+                //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
+                //but for all other cases (like string, number, boolean) the value is just passed through
+                [P in Property]: CreateQResult<Value, Value>;
+              } & SubProperties
+            >
+          :
+            //hence we create a single QResult, but do not use CreateQResult (which will keep creating nested QResults)
+            QResult<
+              SourceShapeType,
+              {
+                //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
+                //but for all other cases (like string, number, boolean) the value is just passed through
+                [P in Property]: CreateQResult<Value, Value,'',SubProperties>;
+              }
+            >
+        : CreateQResult<
           ParentSource,
           QResult<
             SourceShapeType,
@@ -445,7 +459,7 @@ export type CreateQResult<
           infer ParentSource,
           infer SourceProperty
         >
-      ? //for a shapeset, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
+      ? //for a ShapeSet, we make the current result (a QResult) the value of a parent QResult (created with ToQueryResult)
         CreateQResult<
           ParentSource,
           QResult<
@@ -462,8 +476,8 @@ export type CreateQResult<
         >
       : //this needs to be value amongst other things for .select({customKeys}) and ObjectToPlainResult
         Value extends Shape
-        ? QResult<Value, SubProperties>
-        : Value;
+          ? QResult<Value, SubProperties>
+          : Value;
 
 export type CreateShapeSetQResult<
   ShapeType = undefined,
@@ -519,8 +533,8 @@ export type GetSource<Source, Overwrite> = Overwrite extends null
 type GetNestedQueryResultType<Response, Source> =
   Source extends QueryBuilderObject
     ? //if the linked query originates from within another query (like with select())
-      //then we turn the source into a result, and pass the selected properties as "SubProperties"
-      //regardless of whether the response type is an array or object, its gets converted into a result value object
+      //then we turn the source into a result. And then pass the selected properties as "SubProperties"
+      //regardless of whether the response type is an array or object, it gets converted into a result value object
       GetQueryObjectResultType<Source, ResponseToObject<Response>>
     : //by default: we just convert the response type into a result value object
       QueryResponseToResultType<Response>[];
@@ -1029,6 +1043,15 @@ export class QueryShape<
 
   equals(otherValue: NodeReferenceValue) {
     return new Evaluation(this, WhereMethods.EQUALS, [otherValue]);
+  }
+
+  select<QF = unknown>(
+    subQueryFn: QueryBuildFn<S, QF>,
+  ): SelectQueryFactory<S, QF, QueryShape<S, Source, Property>> {
+    let leastSpecificShape = getShapeClass((this.getOriginalValue() as Shape).nodeShape.namedNode);
+    let subQuery = new SelectQueryFactory(leastSpecificShape as ShapeType, subQueryFn);
+    subQuery.parentQueryPath = this.getPropertyPath();
+    return subQuery as any;
   }
 
 
