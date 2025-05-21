@@ -30,6 +30,8 @@ import {
   UpdateQuery,
 } from '../queries/UpdateQuery.js';
 import {
+  checkNewCount,
+  isSetModificationValue,
   NodeDescriptionValue,
   NodeReferenceValue,
   SetModificationValue,SinglePropertyUpdateValue,
@@ -211,7 +213,7 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
     }
     else
     {
-      //single value is provided.
+      //single value is provided
       //check if that fits with the maxCount and minCount of the property
       checkNewCount(propShape,1);
 
@@ -232,27 +234,6 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
   }
 
   return plainValues;
-}
-function checkNewCount(propShape: PropertyShape, numValues: number) {
-  if(propShape.maxCount) {
-    if(numValues > propShape.maxCount) {
-      throw new Error(`Too many values for property: ${propShape.label}. Max count is: ${propShape.maxCount}, updated count would be ${numValues}`);
-    }
-  }
-  if(propShape.minCount) {
-    if(numValues < propShape.minCount) {
-      throw new Error(`Too few values for property: ${propShape.label}. Min count is: ${propShape.minCount}, updated count would be ${numValues}`);
-    }
-  }
-}
-function isSetModificationValue(value: any): value is SetModificationValue {
-  if(!(typeof value === 'object')) return false;
-
-  let hasAddKey  = value.$add;
-  let hasRemoveKey = value.$remove;
-  let numKeys = Object.keys(value).length;
-  //has no other keys
-  return (hasAddKey && hasRemoveKey && numKeys === 2) || (hasAddKey && numKeys === 1) || (hasRemoveKey && numKeys === 1);
 }
 
 function getPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]):NodeSet {

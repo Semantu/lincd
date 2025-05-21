@@ -206,3 +206,33 @@ export abstract class QueryFactory
     return null;
   }
 }
+
+
+export function isSetModificationValue(value: any): value is SetModificationValue {
+  if(!(typeof value === 'object')) return false;
+
+  let hasAddKey  = value.$add;
+  let hasRemoveKey = value.$remove;
+  let numKeys = Object.keys(value).length;
+  //has no other keys
+  return (hasAddKey && hasRemoveKey && numKeys === 2) || (hasAddKey && numKeys === 1) || (hasRemoveKey && numKeys === 1);
+}
+
+/**
+ * Checks if the new count of values for a property is within the min and max count of the property shape.
+ * Throws an error if the count is not within the range.
+ * @param propShape
+ * @param numValues
+ */
+export function checkNewCount(propShape: PropertyShape, numValues: number) {
+  if(propShape.maxCount) {
+    if(numValues > propShape.maxCount) {
+      throw new Error(`Too many values for property: ${propShape.label}. Max count is: ${propShape.maxCount}, updated count would be ${numValues}`);
+    }
+  }
+  if(propShape.minCount) {
+    if(numValues < propShape.minCount) {
+      throw new Error(`Too few values for property: ${propShape.label}. Min count is: ${propShape.minCount}, updated count would be ${numValues}`);
+    }
+  }
+}

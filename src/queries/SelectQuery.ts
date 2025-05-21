@@ -213,7 +213,7 @@ export type NodeResultMap = CoreMap<string, QResult<any, any>>;
 
 export type QResult<ShapeType extends Shape, Object = {}> = Object & {
   id: string;
-  shape: ShapeType;
+  shape?: ShapeType;
 };
 
 export type QueryProps<Q extends SelectQueryFactory<any>> =
