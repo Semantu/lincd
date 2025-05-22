@@ -780,6 +780,9 @@ function filterResults(
     return evaluate(subject, where as WhereEvaluationPath)
       ? subject
       : undefined;
+  } else if(typeof subject === 'undefined') {
+    //this can happen when comparing literals, and there is no value
+    return undefined;
   } else {
     throw Error('Unknown subject type: ' + subject);
   }

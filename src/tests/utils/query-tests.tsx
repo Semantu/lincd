@@ -425,7 +425,22 @@ export const runQueryTests = () => {
       expect(Array.isArray(hasBestFriend)).toBe(true);
       expect(hasBestFriend.length).toBe(1);
       expect(hasBestFriend[0].id).toBe(p2.uri);
-    })
+    });
+
+    test ('where on literal',async() => {
+      const hobbies = await Person.select((p) => {
+        return p.hobby.where(h => h.equals(p2.hobby))
+      });
+      expect(Array.isArray(hobbies)).toBe(true);
+      expect(hobbies.length).toBe(4);
+      let p1Result = hobbies.find(h => h.id === p1.uri);
+      let p2Result = hobbies.find(h => h.id === p2.uri);
+      expect(p1Result).toBeDefined();
+      expect(p2Result).toBeDefined();
+      expect(p1Result.hobby).toBeUndefined();
+      expect(p2Result.hobby).toBe(p2.hobby);
+    });
+
     test('where and',async () => {
       //we select the friends of all persons, but only those friends whose name is moa
       //this will return an array, where each entry represents the results for a single person.
@@ -581,7 +596,7 @@ export const runQueryTests = () => {
       expect(friendCalledJinxAndNameIsSemmy[0].id).toBe(p1.uri);
 
       // select people that have a friend called Jinx, BUT ONLY SELECT THEIR NAME if their name is "Semmy"
-      //so we should get p1 and p2, but only the name of p1
+      //so we should get p1 and p2 (the outher .where filters 4 down to 2), but only the name of p1 should be defined
       let friendCalledJinxAndNameIsSemmy2 = await Person.select((p) => {
         let res = p.name.where((n) => {
           return n.equals('Semmy');
