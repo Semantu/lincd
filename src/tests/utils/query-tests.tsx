@@ -184,6 +184,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(typeof names[0] === 'object').toBe(true);
       expect(names[0].hasOwnProperty('name')).toBe(true);
       expect(names[0].name).toBe('Semmy');
+      expect(names[0].id).toBe(p1.uri);
     });
 
     test('can select an object property of all instances',async () => {
@@ -2129,6 +2130,34 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(res.id).toBe(p3.uri);
       expect(Array.isArray(res.friends)).toBe(true);
       expect(res.friends.length).toBe(0);
+    });
+    test('update query 10 - create new nested object with predefined ID',async () => {
+      // First, make sure p3 has some friends
+      const updateRes = await Person.update(p3,{
+        bestFriend: {
+          id: NamedNode.TEMP_URI_BASE + 'p3-best-friend',
+          name: 'Bestie',
+        }
+      });
+      expect (updateRes.id).toBe(p3.uri);
+      expect (updateRes.bestFriend.id).toBe(NamedNode.TEMP_URI_BASE + 'p3-best-friend');
+      expect (updateRes.bestFriend.name).toBe('Bestie');
+
+      //double check it worked
+      let res1 = await Person.select(p3,p => {
+        return p.bestFriend.name;
+      });
+      expect(res1.bestFriend).toBeDefined();
+      expect(res1.bestFriend.id).toBe(NamedNode.TEMP_URI_BASE + 'p3-best-friend');
+      expect(res1.bestFriend.name).toBe('Bestie');
+
+      const res = await Person.update(p3,{
+        bestFriend: undefined,
+      });
+
+      expect(res.id).toBe(p3.uri);
+      expect(res.bestFriend).toBeUndefined();
+
     });
   });
 };

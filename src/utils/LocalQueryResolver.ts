@@ -374,7 +374,7 @@ function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|
 }>
 {
   //value is expected to be an array of fields, or an object with an id for a direct node reference
-  if ((value as NodeReferenceValue).id)
+  if (isNodeReference(value))
   {
     return Promise.resolve(convertNodeReference(propShape,value as NodeReferenceValue));
   }
@@ -382,6 +382,11 @@ function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|
   {
     return convertNodeDescription(propShape,value as NodeDescriptionValue,createQuery);
   }
+}
+function isNodeReference(value: NodeReferenceValue|NodeDescriptionValue): value is NodeReferenceValue {
+  //check if the value is an object with an id field
+  //and check if there is only 1 key in the object
+  return typeof value === 'object' && value !== null && 'id' in value && Object.keys(value).length === 1;
 }
 function convertNodeReferenceOrId(propShape: PropertyShape, value: NodeReferenceValue,suffixKey?:string):{value:NamedNode,plainValue:any} {
   if(typeof value === 'string') {
@@ -410,11 +415,9 @@ async function convertNodeDescription(propShape: PropertyShape, value: NodeDescr
   if(!value.shape || !value.fields) {
     throw new Error('Expected a node description for property: ' + propShape?.label);
   }
-  //TODO: check how we convert an id field,
-  //if the array of fields contains an id, then we know which node is referred to
-  //and it should have no further fields
 
-  let node = NamedNode.create();
+  //use the provided id as URI or create a new node if not defined
+  let node = value.id ? NamedNode.getOrCreate(value.id) : NamedNode.create();
   let plainResults = await applyFieldUpdates(value.fields,node,createQuery);
 
   let valueShape = propShape?.valueShape || value.shape;

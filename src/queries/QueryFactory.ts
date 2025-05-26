@@ -192,6 +192,11 @@ export type SinglePropertyUpdateValue =
 export type NodeDescriptionValue = {
   shape: NodeShape
   fields: UpdateNodePropertyValue[]
+  /**
+   * The id of the node to be created.
+   * Optional, if not provided a new id will be generated.
+   */
+  id?:string
 };
 export type UpdateNodePropertyValue = {
   prop: PropertyShape,

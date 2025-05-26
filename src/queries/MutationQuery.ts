@@ -20,8 +20,12 @@ export class MutationQueryFactory extends QueryFactory
 
   protected convertUpdateObject(obj,shape: NodeShape)
   {
-    if (typeof obj === 'object' && !(obj instanceof Date))
+    if (typeof obj === 'object' && !(obj instanceof Date) && obj !== null)
     {
+      if ('id' in obj)
+      {
+        throw new Error('You cannot use id in the top level of an update object');
+      }
       return this.convertNodeDescription(obj,shape);
     }
     else if (typeof obj === 'function')
@@ -103,12 +107,16 @@ export class MutationQueryFactory extends QueryFactory
 
   protected convertNodeDescription(obj: Object,shape: NodeShape): NodeDescriptionValue
   {
-    if (obj && 'id' in obj)
-    {
-      throw new Error('You cannot use id in the top level of an update object');
-    }
     const props = shape.getPropertyShapes(true);
     const fields: UpdateNodePropertyValue[] = [];
+    let id;
+    if (obj && 'id' in obj)
+    {
+      //if the object has an id, then we should use it in the result
+      id = obj.id.toString();
+      //but we should not include it in the fields
+      delete obj.id;
+    }
     for (var key in obj)
     {
       let propShape = props.find(p => p.label === key);
@@ -121,10 +129,16 @@ export class MutationQueryFactory extends QueryFactory
         fields.push(this.createNodePropertyValue(obj[key],propShape));
       }
     }
-    return {
+    const res:NodeDescriptionValue = {
       fields,
       shape,
     };
+    if (id)
+    {
+      res.id = id;
+    }
+
+    return res;
   }
 
   protected createNodePropertyValue(value,propShape: PropertyShape): UpdateNodePropertyValue
@@ -238,8 +252,9 @@ export class MutationQueryFactory extends QueryFactory
 
   protected isNodeReference(obj): obj is NodeReferenceValue
   {
-    //check if the object has an id property
-    return obj && 'id' in obj;
+    //check if obj is an object with an id property
+    //and id is the only property
+    return (typeof obj === 'object' && obj !== null && 'id' in obj && Object.keys(obj).length === 1);
   }
 
   protected convertNodeReferences(input: NodeId[]|NodeId): NodeReferenceValue[]
