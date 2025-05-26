@@ -103,7 +103,7 @@ export class MutationQueryFactory extends QueryFactory
 
   protected convertNodeDescription(obj: Object,shape: NodeShape): NodeDescriptionValue
   {
-    if ('id' in obj)
+    if (obj && 'id' in obj)
     {
       throw new Error('You cannot use id in the top level of an update object');
     }
@@ -156,7 +156,16 @@ export class MutationQueryFactory extends QueryFactory
         return this.convertUpdateValue(o,propShape,false);
       }) as SinglePropertyUpdateValue[];
     }
-    if (typeof value === 'object')
+    else if (typeof value === 'undefined')
+    {
+      return value;
+    }
+    else if (value === null)
+    {
+      //unsetting a value with null is also possible. But we pass it as undefined in the query object
+      return undefined;
+    }
+    else if (typeof value === 'object')
     {
       if (this.isNodeReference(value))
       {
@@ -224,20 +233,13 @@ export class MutationQueryFactory extends QueryFactory
 
       }
     }
-    else if (typeof value === 'undefined')
-    {
-      return value;
-    }
-    else if (value === null)
-    {
-      throw new Error('Value cannot be null. If you want to unset a value, use undefined');
-    }
     throw new Error(`Unsupported update value type: ${typeof value}`);
   }
 
   protected isNodeReference(obj): obj is NodeReferenceValue
   {
-    return 'id' in obj;
+    //check if the object has an id property
+    return obj && 'id' in obj;
   }
 
   protected convertNodeReferences(input: NodeId[]|NodeId): NodeReferenceValue[]

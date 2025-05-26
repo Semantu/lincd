@@ -150,9 +150,14 @@ export const testPersons = [p1,p2,p3,p4];
 export const testProps = {name,nickName,bestFriend,hobby,hasFriend,birthDate};
 export const testTypes = {person:personClass};
 
-export const runQueryTests = () => {
+/**
+ *
+ * @param startPromise if provided it will be awaited before running the tests
+ */
+export const runQueryTests = (startPromise=Promise.resolve()) => {
   describe('query tests',() => {
     test('can select a literal property of all instances',async () => {
+      await startPromise;
       //  x:LinkedQuery<Person, QueryString<Person, "name">>
       let names = await Person.select((p) => {
         let res = p.name;
@@ -1913,7 +1918,32 @@ export const runQueryTests = () => {
       expect(qRes2).toBeDefined();
       expect(qRes2.hobby).toEqual(originalHobby);
     });
+    test('update query 3B - unset a single value property with null',async () => {
+      const originalHobby = p1.hobby;
 
+      const res = await Person.update(p1,{
+        hobby: null,
+      });
+
+      // Check result object
+      expect(res.id).toBeDefined();
+      expect(res.id).toEqual(p1.uri);
+      expect(res.hobby).toBeUndefined();
+
+      // Check database
+      let qRes = await Person.select(p1,p => p.hobby);
+      // .where((p) => p.uri.equals(p1.uri));
+      expect(qRes).toBeDefined();
+      expect(qRes.hobby).toBeNull();
+
+      // Restore original value
+      await Person.update(p1,{hobby: originalHobby});
+
+      let qRes2 = await Person.select(p1,p => p.hobby);
+      // .where((p) => p.uri.equals(p1.uri));
+      expect(qRes2).toBeDefined();
+      expect(qRes2.hobby).toEqual(originalHobby);
+    });
     test('update query 4 - overwrite a nested object argument',async () => {
 
       let tp = Person.getFromURI(NamedNode.TEMP_URI_BASE + 'p5-test-person');
