@@ -18,11 +18,11 @@ export type NodeId = { id: string } | string;
 export class MutationQueryFactory extends QueryFactory
 {
 
-  protected convertUpdateObject(obj,shape: NodeShape)
+  protected convertUpdateObject(obj,shape: NodeShape,allowTopLevelId: boolean = false): NodeDescriptionValue
   {
     if (typeof obj === 'object' && !(obj instanceof Date) && obj !== null)
     {
-      if ('id' in obj)
+      if (!allowTopLevelId && 'id' in obj)
       {
         throw new Error('You cannot use id in the top level of an update object');
       }

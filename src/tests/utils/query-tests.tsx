@@ -1813,6 +1813,36 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(res.friends.some(f => f.name === 'Brand New Friend')).toBe(true);
       expect(res.friends.some(f => f.id === p1.uri)).toBe(true);
     });
+    test('create query 3 - create a new person with a fixed ID',async () => {
+        const fixedId = NamedNode.TEMP_URI_BASE + 'p6-test-person';
+        const fixedId2 = NamedNode.TEMP_URI_BASE + 'p6-test-person-friend';
+        const res = await Person.create({
+            id: fixedId,
+            name: 'Test Create Fixed ID',
+            hobby: 'Swimming',
+          bestFriend:{
+              id:fixedId2,
+                name: 'Test Create Fixed ID Friend',
+          }
+        });
+
+        expect(res.id).toBeDefined();
+        expect(res.id).toBe(fixedId);
+        expect(res.name).toBe('Test Create Fixed ID');
+        expect(res.hobby).toBe('Swimming');
+
+        const qRes = await Person.select(p => [p.name,p.hobby,p.bestFriend.name]).where(p => p.equals({id:fixedId}));
+        expect(qRes[0].id).toBe(fixedId);
+        expect(qRes[0].name).toBe('Test Create Fixed ID');
+        expect(qRes[0].hobby).toBe('Swimming');
+        expect(qRes[0].bestFriend).toBeDefined();
+        expect(qRes[0].bestFriend.name).toBe('Test Create Fixed ID Friend');
+        expect(qRes[0].bestFriend.id).toBe(fixedId2);
+
+        //Clean up the created node
+        await Person.delete(fixedId);
+        await Person.delete(fixedId2);
+    })
 
     test('delete query 1 - delete newly created node',async () => {
       const created = await Person.create({

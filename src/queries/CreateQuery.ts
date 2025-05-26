@@ -22,7 +22,7 @@ export class CreateQueryFactory<
   constructor(public shapeClass: typeof Shape,updateObjectOrFn:U)
   {
     super();
-    this.description = this.convertUpdateObject(updateObjectOrFn,this.shapeClass.shape);
+    this.description = this.convertUpdateObject(updateObjectOrFn,this.shapeClass.shape,true);
   }
   getQueryObject():CreateQuery<AddId<U,true>> {
     return {
