@@ -1817,11 +1817,11 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         const fixedId = NamedNode.TEMP_URI_BASE + 'p6-test-person';
         const fixedId2 = NamedNode.TEMP_URI_BASE + 'p6-test-person-friend';
         const res = await Person.create({
-          id: fixedId,
+          __id: fixedId,
           name: 'Test Create Fixed ID',
           hobby: 'Swimming',
           bestFriend:{
-            id:fixedId2,
+            __id:fixedId2,
             name: 'Test Create Fixed ID Friend',
           }
         });
@@ -2165,7 +2165,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       // First, make sure p3 has some friends
       const updateRes = await Person.update(p3,{
         bestFriend: {
-          id: NamedNode.TEMP_URI_BASE + 'p3-best-friend',
+          __id: NamedNode.TEMP_URI_BASE + 'p3-best-friend',
           name: 'Bestie',
         }
       });
