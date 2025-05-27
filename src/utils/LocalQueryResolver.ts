@@ -385,8 +385,12 @@ function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|
 }
 function isNodeReference(value: NodeReferenceValue|NodeDescriptionValue): value is NodeReferenceValue {
   //check if the value is an object with an id field
+  //NOTE: all objects with an id key are considered node references
+  //and all other properties are ignored
+  //to DEFINE the ID of a new node, the user should use __id as a key in the object
+  return typeof value === 'object' && value !== null && 'id' in value;
+  // && Object.keys(value).length === 1;
   //and check if there is only 1 key in the object
-  return typeof value === 'object' && value !== null && 'id' in value && Object.keys(value).length === 1;
 }
 function convertNodeReferenceOrId(propShape: PropertyShape, value: NodeReferenceValue,suffixKey?:string):{value:NamedNode,plainValue:any} {
   if(typeof value === 'string') {
@@ -417,7 +421,7 @@ async function convertNodeDescription(propShape: PropertyShape, value: NodeDescr
   }
 
   //use the provided id as URI or create a new node if not defined
-  let node = value.id ? NamedNode.getOrCreate(value.id) : NamedNode.create();
+  let node = value.__id ? NamedNode.getOrCreate(value.__id) : NamedNode.create();
   let plainResults = await applyFieldUpdates(value.fields,node,createQuery);
 
   let valueShape = propShape?.valueShape || value.shape;
@@ -468,6 +472,9 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
       } else {
         throw new Error('Expected boolean value for property: ' + propShape.label);
       }
+    }
+    else if(datatype.equals(xsd.string)) {
+      res = new Literal(value.toString(),xsd.string);
     }
     else if(datatype.equals(xsd.date)) {
       //check if value is a date
@@ -558,7 +565,7 @@ export function resolveLocal<ResultType>(
     //when a query subject is given as an object with an id, probably from a previous query result
     resultObjects = {
       id: query.subject.id,
-      shape: query.subject.shape || query.shape,
+      // shape: query.shape,
     }
   } else {
     //TODO: review, this happens when an array is given?
@@ -690,13 +697,16 @@ function resolveQueryPathEndResults(
   //start with the local instance as the subject
   let result: ShapeSet | Shape[] | Shape | boolean[] = subject;
   if (Array.isArray(queryPath)) {
-    queryPath.forEach((queryStep) => {
+    for(let queryStep of queryPath) {
       //then resolve each of the query steps and use the result as the new subject for the next step
       result = resolveQueryStepEndResults(
         result as ShapeSet | Shape,
         queryStep,
       );
-    });
+      if(!result) {
+        break;
+      }
+    }
   } else {
     result = (subject as ShapeSet).map((singleShape) => {
       return evaluate(singleShape, queryPath as WherePath);
@@ -990,7 +1000,7 @@ function resolveQuerySteps(
 function shapeToResultObject(subject: Shape) {
   return {
     id: subject.uri,
-    shape: subject,
+    // shape: subject,
   };
 }
 

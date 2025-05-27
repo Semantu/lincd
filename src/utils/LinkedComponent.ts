@@ -480,7 +480,7 @@ export function createLinkedSetComponentFn(
         let sourceIsValidQResult =
           Array.isArray(props.of) &&
           props.of.length > 0 &&
-          (props.of[0] as QResult<any>)?.shape instanceof Shape &&
+          // (props.of[0] as QResult<any>)?.shape instanceof Shape &&
           typeof (props.of[0] as QResult<any>)?.id === 'string' &&
           actualQuery.isValidSetResult(props.of as QResult<any>[]);
 
@@ -702,9 +702,9 @@ function getLinkedSetComponentProps<ShapeType extends Shape, P>(
     !(props.of instanceof NodeSet) &&
     !(props.of instanceof ShapeSet) &&
     !Array.isArray(props.of) &&
-    (props.of as QResult<any>[]).every(
-      (qResult) => qResult.shape instanceof Shape,
-    ) &&
+    // (props.of as QResult<any>[]).every(
+    //   (qResult) => qResult.shape instanceof Shape,
+    // ) &&
     !props.of['then']
   ) {
     throw Error(
@@ -727,7 +727,7 @@ function getLinkedSetComponentProps<ShapeType extends Shape, P>(
     //QResult[]
     sources = new ShapeSet(
       props.of.map((qResult) => {
-        return qResult.shape;
+        return shapeClass.getFromURI(qResult.id);
       }),
     );
   }
@@ -757,8 +757,8 @@ export function getSourceFromInputProps(props, shapeClass) {
 }
 
 function isValidQResult(of,query) {
-  return (of as QResult<any>)?.shape instanceof Shape &&
-  typeof (of as QResult<any>)?.id === 'string' &&
+  // return (of as QResult<any>)?.shape instanceof Shape &&
+  return typeof (of as QResult<any>)?.id === 'string' &&
   query.isValidResult(of as QResult<any>);
 
 

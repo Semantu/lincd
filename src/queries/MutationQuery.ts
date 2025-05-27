@@ -110,12 +110,12 @@ export class MutationQueryFactory extends QueryFactory
     const props = shape.getPropertyShapes(true);
     const fields: UpdateNodePropertyValue[] = [];
     let id;
-    if (obj && 'id' in obj)
+    if (obj && '__id' in obj)
     {
-      //if the object has an id, then we should use it in the result
-      id = obj.id.toString();
+      //if the object has a __id key, then we should use that in the result
+      id = obj.__id.toString();
       //but we should not include it in the fields
-      delete obj.id;
+      delete obj.__id;
     }
     for (var key in obj)
     {
@@ -135,7 +135,7 @@ export class MutationQueryFactory extends QueryFactory
     };
     if (id)
     {
-      res.id = id;
+      res.__id = id;
     }
 
     return res;
@@ -253,8 +253,9 @@ export class MutationQueryFactory extends QueryFactory
   protected isNodeReference(obj): obj is NodeReferenceValue
   {
     //check if obj is an object with an id property
+    //if yes, all other properties are ignored
+    return (typeof obj === 'object' && obj !== null && 'id' in obj);// && Object.keys(obj).length === 1);
     //and id is the only property
-    return (typeof obj === 'object' && obj !== null && 'id' in obj && Object.keys(obj).length === 1);
   }
 
   protected convertNodeReferences(input: NodeId[]|NodeId): NodeReferenceValue[]

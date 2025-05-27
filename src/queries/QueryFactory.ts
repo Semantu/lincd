@@ -196,7 +196,7 @@ export type NodeDescriptionValue = {
    * The id of the node to be created.
    * Optional, if not provided a new id will be generated.
    */
-  id?:string
+  __id?:string
 };
 export type UpdateNodePropertyValue = {
   prop: PropertyShape,

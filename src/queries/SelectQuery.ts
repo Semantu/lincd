@@ -213,7 +213,7 @@ export type NodeResultMap = CoreMap<string, QResult<any, any>>;
 
 export type QResult<ShapeType extends Shape, Object = {}> = Object & {
   id: string;
-  shape?: ShapeType;
+  // shape?: ShapeType;
 };
 
 export type QueryProps<Q extends SelectQueryFactory<any>> =
@@ -1663,7 +1663,9 @@ export class SetSize<Source = null> extends QueryNumber<Source> {
     let countable = this.subject.getPropertyStep();
     let self: SizeStep = {
       count: [countable],
-      label: this.label || this.subject.property.label,
+      label: this.label || this.subject.property.label,//the default is property name + 'Size', i.e., friendsSize
+      //numFriends
+      // label: this.label || 'num'+this.subject.property.label[0].toUpperCase()+this.subject.property.label.slice(1),//the default is property name + 'Size', i.e., friendsSize
     };
 
     //in that case we request the path of the subject of the subject (the parent of the parent)

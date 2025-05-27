@@ -1296,11 +1296,11 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
       const Component2 = linkedComponent(
         query,
-        ({friends,shape,id,source}) => {
+        ({friends,id,source}) => {
           // unknown extends LinkedQuery<any, infer Response, infer Source> ? GetNestedQueryResultType<Response, Source, null> : (unknown extends Array<infer Type> ? UnionToIntersection<QueryResponseToResultType<Type>> : (unknown extends Evaluation ? boolean : (unknown extends Object ? QResult<null, ObjectToPlainResult<unknown>> : unknown)))
           let s = source;
           let f = friends;
-          let shp = shape;
+          // let shp = shape;
           let i = id;
 
           return <div>{friends[0].name}</div>;
@@ -1353,7 +1353,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         typeof query,
         //then you can add the custom props interface as the second type param
         {custom1: boolean}
-      >(query,({friends,shape,id,custom1,source}) => {
+      >(query,({friends,id,custom1,source}) => {
         // unknown extends LinkedQuery<any, infer Response, infer Source> ? GetNestedQueryResultType<Response, Source, null> : (unknown extends Array<infer Type> ? UnionToIntersection<QueryResponseToResultType<Type>> : (unknown extends Evaluation ? boolean : (unknown extends Object ? QResult<null, ObjectToPlainResult<unknown>> : unknown)))
         friends.length;
         friends[0].name;
@@ -1817,12 +1817,12 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         const fixedId = NamedNode.TEMP_URI_BASE + 'p6-test-person';
         const fixedId2 = NamedNode.TEMP_URI_BASE + 'p6-test-person-friend';
         const res = await Person.create({
-            id: fixedId,
-            name: 'Test Create Fixed ID',
-            hobby: 'Swimming',
+          id: fixedId,
+          name: 'Test Create Fixed ID',
+          hobby: 'Swimming',
           bestFriend:{
-              id:fixedId2,
-                name: 'Test Create Fixed ID Friend',
+            id:fixedId2,
+            name: 'Test Create Fixed ID Friend',
           }
         });
 
