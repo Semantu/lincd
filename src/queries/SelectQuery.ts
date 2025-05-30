@@ -190,7 +190,7 @@ export type ToQueryPrimitive<
     : T extends Date
       ? QueryDate<Source, Property>
       : T extends boolean
-        ? QueryBoolean
+        ? QueryBoolean<Source, Property>
         : never;
 
 export type WherePath = WhereEvaluationPath | WhereAndOr;
@@ -290,67 +290,52 @@ export type GetQueryObjectResultType<
   PrimitiveArray = false,
   HasName = false,
 > =
-  QV extends QueryString<infer Source, infer Property>
-    ? CreateQResult<
-        Source,
-        PrimitiveArray extends true ? string[] : string,
-        Property,
-        {},
-        HasName
-      >
-    : //note: count needs to be above number
+      //note: count needs to be above primitive
       QV extends SetSize<infer Source>
       ? SetSizeToQueryResult<Source, HasName>
-      : QV extends QueryNumber<infer Source, infer Property>
+      : QV extends QueryPrimitive<infer Primitive,infer Source, infer Property>
         ? CreateQResult<
             Source,
-            PrimitiveArray extends true ? number[] : number,
+            PrimitiveArray extends true ? Primitive[] : Primitive,
             Property,
             {},
             HasName
           >
-        : QV extends QueryDate<infer Source, infer Property>
-          ? CreateQResult<
-              Source,
-              PrimitiveArray extends true ? Date[] : Date,
-              Property,
-              {},
-              HasName
-            >
-          : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
-            ? CreateQResult<Source, ShapeType, Property, SubProperties, HasName>
-            : //   CreateQResult<Source, ShapeType, Property>
-              QV extends BoundComponent<
-                  infer Source,
+        : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
+          ? CreateQResult<Source, ShapeType, Property, SubProperties, HasName>
+          : //   CreateQResult<Source, ShapeType, Property>
+            QV extends BoundComponent<
+                infer Source,
+                infer ShapeType,
+                infer ComponentResultType
+              >
+            ? // ? ComponentResultType
+              GetQueryObjectResultType<
+                Source,
+                SubProperties & ComponentResultType,
+                PrimitiveArray,
+                HasName
+              >
+            : QV extends QueryShapeSet<
                   infer ShapeType,
-                  infer ComponentResultType
+                  infer Source,
+                  infer Property
                 >
-              ? // ? ComponentResultType
-                GetQueryObjectResultType<
+              ? CreateShapeSetQResult<
+                  ShapeType,
                   Source,
-                  SubProperties & ComponentResultType,
-                  PrimitiveArray,
+                  Property,
+                  SubProperties,
                   HasName
                 >
-              : QV extends QueryShapeSet<
-                    infer ShapeType,
-                    infer Source,
-                    infer Property
+              : QV extends QueryPrimitiveSet<
+                    infer QPrim extends QueryPrimitive<any>
                   >
-                ? CreateShapeSetQResult<
-                    ShapeType,
-                    Source,
-                    Property,
-                    SubProperties,
-                    HasName
-                  >
-                : QV extends QueryPrimitiveSet<
-                      infer QPrim extends QueryPrimitive<any>
-                    >
-                  ? GetQueryObjectResultType<QPrim, null, null, true>
-                  : QV extends Array<infer Type>
-                    ? UnionToIntersection<QueryResponseToResultType<Type>>
-                    : never;
+                ? GetQueryObjectResultType<QPrim, null, null, true>
+                : QV extends Array<infer Type>
+                  ? UnionToIntersection<QueryResponseToResultType<Type>>
+                  : QV extends QueryBoolean< any,any> ? 'bool'
+                  : never;
 
 //for now, we don't pass result types of nested queries of bound components
 //instead we just pass on the result as it would have been if the query element was not extended with ".preLoadFor()"
@@ -477,10 +462,15 @@ export type CreateQResult<
           {},
           HasName
         >
-      : //this needs to be value amongst other things for .select({customKeys}) and ObjectToPlainResult
+      : //Source is not a QueryShape or QueryShape set (currently sometimes used by end QueryPrimitives) ..
+        // this needs to convert to value (amongst other things) for .select({customKeys}) and ObjectToPlainResult
         Value extends Shape
           ? QResult<Value, SubProperties>
-          : Value;
+          // : Value extends boolean ? 'boolean' : Value;
+          : NormaliseBoolean<Value>;
+
+type NormaliseBoolean<T> = [T] extends [boolean] ? boolean : T;
+
 
 export type CreateShapeSetQResult<
   ShapeType = undefined,
@@ -621,6 +611,8 @@ export class QueryBuilderObject<
       return new QueryString(originalValue, property, subject);
     } else if (typeof originalValue === 'number') {
       return new QueryNumber(originalValue, property, subject);
+    } else if (typeof originalValue === 'boolean') {
+      return new QueryBoolean(originalValue, property, subject);
     } else if (originalValue instanceof Date) {
       return new QueryDate(originalValue, property, subject);
     } else if (Array.isArray(originalValue)) {
@@ -1154,14 +1146,14 @@ export class Evaluation {
 
 class SetEvaluation extends Evaluation {}
 
-class QueryBoolean extends QueryBuilderObject<boolean> {
-  constructor(
-    property?: PropertyShape,
-    subject?: QueryShape<any> | QueryShapeSet<any>,
-  ) {
-    super(property, subject);
-  }
-}
+// class QueryBoolean extends QueryBuilderObject<boolean> {
+//   constructor(
+//     property?: PropertyShape,
+//     subject?: QueryShape<any> | QueryShapeSet<any>,
+//   ) {
+//     super(property, subject);
+//   }
+// }
 
 /**
  * The class that is used for when JS primitives are converted to a QueryValue
@@ -1193,6 +1185,7 @@ export abstract class QueryPrimitive<
 }
 
 //@TODO: QueryString, QueryNumber, QueryBoolean, QueryDate can all be replaced with QueryPrimitive, and we can infer the original type, no need for these extra classes
+//UPDATE some of this has started. Query response to result conversion is using QueryPrimitive only
 export class QueryString<
   Source = any,
   Property extends string | number | symbol = '',
@@ -1207,6 +1200,11 @@ export class QueryNumber<
   Source = any,
   Property extends string | number | symbol = any,
 > extends QueryPrimitive<number, Source, Property> {}
+
+export class QueryBoolean<
+  Source = any,
+  Property extends string | number | symbol = any,
+> extends QueryPrimitive<boolean, Source, Property> {}
 
 export class QueryPrimitiveSet<
   QPrimitive extends QueryPrimitive<any> = null,
@@ -1348,6 +1346,7 @@ export class SelectQueryFactory<
 
   setSubject(subject) {
     this.subject = subject;
+    return this;
   }
 
   // applyTo(subject) {
@@ -1490,6 +1489,16 @@ export class SelectQueryFactory<
 
   clone() {
     return new SelectQueryFactory(this.shape, this.queryBuildFn, this.subject);
+  }
+
+  /**
+   * Makes a clone of the query template, sets the subject and executes the query
+   * @param subject
+   */
+  execFor(subject) {
+    //TODO: Differentiate between the result of Shape.query and the internal query in Shape.select?
+    // so that Shape.query can never be executed. Its just a template
+    return this.clone().setSubject(subject).exec();
   }
 
   patchResultPromise<ResultType>(

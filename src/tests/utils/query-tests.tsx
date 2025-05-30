@@ -18,6 +18,7 @@ let bestFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'bestFriend');
 let hobby = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hobby');
 let hasFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasFriend');
 let birthDate = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'birthDate');
+let isRealPerson = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'isRealPerson');
 let pluralTestProp = NamedNode.getOrCreate(
   NamedNode.TEMP_URI_BASE + 'pluralTestProp',
 );
@@ -102,6 +103,18 @@ export class Person extends Shape
   {
     this.overwrite(birthDate,fromNativeDate(nativeDate));
   }
+
+  @literalProperty({
+    path:isRealPerson,
+    datatype: xsd.boolean,
+    maxLength:1
+  })
+  get isRealPerson(): boolean {
+    return this.hasProperty(isRealPerson) ? this.getValue(isRealPerson) === 'true' : undefined;
+  }
+  set isRealPerson(val: boolean) {
+    this.overwrite(isRealPerson, new Literal(val ? 'true' : 'false', xsd.boolean));
+  }
 }
 
 function fromNativeDate(nativeDate: Date)
@@ -145,6 +158,10 @@ p1.pluralTestProp.add(p1);
 p1.pluralTestProp.add(p2);
 p1.pluralTestProp.add(p3);
 p1.pluralTestProp.add(p4);
+
+p1.isRealPerson = true;
+p2.isRealPerson = false;
+p3.isRealPerson = true;
 
 export const testPersons = [p1,p2,p3,p4];
 export const testProps = {name,nickName,bestFriend,hobby,hasFriend,birthDate};
@@ -239,6 +256,22 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(birthDates.length).toBe(4);
       expect(typeof firstResult.birthDate === 'object').toBe(true);
       expect(firstResult.birthDate.toString()).toBe(p1.birthDate.toString());
+    });
+
+    test('can select a boolean',async () => {
+        let isRealPersons = await Person.select((p) => {
+            return p.isRealPerson;
+        });
+
+        expect(Array.isArray(isRealPersons)).toBe(true);
+        expect(isRealPersons.length).toBe(4);
+        expect(isRealPersons.filter(p => p.isRealPerson !== null).length).toBe(3);
+        let p1Result = isRealPersons.find(p => p.id === p1.uri);
+        expect(p1Result.isRealPerson).toBe(true);
+        let p2Result = isRealPersons.find(p => p.id === p2.uri);
+        expect(p2Result.isRealPerson).toBe(false);
+        let p4Result = isRealPersons.find(p => p.id === p4.uri);
+        expect(p4Result.isRealPerson).toBeNull();
     });
 
     test('can select sub properties of a first property that returns a set',async () => {
@@ -1106,6 +1139,29 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
     // //TODO: selectOne() or select().one()
     // //TODO: selectWhere()
     // //TODO: selectWhereOne()
+
+    test('sub select all primitives',async () => {
+        //select all persons, but only select their name and hobby
+        //QResult<Person, {name:string,hobby:string}>[]
+        let bestFriendProps = await Person.select((p) => {
+          return p.bestFriend.select(f => [
+            f.name,
+            f.birthDate,
+            f.isRealPerson,
+            // f.friends.size().as('numFriends'),
+          ])
+        });
+
+        expect(Array.isArray(bestFriendProps)).toBe(true);
+        expect(bestFriendProps.length).toBe(4);
+        const p1Result = bestFriendProps.find(p => p.id === p2.uri);
+        const bestFriend = p1Result.bestFriend;
+        expect(p1Result.bestFriend.id === p3.uri).toBe(true);
+        expect(p1Result.bestFriend.name).toBe(p3.name);
+        expect(p1Result.bestFriend.birthDate).toBe(p3.birthDate);
+        expect(p1Result.bestFriend.isRealPerson).toBe(p3.isRealPerson);
+        // expect(p1Result.bestFriend.friends).toBe(p3.friends.size);
+    });
 
     test('custom result object - equals without where returns a boolean',async () => {
       let customResult = await Person.select((p) => {

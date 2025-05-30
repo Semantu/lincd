@@ -605,10 +605,7 @@ function resolveCustomObject(
   query: CustomQueryObject,
   resultObject: QResult<any, any>,
 ) {
-  // let customResult = shapeToResultObject(subject);
   for (let key of Object.getOwnPropertyNames(query as CustomQueryObject)) {
-    //wrong... we need to write the result to the resultObject
-    //can we find which key was written and take that and use the key?
     let result = resolveQueryPath(subject, query[key]);
     writeResultObject(resultObject,key,result);
   }

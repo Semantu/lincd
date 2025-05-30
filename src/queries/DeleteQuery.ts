@@ -14,7 +14,7 @@ export type DeleteResponse = {
   /**
    * The IDs of the items that were successfully deleted.
    */
-  deleted: string[];
+  deleted: NodeReferenceValue[];
   /**
    * The number of successfully deleted items.
    */
@@ -22,7 +22,7 @@ export type DeleteResponse = {
   /**
    * The IDs of the items that couldn't be deleted.
    */
-  failed?: string[];
+  failed?: NodeReferenceValue[];
   /**
    * A mapping of IDs to error messages for the items that couldn't be deleted.
    */
