@@ -345,7 +345,7 @@ export function createLinkedComponentFn(
                 });
               }
             }
-          }, [linkedProps.source?.node.uri]);
+          }, [linkedProps.source?.node?.uri]);
 
           //we can assume data is loaded if this is a bound component or if the isLoaded state has been set to true
           let dataIsLoaded =
