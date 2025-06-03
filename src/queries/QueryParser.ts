@@ -11,7 +11,7 @@ import { NodeId } from './MutationQuery.js';
 @staticImplements<IQueryParser>() /* this class implements this interface with static methods */
 export class QueryParser {
 
-  static selectQuery<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
+  static async selectQuery<ShapeType extends Shape,ResponseType,Source,ResultType = QueryResponseToResultType<
     GetQueryResponseType<SelectQueryFactory<ShapeType, ResponseType>>,
     ShapeType
   >[]>(
@@ -20,7 +20,7 @@ export class QueryParser {
   {
     try
     {
-      const queryObject = query.getQueryObject();
+      const queryObject = await query.getQueryObject();
       return LinkedStorage.selectQuery(queryObject);
     } catch (e) {
       return Promise.reject(e);

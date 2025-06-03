@@ -211,7 +211,7 @@ export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
 export type NodeResultMap = CoreMap<string, QResult<any, any>>;
 
-export type QResult<ShapeType extends Shape, Object = {}> = Object & {
+export type QResult<ShapeType extends Shape = Shape, Object = {}> = Object & {
   id: string;
   // shape?: ShapeType;
 };
@@ -1292,20 +1292,54 @@ export class SelectQueryFactory<
   private limit: number;
   private offset: number;
   private wherePath: WherePath;
+  private initPromise: {promise:Promise<any>,resolve,reject,complete?: boolean};
 
   constructor(
     public shape: ShapeType<S>,
     private queryBuildFn?: QueryBuildFn<S, ResponseType>,
     private subject?: S | ShapeSet<S>,
-  ) {
+  )
+  {
     super();
+
+    let promise,resolve,reject;
+    promise = new Promise((res,rej)=>{
+        resolve = res;
+        reject = rej;
+    });
+    this.initPromise = {promise, resolve, reject, complete:false};
+
+    //only continue to parse the query if the document is ready, and all shapes from initial bundles are loaded
+    if (
+      typeof document === 'undefined' ||
+      document.readyState !== 'loading'
+    ) {
+      this.init();
+    } else {
+      document.addEventListener('DOMContentLoaded', () => this.init());
+      setTimeout(() => {
+        if (!this.initPromise.complete) {
+          console.warn('⚠️ Forcing init after timeout');
+          this.init();
+        }
+      }, 3500);
+    }
+  }
+  private init() {
     let queryShape = this.getQueryShape();
 
-    if (queryBuildFn) {
+    if (this.queryBuildFn) {
       let queryResponse = this.queryBuildFn(queryShape as any, this);
       this.traceResponse = queryResponse;
     }
+    this.initPromise.resolve(this.traceResponse);
+    this.initPromise.complete = true;
   }
+  private initialized()
+  {
+    return this.initPromise.promise;
+  }
+
 
   /**
    * Returns the dummy shape instance who's properties can be accessed freely inside a queryBuildFn
@@ -1365,7 +1399,8 @@ export class SelectQueryFactory<
   /**
    * Turns the LinkedQuery into a SelectQuery, which is a plain JS object that can be serialized to JSON
    */
-  getQueryObject(): SelectQuery<S> {
+  async getQueryObject(): Promise<SelectQuery<S>> {
+    await this.initialized();
     try
     {
       let queryPaths = this.getQueryPaths();
@@ -1478,8 +1513,8 @@ export class SelectQueryFactory<
     });
   }
 
-  isValidResult(qResult: QResult<any>) {
-    let select = this.getQueryObject().select;
+  async isValidResult(qResult: QResult<any>) {
+    let select = (await this.getQueryObject()).select;
     if (Array.isArray(select)) {
       return this.isValidQueryPathsResult(qResult, select);
     } else if (typeof select === 'object') {

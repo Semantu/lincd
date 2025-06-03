@@ -206,7 +206,7 @@ export type NodeReferenceValue = { id: string };
 
 export abstract class QueryFactory
 {
-  getQueryObject(): LinkedQuery
+  getQueryObject(): LinkedQuery | Promise<LinkedQuery>
   {
     return null;
   }
