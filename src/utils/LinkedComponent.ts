@@ -24,7 +24,7 @@ import {getShapeClass, hasSuperClass} from '../utils/ShapeClass.js';
 
 type ProcessDataResultType<ShapeType extends Shape> = [
   typeof Shape,
-  SelectQuery<ShapeType>,
+  Promise<SelectQuery<ShapeType>>,
   SelectQueryFactory<ShapeType>,
 ];
 
@@ -220,6 +220,7 @@ export function createLinkedComponentFn(
       React.forwardRef<any, CustomProps & LinkedComponentInputProps<ShapeType>>(
         (props, ref) => {
           let [queryResult, setQueryResult] = useState<any>(undefined);
+          let [loadingData,setLoadingData] = useState<string>();
 
           //take the given props and add make sure 'of' is converted to 'source' (an instance of the shape)
           let linkedProps: any = getLinkedComponentProps<
@@ -232,13 +233,19 @@ export function createLinkedComponentFn(
           }
 
           const loadData = () => {
-            let requestQuery = (actualQuery as SelectQueryFactory<any>).clone();
-            requestQuery.setSubject(linkedProps.source);
+            if(!loadingData || loadingData !== linkedProps.source.node.uri) {
+              let requestQuery = (actualQuery as SelectQueryFactory<any>).clone();
+              requestQuery.setSubject(linkedProps.source);
 
-            Shape.queryParser.selectQuery(requestQuery).then((result) => {
-              //store the result to state, this also means we don't need to check cache again.
-              setQueryResult(result);
-            });
+              setLoadingData(linkedProps.source.node.uri);
+              Shape.queryParser.selectQuery(requestQuery).then((result) => {
+                //store the result to state, this also means we don't need to check cache again.
+                setQueryResult(result);
+                setLoadingData(null);
+              });
+            } else {
+              console.warn(`Already loading data for source ${loadingData}, ignoring request`);
+            }
           }
 
           //check if the given source is a QResult, and not just that, but also if its structure
@@ -323,27 +330,27 @@ export function createLinkedComponentFn(
 
             //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
             if (usingStorage && !sourceIsValidQResult) {
-              let cachedRequest = LinkedStorage.isLoaded(
-                linkedProps.source.node,
-                dataRequest,
-              );
+              // let cachedRequest = LinkedStorage.isLoaded(
+              //   linkedProps.source.node,
+              //   dataRequest,
+              // );
               //if these properties were requested before and have finished loading
-              if (cachedRequest === true) {
-                //then we can set state to loaded straight away
-                setQueryResult(true);
-              } else if (cachedRequest === false) {
+              // if (cachedRequest === true) {
+              //   //then we can set state to loaded straight away
+              //   setQueryResult(true);
+              // } else if (cachedRequest === false) {
                 //if the source/prop.of changed, and
                 //if we did not request all these properties before then we continue to load them all
                 loadData();
-              } else {
-                //if some requiredProperties are still being loaded
-                //cachedResult will be a promise (there is no other return type)
-                //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
-                //wait for that loading to be completed and then update the state
-                cachedRequest.then(() => {
-                  setQueryResult(true);
-                });
-              }
+              // } else {
+              //   //if some requiredProperties are still being loaded
+              //   //cachedResult will be a promise (there is no other return type)
+              //   //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
+              //   //wait for that loading to be completed and then update the state
+              //   cachedRequest.then(() => {
+              //     setQueryResult(true);
+              //   });
+              // }
             }
           }, [linkedProps.source?.node.uri]);
 
@@ -354,33 +361,33 @@ export function createLinkedComponentFn(
           //But for the first render, when the useEffect has not run yet,
           //and no this is not a bound component (so it's a top level linkedComponent),
           //then we still need to manually check cache to avoid a rendering a temporary load icon until useEffect has run (in the case the data is already loaded)
-          if (
-            typeof queryResult === 'undefined' &&
-            usingStorage &&
-            !sourceIsValidQResult
-          ) {
-            //only continue to render if the result is true (all required data loaded),
-            // if it's a promise we already deal with that in useEffect()
-            dataIsLoaded =
-              LinkedStorage.isLoaded(linkedProps.source.node, dataRequest) ===
-              true;
-          }
+          // if (
+          //   typeof queryResult === 'undefined' &&
+          //   usingStorage &&
+          //   !sourceIsValidQResult
+          // ) {
+          //   //only continue to render if the result is true (all required data loaded),
+          //   // if it's a promise we already deal with that in useEffect()
+          //   dataIsLoaded =
+          //     LinkedStorage.isLoaded(linkedProps.source.node, dataRequest) ===
+          //     true;
+          // }
 
           //if the data is loaded
           //TODO: remove check for typeof window, this is temporary solution to fix hydration errors
           // but really we should find a way to send the data to the frontend for initial page loads AND notify storage that that data is loaded
           // then this check can be turned off. We can possibly do this with RDFA (rdf in html), then we can probably parse the data from the html, whilst rendering it on the server in one go.
           if (dataIsLoaded && typeof window !== 'undefined') {
-            if (dataRequest) {
-              //TODO: find a way with the new LinkedQuery setup to send the data to the frontend for initial page loads AND then retreive that data here
-              // const dataResult = await resolveLinkedQuery(
-              //   requiredData as LinkedQuery<any>,
-              //   // linkedProps.source,
-              //   // dataRequest,
-              //   // pureDataRequest,
-              // );
-              // linkedProps = {...linkedProps, dataResult};
-            }
+            // if (dataRequest) {
+            //   //TODO: find a way with the new LinkedQuery setup to send the data to the frontend for initial page loads AND then retreive that data here
+            //   // const dataResult = await resolveLinkedQuery(
+            //   //   requiredData as LinkedQuery<any>,
+            //   //   // linkedProps.source,
+            //   //   // dataRequest,
+            //   //   // pureDataRequest,
+            //   // );
+            //   // linkedProps = {...linkedProps, dataResult};
+            // }
 
             // //render the original components with the original + generated properties
             return React.createElement(functionalComponent, linkedProps);
@@ -394,7 +401,7 @@ export function createLinkedComponentFn(
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
-    _wrappedComponent.query = dataRequest;
+    // _wrappedComponent.query = dataRequest;
 
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
@@ -609,7 +616,7 @@ export function createLinkedSetComponentFn(
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
-    _wrappedComponent.query = dataRequest;
+    // _wrappedComponent.query = dataRequest;
 
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
@@ -659,7 +666,7 @@ function processQuery<ShapeType extends Shape>(
   setComponent: boolean = false,
 ): ProcessDataResultType<ShapeType> {
   let shapeClass: typeof Shape;
-  let dataRequest: SelectQuery<ShapeType>;
+  let dataRequest: Promise<SelectQuery<ShapeType>>;
   let query: SelectQueryFactory<ShapeType>;
 
   //if a Shape class was given (the actual class that extends Shape)
