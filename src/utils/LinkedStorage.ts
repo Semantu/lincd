@@ -30,6 +30,7 @@ export abstract class LinkedStorage {
   };
   private static storedEvents: any;
   private static nodeToPropertyRequests: CoreMap<Node, CoreMap<NamedNode, true | Promise<any>>> = new CoreMap();
+  private static fullyLoadedNodes: CoreSet<Node> = new CoreSet();
   private static propShapeMap: Map<NamedNode, PropertyShape[]>;
 
   static init() {
@@ -539,7 +540,10 @@ export abstract class LinkedStorage {
     this.assignQuadsToGraph(quads);
 
     nodes.forEach((node) => {
+      //mark node as no longer temporary
       node.isTemporaryNode = false;
+      //but do mark it as fully loaded, because locally we must have set all the properties known so far
+      this.fullyLoadedNodes.add(node);
       node.isStoring = false;
     });
   }
@@ -817,7 +821,17 @@ export abstract class LinkedStorage {
     }
     return stillLoading ? Promise.all(stillLoading) : true;
   }
+  static setFullyLoaded(node: Node) {
+    this.fullyLoadedNodes.add(node);
+  }
   static isLoaded(node: Node, dataRequest: LinkedDataRequest): boolean | Promise<any> {
+    //temporary nodes are always local and fully known
+    if(node instanceof NamedNode && node.isTemporaryNode) {
+      return true;
+    }
+    if(this.fullyLoadedNodes.has(node)) {
+      return true;
+    }
     if (!this.nodeToPropertyRequests.has(node)) {
       return false;
     }
