@@ -535,7 +535,7 @@ export function resolveLocal<ResultType>(
       subject = query.subject as Shape;
     }
   } else {
-    subject = query.shape.getLocalInstances();
+    subject = query.shape.getLocalInstancesByType();
   }
   // let subject2 = query.subject ? query.subject : query.shape.getLocalInstancesByType();
   // console.log(ValidationReport.printForShapeInstances(query.shape));
