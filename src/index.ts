@@ -8,7 +8,6 @@ import * as Package from './utils/Package.js';
 import * as models from './models.js';
 import * as LinkedErrorLogging from './utils/LinkedErrorLogging.js';
 import * as LinkedFileStorage from './utils/LinkedFileStorage.js';
-import * as QueryParser from './queries/QueryParser.js';
 import * as LinkedStorage from './utils/LinkedStorage.js';
 import * as EventEmitter from './events/EventEmitter.js';
 import * as NodeURIMappings from './collections/NodeURIMappings.js';
@@ -30,7 +29,14 @@ import * as URI from './utils/URI.js';
 import * as Find from './utils/Find.js';
 import * as Order from './utils/Order.js';
 import * as NQuads from './utils/NQuads.js';
-import * as LinkedQuery from './queries/SelectQuery.js';
+import * as QueryContext from './queries/QueryContext.js';
+import * as SelectQuery from './queries/SelectQuery.js';
+import * as UpdateQuery from './queries/UpdateQuery.js';
+import * as MutationQuery from './queries/MutationQuery.js';
+import * as DeleteQuery from './queries/DeleteQuery.js';
+import * as CreateQuery from './queries/CreateQuery.js';
+import * as QueryParser from './queries/QueryParser.js';
+import * as QueryFactory from './queries/QueryFactory.js';
 import * as LinkedComponent from './utils/LinkedComponent.js';
 import * as LinkedComponentClass from './utils/LinkedComponentClass.js';
 import * as ForwardReasoning from './utils/ForwardReasoning.js';
@@ -76,7 +82,6 @@ export function initModularApp() {
     LinkedErrorLogging,
     LinkedFileStorage,
     LinkedStorage,
-    QueryParser,
     Shape,
     ShapeSet,
     Debug,
@@ -100,7 +105,13 @@ export function initModularApp() {
     IQuadStore,
     LinkedComponentClass,
     LinkedComponent,
-    LinkedQuery,
+    SelectQuery,
+    UpdateQuery,
+    MutationQuery,
+    DeleteQuery,
+    CreateQuery,
+    QueryParser,
+    QueryFactory,
     SHACLShapes,
     rdf,
     rdfs,

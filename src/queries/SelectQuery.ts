@@ -1297,7 +1297,7 @@ export class SelectQueryFactory<
   constructor(
     public shape: ShapeType<S>,
     private queryBuildFn?: QueryBuildFn<S, ResponseType>,
-    private subject?: S | ShapeSet<S>,
+    public subject?: S | ShapeSet<S>,
   )
   {
     super();

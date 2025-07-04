@@ -235,9 +235,11 @@ export function createLinkedComponentFn(
           const loadData = () => {
             if(!loadingData || loadingData !== linkedProps.source.node.uri) {
               let requestQuery = (actualQuery as SelectQueryFactory<any>).clone();
-              requestQuery.setSubject(linkedProps.source);
+              if(linkedProps.source) {
+                requestQuery.setSubject(linkedProps.source);
+              }
 
-              setLoadingData(linkedProps.source.node.uri);
+              setLoadingData(linkedProps.source?.node.uri || requestQuery.subject?.node?.uri || requestQuery.subject?.id);
               Shape.queryParser.selectQuery(requestQuery).then((result) => {
                 //store the result to state, this also means we don't need to check cache again.
                 setQueryResult(result);
@@ -308,9 +310,9 @@ export function createLinkedComponentFn(
           // },[props.of])
 
 
-          if (!linkedProps.source) {
+          if (!linkedProps.source && !actualQuery.subject) {
             console.warn(
-              'No source provided to this component: ' +
+              'This component requires a source to be provided (use the property "of"): ' +
                 functionalComponent.name,
             );
             return null;

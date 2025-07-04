@@ -265,9 +265,21 @@ export abstract class Shape implements IShape {
 
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
+    subject:S,
     queryFn: QueryBuildFn<S, R>,
+  ): SelectQueryFactory<S, R>;
+  static query<S extends Shape, R = unknown>(
+    this: {new (node: Node): S; targetClass: any},
+    queryFn: QueryBuildFn<S, R>,
+  ): SelectQueryFactory<S, R>;
+  static query<S extends Shape, R = unknown>(
+    this: {new (node: Node): S; targetClass: any},
+    subject:S|QueryBuildFn<S,R>,
+    queryFn?: QueryBuildFn<S, R>,
   ): SelectQueryFactory<S, R> {
-    const query = new SelectQueryFactory<S>(this as any, queryFn);
+    const _queryFn = (subject && queryFn) ? queryFn : subject as QueryBuildFn<S,R>;
+    const _subject = queryFn ? subject as S : undefined;
+    const query = new SelectQueryFactory<S>(this as any, _queryFn,_subject);
     return query;
   }
 
