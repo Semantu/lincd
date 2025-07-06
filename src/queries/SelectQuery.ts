@@ -142,11 +142,11 @@ export type QueryShapeSetProps<SourceShapeSet, Shape> = {
  */
 export type QShapeSet<
   ShapeSetType extends Shape,
-  Source,
-  Property extends string | number | symbol,
-> = QueryShapeSet<ShapeSetType, Source, Property> &
+  Source = null,
+  Property extends string | number | symbol = null,
+> = QueryShapeSet<ShapeSetType,Source,Property> &
   QueryShapeSetProps<
-    QueryShapeSet<ShapeSetType, Source, Property>,
+    QueryShapeSet<ShapeSetType,Source,Property>,
     ShapeSetType
   >;
 
@@ -155,7 +155,7 @@ export type QShapeSet<
  */
 export type QShape<
   T extends Shape,
-  Source,
+  Source = any,
   Property extends string | number | symbol = any,
 > = QueryShape<T, Source, Property> & QueryShapeProps<T, Source, Property>;
 
@@ -987,7 +987,7 @@ export class QueryShape<
     return proxy;
   }
 
-  static proxifyQueryShape<T extends Shape>(queryShape: QueryShape<T>) {
+  private static proxifyQueryShape<T extends Shape>(queryShape: QueryShape<T>) {
     let originalShape = queryShape.originalValue;
     queryShape.proxy = new Proxy(queryShape, {
       get(target, key, receiver) {
@@ -1036,7 +1036,18 @@ export class QueryShape<
     return queryShape.proxy;
   }
 
-  equals(otherValue: NodeReferenceValue) {
+  as<ShapeClass extends typeof Shape>(shape: ShapeClass): QShape<InstanceType<ShapeClass>, Source, Property> {
+    //if the shape is not the same as the original value, then we need to create a new query shape
+    if (!shape.shape.equals(this.originalValue.nodeShape)) {
+      let newOriginal = new (shape as any)(this.originalValue.namedNode);
+      return QueryShape.create(newOriginal, this.property, this.subject as any);
+    }
+    // else return this
+    return this as any as QShape<InstanceType<ShapeClass>, Source, Property>;
+    // return this.proxy;
+  }
+
+  equals(otherValue: NodeReferenceValue|QShape<any>) {
     return new Evaluation(this, WhereMethods.EQUALS, [otherValue]);
   }
 

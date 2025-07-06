@@ -33,6 +33,9 @@ import {
   QueryBuildFn,
   QueryResponseToEndValues,
   QueryResponseToResultType,
+  QShape,
+  QShapeSet,
+  QResult,
 } from '../queries/SelectQuery.js';
 import {IQueryParser, staticImplements} from '../interfaces/IQueryParser';
 import {TestNode} from '../utils/TraceShape.js';
@@ -265,7 +268,7 @@ export abstract class Shape implements IShape {
 
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
-    subject:S,
+    subject:S|QShape<S>,
     queryFn: QueryBuildFn<S, R>,
   ): SelectQueryFactory<S, R>;
   static query<S extends Shape, R = unknown>(
@@ -274,7 +277,7 @@ export abstract class Shape implements IShape {
   ): SelectQueryFactory<S, R>;
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
-    subject:S|QueryBuildFn<S,R>,
+    subject:S|QShape<S>|QueryBuildFn<S,R>,
     queryFn?: QueryBuildFn<S, R>,
   ): SelectQueryFactory<S, R> {
     const _queryFn = (subject && queryFn) ? queryFn : subject as QueryBuildFn<S,R>;
@@ -317,7 +320,7 @@ export abstract class Shape implements IShape {
     >,
   >(
     this: {new (node: Node): ShapeType; queryParser: IQueryParser},
-    subjects?: ShapeType,
+    subjects?: ShapeType|QResult<ShapeType>,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
@@ -329,7 +332,7 @@ export abstract class Shape implements IShape {
     >[],
   >(
     this: {new (node: Node): ShapeType; queryParser: IQueryParser},
-    subjects?: ICoreIterable<ShapeType>,
+    subjects?: ICoreIterable<ShapeType>|QResult<ShapeType>[],
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
