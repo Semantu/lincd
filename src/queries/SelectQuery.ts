@@ -970,6 +970,10 @@ export class QueryShape<
     super(property, subject);
   }
 
+  get id() {
+    return this.originalValue['id'] || this.originalValue.uri;
+  }
+
   // where(validation: WhereClause<S>): this {
   //   let nodeShape = this.originalValue.nodeShape;
   //   this.wherePath = processWhereClause(validation, nodeShape);
@@ -1308,7 +1312,7 @@ export class SelectQueryFactory<
   constructor(
     public shape: ShapeType<S>,
     private queryBuildFn?: QueryBuildFn<S, ResponseType>,
-    public subject?: S | ShapeSet<S>,
+    public subject?: S | ShapeSet<S> | QResult<S>,
   )
   {
     super();

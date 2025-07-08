@@ -35,7 +35,7 @@ import {
   QueryResponseToResultType,
   QShape,
   QShapeSet,
-  QResult,
+  QResult,QueryShape,
 } from '../queries/SelectQuery.js';
 import {IQueryParser, staticImplements} from '../interfaces/IQueryParser';
 import {TestNode} from '../utils/TraceShape.js';
@@ -268,7 +268,7 @@ export abstract class Shape implements IShape {
 
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
-    subject:S|QShape<S>,
+    subject:S|QShape<S>|QResult<S>,
     queryFn: QueryBuildFn<S, R>,
   ): SelectQueryFactory<S, R>;
   static query<S extends Shape, R = unknown>(
@@ -277,11 +277,14 @@ export abstract class Shape implements IShape {
   ): SelectQueryFactory<S, R>;
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
-    subject:S|QShape<S>|QueryBuildFn<S,R>,
+    subject:S|QShape<S>|QResult<S>|QueryBuildFn<S,R>,
     queryFn?: QueryBuildFn<S, R>,
   ): SelectQueryFactory<S, R> {
     const _queryFn = (subject && queryFn) ? queryFn : subject as QueryBuildFn<S,R>;
-    const _subject = queryFn ? subject as S : undefined;
+    let _subject:S|QResult<S> = queryFn ? subject as S : undefined;
+    if(_subject instanceof QueryShape) {
+      _subject = {id:_subject.id} as QResult<S>;
+    }
     const query = new SelectQueryFactory<S>(this as any, _queryFn,_subject);
     return query;
   }
@@ -380,7 +383,7 @@ export abstract class Shape implements IShape {
 
   static update<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
     this: {new (node: Node): ShapeType; queryParser: IQueryParser},
-    id: string | {id: string} | {uri: string},
+    id: string | {id: string} | {uri: string} | QShape<ShapeType>,
     updateObjectOrFn?: U,
   ): Promise<AddId<U>> {
     return this.queryParser.updateQuery(
