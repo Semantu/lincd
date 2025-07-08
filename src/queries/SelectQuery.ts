@@ -813,7 +813,9 @@ export class QueryShapeSet<
           ) {
             //then return that method and bind the original value as 'this'
             return originalShapeSet[key].bind(originalShapeSet);
-          } else {
+          } else if(key !== 'then') {
+            //TODO: there is a strange bug with "then" being called, only for queries that access ShapeSets (multi value props), but I'm not sure where it comes from
+            //hiding the warning for now in that case as it doesn't seem to affect the results
             console.warn(
               'Could not find property shape for key ' +
                 key +
@@ -1085,6 +1087,34 @@ export class BoundComponent<
     super(null, null);
   }
 
+  getParentQueryFactory(
+  ): SelectQueryFactory<any> {
+    let parentQuery:SelectQueryFactory<any> | Object = this.originalValue.query;
+
+    //if a Shape class was given (the actual class that extends Shape)
+    if (parentQuery instanceof SelectQueryFactory) {
+      return parentQuery;
+    } else if (typeof parentQuery === 'object') {
+      if (Object.keys(parentQuery).length > 1) {
+        throw new Error(
+          'Only one key is allowed to map a query to a property for linkedSetComponents',
+        );
+      }
+      for (let key in parentQuery) {
+        if (parentQuery[key] instanceof SelectQueryFactory) {
+          return parentQuery[key];
+        } else {
+          throw new Error(
+            'Unknown value type for query object. Keep to this format: {propName: Shape.query(s => ...)}',
+          );
+        }
+      }
+    } else {
+      throw new Error(
+        'Unknown data query type. Expected a LinkedQuery (from Shape.query()) or an object with 1 key whose value is a LinkedQuery',
+      );
+    }
+  }
   getPropertyPath() {
     //get the path that is passed to Component.of(some.path.here)
     let sourcePath: ComponentQueryPath = this.source.getPropertyPath();
@@ -1093,8 +1123,8 @@ export class BoundComponent<
     // this.dataRequest.forEach((queryStep) => {
     //   childRequests.push(queryStep);
     // });
-
-    let compSelectQuery = this.originalValue.query.select;
+    let requestQuery = this.getParentQueryFactory();
+    let compSelectQuery = requestQuery.getQueryObject().select;
 
     if (Array.isArray(sourcePath)) {
       //add the path steps that this component itself requires (so we are combining the data request of 2 components)
@@ -1290,6 +1320,40 @@ export class QueryPrimitiveSet<
   }
 }
 
+let documentLoaded = false;
+let callbackStack = [];
+const docReady = () => {
+  documentLoaded = true;
+  callbackStack.forEach((callback) => callback());
+  callbackStack = [];
+}
+if (
+  typeof document === 'undefined' ||
+  document.readyState !== 'loading'
+) {
+  docReady();
+} else {
+  documentLoaded = false;
+  document.addEventListener('DOMContentLoaded', () => () => {
+    docReady();
+  });
+  setTimeout(() => {
+    if(!documentLoaded) {
+      console.warn('⚠️ Forcing init after timeout');
+      docReady();
+    }
+  }, 3500);
+}
+//only continue to parse the query if the document is ready, and all shapes from initial bundles are loaded
+export var onQueriesReady = (callback) => {
+  if(!documentLoaded) {
+    callbackStack.push(callback);
+  } else {
+    callback();
+  }
+};
+
+
 export class SelectQueryFactory<
   S extends Shape,
   ResponseType = any,
@@ -1414,8 +1478,7 @@ export class SelectQueryFactory<
   /**
    * Turns the LinkedQuery into a SelectQuery, which is a plain JS object that can be serialized to JSON
    */
-  async getQueryObject(): Promise<SelectQuery<S>> {
-    await this.initialized();
+  getQueryObject(): SelectQuery<S> {
     try
     {
       let queryPaths = this.getQueryPaths();
@@ -1528,8 +1591,8 @@ export class SelectQueryFactory<
     });
   }
 
-  async isValidResult(qResult: QResult<any>) {
-    let select = (await this.getQueryObject()).select;
+  isValidResult(qResult: QResult<any>) {
+    let select = this.getQueryObject().select;
     if (Array.isArray(select)) {
       return this.isValidQueryPathsResult(qResult, select);
     } else if (typeof select === 'object') {

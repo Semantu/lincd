@@ -221,7 +221,8 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       //then
 
       let personFriends = await Person.select((p) => {
-        return p.friends;
+        let res = p.friends;
+        return res;
       });
       /**
        * Expected result:
@@ -1454,6 +1455,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       // Argument of type 'PropertyQueryStep | CountStep | CustomQueryObject | QueryPath[] | BoundComponentQueryStep'
       // is not assignable to 'PropertyQueryStep | CountStep | CustomQueryObject | QueryPath[]'.
 
+      //this needs to not throw an error
       let query2Object = parentQuery.getQueryPaths(); //typeof query2 extends LinkedQuery<any, infer Response, infer Source> ? GetQueryObjectResultType<Response> : never;
 
       const ParentComponent = linkedComponent(parentQuery,({hobby,bestFriend}) => {

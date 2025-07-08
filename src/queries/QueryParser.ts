@@ -20,7 +20,7 @@ export class QueryParser {
   {
     try
     {
-      const queryObject = await query.getQueryObject();
+      const queryObject = query.getQueryObject();
       return LinkedStorage.selectQuery(queryObject);
     } catch (e) {
       return Promise.reject(e);

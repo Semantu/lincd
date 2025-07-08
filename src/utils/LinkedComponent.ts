@@ -10,7 +10,7 @@ import {
   QueryResponseToResultType,
   QueryWrapperObject,
   SelectQuery,
-  ToQueryResultSet,
+  ToQueryResultSet,onQueriesReady,
 } from '../queries/SelectQuery.js';
 import {Shape} from '../shapes/Shape.js';
 
@@ -24,7 +24,6 @@ import {getShapeClass, hasSuperClass} from '../utils/ShapeClass.js';
 
 type ProcessDataResultType<ShapeType extends Shape> = [
   typeof Shape,
-  Promise<SelectQuery<ShapeType>>,
   SelectQueryFactory<ShapeType>,
 ];
 
@@ -48,7 +47,7 @@ export interface LinkedComponent<P, ShapeType extends Shape = Shape,ResultType=a
    * @param source the node or shape that this component should visualise
    */
   original?: LinkableComponent<P, ShapeType>;
-  query?: SelectQuery<any>;
+  query?: SelectQueryFactory<any>;//SelectQuery<any>;
   shape?: typeof Shape;
 }
 
@@ -66,7 +65,7 @@ export interface LinkedSetComponent<
    * @param source the node or shape that this component should visualise
    */
   original?: LinkableSetComponent<P, ShapeType>;
-  query?: SelectQuery<any>;
+  query?: SelectQueryFactory<any>;
 
   shape?: typeof Shape;
 }
@@ -211,7 +210,10 @@ export function createLinkedComponentFn(
       ShapeType
     >,
   ): LinkedComponent<CustomProps, ShapeType,Res> {
-    let [shapeClass, dataRequest, actualQuery] = processQuery<ShapeType>(query);
+    let [shapeClass,actualQuery] = processQuery<ShapeType>(query);
+    // onQueriesReady(() => {
+    //   dataRequest = getDataRequest<ShapeType>(query);
+    // });
 
     //create a new functional component which wraps the original
     //also, first of all use React.forwardRef to support OPTIONAL use of forwardRef by the linked component itself
@@ -403,7 +405,11 @@ export function createLinkedComponentFn(
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
-    // _wrappedComponent.query = dataRequest;
+    //TODO: turn this on, to do that we need to make dataRequest NOT a promise.
+    // to do that we need to move init() more up, queries should perhaps be parsed only after document is loaded
+    // but without promise.. with a timeout or callback function. whilst not parsed we should not use them
+    // so then dataRequest should not even be accessed and the component should render empty until init is completed
+    _wrappedComponent.query = query;
 
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
@@ -447,7 +453,7 @@ export function createLinkedSetComponentFn(
       ShapeType
     >,
   ): LinkedSetComponent<CustomProps, ShapeType, Res> {
-    let [shapeClass, dataRequest, actualQuery] = processQuery<ShapeType>(
+    let [shapeClass, actualQuery] = processQuery<ShapeType>(
       query,
       true,
     );
@@ -543,16 +549,17 @@ export function createLinkedSetComponentFn(
         useEffect(() => {
           //if this property is not bound (if this component is bound we can expect all properties to be loaded by the time it renders)
           if (usingStorage && !sourceIsValidQResult) {
-            let cachedRequest = LinkedStorage.nodesAreLoaded(
-              linkedProps.sources?.getNodes(),
-              dataRequest,
-            );
+            let cachedRequest:boolean = false;
+            // LinkedStorage.nodesAreLoaded(
+            //   linkedProps.sources?.getNodes(),
+            //   dataRequest,
+            // );
             //if these properties were requested before and have finished loading
-            if (cachedRequest === true) {
+            // if (cachedRequest === true) {
               //we can set state to reflect that
-              debugger;
-              setQueryResult(true);
-            } else if (cachedRequest === false) {
+              // debugger;
+              // setQueryResult(true);
+            // } else if (cachedRequest === false) {
               //if we did not request all these properties before then we continue to load them all
               //load the required PropertyShapes from storage for this specific source
               //we bypass cache because already checked cache ourselves above
@@ -571,15 +578,15 @@ export function createLinkedSetComponentFn(
                 //store the result to state, this also means we don't need to check cache again.
                 setQueryResult(result);
               });
-            } else {
-              //if some requiredProperties are still being loaded
-              //cachedResult will be a promise (there is no other return type)
-              //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
-              //wait for that loading to be completed and then update the state
-              cachedRequest.then(() => {
-                setQueryResult(true);
-              });
-            }
+            // } else {
+            //   //if some requiredProperties are still being loaded
+            //   //cachedResult will be a promise (there is no other return type)
+            //   //(this may happen when a different component already requested the same properties for the same source just before this sibling component)
+            //   //wait for that loading to be completed and then update the state
+            //   cachedRequest.then(() => {
+            //     setQueryResult(true);
+            //   });
+            // }
           }
           //note: this useEffect function should be re-triggered if a different set of source nodes is given
           //however the actual set could be a new one every time. For now we check the 'of' prop, but if this triggers
@@ -599,11 +606,11 @@ export function createLinkedSetComponentFn(
         ) {
           //only continue to render if the result is true (all required data loaded),
           // if it's a promise we already deal with that in useEffect()
-          dataIsLoaded =
-            LinkedStorage.nodesAreLoaded(
-              linkedProps.sources?.getNodes(),
-              dataRequest,
-            ) === true;
+          dataIsLoaded = false;
+            // LinkedStorage.nodesAreLoaded(
+            //   linkedProps.sources?.getNodes(),
+            //   dataRequest,
+            // ) === true;
         }
         //if the data is loaded
         if (dataIsLoaded) {
@@ -618,7 +625,7 @@ export function createLinkedSetComponentFn(
     //keep a copy of the original for strict checking of equality when compared to
     _wrappedComponent.original = functionalComponent;
 
-    // _wrappedComponent.query = dataRequest;
+    _wrappedComponent.query = query;
 
     //link the wrapped functional component to its shape
     _wrappedComponent.shape = shapeClass;
@@ -668,12 +675,10 @@ function processQuery<ShapeType extends Shape>(
   setComponent: boolean = false,
 ): ProcessDataResultType<ShapeType> {
   let shapeClass: typeof Shape;
-  let dataRequest: Promise<SelectQuery<ShapeType>>;
   let query: SelectQueryFactory<ShapeType>;
 
   //if a Shape class was given (the actual class that extends Shape)
   if (requiredData instanceof SelectQueryFactory) {
-    dataRequest = requiredData.getQueryObject();
     query = requiredData;
     shapeClass = requiredData.shape as any;
   } else if (typeof requiredData === 'object' && setComponent) {
@@ -684,7 +689,6 @@ function processQuery<ShapeType extends Shape>(
     }
     for (let key in requiredData) {
       if (requiredData[key] instanceof SelectQueryFactory) {
-        dataRequest = requiredData[key].getQueryObject();
         shapeClass = requiredData[key].shape as any;
         query = requiredData[key];
       } else {
@@ -698,8 +702,39 @@ function processQuery<ShapeType extends Shape>(
       'Unknown data query type. Expected a LinkedQuery (from Shape.query()) or an object with 1 key whose value is a LinkedQuery',
     );
   }
-  return [shapeClass, dataRequest, query];
+  return [shapeClass, query];
 }
+/*function getDataRequest<ShapeType extends Shape>(
+  requiredData: SelectQueryFactory<ShapeType> | QueryWrapperObject<ShapeType>,
+  setComponent: boolean = false,
+): Promise<SelectQuery<ShapeType>> {
+  let dataRequest: Promise<SelectQuery<ShapeType>>;
+
+  //if a Shape class was given (the actual class that extends Shape)
+  if (requiredData instanceof SelectQueryFactory) {
+    dataRequest = requiredData.getQueryObject();
+  } else if (typeof requiredData === 'object' && setComponent) {
+    if (Object.keys(requiredData).length > 1) {
+      throw new Error(
+        'Only one key is allowed to map a query to a property for linkedSetComponents',
+      );
+    }
+    for (let key in requiredData) {
+      if (requiredData[key] instanceof SelectQueryFactory) {
+        dataRequest = requiredData[key].getQueryObject();
+      } else {
+        throw new Error(
+          'Unknown value type for query object. Keep to this format: {propName: Shape.query(s => ...)}',
+        );
+      }
+    }
+  } else {
+    throw new Error(
+      'Unknown data query type. Expected a LinkedQuery (from Shape.query()) or an object with 1 key whose value is a LinkedQuery',
+    );
+  }
+  return dataRequest;
+}*/
 
 function getLinkedSetComponentProps<ShapeType extends Shape, P>(
   props: LinkedSetComponentInputProps<ShapeType>,
@@ -769,8 +804,6 @@ function isValidQResult(of,query) {
   // return (of as QResult<any>)?.shape instanceof Shape &&
   return typeof (of as QResult<any>)?.id === 'string' &&
   query.isValidResult(of as QResult<any>);
-
-
 }
 
 // function linkedComponentClass<ShapeType extends Shape, P = {}>(
