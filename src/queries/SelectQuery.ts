@@ -1032,10 +1032,14 @@ export class QueryShape<
             );
           }
         }
-        //otherwise return the value of the property on the original shape
-        throw new Error(
-          `${originalShape.constructor.name}.${key.toString()} is missing a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
-        );
+        if(key !== 'then') {
+          //otherwise return the value of the property on the original shape
+          throw new Error(
+            `${originalShape.constructor.name}.${key.toString()} is missing a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
+          );
+        } else {
+          console.error('Proxy is accessed like a promise');
+        }
         //return originalShape[key];
       },
     });

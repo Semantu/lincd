@@ -241,7 +241,7 @@ export function createLinkedComponentFn(
                 requestQuery.setSubject(linkedProps.source);
               }
 
-              setLoadingData(linkedProps.source?.node.uri || requestQuery.subject?.node?.uri || requestQuery.subject?.id);
+              setLoadingData(linkedProps.source?.node?.uri || linkedProps.source?.id || requestQuery.subject?.node?.uri || requestQuery.subject?.id);
               Shape.queryParser.selectQuery(requestQuery).then((result) => {
                 //store the result to state, this also means we don't need to check cache again.
                 setQueryResult(result);
