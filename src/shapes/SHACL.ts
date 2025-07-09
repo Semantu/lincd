@@ -430,6 +430,10 @@ export class NodeShape extends SHACL_Shape {
     this.set(shacl.property, property.namedNode);
   }
 
+  get properties() {
+    return this.getPropertyShapes(false);
+  }
+
   getPropertyShapes(includeSuperClasses:boolean=false): ShapeSet<PropertyShape> {
     let res:NodeSet;
     if(includeSuperClasses) {
