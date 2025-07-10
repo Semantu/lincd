@@ -1001,6 +1001,12 @@ function shapeToResultObject(subject: Shape) {
   };
 }
 
+function namedNodeToResultObject(subject: NamedNode) {
+  return {
+    id: subject.uri,
+  };
+}
+
 function shapeSetToResultObjects(subject: ShapeSet) {
   //create the start of the result JS object for each subject node
   let resultObjects: NodeResultMap = new CoreMap();
@@ -1155,6 +1161,28 @@ function resolveQueryStepForShapeEndResults(
   }
 }
 
+function stepResultToSubResult(stepResult) {
+  if (stepResult instanceof ShapeSet) {
+    return shapeSetToResultObjects(stepResult);
+  }
+  else if (stepResult instanceof Shape) {
+    return shapeToResultObject(stepResult);
+  }
+  //temporary support for accessors returning named nodes
+  else if(stepResult instanceof NamedNode) {
+    return namedNodeToResultObject(stepResult)
+  }
+  else if(Array.isArray(stepResult)) {
+    return stepResult.map(stepResultToSubResult);
+  } else {
+    //strings,numbers,booleans,dates can just pass. but not other objects
+    if(typeof stepResult === 'object') {
+      if(!(stepResult instanceof Date)) {
+        console.warn("New warning, is this a warning? Unknown step result type: ",stepResult);
+      }
+    }
+  }
+}
 function resolvePropertyStep(
   singleShape: Shape,
   queryStep: PropertyQueryStep,
@@ -1163,13 +1191,7 @@ function resolvePropertyStep(
 ) {
   //directly access the get/set method of the shape
   let stepResult = singleShape[(queryStep as PropertyQueryStep).property.label];
-  let subResultObjects;
-  if (stepResult instanceof ShapeSet) {
-    subResultObjects = shapeSetToResultObjects(stepResult);
-  }
-  if (stepResult instanceof Shape) {
-    subResultObjects = shapeToResultObject(stepResult);
-  }
+  let subResultObjects = stepResultToSubResult(stepResult);
 
   if ((queryStep as PropertyQueryStep).where) {
     stepResult = filterResults(

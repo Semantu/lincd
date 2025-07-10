@@ -604,7 +604,7 @@ lincdPackage.linkedShape(ValidationResult);
 //ALL the following is to support Shape having get/set methods with property shapes
 //and Shape itself having a nodeShape
 //if we dont need Shape to have get/set methods (like label and type) then this can be removed
-Shape.shape = NodeShape.getFromURI('http://lincd/Shape');
+Shape.shape = NodeShape.getFromURI('https://data.lincd.org/module/lincd/shape/shape');
 addNodeShapeToShapeClass(Shape.shape,Shape);
 
 //Here we can register the properties of the Shape class itself
@@ -621,3 +621,47 @@ registerPropertyShape(Shape.shape,createPropertyShape(
   },
   'type',
 ));
+
+registerPropertyShape(NodeShape.shape,createPropertyShape({
+  path:shacl.property,
+  shape:PropertyShape,
+},'properties',shacl.IRI));
+
+registerPropertyShape(NodeShape.shape,createPropertyShape({
+  path:shacl.targetClass,
+  shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+},'targetClass',shacl.IRI));
+
+registerPropertyShape(NodeShape.shape,createPropertyShape({
+  path:shacl.targetClass,
+  shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+},'targetNode',shacl.IRI));
+
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  path:shacl.path,
+  shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+},'path',shacl.IRI));
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  path:shacl.node,
+  shape:NodeShape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+  maxCount:1
+},'nodeShape',shacl.IRI));
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  maxCount:1,
+  path:shacl.nodeKind,
+  shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+},'nodeKind',shacl.IRI));
+
+//PropertyShape.valueShape
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  path: shacl.node,
+  shape:NodeShape,
+  maxCount:1,
+},'valueShape', shacl.IRI));
+
+//PropertyShape.datatype
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  path: shacl.datatype,
+  shape:Shape,
+  maxCount:1,
+},'datatype', shacl.IRI));

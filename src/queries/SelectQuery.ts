@@ -618,6 +618,13 @@ export class QueryBuilderObject<
     } else if (Array.isArray(originalValue)) {
       return new QueryPrimitiveSet(originalValue, property, subject);
     } else if ((originalValue as any) instanceof TestNode) {
+      //Temporary solution to support accessors with decorators that return named nodes.
+      //As long as the decorator indicates the shape the values should have, we can still use it.
+      //In the future queries will only use the decorators, not the actually returned value. Then this can go
+      if(property.nodeShape) {
+        const shape = new (getShapeClass(property.nodeShape.namedNode) as any)(originalValue);
+        return QueryShape.create(shape,property,subject);
+      }
       throw new Error(
         subject.getOriginalValue().nodeShape.label +
           '.' +
