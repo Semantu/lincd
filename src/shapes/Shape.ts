@@ -352,7 +352,7 @@ export abstract class Shape implements IShape {
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType> {
     let _selectFn;
     let subject;
-    if (targetOrSelectFn instanceof Shape) {
+    if (_selectFn) {
       _selectFn = selectFn;
       subject = targetOrSelectFn;
     } else {
