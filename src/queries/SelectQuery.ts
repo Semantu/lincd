@@ -9,7 +9,7 @@ import {CoreMap} from '../collections/CoreMap.js';
 import { getPropertyShapeByLabel,getShapeClass } from '../utils/ShapeClass.js';
 import {
   NodeReferenceValue,
-  Prettify,
+  Prettify,ShapeReferenceValue,
 } from './QueryFactory.js';
 import {QueryFactory} from './QueryFactory.js';
 
@@ -87,7 +87,7 @@ export type QueryPropertyPath = QueryStep[];
  * A QueryStep is a single step in a query path
  * It contains the property that was requested, and optionally a where clause
  */
-export type QueryStep = PropertyQueryStep | SizeStep | CustomQueryObject | NodeReferenceValue;
+export type QueryStep = PropertyQueryStep | SizeStep | CustomQueryObject | ShapeReferenceValue;
 export type SizeStep = {
   count: QueryPropertyPath;
   label?: string;
@@ -208,7 +208,7 @@ export type WhereEvaluationPath = {
 export type QueryArg = NodeReferenceValue | JSNonNullPrimitive | ArgPath | WherePath;
 export type ArgPath = {
   path: QueryPropertyPath;
-  subject:NodeReferenceValue;
+  subject:ShapeReferenceValue;
 }
 export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
@@ -740,7 +740,10 @@ export class QueryBuilderObject<
     if(((this.originalValue as Shape).node as TestNode)?.targetID) {
       path.unshift({
         id: ((this.originalValue as Shape).node as TestNode)?.targetID,
-      });
+        shape: {
+          id: (this.originalValue as Shape).nodeShape.uri,
+        }
+      } as ShapeReferenceValue);
     }
     return path;
   }
@@ -1194,11 +1197,11 @@ export class Evaluation {
       if (arg instanceof QueryBuilderObject) {
         let path = arg.getPropertyPath();
         let subject;
-        if(path[0] && (path[0] as NodeReferenceValue).id) {
+        if(path[0] && (path[0] as ShapeReferenceValue).id) {
           subject = path.shift();
         }
         if((!path || path.length === 0) && subject) {
-          return subject as NodeReferenceValue;
+          return subject as ShapeReferenceValue;
         }
         return {
           path,
