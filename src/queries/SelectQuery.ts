@@ -87,7 +87,7 @@ export type QueryPropertyPath = QueryStep[];
  * A QueryStep is a single step in a query path
  * It contains the property that was requested, and optionally a where clause
  */
-export type QueryStep = PropertyQueryStep | SizeStep | CustomQueryObject;
+export type QueryStep = PropertyQueryStep | SizeStep | CustomQueryObject | NodeReferenceValue;
 export type SizeStep = {
   count: QueryPropertyPath;
   label?: string;
@@ -198,9 +198,18 @@ export type WherePath = WhereEvaluationPath | WhereAndOr;
 export type WhereEvaluationPath = {
   path: QueryPropertyPath;
   method: WhereMethods;
-  args: any[];
+  args: QueryArg[];
 };
 
+/**
+ * An argument can be a direct reference to a node, a js primitive (boolean,number), a path to resolve (like from a query context variables)
+ * Or a wherePath in the case of some() or every() (e.g. x.where(x.friends.some(f => f.age > 18) -> the argument is a wherePath)
+ */
+export type QueryArg = NodeReferenceValue | JSNonNullPrimitive | ArgPath | WherePath;
+export type ArgPath = {
+  path: QueryPropertyPath;
+  subject:NodeReferenceValue;
+}
 export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
 /**
@@ -727,6 +736,12 @@ export class QueryBuilderObject<
     if (this.subject) {
       return this.subject.getPropertyPath(path);
     }
+    //when query context is used as the first step, then the first step is just a pointer to the subject it represents
+    if(((this.originalValue as Shape).node as TestNode)?.targetID) {
+      path.unshift({
+        id: ((this.originalValue as Shape).node as TestNode)?.targetID,
+      });
+    }
     return path;
   }
 }
@@ -980,7 +995,8 @@ export class QueryShape<
   }
 
   get id() {
-    return this.originalValue['id'] || this.originalValue.uri;
+    //if the QueryShape was created for a TestNode that points to a specific node, then return that node's targetID
+    return (this.originalValue.node as TestNode)?.targetID || this.originalValue['id'] || this.originalValue.uri;
   }
 
   // where(validation: WhereClause<S>): this {
@@ -1162,18 +1178,43 @@ export class Evaluation {
   constructor(
     public value: QueryBuilderObject | QueryPrimitiveSet,
     public method: WhereMethods,
-    public args: any[],
+    public args: QueryArg[],
   ) {}
 
   getPropertyPath() {
     return this.getWherePath();
+  }
+  processArgs():QueryArg[] {
+    //if the args are not an array, then we convert them to an array
+    if(!this.args || !Array.isArray(this.args)) {
+      return [];
+    }
+    //convert each arg to a QueryBuilderObject
+    return this.args.map((arg) => {
+      if (arg instanceof QueryBuilderObject) {
+        let path = arg.getPropertyPath();
+        let subject;
+        if(path[0] && (path[0] as NodeReferenceValue).id) {
+          subject = path.shift();
+        }
+        if((!path || path.length === 0) && subject) {
+          return subject as NodeReferenceValue;
+        }
+        return {
+          path,
+          subject
+        } as ArgPath;
+      } else {
+        return arg;
+      }
+    });
   }
 
   getWherePath(): WherePath {
     let evalPath: WhereEvaluationPath = {
       path: this.value.getPropertyPath(),
       method: this.method,
-      args: this.args,
+      args: this.processArgs(),
     };
 
     if (this._andOr.length > 0) {

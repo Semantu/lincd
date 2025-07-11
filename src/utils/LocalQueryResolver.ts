@@ -19,7 +19,9 @@ import {
   WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
-  WherePath,SortByPath,
+  WherePath,
+  SortByPath,
+  QueryArg,ArgPath,
 } from '../queries/SelectQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
@@ -601,7 +603,7 @@ export function resolveLocal<ResultType>(
  * @param resultObject
  */
 function resolveCustomObject(
-  subject: Shape,
+  subject: Shape | NodeReferenceValue,
   query: CustomQueryObject,
   resultObject: QResult<any, any>,
 ) {
@@ -669,7 +671,7 @@ export function resolveLocalEndResults<S extends SelectQueryFactory<any>>(
 }
 
 function resolveQueryPath(
-  subject: ShapeSet | Shape,
+  subject: ShapeSet | Shape | NodeReferenceValue,
   queryPath: QueryPath | ComponentQueryPath,
   resultObjects?: NodeResultMap | QResult<any, any>,
 ) {
@@ -688,16 +690,16 @@ function resolveQueryPath(
 }
 
 function resolveQueryPathEndResults(
-  subject: ShapeSet | Shape,
+  subject: ShapeSet | Shape | NodeReferenceValue,
   queryPath: QueryPath | ComponentQueryPath,
 ) {
   //start with the local instance as the subject
-  let result: ShapeSet | Shape[] | Shape | boolean[] = subject;
+  let result: ShapeSet | Shape[] | Shape | boolean[] | NodeReferenceValue = subject;
   if (Array.isArray(queryPath)) {
     for(let queryStep of queryPath) {
       //then resolve each of the query steps and use the result as the new subject for the next step
       result = resolveQueryStepEndResults(
-        result as ShapeSet | Shape,
+        result as ShapeSet | Shape | NodeReferenceValue,
         queryStep,
       );
       if(!result) {
@@ -798,12 +800,31 @@ function filterResults(
   }
 }
 
+function resolveWhereArgs(args:QueryArg[]) {
+  if(!args || !Array.isArray(args)) {
+    return [];
+  }
+  return args.map(arg => {
+    //if this is an argpath
+    if((arg as ArgPath).path && !(arg as WhereEvaluationPath).args) {
+      //in this case we need to follow the path to the end value
+      if(!(arg as ArgPath).subject) {
+        throw new Error('Expected a subject for arg path: ' + JSON.stringify(arg));
+      }
+      return resolveQueryPath((arg as ArgPath).subject,(arg as ArgPath).path)
+    }
+    return arg;
+  })
+}
 function evaluate(singleShape: Shape, where: WherePath): boolean {
   if ((where as WhereEvaluationPath).path) {
     let shapeEndValue = resolveQueryPathEndResults(
       singleShape,
       (where as WhereEvaluationPath).path,
     );
+
+    let args = resolveWhereArgs((where as WhereEvaluationPath).args);
+
     //when multiple values are the subject of the evaluation
     //and, we're NOT evaluating some() or every()
     if (
@@ -817,14 +838,14 @@ function evaluate(singleShape: Shape, where: WherePath): boolean {
         return evaluateWhere(
           singleEndValue as any,
           (where as WhereEvaluationPath).method,
-          (where as WhereEvaluationPath).args,
+          args,
         );
       });
     }
     return evaluateWhere(
       shapeEndValue as any,
       (where as WhereEvaluationPath).method,
-      (where as WhereEvaluationPath).args,
+      args,
     );
   } else if ((where as WhereAndOr).andOr) {
     //the first run we simply take the result as the combined result
@@ -945,7 +966,7 @@ function resolveWhereEvery(shapes, evaluation: WhereEvaluationPath) {
 }
 
 function resolveQuerySteps(
-  subject: ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[],
+  subject: ShapeSet | Shape[] | Shape | JSPrimitive | JSPrimitive[] | NodeReferenceValue,
   queryPath: (QueryStep | SubQueryPaths)[],
   resultObjects?: NodeResultMap | QResult<any, any>,
 ) {
@@ -955,18 +976,18 @@ function resolveQuerySteps(
   //queryPath.slice(1,queryPath.length);
   let [currentStep, ...restPath] = queryPath;
 
-  if (subject instanceof Shape) {
+  if (subject instanceof Shape || (subject as NodeReferenceValue).id) {
     if (Array.isArray(currentStep)) {
       return resolveQueryPathsForShape(
         queryPath as SubQueryPaths,
-        subject,
+        subject as (Shape | NodeReferenceValue),
         resultObjects,
       );
     }
     //TODO: review differences between shape vs shapes and make it DRY
     return resolveQueryStepForShape(
       currentStep,
-      subject,
+      subject as (Shape | NodeReferenceValue),
       restPath,
       resultObjects as QResult<any, any>,
     );
@@ -1017,7 +1038,7 @@ function shapeSetToResultObjects(subject: ShapeSet) {
 }
 
 function resolveQueryStepEndResults(
-  subject: ShapeSet | Shape[] | Shape,
+  subject: ShapeSet | Shape[] | Shape | NodeReferenceValue,
   queryStep: QueryStep | SubQueryPaths,
 ) {
   if (subject instanceof Shape) {
@@ -1074,7 +1095,7 @@ function resolveQueryPathsForShapesEndResults(
 
 function resolveQueryPathsForShape(
   queryPaths: SubQueryPaths,
-  subject: Shape,
+  subject: Shape | NodeReferenceValue,
   resultObject: QResult<any, any>,
 ) {
   if (Array.isArray(queryPaths)) {
@@ -1105,7 +1126,7 @@ function resolveQueryPathsForShapeEndResults(
 
 function resolveQueryStepForShape(
   queryStep: QueryStep | SubQueryPaths,
-  subject: Shape,
+  subject: Shape | NodeReferenceValue,
   restPath: (QueryStep | SubQueryPaths)[],
   resultObject: QResult<any, any>,
 ) {
@@ -1184,7 +1205,7 @@ function stepResultToSubResult(stepResult) {
   }
 }
 function resolvePropertyStep(
-  singleShape: Shape,
+  singleShape: Shape | NodeReferenceValue,
   queryStep: PropertyQueryStep,
   restPath: (QueryStep | SubQueryPaths)[],
   resultObjects: NodeResultMap | QResult<any, any>,
@@ -1231,7 +1252,7 @@ function resolvePropertyStep(
   if (resultObjects) {
     let nodeResult =
       resultObjects instanceof Map
-        ? resultObjects.get(singleShape.uri)
+        ? resultObjects.get((singleShape as Shape).uri || (singleShape as NodeReferenceValue).id)
         : resultObjects;
     //write the result for this property into the result object
     writeResultObject(nodeResult, queryStep.property.label, stepResult);
@@ -1253,7 +1274,7 @@ function resolvePropertyStep(
 }
 
 function resolveCountStep(
-  singleShape: Shape,
+  singleShape: Shape | NodeReferenceValue,
   queryStep: SizeStep,
   resultObjects?: NodeResultMap,
 ) {
@@ -1276,7 +1297,7 @@ function resolveCountStep(
 }
 
 function updateResultObjects(
-  singleShape: Shape,
+  singleShape: Shape | NodeReferenceValue,
   queryStep: QueryStep,
   result: any,
   resultObjects: NodeResultMap,
@@ -1285,7 +1306,7 @@ function updateResultObjects(
   if (resultObjects) {
     let nodeResult =
       resultObjects instanceof Map
-        ? resultObjects.get(singleShape.uri)
+        ? resultObjects.get((singleShape as Shape).uri || (singleShape as NodeReferenceValue).id)
         : resultObjects;
     if (nodeResult) {
       writeResultObject(nodeResult, (queryStep as SizeStep).label || defaultLabel, result);
