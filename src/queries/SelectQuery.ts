@@ -1272,8 +1272,9 @@ export abstract class QueryPrimitive<
     super(property, subject);
   }
 
-  equals(otherValue: JSPrimitive) {
-    return new Evaluation(this, WhereMethods.EQUALS, [otherValue]);
+  equals(otherValue: JSPrimitive|QueryBuilderObject) {
+    //TODO: review types, this is working but currently QueryBuilderObject is not accepted as a type of args
+    return new Evaluation(this, WhereMethods.EQUALS, [otherValue as any]);
   }
 
   where(validation: WhereClause<string>): this {

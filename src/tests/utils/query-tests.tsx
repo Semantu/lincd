@@ -5,11 +5,12 @@ import { Literal,NamedNode } from '../../models';
 import { xsd } from '../../ontologies/xsd';
 import { TestNode } from '../../utils/TraceShape';
 import { describe,expect,test } from '@jest/globals';
-import { QResult,QueryBuilderObject } from '../../queries/SelectQuery';
+import { QResult,QShape,QueryBuilderObject } from '../../queries/SelectQuery';
 import { render,waitFor } from '@testing-library/react';
 import { ShapeSet } from '../../collections/ShapeSet';
 import { setDefaultPageLimit } from '../../utils/Package';
 import React from 'react';
+import {getQueryContext, setQueryContext} from '../../queries/QueryContext';
 
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
@@ -166,6 +167,9 @@ p3.isRealPerson = true;
 export const testPersons = [p1,p2,p3,p4];
 export const testProps = {name,nickName,bestFriend,hobby,hasFriend,birthDate};
 export const testTypes = {person:personClass};
+
+
+setQueryContext('user',p3,Person);
 
 /**
  *
@@ -671,6 +675,39 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(first.friends.length).toBe(2);
       expect(first.friends[0].id).toBe(p2.uri);
     });
+
+    test('where with query context',async () => {
+      //should return name of p2
+      let namesHasBestFriendUser = await Person.select((p) => {
+        return p.name;
+      }).where((p) => {
+        return p.bestFriend.equals(getQueryContext('user'));
+      });
+
+      expect(Array.isArray(namesHasBestFriendUser)).toBe(true);
+
+      let first = namesHasBestFriendUser[0];
+      expect(namesHasBestFriendUser).toHaveLength(1);
+      expect(first.id).toBe(p2.uri);
+      expect(first.name).toBe(p2.name);
+    })
+
+    test('where with query context as base of property path',async () => {
+      //should return name of p2
+      let hasUserAsFriend = await Person.select((p) => {
+        return p.name;
+      }).where((p) => {
+        const userName = getQueryContext<Person>('user').name;
+        return p.friends.some(f => f.name.equals(userName));
+      });
+
+      expect(Array.isArray(hasUserAsFriend)).toBe(true);
+
+      expect(hasUserAsFriend).toHaveLength(2);
+      expect(hasUserAsFriend.some(p => p.id === p1.uri && p.name === p1.name)).toBeTruthy();
+      expect(hasUserAsFriend.some(p => p.id === p2.uri && p.name === p2.name)).toBeTruthy();
+    })
+
     //#### COUNT TESTS ####
     test('count a shapeset',async () => {
       //count the number of friends that each person has

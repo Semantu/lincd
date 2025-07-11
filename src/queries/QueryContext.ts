@@ -19,14 +19,14 @@ export function getQueryContext<T extends Shape>(name:string):QShape<T> {
 }
 export function setQueryContext(name:string, value:any,shapeType?) {
     //if a QResult was provided
-    if(value && typeof value.id === 'string') {
+    if(value && (typeof value.id === 'string' || typeof value.uri === 'string')) {
         //convert to QShape
         if(!shapeType){
             console.warn('setQueryContext: value is a QResult but no shapeType provided', value);
             return;
         }
         const testNode = new TestNode();
-        testNode.targetID = value.id;
+        testNode.targetID = value.id || value.uri;
         const shape = new (shapeType as any)(testNode);//.getFromURI(value.id);
         value = QueryShape.create(shape);
         //const converted = QueryBuilderObject.convertOriginal(shape,null,null);
