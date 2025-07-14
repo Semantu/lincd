@@ -738,15 +738,21 @@ export class QueryBuilderObject<
     }
     //when query context is used as the first step, then the first step is just a pointer to the subject it represents
     if(((this.originalValue as Shape).node as TestNode)?.targetID) {
-      path.unshift({
-        id: ((this.originalValue as Shape).node as TestNode)?.targetID,
-        shape: {
-          id: (this.originalValue as Shape).nodeShape.uri,
-        }
-      } as ShapeReferenceValue);
+      path.unshift(convertQueryContext(this.originalValue as Shape));
     }
     return path;
   }
+}
+/**
+ * Converts query context to a ShapeReferenceValue
+ */
+const convertQueryContext = (shape: Shape): ShapeReferenceValue => {
+  return {
+    id: (shape.node as TestNode)?.targetID,
+    shape: {
+      id: shape.nodeShape.uri,
+    }
+  } as ShapeReferenceValue
 }
 
 const processWhereClause = (
@@ -1058,15 +1064,15 @@ export class QueryShape<
             );
           }
         }
-        if(key !== 'then') {
-          //otherwise return the value of the property on the original shape
-          throw new Error(
-            `${originalShape.constructor.name}.${key.toString()} is missing a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
-          );
-        } else {
-          console.error('Proxy is accessed like a promise');
-        }
-        //return originalShape[key];
+        // if(key !== 'then') {
+        //   //otherwise return the value of the property on the original shape
+        //   throw new Error(
+        //     `${originalShape.constructor.name}.${key.toString()} is missing a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
+        //   );
+        // } else {
+        //   console.error('Proxy is accessed like a promise');
+        // }
+        return originalShape[key];
       },
     });
     return queryShape.proxy;
@@ -1541,7 +1547,7 @@ export class SelectQueryFactory<
       let selectQuery = {
         type: 'select',
         select: queryPaths,
-        subject: this.subject,
+        subject: this.getSubject(),
         limit: this.limit,
         offset: this.offset,
         shape: this.shape,
@@ -1558,6 +1564,15 @@ export class SelectQueryFactory<
         throw err;
     }
   }
+  getSubject() {
+    //if the subject is a QueryShape which comes from query context
+    //then it will point to a target node with "targetID"
+    //and we convert it to a node reference
+    if(((this.subject as Shape)?.node as TestNode)?.targetID) {
+      return convertQueryContext(this.subject as Shape);
+    }
+  return this.subject;
+}
 
   private getSortByPath() {
     if (!this.sortResponse) return null;

@@ -36,7 +36,7 @@ import {
   isSetModificationValue,
   NodeDescriptionValue,
   NodeReferenceValue,
-  SetModificationValue,SinglePropertyUpdateValue,
+  SetModificationValue,ShapeReferenceValue,SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
 } from '../queries/QueryFactory.js';
 import { NamedNode,Literal } from '../models.js';
@@ -997,6 +997,16 @@ function resolveQuerySteps(
   }
   //queryPath.slice(1,queryPath.length);
   let [currentStep, ...restPath] = queryPath;
+
+  //if the first step is a ShapeReferenceValue, it comes from a QueryContextVariable
+  //and it serves as a replacement for the subject
+  if((currentStep as ShapeReferenceValue).id && (currentStep as ShapeReferenceValue).shape) {
+      let shape = getShapeClass(NamedNode.getOrCreate((currentStep as ShapeReferenceValue).shape.id));
+      const shapeInstance = (shape as any).getFromURI((currentStep as ShapeReferenceValue).id) as Shape;
+      subject = shapeInstance;
+      //continue with the next step for this new subject
+      [currentStep, ...restPath] = restPath;
+    }
 
   if (subject instanceof Shape) {
     if (Array.isArray(currentStep)) {
