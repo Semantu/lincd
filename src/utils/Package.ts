@@ -23,6 +23,7 @@ import {
 import { createPropertyShape,registerPropertyShape } from '../shapes/SHACL.js';
 import { shacl } from '../ontologies/shacl.js';
 import { rdfs } from '../ontologies/rdfs.js';
+import { xsd } from '../ontologies/xsd.js';
 
 //global tree
 declare var lincd: any;
@@ -633,23 +634,25 @@ registerPropertyShape(NodeShape.shape,createPropertyShape({
 },'targetClass',shacl.IRI));
 
 registerPropertyShape(NodeShape.shape,createPropertyShape({
-  path:shacl.targetClass,
-  shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+  path:shacl.targetNode,
+  shape:Shape,//actually returns a NamedNode... is this correct then? Should we define or use a rdfs Class that matches the potential values?
 },'targetNode',shacl.IRI));
 
 registerPropertyShape(PropertyShape.shape,createPropertyShape({
   path:shacl.path,
-  shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+  shape:Shape,
 },'path',shacl.IRI));
+
 registerPropertyShape(PropertyShape.shape,createPropertyShape({
   path:shacl.node,
-  shape:NodeShape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+  shape:NodeShape,
   maxCount:1
-},'nodeShape',shacl.IRI));
+},'valueShape',shacl.IRI));
+
 registerPropertyShape(PropertyShape.shape,createPropertyShape({
   maxCount:1,
   path:shacl.nodeKind,
-  shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+  shape:Shape,//actually returns a NamedNode. Queries currently cannot continue after accessing nodeKind
 },'nodeKind',shacl.IRI));
 
 //PropertyShape.valueShape
@@ -665,3 +668,30 @@ registerPropertyShape(PropertyShape.shape,createPropertyShape({
   shape:Shape,
   maxCount:1,
 },'datatype', shacl.IRI));
+
+
+//PropertyShape.maxCount
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  path: shacl.maxCount,
+  datatype:xsd.integer,
+  maxCount:1,
+},'maxCount', shacl.Literal));
+
+//PropertyShape.minCount
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  path: shacl.minCount,
+  datatype:xsd.integer,
+  maxCount:1,
+},'minCount', shacl.Literal));
+
+//PropertyShape.name
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  path: shacl.name,
+},'name', shacl.Literal));
+
+//PropertyShape.description
+registerPropertyShape(PropertyShape.shape,createPropertyShape({
+  path:shacl.description,
+},'description', shacl.Literal));
+
+//PropertyShape.inList

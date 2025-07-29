@@ -1176,7 +1176,7 @@ function stepResultToSubResult(stepResult) {
     return stepResult.map(stepResultToSubResult);
   } else {
     //strings,numbers,booleans,dates can just pass. but not other objects
-    if(typeof stepResult === 'object') {
+    if(stepResult && typeof stepResult === 'object') {
       if(!(stepResult instanceof Date)) {
         console.warn("New warning, is this a warning? Unknown step result type: ",stepResult);
       }

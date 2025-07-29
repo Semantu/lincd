@@ -500,6 +500,20 @@ export abstract class Shape implements IShape {
   static getLocalInstancesByType<T extends Shape>(
     this: ShapeType<T>,
   ): ShapeSet<T> {
+    return this.getSetOf(this.getLocalInstanceNodesByType());
+  }
+
+
+  /**
+   * Finds all the instances whos rdf:type matches the targetClass of this shape
+   * Ignores if the nodes are valid instances of the shape
+   * Returns a set of shape instances.
+   * This is helpful when using partly loaded data
+   * @deprecated
+   */
+  static getLocalInstanceNodesByType<T extends Shape>(
+    this: ShapeType<T>,
+  ): NodeSet {
     //get all instances of the target class of this shape
     let nodes = this.targetClass.getAllInverse(rdf.type);
     //also look for shapes that extend this shape
@@ -513,8 +527,7 @@ export abstract class Shape implements IShape {
           });
       }
     });
-    //return as a set
-    return this.getSetOf(nodes);
+    return nodes;
   }
 
   /**

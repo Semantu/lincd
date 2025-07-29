@@ -79,10 +79,6 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
    * Each value of the property must occur in this set
    */
   in?: NodeSet | Node[];
-  /**
-   * Value of the property must be boolean
-   */
-  editInline?: boolean;
 }
 
 export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
@@ -165,10 +161,6 @@ export interface PropertyShapeConfig {
    * Each value of the property must occur in this set
    */
   in?: NodeSet | Node[];
-  /**
-   * Value of the property must be boolean
-   */
-  editInline?: boolean;
 }
 
 export interface ParameterConfig {
@@ -252,6 +244,13 @@ export function createPropertyShape(
   propertyShape.path = config.path;
   propertyShape.label = propertyKey;
 
+  if(config.name) {
+    propertyShape.name = config.name;
+  }
+  if(config.description) {
+    propertyShape.description = config.description;
+  }
+
   if (config.required) {
     propertyShape.minCount = 1;
   } else if (config.minCount) {
@@ -307,10 +306,6 @@ export function createPropertyShape(
   if (config.in) {
     //assuming config.in is a NodeSet already:
     propertyShape.inList = List.createFrom(config.in);
-  }
-
-  if (config.editInline) {
-    propertyShape.editInline = config.editInline;
   }
 
   // console.log('Property method ' + config.path.toString() + ' initialised.');

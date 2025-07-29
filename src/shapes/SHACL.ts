@@ -85,10 +85,6 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
    * Each value of the property must occur in this set
    */
   in?: NodeSet | Node[];
-  /**
-   * Value of the property must be boolean
-   */
-  editInline?: boolean;
 }
 
 export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
@@ -171,10 +167,6 @@ export interface PropertyShapeConfig {
    * Each value of the property must occur in this set
    */
   in?: NodeSet | Node[];
-  /**
-   * Value of the property must be boolean
-   */
-  editInline?: boolean;
 
   /**
    * Values of the configured property path are sorted by the values of this property path.
@@ -182,9 +174,6 @@ export interface PropertyShapeConfig {
   sortBy?: NamedNode|NamedNode[];
 }
 
-export interface ParameterConfig {
-  optional?: number;
-}
 
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
@@ -205,11 +194,11 @@ export interface ParameterConfig {
  * }
  * ```
  */
-export const linkedProperty = (config: PropertyShapeConfig) => {
+export const linkedProperty = (config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig) => {
   return _linkedProperty(config);
 };
 const _linkedProperty = (
-  config: PropertyShapeConfig,
+  config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
   defaultNodeKind: NamedNode = null,
 ) => {
   return function (
@@ -249,7 +238,7 @@ export function registerPropertyShape(
   }
 }
 export function createPropertyShape(
-  config: PropertyShapeConfig,
+  config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
   propertyKey: string,
   defaultNodeKind: NamedNode = null,
 ) {
@@ -314,10 +303,6 @@ export function createPropertyShape(
     propertyShape.inList = List.createFrom(config.in);
   }
 
-  if (config.editInline) {
-    propertyShape.editInline = config.editInline;
-  }
-
   // console.log('Property method ' + config.path.toString() + ' initialised.');
   // if (!target.constructor.shape) {
   // 	console.log('Creating shape from method decorators.');
@@ -340,8 +325,6 @@ export function createPropertyShape(
   //sh.class
   // (Literal value must have this datatype, like range)
   //sh.datatype
-  //
-  //sh.optional
   //
   //sh.path
   // (values must have this node type. Choose from:  sh:NodeKind: sh:BlankNode,sh:IRI, sh:Literal, sh:BlankNodeOrIRI, sh:BlankNodeOrLiteral or sh:IRIOrLiteral)
@@ -613,12 +596,12 @@ export class PropertyShape extends SHACL_Shape {
     this.overwrite(shacl.name, new Literal(value));
   }
 
-  get optional(): string {
-    return this.getValue(shacl.optional);
+  get description(): string {
+    return this.getValue(shacl.description);
   }
 
-  set optional(value: string) {
-    this.overwrite(shacl.optional, new Literal(value, xsd.boolean));
+  set description(value: string) {
+    this.overwrite(shacl.description, new Literal(value));
   }
 
   get path(): NamedNode|NamedNode[] {
@@ -634,6 +617,8 @@ export class PropertyShape extends SHACL_Shape {
     (value instanceof NamedNode) ? this.overwrite(shacl.path, value) : this.moverwrite(shacl.path, value);
   }
 
+  //@TODO: property decorators should support properties that hold List values
+  // Queries should return arrays for these type of values
   get in(): NamedNode {
     return this.getOne(shacl.in) as NamedNode;
   }
@@ -650,14 +635,6 @@ export class PropertyShape extends SHACL_Shape {
 
   set inList(value: List) {
     this.overwrite(shacl.in, value.node);
-  }
-
-  get editInline(): boolean {
-    return this.getValue(shacl.editInline)  === 'true';
-  }
-
-  set editInline(val: boolean) {
-    this.overwrite(shacl.editInline, new Literal(val ? 'true' : "false",xsd.boolean));
   }
 
   get parentNodeShape(): NodeShape {

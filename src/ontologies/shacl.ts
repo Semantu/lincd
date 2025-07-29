@@ -21,8 +21,8 @@ var _in: NamedNode = ns('in');
 var maxCount: NamedNode = ns('maxCount');
 var minCount: NamedNode = ns('minCount');
 var inList: NamedNode = ns('inList');
-var editInline: NamedNode =  ns('editInline');
 var name: NamedNode = ns('name');
+var description: NamedNode = ns('description');
 var NodeShape: NamedNode = ns('NodeShape');
 var optional: NamedNode = ns('optional');
 var Parameter: NamedNode = ns('Parameter');
@@ -99,6 +99,7 @@ export const shacl = {
   maxCount,
   minCount,
   name,
+  description,
   node,
   NodeShape,
   optional,
@@ -119,7 +120,6 @@ export const shacl = {
   IRIOrLiteral,
   nodeKind,
   inList,
-  editInline,
   languageIn,
   lessThan,
   lessThanOrEquals,
