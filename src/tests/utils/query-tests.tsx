@@ -1,4 +1,4 @@
-import { linkedComponent,linkedSetComponent,linkedShape } from '../../package';
+import {getPackageShape,linkedComponent,linkedSetComponent,linkedShape} from '../../package';
 import { Shape } from '../../shapes/Shape';
 import { literalProperty,objectProperty } from '../../shapes/SHACL';
 import { Literal,NamedNode } from '../../models';
@@ -12,6 +12,8 @@ import { setDefaultPageLimit } from '../../utils/Package';
 import React from 'react';
 import {getQueryContext, setQueryContext} from '../../queries/QueryContext';
 
+let dogClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Dog');
+let petClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Pet');
 let personClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Person');
 let name = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'name');
 let nickName = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'nickName');
@@ -19,10 +21,36 @@ let bestFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'bestFriend');
 let hobby = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hobby');
 let hasFriend = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasFriend');
 let birthDate = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'birthDate');
+let owner = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'owner');
+let guardDogLevel = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'guardDogLevel');
+let hasPet = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'hasPet');
 let isRealPerson = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'isRealPerson');
 let pluralTestProp = NamedNode.getOrCreate(
   NamedNode.TEMP_URI_BASE + 'pluralTestProp',
 );
+
+
+@linkedShape
+export class Pet extends Shape
+{
+  static targetClass = petClass;
+
+  @literalProperty({
+    path: bestFriend,
+    maxCount: 1,
+    shape:Pet
+  })
+  get bestFriend(): Pet
+  {
+    return this.getOneAs(bestFriend,Pet);
+  }
+
+  set bestFriend(val: Pet)
+  {
+    this.overwrite(bestFriend,val.namedNode);
+  }
+}
+
 
 @linkedShape
 export class Person extends Shape
@@ -82,6 +110,27 @@ export class Person extends Shape
   }
 
   @objectProperty({
+    path: hasPet,
+    shape: Pet,
+  })
+  get pets() {
+    return this.getAllAs<Pet>(hasPet,Pet);
+  }
+
+  @objectProperty({
+    path: hasPet,
+    shape: Pet,
+    maxCount:1
+  })
+  get firstPet() {
+    return this.getOneAs<Pet>(hasPet,Pet);
+  }
+  set firstPet(val:Pet) {
+    this.overwrite(hasPet,val.namedNode)
+  }
+
+
+  @objectProperty({
     path: pluralTestProp,
     shape: Person,
   })
@@ -115,6 +164,28 @@ export class Person extends Shape
   }
   set isRealPerson(val: boolean) {
     this.overwrite(isRealPerson, new Literal(val ? 'true' : 'false', xsd.boolean));
+  }
+}
+
+
+@linkedShape
+export class Dog extends Pet
+{
+  static targetClass = dogClass;
+
+  @literalProperty({
+    path: guardDogLevel,
+    maxCount: 1,
+    datatype:xsd.integer
+  })
+  get guardDogLevel(): number
+  {
+    return this.hasProperty(guardDogLevel) ? parseInt(this.getValue(guardDogLevel)) : undefined;
+  }
+
+  set guardDogLevel(val: number)
+  {
+    this.overwrite(guardDogLevel,new Literal(val.toString(),xsd.integer));
   }
 }
 
@@ -163,6 +234,19 @@ p1.pluralTestProp.add(p4);
 p1.isRealPerson = true;
 p2.isRealPerson = false;
 p3.isRealPerson = true;
+
+let dog1 = Dog.getFromURI(NamedNode.TEMP_URI_BASE + 'dog1');
+dog1.guardDogLevel = 2;
+
+let dog2 = Dog.getFromURI(NamedNode.TEMP_URI_BASE + 'dog2');
+dog1.bestFriend = dog2;
+
+p1.pets.add(dog1);
+p2.pets.add(dog2);
+
+
+//kind of a dupplicate, but helpful for testing .as() on singular values
+p1.firstPet = dog1;
 
 export const testPersons = [p1,p2,p3,p4];
 export const testProps = {name,nickName,bestFriend,hobby,hasFriend,birthDate};
@@ -1357,6 +1441,51 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(subResult[0].friends[0].hasOwnProperty('hobby')).toBe(true);
       expect(subResult[0].friends[0].name).toBe('Moa');
     });
+
+    test('select shapeset as',async () => {
+      let personsWithGuardDogs = await Person.select((p) => {
+        return p.pets.as(Dog).guardDogLevel
+      });
+
+      expect(Array.isArray(personsWithGuardDogs)).toBe(true);
+
+      const p1Res = personsWithGuardDogs.find(p => p.id === p1.uri);
+      expect(p1Res.pets.length).toBe(1);
+      expect(p1Res.pets[0].id).toBe(dog1.uri);
+      expect(p1Res.pets[0].guardDogLevel).toBe(dog1.guardDogLevel);
+
+      const p2Res = personsWithGuardDogs.find(p => p.id === p2.uri);
+      expect(p2Res.pets.length).toBe(1);
+      expect(p2Res.pets[0].id).toBe(dog2.uri);
+      expect(p2Res.pets[0].guardDogLevel).toBeNull();
+
+      const p3Res = personsWithGuardDogs.find(p => p.id === p3.uri);
+      expect(p3Res.pets.length).toBe(0);
+    });
+
+
+
+    test('select shape as',async () => {
+      let personsWithGuardDogs = await Person.select((p) => {
+        return p.firstPet.as(Dog).guardDogLevel
+      });
+
+      expect(Array.isArray(personsWithGuardDogs)).toBe(true);
+
+      const p1Res = personsWithGuardDogs.find(p => p.id === p1.uri);
+      expect(p1Res.firstPet).toBeDefined();
+      expect(p1Res.firstPet.id).toBe(dog1.uri);
+      expect(p1Res.firstPet.guardDogLevel).toBe(dog1.guardDogLevel);
+
+      const p2Res = personsWithGuardDogs.find(p => p.id === p2.uri);
+      expect(p2Res.firstPet).toBeDefined();
+      expect(p2Res.firstPet.id).toBe(dog2.uri);
+      expect(p2Res.firstPet.guardDogLevel).toBeNull();
+
+      const p3Res = personsWithGuardDogs.find(p => p.id === p3.uri);
+      expect(p3Res.firstPet).toBeNull();
+    });
+
     test('component with single property query',async () => {
       const Component = linkedComponent(
         Person.query((p) => p.name),
@@ -2284,8 +2413,12 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(res.bestFriend).toBeUndefined();
 
     });
+
+
   });
 };
+
+
     //@TODO: add tests for updating ALL items without passing an id as first param
     // test('update all items (without id)',async () => {
     //   //original:

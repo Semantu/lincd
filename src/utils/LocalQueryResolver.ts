@@ -1242,6 +1242,11 @@ function resolvePropertyStep(
   restPath: (QueryStep | SubQueryPaths)[],
   resultObjects: NodeResultMap | QResult<any, any>,
 ) {
+  //sometimes when .as() was used we may get a singleShape as subject that does not match with the nodeShape of the property of this step
+  //If the singleShape does not match the nodeShape of the property, we change the shape
+  if(!singleShape.nodeShape.equals(queryStep.property.parentNodeShape)) {
+    singleShape = new (getShapeClass(queryStep.property.parentNodeShape.namedNode) as any)(singleShape.namedNode);
+  }
   //directly access the get/set method of the shape
   let stepResult = singleShape[(queryStep as PropertyQueryStep).property.label];
   let subResultObjects = stepResultToSubResult(stepResult);

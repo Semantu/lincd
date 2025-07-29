@@ -783,6 +783,8 @@ export class QueryShapeSet<
     subject?: QueryShape<any> | QueryShapeSet<any>,
   ) {
     super(property, subject);
+    this.originalValue = _originalValue;
+
     //Note that QueryShapeSet intentionally does not store the _originalValue shape set, because it manipulates this.queryShapes
     // and then recreates the original shape set when getOriginalValue() is called
     this.queryShapes = new CoreSet(
@@ -790,6 +792,16 @@ export class QueryShapeSet<
         QueryShape.create(shape, property, subject),
       ),
     );
+  }
+
+  as<ShapeClass extends typeof Shape>(shape: ShapeClass): QShapeSet<InstanceType<ShapeClass>, Source, Property> {
+    //if the shape is not the same as the original value, then we need to create a new query shape
+    if (!shape.shape.equals(this.originalValue.getLeastSpecificShape().shape)) {
+      let newOriginal = (shape as any).getSetOf(this.originalValue.getNodes());
+      return QueryShapeSet.create(newOriginal, this.property, this.subject as any);
+    }
+    // else return this
+    return this as any as QShapeSet<InstanceType<ShapeClass>, Source, Property>;
   }
 
   static create<S extends Shape = Shape>(
@@ -1064,14 +1076,14 @@ export class QueryShape<
             );
           }
         }
-        // if(key !== 'then') {
+        if(key !== 'then') {
         //   //otherwise return the value of the property on the original shape
-        //   throw new Error(
-        //     `${originalShape.constructor.name}.${key.toString()} is missing a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
-        //   );
+          console.warn(
+            `${originalShape.constructor.name}.${key.toString()} is accessed in a query, but it does not have a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
+          );
         // } else {
         //   console.error('Proxy is accessed like a promise');
-        // }
+        }
         return originalShape[key];
       },
     });

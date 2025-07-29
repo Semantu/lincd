@@ -9,4 +9,5 @@ export const {
   registerPackageExport,
   registerPackageModule,
   packageExports,
+  getPackageShape,
 } = linkedPackage('lincd');
