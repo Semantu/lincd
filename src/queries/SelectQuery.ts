@@ -9,7 +9,7 @@ import {CoreMap} from '../collections/CoreMap.js';
 import { getPropertyShapeByLabel,getShapeClass } from '../utils/ShapeClass.js';
 import {
   NodeReferenceValue,
-  Prettify,
+  Prettify,ShapeReferenceValue,
 } from './QueryFactory.js';
 import {QueryFactory} from './QueryFactory.js';
 
@@ -87,7 +87,7 @@ export type QueryPropertyPath = QueryStep[];
  * A QueryStep is a single step in a query path
  * It contains the property that was requested, and optionally a where clause
  */
-export type QueryStep = PropertyQueryStep | SizeStep | CustomQueryObject;
+export type QueryStep = PropertyQueryStep | SizeStep | CustomQueryObject | ShapeReferenceValue;
 export type SizeStep = {
   count: QueryPropertyPath;
   label?: string;
@@ -198,9 +198,18 @@ export type WherePath = WhereEvaluationPath | WhereAndOr;
 export type WhereEvaluationPath = {
   path: QueryPropertyPath;
   method: WhereMethods;
-  args: any[];
+  args: QueryArg[];
 };
 
+/**
+ * An argument can be a direct reference to a node, a js primitive (boolean,number), a path to resolve (like from a query context variables)
+ * Or a wherePath in the case of some() or every() (e.g. x.where(x.friends.some(f => f.age > 18) -> the argument is a wherePath)
+ */
+export type QueryArg = NodeReferenceValue | JSNonNullPrimitive | ArgPath | WherePath;
+export type ArgPath = {
+  path: QueryPropertyPath;
+  subject:ShapeReferenceValue;
+}
 export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
 /**
@@ -727,8 +736,23 @@ export class QueryBuilderObject<
     if (this.subject) {
       return this.subject.getPropertyPath(path);
     }
+    //when query context is used as the first step, then the first step is just a pointer to the subject it represents
+    if(((this.originalValue as Shape).node as TestNode)?.targetID) {
+      path.unshift(convertQueryContext(this.originalValue as Shape));
+    }
     return path;
   }
+}
+/**
+ * Converts query context to a ShapeReferenceValue
+ */
+const convertQueryContext = (shape: Shape): ShapeReferenceValue => {
+  return {
+    id: (shape.node as TestNode)?.targetID,
+    shape: {
+      id: shape.nodeShape.uri,
+    }
+  } as ShapeReferenceValue
 }
 
 const processWhereClause = (
@@ -980,7 +1004,8 @@ export class QueryShape<
   }
 
   get id() {
-    return this.originalValue['id'] || this.originalValue.uri;
+    //if the QueryShape was created for a TestNode that points to a specific node, then return that node's targetID
+    return (this.originalValue.node as TestNode)?.targetID || this.originalValue['id'] || this.originalValue.uri;
   }
 
   // where(validation: WhereClause<S>): this {
@@ -1039,15 +1064,15 @@ export class QueryShape<
             );
           }
         }
-        if(key !== 'then') {
-          //otherwise return the value of the property on the original shape
-          throw new Error(
-            `${originalShape.constructor.name}.${key.toString()} is missing a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
-          );
-        } else {
-          console.error('Proxy is accessed like a promise');
-        }
-        //return originalShape[key];
+        // if(key !== 'then') {
+        //   //otherwise return the value of the property on the original shape
+        //   throw new Error(
+        //     `${originalShape.constructor.name}.${key.toString()} is missing a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
+        //   );
+        // } else {
+        //   console.error('Proxy is accessed like a promise');
+        // }
+        return originalShape[key];
       },
     });
     return queryShape.proxy;
@@ -1162,18 +1187,43 @@ export class Evaluation {
   constructor(
     public value: QueryBuilderObject | QueryPrimitiveSet,
     public method: WhereMethods,
-    public args: any[],
+    public args: QueryArg[],
   ) {}
 
   getPropertyPath() {
     return this.getWherePath();
+  }
+  processArgs():QueryArg[] {
+    //if the args are not an array, then we convert them to an array
+    if(!this.args || !Array.isArray(this.args)) {
+      return [];
+    }
+    //convert each arg to a QueryBuilderObject
+    return this.args.map((arg) => {
+      if (arg instanceof QueryBuilderObject) {
+        let path = arg.getPropertyPath();
+        let subject;
+        if(path[0] && (path[0] as ShapeReferenceValue).id) {
+          subject = path.shift();
+        }
+        if((!path || path.length === 0) && subject) {
+          return subject as ShapeReferenceValue;
+        }
+        return {
+          path,
+          subject
+        } as ArgPath;
+      } else {
+        return arg;
+      }
+    });
   }
 
   getWherePath(): WherePath {
     let evalPath: WhereEvaluationPath = {
       path: this.value.getPropertyPath(),
       method: this.method,
-      args: this.args,
+      args: this.processArgs(),
     };
 
     if (this._andOr.length > 0) {
@@ -1228,8 +1278,9 @@ export abstract class QueryPrimitive<
     super(property, subject);
   }
 
-  equals(otherValue: JSPrimitive) {
-    return new Evaluation(this, WhereMethods.EQUALS, [otherValue]);
+  equals(otherValue: JSPrimitive|QueryBuilderObject) {
+    //TODO: review types, this is working but currently QueryBuilderObject is not accepted as a type of args
+    return new Evaluation(this, WhereMethods.EQUALS, [otherValue as any]);
   }
 
   where(validation: WhereClause<string>): this {
@@ -1496,7 +1547,7 @@ export class SelectQueryFactory<
       let selectQuery = {
         type: 'select',
         select: queryPaths,
-        subject: this.subject,
+        subject: this.getSubject(),
         limit: this.limit,
         offset: this.offset,
         shape: this.shape,
@@ -1513,6 +1564,15 @@ export class SelectQueryFactory<
         throw err;
     }
   }
+  getSubject() {
+    //if the subject is a QueryShape which comes from query context
+    //then it will point to a target node with "targetID"
+    //and we convert it to a node reference
+    if(((this.subject as Shape)?.node as TestNode)?.targetID) {
+      return convertQueryContext(this.subject as Shape);
+    }
+  return this.subject;
+}
 
   private getSortByPath() {
     if (!this.sortResponse) return null;

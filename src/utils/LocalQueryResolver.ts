@@ -19,10 +19,12 @@ import {
   WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
-  WherePath,SortByPath,
+  WherePath,
+  SortByPath,
+  QueryArg,ArgPath,QueryPropertyPath,
 } from '../queries/SelectQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {Shape} from '../shapes/Shape.js';
+import {Shape,ShapeType} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
@@ -34,7 +36,7 @@ import {
   isSetModificationValue,
   NodeDescriptionValue,
   NodeReferenceValue,
-  SetModificationValue,SinglePropertyUpdateValue,
+  SetModificationValue,ShapeReferenceValue,SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
 } from '../queries/QueryFactory.js';
 import { NamedNode,Literal } from '../models.js';
@@ -44,8 +46,13 @@ import { rdf } from '../ontologies/rdf.js';
 import { NodeSet } from '../collections/NodeSet.js';
 import { CreateQuery } from '../queries/CreateQuery.js';
 import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery.js';
+import { getShapeClass } from './ShapeClass.js';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
+
+export type ProcessedWhereEvaluationPath = WhereEvaluationPath & {
+  processedArgs:any[];
+};
 
 export async function createLocal<ResultType>(query: CreateQuery<ResultType>):Promise<ResultType> {
   if (query.type === 'create')
@@ -776,7 +783,7 @@ function filterResults(
   }
   if (subject instanceof ShapeSet) {
     subject.forEach((singleShape) => {
-      if (!evaluate(singleShape, where as WhereEvaluationPath)) {
+      if (!evaluate(singleShape, where)) {
         resultObjects?.delete(singleShape.uri);
         (subject as ShapeSet).delete(singleShape);
       }
@@ -798,12 +805,48 @@ function filterResults(
   }
 }
 
+/**
+ * Pre-processes the where clause to resolve the args if it is a path with args
+ * This prevents the need to resolve the args multiple times when evaluating the where clause
+ * @param where
+ */
+function preProcessWhere(where: WhereEvaluationPath): any[] {
+  //if the where clause is a path, we need to resolve the args
+  if (where.path && where.args) {
+    (where as ProcessedWhereEvaluationPath).processedArgs = resolveWhereArgs(where.args);
+    return (where as ProcessedWhereEvaluationPath).processedArgs;
+  }
+  return [];
+}
+
+function resolveWhereArgs(args:QueryArg[]) {
+  if(!args || !Array.isArray(args)) {
+    return [];
+  }
+  return args.map(arg => {
+    //if this is an argpath
+    if((arg as ArgPath).path && !(arg as WhereEvaluationPath).args) {
+      //in this case we need to follow the path to the end value
+      if(!(arg as ArgPath).subject) {
+        //if this happens, we probably need to NOT pre-process the where clause for args coming from the main query (as opposed to args from query context)
+        throw new Error('Expected a subject for arg path: ' + JSON.stringify(arg));
+      }
+      const shapeClass = getShapeClass(NamedNode.getOrCreate((arg as ArgPath).subject.shape.id));
+      const shape = (shapeClass as ShapeType).getFromURI((arg as ArgPath).subject.id) as Shape;
+      return resolveQueryPath(shape,(arg as ArgPath).path)
+    }
+    return arg;
+  })
+}
 function evaluate(singleShape: Shape, where: WherePath): boolean {
   if ((where as WhereEvaluationPath).path) {
     let shapeEndValue = resolveQueryPathEndResults(
       singleShape,
       (where as WhereEvaluationPath).path,
     );
+
+    let args:any[] = (where as ProcessedWhereEvaluationPath).processedArgs || preProcessWhere(where as WhereEvaluationPath);
+
     //when multiple values are the subject of the evaluation
     //and, we're NOT evaluating some() or every()
     if (
@@ -817,14 +860,14 @@ function evaluate(singleShape: Shape, where: WherePath): boolean {
         return evaluateWhere(
           singleEndValue as any,
           (where as WhereEvaluationPath).method,
-          (where as WhereEvaluationPath).args,
+          args,
         );
       });
     }
     return evaluateWhere(
       shapeEndValue as any,
       (where as WhereEvaluationPath).method,
-      (where as WhereEvaluationPath).args,
+      args,
     );
   } else if ((where as WhereAndOr).andOr) {
     //the first run we simply take the result as the combined result
@@ -954,6 +997,16 @@ function resolveQuerySteps(
   }
   //queryPath.slice(1,queryPath.length);
   let [currentStep, ...restPath] = queryPath;
+
+  //if the first step is a ShapeReferenceValue, it comes from a QueryContextVariable
+  //and it serves as a replacement for the subject
+  if((currentStep as ShapeReferenceValue).id && (currentStep as ShapeReferenceValue).shape) {
+      let shape = getShapeClass(NamedNode.getOrCreate((currentStep as ShapeReferenceValue).shape.id));
+      const shapeInstance = (shape as any).getFromURI((currentStep as ShapeReferenceValue).id) as Shape;
+      subject = shapeInstance;
+      //continue with the next step for this new subject
+      [currentStep, ...restPath] = restPath;
+    }
 
   if (subject instanceof Shape) {
     if (Array.isArray(currentStep)) {

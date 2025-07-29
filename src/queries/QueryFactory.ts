@@ -203,6 +203,7 @@ export type UpdateNodePropertyValue = {
   val: PropUpdateValue
 };
 export type NodeReferenceValue = { id: string };
+export type ShapeReferenceValue = { id: string,shape:NodeReferenceValue};
 
 export abstract class QueryFactory
 {
