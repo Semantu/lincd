@@ -629,6 +629,12 @@ registerPropertyShape(NodeShape.shape,createPropertyShape({
 },'properties',shacl.IRI));
 
 registerPropertyShape(NodeShape.shape,createPropertyShape({
+  path:rdf.type,
+  maxCount:1,
+  shape:PropertyShape,
+},'type',shacl.IRI));
+
+registerPropertyShape(NodeShape.shape,createPropertyShape({
   path:shacl.targetClass,
   shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
 },'targetClass',shacl.IRI));
