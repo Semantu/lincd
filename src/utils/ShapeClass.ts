@@ -238,7 +238,7 @@ export function getShapeOrSubShape<S extends Shape = Shape>(
 
   //new:
   //find all shapes that extend the given shape(s)
-  let mostSpecificShapes = getMostSpecificShapes(node, shape);
+  let mostSpecificShapes = getMostSpecificShapesByType(node, shape);
 
   //take the first one and return a new instance of that shape
   if (mostSpecificShapes.length > 0) {

@@ -575,7 +575,7 @@ export function resolveLocal<ResultType>(
       // shape: query.shape,
     }
   } else {
-    //TODO: review, this happens when an array is given?
+    //no specific subject is given, so subjects will be a ShapeSet of filtered instances,
     resultObjects = shapeSetToResultObjects(subject as ShapeSet);
   }
 
