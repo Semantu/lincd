@@ -1463,8 +1463,6 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(p3Res.pets.length).toBe(0);
     });
 
-
-
     test('select shape as',async () => {
       let personsWithGuardDogs = await Person.select((p) => {
         return p.firstPet.as(Dog).guardDogLevel
@@ -1484,6 +1482,16 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
       const p3Res = personsWithGuardDogs.find(p => p.id === p3.uri);
       expect(p3Res.firstPet).toBeNull();
+    });
+
+    test('select one',async () => {
+      let singleResult = await Person.select((p) => {
+        return p.name
+      }).where(p => p.equals({id:p1.uri})).one();
+
+      expect(Array.isArray(singleResult)).toBe(false);
+      expect(singleResult).toBeDefined();
+      expect(singleResult.name).toBe(p1.name);
     });
 
     test('component with single property query',async () => {

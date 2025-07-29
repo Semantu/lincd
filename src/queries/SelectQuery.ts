@@ -22,6 +22,12 @@ import {QueryFactory} from './QueryFactory.js';
 export type JSPrimitive = JSNonNullPrimitive | null | undefined;
 export type JSNonNullPrimitive = string | number | boolean | Date;
 
+export type SingleResult<ResultType> = ResultType extends Array<infer R>
+  ? R
+  : ResultType extends Set<infer R>
+    ? R
+    : ResultType;
+
 /**
  * All the possible types that a regular get/set method of a Shape can return
  */
@@ -77,6 +83,7 @@ export interface SelectQuery<S extends Shape = Shape, ResultType = any>
   limit?: number;
   offset?: number;
   shape?: ShapeType<S>;
+  singleResult?: boolean;
 }
 /**
  * Much like a querypath, except it can only contain QuerySteps
@@ -249,6 +256,7 @@ export type PatchedQueryPromise<ResultType, ShapeType extends Shape> = {
     sortParam: any,
     direction?: 'ASC' | 'DESC',
   ): PatchedQueryPromise<ResultType, ShapeType>;
+  one():PatchedQueryPromise<SingleResult<ResultType>, ShapeType>;
 } & Promise<ResultType>;
 
 export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
@@ -1442,6 +1450,7 @@ export class SelectQueryFactory<
   public sortResponse: any;
   public sortDirection: string;
   public parentQueryPath: QueryPath;
+  public singleResult: boolean;
   private limit: number;
   private offset: number;
   private wherePath: WherePath;
@@ -1565,6 +1574,9 @@ export class SelectQueryFactory<
         shape: this.shape,
         sortBy: this.getSortByPath(),
       } as SelectQuery<S>;
+      if(this.singleResult) {
+        selectQuery.singleResult = this.singleResult;
+      }
       if (this.wherePath)
       {
         selectQuery.where = this.wherePath;
@@ -1699,7 +1711,7 @@ export class SelectQueryFactory<
 
   patchResultPromise<ResultType>(
     p: Promise<ResultType>,
-  ): PatchedQueryPromise<ResultType, S> {
+  ): PatchedQueryPromise<any, S> {
     let pAdjusted = p as PatchedQueryPromise<ResultType, S>;
     p['where'] = (
       validation: WhereClause<S>,
@@ -1719,7 +1731,13 @@ export class SelectQueryFactory<
       this.sortBy(sortFn, direction);
       return pAdjusted;
     };
-    return p as PatchedQueryPromise<ResultType, S>;
+    p['one'] = (): PatchedQueryPromise<ResultType, S> => {
+      this.setLimit(1);
+      this.singleResult = true;
+      return pAdjusted;
+    }
+
+    return p as any as PatchedQueryPromise<SingleResult<ResultType>, S>;
   }
 
   sortBy<R>(sortFn: QueryBuildFn<S, R>, direction) {

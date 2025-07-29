@@ -595,9 +595,14 @@ export function resolveLocal<ResultType>(
       );
     query.subject ? r(subject) : (subject as ShapeSet).map(r);
   }
-  return (
+  const results = (
     resultObjects instanceof Map ? [...resultObjects.values()] : resultObjects
   ) as ResultType;
+
+  if(query.singleResult) {
+    return results[0]
+  }
+  return results;
 }
 
 /**
