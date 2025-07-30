@@ -1,6 +1,6 @@
 import { GetQueryResponseType,QueryResponseToResultType,SelectQueryFactory } from '../queries/SelectQuery.js';
 import { Shape } from '../shapes/Shape.js';
-import { AddId,UpdatePartial } from '../queries/QueryFactory.js';
+import {AddId,NodeReferenceValue,UpdatePartial} from '../queries/QueryFactory.js';
 import { CreateResponse } from '../queries/CreateQuery.js';
 import { NodeId } from '../queries/MutationQuery.js';
 import { DeleteResponse } from '../queries/DeleteQuery.js';
@@ -33,7 +33,7 @@ export interface IQueryParser
   ): Promise<CreateResponse<U>>;
 
   deleteQuery(
-    id: NodeId | NodeId[],
+    id: NodeId | NodeId[] | NodeReferenceValue[],
     shapeClass: typeof Shape,
   ): Promise<DeleteResponse>;
 }

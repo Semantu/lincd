@@ -1,6 +1,6 @@
 import { IQueryParser,staticImplements } from '../interfaces/IQueryParser.js';
 import { GetQueryResponseType,QueryResponseToResultType,SelectQueryFactory } from './SelectQuery.js';
-import { AddId,UpdatePartial } from './QueryFactory.js';
+import {AddId,NodeReferenceValue,UpdatePartial} from './QueryFactory.js';
 import { Shape } from '../shapes/Shape.js';
 import { LinkedStorage } from '../utils/LinkedStorage.js';
 import { UpdateQueryFactory } from './UpdateQuery.js';
@@ -53,7 +53,7 @@ export class QueryParser {
   }
 
   static deleteQuery(
-    id:NodeId|NodeId[],
+    id: NodeId | NodeId[] | NodeReferenceValue[],
     shapeClass:typeof Shape,
   ): Promise<DeleteResponse> {
     const query = new DeleteQueryFactory<Shape, {}>(shapeClass, id);

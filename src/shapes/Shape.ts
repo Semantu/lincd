@@ -39,7 +39,7 @@ import {
 } from '../queries/SelectQuery.js';
 import {IQueryParser, staticImplements} from '../interfaces/IQueryParser';
 import {TestNode} from '../utils/TraceShape.js';
-import {UpdatePartial, AddId} from '../queries/QueryFactory.js';
+import {UpdatePartial,AddId,NodeReferenceValue} from '../queries/QueryFactory.js';
 import {ClassOf} from '../utils/Types.js';
 import {CreateResponse} from '../queries/CreateQuery.js';
 import {NodeId} from '../queries/MutationQuery.js';
@@ -202,7 +202,7 @@ export abstract class Shape implements IShape {
 
   static delete<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
     this: {new (node: Node): ShapeType; queryParser: IQueryParser},
-    id: NodeId | NodeId[],
+    id: NodeId | NodeId[] | NodeReferenceValue[],
   ): Promise<DeleteResponse> {
     return this.queryParser.deleteQuery(id, this as any as typeof Shape);
   }

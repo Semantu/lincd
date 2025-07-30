@@ -2147,8 +2147,24 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       const qRes = await Person.select().where(p => p.name.equals('To Be Deleted'));
       expect(qRes.length).toBe(0);
     });
+    test('delete query 2 - delete newly created node by node reference',async () => {
+      const created = await Person.create({
+        name: 'To Be Deleted',
+        hobby: 'Archery',
+      });
 
-    test('delete query 2 - delete multiple newly created nodes',async () => {
+      // make sure it's there
+      const check = await Person.select(p => p.name).where(p => p.name.equals('To Be Deleted'));
+      expect(check[0].name).toBe('To Be Deleted');
+
+      await Person.delete(created);
+
+      // verify deletion
+      const qRes = await Person.select().where(p => p.name.equals('To Be Deleted'));
+      expect(qRes.length).toBe(0);
+    });
+
+    test('delete query 3 - delete multiple newly created nodes',async () => {
       const created1 = await Person.create({
         name: 'To Be Deleted 1',
         hobby: 'Archery',
@@ -2167,6 +2183,30 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(check.length).toBe(2);
 
       await Person.delete(ids);
+
+      // verify deletion
+      const qRes = await Person.select().where(p => p.name.equals('To Be Deleted 1').or(p.name.equals('To Be Deleted 2')));
+      expect(qRes.length).toBe(0);
+    });
+
+    test('delete query 4 - delete multiple newly created nodes by passing the full result objects',async () => {
+      const created1 = await Person.create({
+        name: 'To Be Deleted 1',
+        hobby: 'Archery',
+      });
+
+      const created2 = await Person.create({
+        name: 'To Be Deleted 2',
+        hobby: 'Archery',
+      });
+
+      const toBeDeleted = [created1,created2];
+
+      // make sure they're there
+      const check = await Person.select(p => p.name).where(p => p.name.equals('To Be Deleted 1').or(p.name.equals('To Be Deleted 2')));
+      expect(check.length).toBe(2);
+
+      await Person.delete(toBeDeleted);
 
       // verify deletion
       const qRes = await Person.select().where(p => p.name.equals('To Be Deleted 1').or(p.name.equals('To Be Deleted 2')));
