@@ -469,7 +469,7 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
       if(typeof value === 'number') {
         res = new Literal(value.toString(),xsd.integer);
       } else {
-        throw new Error('Expected a number value for property: ' + propShape.label);
+        throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.integer, so it expects a number value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
       }
     }
     else if(datatype.equals(xsd.boolean)) {
@@ -477,7 +477,7 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
       {
         res = Boolean_toLiteral(value);
       } else {
-        throw new Error('Expected boolean value for property: ' + propShape.label);
+        throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.boolean, so it expects a boolean value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
       }
     }
     else if(datatype.equals(xsd.string)) {
@@ -488,7 +488,7 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
       if(value instanceof Date) {
         res = XSDDate_fromNativeDate(value);
       } else {
-        throw new Error('Expected date value for property: ' + propShape.label);
+        throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.date, so it expects a Date value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
       }
     }
     else {
@@ -508,7 +508,7 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
   if(!res)
   {
     if(typeof value !== 'string') {
-      throw new Error('Expected string value for property: ' + propShape.label);
+      throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has no datatype defined in its decorator, so it expects a string value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
     }
     //and we convert the string to a literal
     //Note: datatype could be null or any other unsupported datatype
