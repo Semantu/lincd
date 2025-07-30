@@ -1,7 +1,7 @@
 import { LinkedQuery } from './SelectQuery.js';
 import { NodeShape,PropertyShape } from '../shapes/SHACL.js';
 import { Shape } from '../shapes/Shape.js';
-import { ShapeValuesSet } from '../collections/ShapeValuesSet.js';
+import {ShapeSet} from '../collections/ShapeSet';
 
 export type Prettify<T> = T extends infer R
   ? {
@@ -167,7 +167,7 @@ type KeysWithoutFunctions<T> = {
 
 // type ShapePropertyToUpdatePartial<ShapeProperty> = ShapeProperty;
 type ShapePropValueToUpdatePartial<ShapeProperty> = ShapeProperty extends Shape ? UpdatePartial<ShapeProperty> :
-  ShapeProperty extends ShapeValuesSet<infer SSType> ? SetUpdateValue<SSType> : ShapeProperty;
+  ShapeProperty extends ShapeSet<infer SSType> ? SetUpdateValue<SSType> : ShapeProperty;
 
 type SetUpdateValue<SSType> = UpdatePartial<SSType>[] | SetModification<SSType>;
 
