@@ -628,6 +628,16 @@ function writeResultObject(resultObject,key,result) {
   if(typeof result === 'undefined') {
     result = null;
   }
+  //if this key was already set
+  if(key in resultObject) {
+    //if both the existing value and the new value are objects, we can merge them
+    if(result && resultObject[key] && typeof result === 'object' && typeof resultObject[key] === 'object') {
+      resultObject[key] = { ...resultObject[key], ...result };
+      return;
+    } else {
+      console.warn('Overwriting existing value for key: ' + key + ' in result object. Existing value: ' + JSON.stringify(resultObject[key]) + ', new value: ' + JSON.stringify(result));
+    }
+  }
   resultObject[key] = result;
 }
 

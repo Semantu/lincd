@@ -245,7 +245,7 @@ p1.pets.add(dog1);
 p2.pets.add(dog2);
 
 
-//kind of a dupplicate, but helpful for testing .as() on singular values
+//kind of a duplicate (it replaces previously set pets), but helpful for testing .as() on singular values
 p1.firstPet = dog1;
 
 export const testPersons = [p1,p2,p3,p4];
@@ -1493,6 +1493,58 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(singleResult).toBeDefined();
       expect(singleResult.name).toBe(p1.name);
     });
+
+    test('nested queries 2',async() => {
+      const nested = await Person.select((p) => {
+        return [
+          p.name,
+          p.friends.select((p2) => {
+            return [
+              p2.firstPet,
+              p2.bestFriend.select((p3) => {
+                return [p3.name];
+              }),
+            ];
+          }),
+        ];
+      }).where(p => p.equals({id:p1.uri}));
+
+      //p1 -> p2 (friends) -> p3 (bestFriend)
+      //p2 -> dog2 (firstPet)
+      const result1 = nested[0];
+      expect(result1.name).toBe(p1.name);
+      expect(Array.isArray(result1.friends)).toBe(true);
+      expect(result1.friends.length).toBe(2);
+      const result2 = result1.friends[0];
+      expect(result2.firstPet).toBeDefined();
+      expect(result2.firstPet.id).toBe(dog2.uri);
+      expect(result2.bestFriend).toBeDefined();
+      expect(result2.bestFriend.id).toBe(p3.uri);
+      expect(result2.bestFriend.name).toBe(p3.name);
+
+    })
+
+    test('select duplicate paths',async () => {
+      let bestFriendProps = await Person.select((p) => {
+        return [
+          p.bestFriend.name,
+          p.bestFriend.hobby,
+          p.bestFriend.isRealPerson,
+        ]
+      });
+
+      expect(Array.isArray(bestFriendProps)).toBe(true);
+      expect(bestFriendProps.length).toBe(4);
+      const p1Result = bestFriendProps.find(p => p.id === p1.uri);
+      expect(p1Result.bestFriend).toBe(null);
+      const p2Result = bestFriendProps.find(p => p.id === p2.uri);
+      const bestFriend = p2Result.bestFriend;
+      expect(bestFriend.id === p3.uri).toBe(true);
+      expect(bestFriend.name).toBe(p3.name);
+      expect(bestFriend.hobby).toBe(null);
+      expect(bestFriend.isRealPerson).toBe(true);
+    })
+
 
     test('component with single property query',async () => {
       const Component = linkedComponent(
