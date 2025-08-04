@@ -483,10 +483,10 @@ function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,pla
     else if(datatype.equals(xsd.string)) {
       res = new Literal(value.toString(),xsd.string);
     }
-    else if(datatype.equals(xsd.date)) {
+    else if(datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
       //check if value is a date
       if(value instanceof Date) {
-        res = XSDDate_fromNativeDate(value);
+        res = XSDDate_fromNativeDate(value,datatype);
       } else {
         throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.date, so it expects a Date value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
       }
@@ -1489,11 +1489,11 @@ function resolveQueryStepForShapesEndResults(
   }
 }
 
-function XSDDate_fromNativeDate(nativeDate: Date) {
+function XSDDate_fromNativeDate(nativeDate: Date,datatype) {
   if (!nativeDate) return null;
 
   var value = nativeDate.toISOString();
-  let literal = new Literal(value, xsd.dateTime);
+  let literal = new Literal(value, datatype);
   return literal;
 
 }

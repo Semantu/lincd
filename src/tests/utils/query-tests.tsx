@@ -141,6 +141,8 @@ export class Person extends Shape
 
   @literalProperty({
     path: birthDate,
+    datatype:xsd.date,
+    maxCount:1,
   })
   get birthDate(): Date
   {
@@ -2514,6 +2516,32 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
     });
 
+    test('update query 11 - update datatype: Date',async () => {
+      const originalBirthDate = p1.birthDate;
+
+      const res = await Person.update(p1,{
+        birthDate: new Date('1990-01-01'),
+      });
+
+
+      expect(res.id).toBeDefined();
+      expect(res.id).toEqual(p1.uri);
+      expect(res.birthDate).toBeDefined();
+      expect(res.birthDate.toISOString()).toBe('1990-01-01T00:00:00.000Z');
+
+
+      // Check database
+      let qRes = await Person.select(p1,(p) => p.birthDate);
+      expect(qRes).toBeDefined();
+      expect(qRes.birthDate.toISOString()).toBe('1990-01-01T00:00:00.000Z');
+
+      // Restore original value
+      await Person.update(p1,{birthDate: originalBirthDate});
+
+      let qRes2 = await Person.select(p1,(p) => p.birthDate);
+      expect(qRes2).toBeDefined();
+      expect(qRes2.birthDate.toISOString()).toBe(originalBirthDate.toISOString());
+    })
 
   });
 };
