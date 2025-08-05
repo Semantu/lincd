@@ -417,7 +417,7 @@ function convertNodeReference(propShape: PropertyShape, value: NodeReferenceValu
     throw new Error('Invalid value for property: ' + propShape.label+(suffixKey ? '.'+suffixKey : '')+'. A node reference should only contain the id field.');
   }
   return {
-    value:NamedNode.getOrCreate((value as NodeReferenceValue).id),
+    value:NamedNode.getNamedNode((value as NodeReferenceValue).id),
     //return an object only with the ID (a NodeReferenceValue should always only have an id field)
     plainValue:{id:(value as NodeReferenceValue).id}
   }
@@ -537,7 +537,12 @@ export function resolveLocal<ResultType>(
   let subject:Shape|ShapeSet;
   if(query.subject) {
     if((query.subject as QResult<any>).id) {
-      subject = query.shape.getFromURI((query.subject as QResult<any>).id) as Shape;
+      if(NamedNode.getNamedNode((query.subject as QResult<any>).id))
+      {
+        subject = query.shape.getFromURI((query.subject as QResult<any>).id) as Shape;
+      } else {
+        return null;
+      }
     } else {
       subject = query.subject as Shape;
     }
@@ -846,7 +851,11 @@ function resolveWhereArgs(args:QueryArg[]) {
         //if this happens, we probably need to NOT pre-process the where clause for args coming from the main query (as opposed to args from query context)
         throw new Error('Expected a subject for arg path: ' + JSON.stringify(arg));
       }
-      const shapeClass = getShapeClass(NamedNode.getOrCreate((arg as ArgPath).subject.shape.id));
+      const node = NamedNode.getNamedNode((arg as ArgPath).subject.shape.id);
+      if(!node) {
+        return [];
+      }
+      const shapeClass = getShapeClass(node);
       const shape = (shapeClass as ShapeType).getFromURI((arg as ArgPath).subject.id) as Shape;
       return resolveQueryPath(shape,(arg as ArgPath).path)
     }
@@ -1016,7 +1025,7 @@ function resolveQuerySteps(
   //if the first step is a ShapeReferenceValue, it comes from a QueryContextVariable
   //and it serves as a replacement for the subject
   if((currentStep as ShapeReferenceValue).id && (currentStep as ShapeReferenceValue).shape) {
-      let shape = getShapeClass(NamedNode.getOrCreate((currentStep as ShapeReferenceValue).shape.id));
+      let shape = getShapeClass(NamedNode.getNamedNode((currentStep as ShapeReferenceValue).shape.id));
       const shapeInstance = (shape as any).getFromURI((currentStep as ShapeReferenceValue).id) as Shape;
       subject = shapeInstance;
       //continue with the next step for this new subject

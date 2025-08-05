@@ -501,6 +501,15 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(qRes.name).toBe(p1.name);
       expect(qRes.id).toBe(p1.uri);
     });
+    test('can select properties of a specific subject by ID reference',async () => {
+      let qRes = await Person.select({id:p1.uri},p => p.name);
+      expect(qRes.name).toBe(p1.name);
+      expect(qRes.id).toBe(p1.uri);
+    });
+    test('select with a non existing returns null',async () => {
+      let qRes = await Person.select({id:'https://does.not/exist'},p => p.name);
+      expect(qRes).toBeNull();
+    });
 
     test('can select 3 level deep nested paths',async () => {
       let level3Friends = await Person.select((p) => {
