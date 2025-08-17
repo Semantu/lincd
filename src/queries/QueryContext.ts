@@ -34,7 +34,7 @@ export function setQueryContext(name:string, value:any,shapeType?) {
     if(value instanceof Shape) {
         //convert to QShape
         value = new QueryShape(value);
-    } else if(!(value instanceof QueryShape)) {
+    } else if(value && !(value instanceof QueryShape)) {
         console.warn('setQueryContext: value is not a QueryShape or Shape', value);
         return;
     }
