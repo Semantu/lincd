@@ -639,7 +639,7 @@ function writeResultObject(resultObject,key,result) {
     if(result && resultObject[key] && typeof result === 'object' && typeof resultObject[key] === 'object') {
       resultObject[key] = { ...resultObject[key], ...result };
       return;
-    } else {
+    } else if(result[key] !== null) {
       console.warn('Overwriting existing value for key: ' + key + ' in result object. Existing value: ' + JSON.stringify(resultObject[key]) + ', new value: ' + JSON.stringify(result));
     }
   }

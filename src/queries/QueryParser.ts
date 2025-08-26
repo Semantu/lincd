@@ -47,9 +47,13 @@ export class QueryParser {
     updateObjectOrFn: U,
     shapeClass:typeof Shape,
   ): Promise<CreateResponse<U>> {
-    const query = new CreateQueryFactory<ShapeType, U>(shapeClass, updateObjectOrFn);
-    let queryObject = query.getQueryObject();
-    return LinkedStorage.createQuery(queryObject);
+    try {
+      const query = new CreateQueryFactory<ShapeType, U>(shapeClass, updateObjectOrFn);
+      let queryObject = query.getQueryObject();
+      return LinkedStorage.createQuery(queryObject);
+    } catch (e) {
+      console.warn(e);
+    }
   }
 
   static deleteQuery(

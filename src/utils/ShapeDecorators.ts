@@ -87,6 +87,12 @@ export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
    * Each value of this property must have this class as its rdf:type
    */
   class?: NamedNode;
+  /**
+   * The shape that values of this property path need to confirm to.
+   * You need to provide a class that extends Shape.
+   * This is LINCDs equivalent of shacl:node
+   */
+  shape?: typeof Shape | [string, string];
 }
 
 export interface PropertyShapeConfig {
@@ -117,13 +123,6 @@ export interface PropertyShapeConfig {
    ```
    */
   nodeKind?: typeof Node | (typeof Node)[];
-
-  /**
-   * The shape that values of this property path need to confirm to.
-   * You need to provide a class that extends Shape.
-   * This is LINCDs equivalent of shacl:node
-   */
-  shape?: typeof Shape | [string,string];
 
   /**
    * Minimum number of values required
@@ -168,10 +167,10 @@ export interface ParameterConfig {
 }
 
 export const literalProperty = (config: LiteralPropertyShapeConfig) => {
-  return _linkedProperty(config, shacl.Literal);
+  return _linkedProperty<LiteralPropertyShapeConfig>(config, shacl.Literal);
 };
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
-  return _linkedProperty(config, shacl.IRI);
+  return _linkedProperty<ObjectPropertyShapeConfig>(config, shacl.IRI);
 };
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
@@ -192,11 +191,11 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
  * }
  * ```
  */
-export const linkedProperty = (config: PropertyShapeConfig) => {
+export const linkedProperty = (config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig) => {
   return _linkedProperty(config);
 };
-const _linkedProperty = (
-  config: PropertyShapeConfig,
+const _linkedProperty = <Config extends ObjectPropertyShapeConfig | LiteralPropertyShapeConfig>(
+  config: Config,
   defaultNodeKind: NamedNode = null,
 ) => {
   return function (
@@ -204,20 +203,27 @@ const _linkedProperty = (
     propertyKey: string,
     descriptor: PropertyDescriptor,
   ) {
-
-    //then we pass the shape, and it will be used to register the property shape
-    let propertyShape = createPropertyShape(
-      config,
-      propertyKey,
-      defaultNodeKind,
-    );
-
-    //once the NodeShape is available, we can add the property shape to it
-    onShapeSetup(target.constructor, (shape: NodeShape) => {
-      registerPropertyShape(shape, propertyShape);
-    });
+    createAndRegisterPropertyShape(target.constructor, propertyKey, config, defaultNodeKind);
   };
 };
+function createAndRegisterPropertyShape<Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig>(
+  shapeClass: typeof Shape | [string,string],
+  propertyKey: string,
+  config: Config,
+  defaultNodeKind: NamedNode = null,
+) {
+  //then we pass the shape, and it will be used to register the property shape
+  let propertyShape = createPropertyShape<Config>(
+    config,
+    propertyKey,
+    defaultNodeKind,
+  );
+
+  //once the NodeShape is available, we can add the property shape to it
+  onShapeSetup(shapeClass, (shape: NodeShape) => {
+    registerPropertyShape(shape, propertyShape);
+  });
+}
 
 export function registerPropertyShape(
   shape: NodeShape,
@@ -233,10 +239,17 @@ export function registerPropertyShape(
 
     //then add it directly
     shape.addPropertyShape(propertyShape);
+  } else {
+    //this also happens when the shape is already in storage. in this case we should copy over all the properties
+    let existing = NamedNode.getNamedNode(uri);
+    propertyShape.namedNode.getProperties().forEach(prop => {
+      existing.moverwrite(prop,propertyShape.namedNode.getAll(prop));
+    });
+    // console.log('Updated shape:',existing.print());
   }
 }
-export function createPropertyShape(
-  config: PropertyShapeConfig,
+export function createPropertyShape<Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig>(
+  config: Config,
   propertyKey: string,
   defaultNodeKind: NamedNode = null,
 ) {
@@ -296,9 +309,9 @@ export function createPropertyShape(
     }
   }
   //we accept a shape configuration, which translates to a sh:nodeShape
-  if (config.shape) {
+  if ((config as ObjectPropertyShapeConfig).shape) {
     //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
-    onShapeSetup(config.shape, (nodeShape: NodeShape) => {
+    onShapeSetup((config as ObjectPropertyShapeConfig).shape, (nodeShape: NodeShape) => {
       propertyShape.valueShape = nodeShape;
     },propertyKey);
   }
@@ -389,3 +402,8 @@ export function onShapeSetup(shapeClass: typeof Shape | [string,string], callbac
     shapeClass['shapeCallbacks'].push(callback);
   }
 }
+
+export function registerProperty(shape:typeof Shape,label:string,config:ObjectPropertyShapeConfig|LiteralPropertyShapeConfig) {
+  createAndRegisterPropertyShape(shape,label,config as any)
+}
+

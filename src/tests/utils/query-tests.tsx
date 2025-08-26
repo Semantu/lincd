@@ -159,7 +159,7 @@ export class Person extends Shape
   @literalProperty({
     path:isRealPerson,
     datatype: xsd.boolean,
-    maxLength:1
+    maxCount:1
   })
   get isRealPerson(): boolean {
     return this.hasProperty(isRealPerson) ? this.getValue(isRealPerson) === 'true' : undefined;

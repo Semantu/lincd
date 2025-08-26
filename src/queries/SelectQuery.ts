@@ -12,6 +12,8 @@ import {
   Prettify,ShapeReferenceValue,
 } from './QueryFactory.js';
 import {QueryFactory} from './QueryFactory.js';
+import { NodeSet } from '../collections/NodeSet';
+import { xsd } from '../ontologies/xsd.js';
 
 /**
  * ###################################
@@ -638,8 +640,8 @@ export class QueryBuilderObject<
       //Temporary solution to support accessors with decorators that return named nodes.
       //As long as the decorator indicates the shape the values should have, we can still use it.
       //In the future queries will only use the decorators, not the actually returned value. Then this can go
-      if(property.nodeShape) {
-        const shape = new (getShapeClass(property.nodeShape.namedNode) as any)(originalValue);
+      if(property.valueShape) {
+        const shape = new (getShapeClass(property.valueShape.namedNode) as any)(originalValue);
         return QueryShape.create(shape,property,subject);
       }
       throw new Error(
@@ -652,6 +654,87 @@ export class QueryBuilderObject<
       throw new Error('Unknown query path result type: ' + originalValue);
     }
   }
+
+  /**
+   * Create a Query Builder Object based on the requested PropertyShape
+   */
+  static generatePathValue(
+    // originalValue: AccessorReturnValue,
+    property: PropertyShape,
+    subject: QueryShape<any> | QueryShapeSet<any> | QueryShape<any>,
+  ): QueryBuilderObject {
+    let datatype = property.datatype;
+    let valueShape = property.valueShape;
+    let singleValue = property.maxCount <= 1;
+    if(datatype)
+    {
+      if (singleValue)
+      {
+        if (datatype.equals(xsd.integer))
+        {
+          return new QueryNumber(0,property,subject);
+        }
+        else if (datatype.equals(xsd.boolean))
+        {
+          return new QueryBoolean(false,property,subject);
+        }
+        else if (datatype.equals(xsd.dateTime) || datatype.equals(xsd.date))
+        {
+          return new QueryDate(new Date(),property,subject);
+        }
+        else if (datatype.equals(xsd.string))
+        {
+          return new QueryString('',property,subject);
+        }
+      }
+      else
+      {
+        return new QueryPrimitiveSet([''], property, subject);
+      }
+    }
+    let path = property.path;
+    if(Array.isArray(path)) {
+      console.error("Unimplemented: property shape has multiple paths, using the first one for query generation. This is WRONG",property);
+      path = path[0];
+    }
+
+    if(valueShape) {
+      if (singleValue) {
+        const shapeValue = new (getShapeClass(valueShape.namedNode) as any)(new TestNode(path));
+        return QueryShape.create(shapeValue,property,subject);
+      } else {
+        const shapeValue = new (getShapeClass(valueShape.namedNode) as any)(new TestNode(path));
+        return QueryShapeSet.create(new ShapeSet([shapeValue]), property, subject);
+      }
+    }
+
+    //no value shape and no data type.
+    //Lets look at the node kind
+    if(property.nodeKind.equals(shacl.Literal) || property.nodeKind.equals(shacl.BlankNodeOrLiteral)) {
+      if (singleValue)
+      {
+        //default to string if no datatype is set
+        return new QueryString('',property,subject);
+      }
+      else
+      {
+        return new QueryPrimitiveSet([''],property,subject);
+      }
+    }
+
+    //if an object is expected and no value shape is set, then warn
+    console.warn(`No shape set for objectProperty ${property.parentNodeShape.label}.${property.label}`);
+
+    //and use a generic shape
+    const shapeValue = new (Shape as any)(new TestNode(path));
+    if(singleValue)
+    {
+      return QueryShape.create(shapeValue,property,subject);
+    } else {
+      return QueryShapeSet.create(new ShapeSet(shapeValue), property, subject);
+    }
+  }
+
 
   static getOriginalSource(
     endValue: ShapeSet<Shape> | Shape[] | QueryPrimitiveSet,
@@ -1074,14 +1157,24 @@ export class QueryShape<
             key,
           );
           if (propertyShape) {
+            //generate the query shape based on the property shape
+            // let nodeValue;
+            // if(propertyShape.maxCount <= 1) {
+            //   nodeValue = new TestNode(propertyShape.path);
+            // } else {
+            //   nodeValue = new NodeSet(new TestNode(propertyShape.path));
+            // }
+
+            return QueryBuilderObject.generatePathValue(propertyShape,target);
+
             //get the value of the property from the original shape
-            let value = originalShape[key];
-            //convert the value into a query value
-            return QueryBuilderObject.convertOriginal(
-              value,
-              propertyShape,
-              queryShape,
-            );
+            // let value = originalShape[key];
+            // //convert the value into a query value
+            // return QueryBuilderObject.convertOriginal(
+            //   value,
+            //   propertyShape,
+            //   queryShape,
+            // );
           }
         }
         if(key !== 'then') {
