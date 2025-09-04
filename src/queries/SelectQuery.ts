@@ -689,7 +689,8 @@ export class QueryBuilderObject<
       }
       else
       {
-        return new QueryPrimitiveSet([''], property, subject);
+        //TODO review this, do we need property & subject in both of these? currently yes, but why
+        return new QueryPrimitiveSet([''], property, subject,[new QueryString('',property,subject)]);
       }
     }
     let path = property.path;
@@ -718,7 +719,8 @@ export class QueryBuilderObject<
       }
       else
       {
-        return new QueryPrimitiveSet([''],property,subject);
+        //TODO review this, do we need property & subject in both of these? currently yes, but why
+        return new QueryPrimitiveSet([''], property, subject,[new QueryString('',property,subject)]);
       }
     }
 
@@ -1483,9 +1485,14 @@ export class QueryPrimitiveSet<
     //however, sometimes the path goes through the subject of this SET rather than the individual items (which have an individual shape as subject)
     //so we pass the subject of this set so it can be used
     let first = this.contents.first();
-    (first.subject as QueryShapeSet).wherePath =
-      (first.subject as QueryShapeSet).wherePath || this.subject.wherePath;
-    return this.contents.first().getPropertyPath();
+    if(first) {
+      (first.subject as QueryShapeSet).wherePath =
+        (first.subject as QueryShapeSet).wherePath || this.subject.wherePath;
+      return first.getPropertyPath();
+    } else {
+      console.warn(`QueryPrimitiveSet without items. From ${this.subject.getOriginalValue().nodeShape.label}.${this.property.label}.  What to return as property path?`);
+      return this.subject.getPropertyPath();
+    }
   }
 
   //countable, resultKey?: string
