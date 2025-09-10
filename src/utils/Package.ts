@@ -612,6 +612,8 @@ addNodeShapeToShapeClass(Shape.shape,Shape);
 //We can't do that inside of Shape because it would cause circular dependencies
 registerPropertyShape(Shape.shape,createPropertyShape({
     path: rdfs.label,
+    //TODO: multiple labels should be possible
+    maxCount:1,//currently get label is implemented to return a single value
   },
   'label',
   shacl.Literal,
@@ -637,6 +639,7 @@ registerPropertyShape(NodeShape.shape,createPropertyShape({
 registerPropertyShape(NodeShape.shape,createPropertyShape({
   path:shacl.targetClass,
   shape:Shape,//should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+  maxCount:1,
 },'targetClass',shacl.IRI));
 
 registerPropertyShape(NodeShape.shape,createPropertyShape({
@@ -693,11 +696,13 @@ registerPropertyShape(PropertyShape.shape,createPropertyShape({
 //PropertyShape.name
 registerPropertyShape(PropertyShape.shape,createPropertyShape({
   path: shacl.name,
+  maxCount:1,
 },'name', shacl.Literal));
 
 //PropertyShape.description
 registerPropertyShape(PropertyShape.shape,createPropertyShape({
   path:shacl.description,
+  maxCount:1,
 },'description', shacl.Literal));
 
 //PropertyShape.inList

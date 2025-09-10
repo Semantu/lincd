@@ -1474,6 +1474,32 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(p3Res.pets.length).toBe(0);
     });
 
+    test('select non existing returns null or empty array for multiple value properties',async () => {
+      let persons = await Person.select((p) => {
+        return [p.bestFriend,p.friends]
+      });
+      //both multi value properties as well as single value properties should return null if no values exists
+      //an empty array is NOT accepted
+      //undefined is also not accepted.
+      //only null works well with JSON
+
+
+      expect(Array.isArray(persons)).toBe(true);
+
+      const p1Res = persons.find(p => p.id === p1.uri);
+      expect(Array.isArray(p1Res.friends)).toBe(true);
+      expect(p1Res.bestFriend).toBeNull();
+
+      const p2Res = persons.find(p => p.id === p2.uri);
+      expect(Array.isArray(p2Res.friends)).toBe(true);
+      expect(typeof p2Res.bestFriend?.id).toBe('string');
+
+      const p3Res = persons.find(p => p.id === p3.uri);
+      expect(Array.isArray(p3Res.friends)).toBe(true);
+      expect(Array.isArray(p3Res.friends.length)).toBe(0);
+      expect(p3Res.bestFriend).toBeNull();
+    })
+
     test('select shape as',async () => {
       let personsWithGuardDogs = await Person.select((p) => {
         return p.firstPet.as(Dog).guardDogLevel

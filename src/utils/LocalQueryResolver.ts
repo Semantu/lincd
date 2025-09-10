@@ -21,79 +21,93 @@ import {
   WhereMethods,
   WherePath,
   SortByPath,
-  QueryArg,ArgPath,QueryPropertyPath,
+  QueryArg,
+  ArgPath,
+  QueryPropertyPath,
 } from '../queries/SelectQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {Shape,ShapeType} from '../shapes/Shape.js';
+import {Shape, ShapeType} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
-import {
-  UpdateQuery,
-} from '../queries/UpdateQuery.js';
+import {UpdateQuery} from '../queries/UpdateQuery.js';
 import {
   checkNewCount,
   isSetModificationValue,
   NodeDescriptionValue,
   NodeReferenceValue,
-  SetModificationValue,ShapeReferenceValue,SinglePropertyUpdateValue,
+  SetModificationValue,
+  ShapeReferenceValue,
+  SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
 } from '../queries/QueryFactory.js';
-import { NamedNode,Literal } from '../models.js';
-import { xsd } from '../ontologies/xsd.js';
-import { PropertyShape,ValidationReport } from '../shapes/SHACL.js';
-import { rdf } from '../ontologies/rdf.js';
-import { NodeSet } from '../collections/NodeSet.js';
-import { CreateQuery } from '../queries/CreateQuery.js';
-import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery.js';
-import { getShapeClass } from './ShapeClass.js';
-import { NodeValuesSet } from '../collections/NodeValuesSet';
+import {NamedNode, Literal} from '../models.js';
+import {xsd} from '../ontologies/xsd.js';
+import {PropertyShape, ValidationReport} from '../shapes/SHACL.js';
+import {rdf} from '../ontologies/rdf.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {CreateQuery} from '../queries/CreateQuery.js';
+import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
+import {getShapeClass} from './ShapeClass.js';
+import {NodeValuesSet} from '../collections/NodeValuesSet';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
 export type ProcessedWhereEvaluationPath = WhereEvaluationPath & {
-  processedArgs:any[];
+  processedArgs: any[];
 };
 
-export async function createLocal<ResultType>(query: CreateQuery<ResultType>):Promise<ResultType> {
-  if (query.type === 'create')
-  {
+export async function createLocal<ResultType>(
+  query: CreateQuery<ResultType>,
+): Promise<ResultType> {
+  if (query.type === 'create') {
     //convert the description of the node to create just like in update(),
     // but this time there is no parent propertyShape, so we use null
     //this will also set the rdf:type and save() the node.
-    const {value,plainValue} = await convertNodeDescription(null,query.description,true);
+    const {value, plainValue} = await convertNodeDescription(
+      null,
+      query.description,
+      true,
+    );
     return plainValue;
   } else {
     throw new Error('Unknown query type: ' + query.type);
   }
 }
 
-export async function deleteLocal(query:DeleteQuery):Promise<DeleteResponse> {
-  if (query.type === 'delete')
-  {
-    const response:DeleteResponse ={
+export async function deleteLocal(query: DeleteQuery): Promise<DeleteResponse> {
+  if (query.type === 'delete') {
+    const response: DeleteResponse = {
       deleted: [],
-      count:0
-    }
-    const errors:Record<string,string> = {};
-    const failed = []
-    query.ids.forEach(id => {
+      count: 0,
+    };
+    const errors: Record<string, string> = {};
+    const failed = [];
+    query.ids.forEach((id) => {
       let subject;
       try {
-        subject = convertNodeReferenceOrId(null,id);
-      } catch(err) {
-        let idString = typeof id === 'string' ? id : id?.id ? id.id : (id && id['uri']) ? id['uri'] : '';
-        if(idString === '') {
-          errors[Object.keys(errors).length] = "Invalid id: " + id;
+        subject = convertNodeReferenceOrId(null, id);
+      } catch (err) {
+        let idString =
+          typeof id === 'string'
+            ? id
+            : id?.id
+              ? id.id
+              : id && id['uri']
+                ? id['uri']
+                : '';
+        if (idString === '') {
+          errors[Object.keys(errors).length] = 'Invalid id: ' + id;
           failed.push(id);
         } else {
-          errors[idString] = "Could not find node with id: " + idString;
+          errors[idString] = 'Could not find node with id: ' + idString;
           failed.push(idString);
         }
         return;
       }
-      if(!subject.value) {
-        errors[subject.plainValue.id] = "No node found with id: " + subject.plainValue.id;
+      if (!subject.value) {
+        errors[subject.plainValue.id] =
+          'No node found with id: ' + subject.plainValue.id;
         failed.push(subject.plainValue.id);
         return;
       }
@@ -102,7 +116,7 @@ export async function deleteLocal(query:DeleteQuery):Promise<DeleteResponse> {
       response.deleted.push(subject.plainValue.id);
       response.count++;
     });
-    if(failed.length > 0 ){
+    if (failed.length > 0) {
       response.failed = failed;
       response.errors = errors;
     }
@@ -112,131 +126,135 @@ export async function deleteLocal(query:DeleteQuery):Promise<DeleteResponse> {
   return null;
 }
 
-export async function updateLocal<ResultType>(query: UpdateQuery<ResultType>):Promise<ResultType> {
-  if (query.type === 'update')
-  {
+export async function updateLocal<ResultType>(
+  query: UpdateQuery<ResultType>,
+): Promise<ResultType> {
+  if (query.type === 'update') {
     let subject = NamedNode.getNamedNode(query.id);
-    if (!subject)
-    {
+    if (!subject) {
       throw new Error('No subject found for id: ' + query.id);
     }
     // let shapeClass = getShapeClass(query.shape.namedNode);
     // let shape = new (shapeClass as any)(subject);
-    let plainResults = await applyFieldUpdates(query.updates.fields,subject);
+    let plainResults = await applyFieldUpdates(query.updates.fields, subject);
     plainResults['id'] = query.id;
     return plainResults as ResultType;
   } else {
     throw new Error('Invalid query type: ' + query.type);
   }
 }
-async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: NamedNode,createQuery:boolean=false) {
+async function applyFieldUpdates(
+  fields: UpdateNodePropertyValue[],
+  subject: NamedNode,
+  createQuery: boolean = false,
+) {
   let plainValues = {};
-  for (let field of fields)
-  {
+  for (let field of fields) {
     let propShape = field.prop;
     let propertyPath = propShape.path;
 
-    if(typeof field.val === 'undefined') {
-      unsetPropertyPath(subject,propertyPath);
-      if(propShape.maxCount >= 1) {
+    if (typeof field.val === 'undefined') {
+      unsetPropertyPath(subject, propertyPath);
+      if (propShape.maxCount >= 1) {
         //when clearing a single property we return undefined
         plainValues[propShape.label] = undefined;
-
       } else {
         plainValues[propShape.label] = [];
         //when clearing a set of values we return an empty array
       }
-    }
-    else if (Array.isArray(field.val))
-    {
-      checkNewCount(propShape,field.val.length);
+    } else if (Array.isArray(field.val)) {
+      checkNewCount(propShape, field.val.length);
 
       let values = [];
       let plainValueArr = [];
       //see check above, we already know it's an array, so we can cast it
-      for(let singleVal of (field.val as SinglePropertyUpdateValue[])) {
-        let res = await convertValue(propShape,singleVal,createQuery);
+      for (let singleVal of field.val as SinglePropertyUpdateValue[]) {
+        let res = await convertValue(propShape, singleVal, createQuery);
         plainValueArr.push(res.plainValue);
         values.push(res.value);
       }
-      if(values.every(v => typeof v === 'undefined')) {
+      if (values.every((v) => typeof v === 'undefined')) {
         //clearing a property
         plainValues[propShape.label] = undefined;
-        unsetPropertyPath(subject,propertyPath);
-      }
-      else if(values.some(v => typeof v === 'undefined')) {
-        throw new Error('Invalid use of undefined for property: ' + propShape.label+'. You cannot mix undefined with defined values');
-      }
-      else {
+        unsetPropertyPath(subject, propertyPath);
+      } else if (values.some((v) => typeof v === 'undefined')) {
+        throw new Error(
+          'Invalid use of undefined for property: ' +
+            propShape.label +
+            '. You cannot mix undefined with defined values',
+        );
+      } else {
         // For multi-value properties, return updatedTo structure if this is an UPDATE query (if it's a CREATE query we just return the array)
-        plainValues[propShape.label] = createQuery ? plainValueArr : { updatedTo: plainValueArr };
-        overwritePropertyPathMultipleValues(subject,propertyPath,values);
+        plainValues[propShape.label] = createQuery
+          ? plainValueArr
+          : {updatedTo: plainValueArr};
+        overwritePropertyPathMultipleValues(subject, propertyPath, values);
       }
-    }
-    else if(isSetModificationValue(field.val))
-    {
+    } else if (isSetModificationValue(field.val)) {
       //check if the new UPDATED number of properties would be allowed
       //by getting the current values, and counting how many remain after adding/removing values
-      const currentValues = getPropertyPath(subject,propertyPath);
+      const currentValues = getPropertyPath(subject, propertyPath);
       const numCurrentValues = currentValues.size;
-      const numFinalValues = numCurrentValues + (field.val.$add ? field.val.$add.length : 0) - (field.val.$remove ? field.val.$remove.length : 0);
-      checkNewCount(propShape,numFinalValues);
+      const numFinalValues =
+        numCurrentValues +
+        (field.val.$add ? field.val.$add.length : 0) -
+        (field.val.$remove ? field.val.$remove.length : 0);
+      checkNewCount(propShape, numFinalValues);
 
       //prepare object to keep track of the plain values that are added and removed
-      const plainUpdates: { added?,removed? } = {};
+      const plainUpdates: {added?; removed?} = {};
 
-      if (field.val.$remove)
-      {
+      if (field.val.$remove) {
         let removedPlainValues = [];
         //remove the values from the property path
-        field.val.$remove.forEach(val => {
+        field.val.$remove.forEach((val) => {
           //convert the node reference value to a real node
-          let nodeToRemove = convertNodeReference(propShape,val,'$remove');
+          let nodeToRemove = convertNodeReference(propShape, val, '$remove');
           //keep track of what's removed
           removedPlainValues.push(nodeToRemove.plainValue);
           //remove the value from the property path
-          unsetPropertyPathValue(subject,propertyPath,nodeToRemove.value);
+          unsetPropertyPathValue(subject, propertyPath, nodeToRemove.value);
         });
         plainUpdates.removed = removedPlainValues;
       }
-      if (field.val.$add)
-      {
+      if (field.val.$add) {
         let addedPlainValues = [];
         //add the values to the property path
         let values = [];
-        for (let singleVal of field.val.$add)
-        {
+        for (let singleVal of field.val.$add) {
           //convert the value (which can be a node reference or a node description)
-          let res = await convertValue(propShape,singleVal,createQuery);
+          let res = await convertValue(propShape, singleVal, createQuery);
           //keep track of what's added
           addedPlainValues.push(res.plainValue);
           values.push(res.value);
         }
         //add the new values to the set of values at the end of the path
-        addToResultSets(subject,propertyPath,values);
+        addToResultSets(subject, propertyPath, values);
         //if all that went well, keep track of the added values
         plainUpdates.added = addedPlainValues;
       }
       plainValues[propShape.label] = plainUpdates;
-    }
-    else
-    {
+    } else {
       //single value is provided
       //check if that fits with the maxCount and minCount of the property
-      checkNewCount(propShape,1);
+      checkNewCount(propShape, 1);
 
-      let res = await convertValue(propShape,(field as UpdateNodePropertyValue).val,createQuery);
+      let res = await convertValue(
+        propShape,
+        (field as UpdateNodePropertyValue).val,
+        createQuery,
+      );
 
       // if(typeof res.value === 'undefined') {
       //   unsetPropertyPath(subject,propertyPath);
       //   plainValues[propShape.label] = undefined;
       // } else {
-        //save the plain value for the result
-        plainValues[propShape.label] = res.plainValue;
-        //Note, we are using SET here, to ADD a value.
-        //If there are multiple values possible and the user wants to overwrite all the values,
-        //they need to use an update function instead of an update object
-        overwritePropertyPathSingleValue(subject,propertyPath,res.value);
+      //save the plain value for the result
+      plainValues[propShape.label] = res.plainValue;
+      //Note, we are using SET here, to ADD a value.
+      //If there are multiple values possible and the user wants to overwrite all the values,
+      //they need to use an update function instead of an update object
+      overwritePropertyPathSingleValue(subject, propertyPath, res.value);
       // }
     }
   }
@@ -244,10 +262,13 @@ async function applyFieldUpdates(fields: UpdateNodePropertyValue[],subject: Name
   return plainValues;
 }
 
-function getPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]):NodeSet<NamedNode> {
-  if(Array.isArray(path)) {
-    let target:NodeSet = new NodeSet([subject]);
-    for(let p of path) {
+function getPropertyPath(
+  subject: NamedNode,
+  path: NamedNode | NamedNode[],
+): NodeSet<NamedNode> {
+  if (Array.isArray(path)) {
+    let target: NodeSet = new NodeSet([subject]);
+    for (let p of path) {
       target = target.getAll(p);
     }
     return target as NodeSet<NamedNode>;
@@ -256,142 +277,186 @@ function getPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]):NodeSe
   }
 }
 
-function addToResultSets(subject: NamedNode, path: NamedNode|NamedNode[],values:NamedNode[]) {
-  if(Array.isArray(path)) {
+function addToResultSets(
+  subject: NamedNode,
+  path: NamedNode | NamedNode[],
+  values: NamedNode[],
+) {
+  if (Array.isArray(path)) {
     //save the last property, that's the one we want to add values to
     let lastPath = path.pop();
-    let target:NamedNode|NodeSet = new NodeSet([subject]);
+    let target: NamedNode | NodeSet = new NodeSet([subject]);
     //for the remaining parts, follow the path to the end
-    for(let p of path) {
+    for (let p of path) {
       target = target.getAll(p);
     }
     //for each node in the target nodes, add the values with the last property from the path as predicate
     //the existing quads with this subject and predicate will remain, and the new values will be added to the graph
-    target.msetEach(lastPath,values);
+    target.msetEach(lastPath, values);
   } else {
     //if it's a single property, we can just add the values with the given path as predicate
     //the existing quads with this subject and predicate will remain, and the new values will be added to the graph
-    subject.mset(path as NamedNode,values);
+    subject.mset(path as NamedNode, values);
   }
 }
-function overwritePropertyPathMultipleValues(subject: NamedNode, path: NamedNode|NamedNode[],values:NamedNode[]) {
-  if(Array.isArray(path)) {
+function overwritePropertyPathMultipleValues(
+  subject: NamedNode,
+  path: NamedNode | NamedNode[],
+  values: NamedNode[],
+) {
+  if (Array.isArray(path)) {
     //NOTE: for now we are removing the entire path, not just the last part of the path
     // Not sure yet if we need to distinguish between the two
-    console.warn(`Overwriting each end values in property path (${path.map(p => p.uri).join(' -> ')}) with multiple values ${values.map(v => v.uri).join(", ")}. Is that expected behaviour?`);
+    console.warn(
+      `Overwriting each end values in property path (${path.map((p) => p.uri).join(' -> ')}) with multiple values ${values.map((v) => v.uri).join(', ')}. Is that expected behaviour?`,
+    );
 
     let lastPath = path.pop();
-    let target:NodeSet = new NodeSet([subject]);
-    for(let p of path) {
+    let target: NodeSet = new NodeSet([subject]);
+    for (let p of path) {
       target = target.getAll(p);
     }
 
-    (target as NodeSet).forEach(node => {
-      node.moverwrite(lastPath,values);
+    (target as NodeSet).forEach((node) => {
+      node.moverwrite(lastPath, values);
     });
   } else {
-    subject.moverwrite(path as NamedNode,values);
+    subject.moverwrite(path as NamedNode, values);
   }
 }
-function overwritePropertyPathSingleValue(subject: NamedNode, path: NamedNode|NamedNode[],value:NamedNode|Literal) {
-  if(Array.isArray(path)) {
+function overwritePropertyPathSingleValue(
+  subject: NamedNode,
+  path: NamedNode | NamedNode[],
+  value: NamedNode | Literal,
+) {
+  if (Array.isArray(path)) {
     //NOTE: for now we are removing the entire path, not just the last part of the path
     // Not sure yet if we need to distinguish between the two
-    console.warn(`Overwriting each end values in property path (${path.map(p => p.uri).join(' -> ')}) with single value ${value.toString()}. Is that expected behaviour? `);
+    console.warn(
+      `Overwriting each end values in property path (${path.map((p) => p.uri).join(' -> ')}) with single value ${value.toString()}. Is that expected behaviour? `,
+    );
 
     let lastPath = path.pop();
-    let target:NamedNode|NodeSet = subject;
-    for(let p of path) {
+    let target: NamedNode | NodeSet = subject;
+    for (let p of path) {
       target = target.getAll(p);
     }
 
-    (target as NodeSet).forEach(node => {
-      node.overwrite(lastPath,value);
+    (target as NodeSet).forEach((node) => {
+      node.overwrite(lastPath, value);
     });
   } else {
-    subject.overwrite(path as NamedNode,value);
+    subject.overwrite(path as NamedNode, value);
   }
 }
-function unsetPropertyPathValue(subject: NamedNode, path: NamedNode|NamedNode[],value:NamedNode|Literal){
-  if(Array.isArray(path)) {
+function unsetPropertyPathValue(
+  subject: NamedNode,
+  path: NamedNode | NamedNode[],
+  value: NamedNode | Literal,
+) {
+  if (Array.isArray(path)) {
     //NOTE: for unsetting a specific value we are just unsetting the final connection NOT the entire path
-    console.warn(`Unsetting each end value in property path (${path.map(p => p.uri).join(' -> ')}) with value ${value.toString()}. Is that expected behaviour? `);
+    console.warn(
+      `Unsetting each end value in property path (${path.map((p) => p.uri).join(' -> ')}) with value ${value.toString()}. Is that expected behaviour? `,
+    );
 
     let lastPath = path.pop();
-    let target:NodeSet = new NodeSet([subject]);
-    for(let p of path) {
+    let target: NodeSet = new NodeSet([subject]);
+    for (let p of path) {
       target = target.getAll(p);
     }
 
-    target.forEach(node => {
-      node.unset(lastPath,value);
+    target.forEach((node) => {
+      node.unset(lastPath, value);
     });
   } else {
-    subject.unset(path as NamedNode,value);
+    subject.unset(path as NamedNode, value);
   }
 }
 
-
-function unsetPropertyPath(subject: NamedNode, path: NamedNode|NamedNode[]) {
-  if(Array.isArray(path)) {
+function unsetPropertyPath(subject: NamedNode, path: NamedNode | NamedNode[]) {
+  if (Array.isArray(path)) {
     //NOTE: for now we are removing the last part of the path, disconnecting the end values from the subject at the final property of the path
     // If we need to remove the entire path this should likely be done with other structures, like a ItemListElement being dependent on having an item defined and automatically being removed when we remove the item
-    console.warn('Unsetting the final property-value pair of the property path. Is that expected behaviour? : '+path.map(p => p.uri).join(' -> '));
+    console.warn(
+      'Unsetting the final property-value pair of the property path. Is that expected behaviour? : ' +
+        path.map((p) => p.uri).join(' -> '),
+    );
 
     let lastPath = path.pop();
-    let targets:NodeSet = new NodeSet([subject]);
-    for(let p of path) {
+    let targets: NodeSet = new NodeSet([subject]);
+    for (let p of path) {
       targets = targets.getAll(p);
     }
-    targets.forEach(node => {
+    targets.forEach((node) => {
       node.unsetAll(lastPath);
     });
   } else {
     subject.unsetAll(path);
   }
-
 }
-async function convertValue(propShape: PropertyShape, value: any,createQuery:boolean=false):Promise<{value:(Literal|NamedNode),plainValue:any}> {
-  if(propShape.nodeKind === shacl.Literal) {
-    return convertLiteral(propShape,value);
-  } else if(propShape.nodeKind === shacl.BlankNodeOrIRI || propShape.nodeKind === shacl.BlankNode || propShape.nodeKind === shacl.IRI) {
-    return await convertNamedNode(propShape,value,createQuery);
+async function convertValue(
+  propShape: PropertyShape,
+  value: any,
+  createQuery: boolean = false,
+): Promise<{value: Literal | NamedNode; plainValue: any}> {
+  if (propShape.nodeKind === shacl.Literal) {
+    return convertLiteral(propShape, value);
+  } else if (
+    propShape.nodeKind === shacl.BlankNodeOrIRI ||
+    propShape.nodeKind === shacl.BlankNode ||
+    propShape.nodeKind === shacl.IRI
+  ) {
+    return await convertNamedNode(propShape, value, createQuery);
   } else {
     //we currently don't support other node kinds, like shacl.BlankNodeOrLiteral and shacl.BlankNodeOrIRI
     //so in this case, we allow all types of values,
     //next we look at datatype and shapeValue to determine the correct type of value
-    if(propShape.datatype) {
-      return convertLiteral(propShape,value);
-    } else if(propShape.valueShape) {
-      return await convertNamedNode(propShape,value,createQuery);
+    if (propShape.datatype) {
+      return convertLiteral(propShape, value);
+    } else if (propShape.valueShape) {
+      return await convertNamedNode(propShape, value, createQuery);
     }
     //these are clearly meant to be literals
-    if(typeof value === 'number' || typeof value === 'boolean' || value instanceof Date || typeof value === 'string') {
-      return convertLiteral(propShape,value);
+    if (
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      value instanceof Date ||
+      typeof value === 'string'
+    ) {
+      return convertLiteral(propShape, value);
     }
     //arrays mean it's an array of field+value objects
-    else if(Array.isArray(value)) {
-      return await convertNamedNode(propShape,value as any,createQuery);
+    else if (Array.isArray(value)) {
+      return await convertNamedNode(propShape, value as any, createQuery);
     }
     throw new Error('Unknown value type for property: ' + propShape.label);
   }
 }
-function convertNamedNode(propShape: PropertyShape, value: NodeDescriptionValue|NodeReferenceValue,createQuery:boolean=true):Promise<{
-  value:NamedNode,
-  plainValue:any
-}>
-{
+function convertNamedNode(
+  propShape: PropertyShape,
+  value: NodeDescriptionValue | NodeReferenceValue,
+  createQuery: boolean = true,
+): Promise<{
+  value: NamedNode;
+  plainValue: any;
+}> {
   //value is expected to be an array of fields, or an object with an id for a direct node reference
-  if (isNodeReference(value))
-  {
-    return Promise.resolve(convertNodeReference(propShape,value as NodeReferenceValue));
-  }
-  else
-  {
-    return convertNodeDescription(propShape,value as NodeDescriptionValue,createQuery);
+  if (isNodeReference(value)) {
+    return Promise.resolve(
+      convertNodeReference(propShape, value as NodeReferenceValue),
+    );
+  } else {
+    return convertNodeDescription(
+      propShape,
+      value as NodeDescriptionValue,
+      createQuery,
+    );
   }
 }
-function isNodeReference(value: NodeReferenceValue|NodeDescriptionValue): value is NodeReferenceValue {
+function isNodeReference(
+  value: NodeReferenceValue | NodeDescriptionValue,
+): value is NodeReferenceValue {
   //check if the value is an object with an id field
   //NOTE: all objects with an id key are considered node references
   //and all other properties are ignored
@@ -400,53 +465,82 @@ function isNodeReference(value: NodeReferenceValue|NodeDescriptionValue): value 
   // && Object.keys(value).length === 1;
   //and check if there is only 1 key in the object
 }
-function convertNodeReferenceOrId(propShape: PropertyShape, value: NodeReferenceValue,suffixKey?:string):{value:NamedNode,plainValue:any} {
-  if(typeof value === 'string') {
+function convertNodeReferenceOrId(
+  propShape: PropertyShape,
+  value: NodeReferenceValue,
+  suffixKey?: string,
+): {value: NamedNode; plainValue: any} {
+  if (typeof value === 'string') {
     return {
-      value:NamedNode.getNamedNode(value),
-      plainValue:{id:value}
+      value: NamedNode.getNamedNode(value),
+      plainValue: {id: value},
     };
   }
-  return convertNodeReference(propShape,value,suffixKey);
+  return convertNodeReference(propShape, value, suffixKey);
 }
-function convertNodeReference(propShape: PropertyShape, value: NodeReferenceValue,suffixKey?:string):{value:NamedNode,plainValue:any} {
-  if(!value.id) {
-    throw new Error('Expected a node reference for property: ' + propShape?.label+(suffixKey ? '.'+suffixKey : ''));
+function convertNodeReference(
+  propShape: PropertyShape,
+  value: NodeReferenceValue,
+  suffixKey?: string,
+): {value: NamedNode; plainValue: any} {
+  if (!value.id) {
+    throw new Error(
+      'Expected a node reference for property: ' +
+        propShape?.label +
+        (suffixKey ? '.' + suffixKey : ''),
+    );
   }
   //if other keys are present
-  if(Object.keys(value).length > 1) {
-    throw new Error('Invalid value for property: ' + propShape.label+(suffixKey ? '.'+suffixKey : '')+'. A node reference should only contain the id field.');
+  if (Object.keys(value).length > 1) {
+    throw new Error(
+      'Invalid value for property: ' +
+        propShape.label +
+        (suffixKey ? '.' + suffixKey : '') +
+        '. A node reference should only contain the id field.',
+    );
   }
   return {
-    value:NamedNode.getNamedNode((value as NodeReferenceValue).id),
+    value: NamedNode.getNamedNode((value as NodeReferenceValue).id),
     //return an object only with the ID (a NodeReferenceValue should always only have an id field)
-    plainValue:{id:(value as NodeReferenceValue).id}
-  }
+    plainValue: {id: (value as NodeReferenceValue).id},
+  };
 }
-async function convertNodeDescription(propShape: PropertyShape, value: NodeDescriptionValue,createQuery:boolean=false):Promise<{value:NamedNode,plainValue:any}> {
-  if(!value.shape || !value.fields) {
-    throw new Error('Expected a node description for property: ' + propShape?.label);
+async function convertNodeDescription(
+  propShape: PropertyShape,
+  value: NodeDescriptionValue,
+  createQuery: boolean = false,
+): Promise<{value: NamedNode; plainValue: any}> {
+  if (!value.shape || !value.fields) {
+    throw new Error(
+      'Expected a node description for property: ' + propShape?.label,
+    );
   }
 
   //use the provided id as URI or create a new node if not defined
-  let node = value.__id ? NamedNode.getOrCreate(value.__id) : NamedNode.create();
-  let plainResults = await applyFieldUpdates(value.fields,node,createQuery);
+  let node = value.__id
+    ? NamedNode.getOrCreate(value.__id)
+    : NamedNode.create();
+  let plainResults = await applyFieldUpdates(value.fields, node, createQuery);
 
   let valueShape = propShape?.valueShape || value.shape;
   //if this property comes with a restriction that all values need to be of a certain shape
-  if(valueShape) {
+  if (valueShape) {
     //if that shape comes with a target class
-    if(valueShape.targetClass)
-    {
+    if (valueShape.targetClass) {
       //then we set the type of the node to the target class
       //this is a "free" automatic property that we set for the user, so they don't need to always manually type it into the create() or update() queries
-      node.set(rdf.type,valueShape.targetClass);
+      node.set(rdf.type, valueShape.targetClass);
     }
     //However... for other restrictions of the shape, the user needs to make sure that the node is valid
     //So lets check if the node is valid according to the shape
-    if(!valueShape.validateNode(node)) {
-      let report = ValidationReport.forNodeAgainstShape(node,valueShape).toString();
-      throw new Error(`Property: ${propShape.label} expects all values to be valid instances of shape ${valueShape.label}. Validation failed: ${report}`);
+    if (!valueShape.validateNode(node)) {
+      let report = ValidationReport.forNodeAgainstShape(
+        node,
+        valueShape,
+      ).toString();
+      throw new Error(
+        `Property: ${propShape.label} expects all values to be valid instances of shape ${valueShape.label}. Validation failed: ${report}`,
+      );
     }
   }
 
@@ -454,70 +548,93 @@ async function convertNodeDescription(propShape: PropertyShape, value: NodeDescr
   plainResults['id'] = node.uri;
 
   return {
-    value:node,
-    plainValue:plainResults
+    value: node,
+    plainValue: plainResults,
   };
 }
 
-function convertLiteral(propShape: PropertyShape, value: any):{value:Literal,plainValue:any} {
-  if(typeof value === 'object' && !(value instanceof Date)) {
-    throw new Error('Object values are not allowed for property: ' + propShape.label);
+function convertLiteral(
+  propShape: PropertyShape,
+  value: any,
+): {value: Literal; plainValue: any} {
+  if (typeof value === 'object' && !(value instanceof Date)) {
+    throw new Error(
+      'Object values are not allowed for property: ' + propShape.label,
+    );
   }
   let datatype = propShape.datatype;
-  let res:Literal;
-  if(datatype) {
-    if(datatype.equals(xsd.integer)) {
-      if(typeof value === 'number') {
-        res = new Literal(value.toString(),xsd.integer);
+  let res: Literal;
+  if (datatype) {
+    if (datatype.equals(xsd.integer)) {
+      if (typeof value === 'number') {
+        res = new Literal(value.toString(), xsd.integer);
       } else {
-        throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.integer, so it expects a number value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
+        throw new Error(
+          `Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.integer, so it expects a number value. Given value: ` +
+            JSON.stringify(value) +
+            ' of type: ' +
+            typeof value,
+        );
       }
-    }
-    else if(datatype.equals(xsd.boolean)) {
-      if(typeof value === 'boolean')
-      {
+    } else if (datatype.equals(xsd.boolean)) {
+      if (typeof value === 'boolean') {
         res = Boolean_toLiteral(value);
       } else {
-        throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.boolean, so it expects a boolean value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
+        throw new Error(
+          `Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.boolean, so it expects a boolean value. Given value: ` +
+            JSON.stringify(value) +
+            ' of type: ' +
+            typeof value,
+        );
       }
-    }
-    else if(datatype.equals(xsd.string)) {
-      res = new Literal(value.toString(),xsd.string);
-    }
-    else if(datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
+    } else if (datatype.equals(xsd.string)) {
+      res = new Literal(value.toString(), xsd.string);
+    } else if (datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
       //check if value is a date
-      if(value instanceof Date) {
-        res = XSDDate_fromNativeDate(value,datatype);
+      if (value instanceof Date) {
+        res = XSDDate_fromNativeDate(value, datatype);
       } else {
-        throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.date, so it expects a Date value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
+        throw new Error(
+          `Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.date, so it expects a Date value. Given value: ` +
+            JSON.stringify(value) +
+            ' of type: ' +
+            typeof value,
+        );
       }
-    }
-    else {
-      console.warn(`Unknown datatype :${datatype.toString()}. Assuming it's a string value`);
+    } else {
+      console.warn(
+        `Unknown datatype :${datatype.toString()}. Assuming it's a string value`,
+      );
     }
   }
-  if(typeof value === 'undefined') {
+  if (typeof value === 'undefined') {
     return {
-      value:undefined,
-      plainValue:undefined
-    }
+      value: undefined,
+      plainValue: undefined,
+    };
   }
-  if(value === null) {
-    throw new Error('Value cannot be null. If you want to unset a value, use undefined');
+  if (value === null) {
+    throw new Error(
+      'Value cannot be null. If you want to unset a value, use undefined',
+    );
   }
   //if none of the previous options matched (and therefor res is not set yet), then we assume the value is a string
-  if(!res)
-  {
-    if(typeof value !== 'string') {
-      throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has no datatype defined in its decorator, so it expects a string value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
+  if (!res) {
+    if (typeof value !== 'string') {
+      throw new Error(
+        `Property ${propShape.parentNodeShape.label}.${propShape.label} has no datatype defined in its decorator, so it expects a string value. Given value: ` +
+          JSON.stringify(value) +
+          ' of type: ' +
+          typeof value,
+      );
     }
     //and we convert the string to a literal
     //Note: datatype could be null or any other unsupported datatype
-    res = new Literal(value,datatype);
+    res = new Literal(value, datatype);
   }
   return {
-    value:res,
-    plainValue:value
+    value: res,
+    plainValue: value,
   };
 }
 
@@ -535,23 +652,24 @@ export function resolveLocal<ResultType>(
   //   shape = query.subject
   // }
 
-  let subject:NamedNode|NodeSet<NamedNode>;
-  if(query.subject) {
-    if((query.subject as QResult<any>).id) {
-      if(NamedNode.getNamedNode((query.subject as QResult<any>).id))
-      {
+  let subject: NamedNode | NodeSet<NamedNode>;
+  if (query.subject) {
+    if ((query.subject as QResult<any>).id) {
+      if (NamedNode.getNamedNode((query.subject as QResult<any>).id)) {
         // subject = query.shape.getFromURI((query.subject as QResult<any>).id) as Shape;
         subject = NamedNode.getOrCreate((query.subject as QResult<any>).id);
       } else {
         return null;
       }
-    } else if(query.subject instanceof ShapeSet) {
+    } else if (query.subject instanceof ShapeSet) {
       subject = (query.subject as ShapeSet).getNodes() as NodeSet<NamedNode>;
     } else {
       subject = (query.subject as Shape).namedNode;
     }
   } else {
-    subject = query.shape.getLocalInstancesByType().getNodes() as NodeSet<NamedNode>;
+    subject = query.shape
+      .getLocalInstancesByType()
+      .getNodes() as NodeSet<NamedNode>;
   }
   // let subject2 = query.subject ? query.subject : query.shape.getLocalInstancesByType();
   // console.log(ValidationReport.printForShapeInstances(query.shape));
@@ -561,8 +679,8 @@ export function resolveLocal<ResultType>(
     subject = filterResults(subject, query.where);
   }
   //sort the instances before slicing
-  if(query.sortBy) {
-    subject = sortResults(subject,query.sortBy);
+  if (query.sortBy) {
+    subject = sortResults(subject, query.sortBy);
   }
   //slice the instances based on the limit and offset
   if (query.limit && subject instanceof NodeSet) {
@@ -573,16 +691,16 @@ export function resolveLocal<ResultType>(
   }
 
   let resultObjects;
-  if(query.subject instanceof ShapeSet) {
+  if (query.subject instanceof ShapeSet) {
     resultObjects = nodesToResultObjects(subject as NodeSet<NamedNode>);
-  } else if(query.subject instanceof Shape) {
+  } else if (query.subject instanceof Shape) {
     resultObjects = shapeToResultObject(subject as NamedNode);
-  } else if(query.subject && query.subject.id) {
+  } else if (query.subject && query.subject.id) {
     //when a query subject is given as an object with an id, probably from a previous query result
     resultObjects = {
       id: query.subject.id,
       // shape: query.shape,
-    }
+    };
   } else {
     //no specific subject is given, so subjects will be a NodeSet of filtered instances,
     resultObjects = nodesToResultObjects(subject as NodeSet<NamedNode>);
@@ -608,8 +726,8 @@ export function resolveLocal<ResultType>(
     resultObjects instanceof Map ? [...resultObjects.values()] : resultObjects
   ) as ResultType;
 
-  if(query.singleResult) {
-    return results[0]
+  if (query.singleResult) {
+    return results[0];
   }
   return results;
 }
@@ -628,23 +746,35 @@ function resolveCustomObject(
 ) {
   for (let key of Object.getOwnPropertyNames(query as CustomQueryObject)) {
     let result = resolveQueryPath(subject, query[key]);
-    writeResultObject(resultObject,key,result);
+    writeResultObject(resultObject, key, result);
   }
   return resultObject;
 }
-function writeResultObject(resultObject,key,result) {
+function writeResultObject(resultObject, key, result) {
   //convert undefined to null, because JSON.stringify will KEEP keys that have a null value. Which is required for LINCD to work properly with nested queries
-  if(typeof result === 'undefined') {
+  if (typeof result === 'undefined') {
     result = null;
   }
   //if this key was already set
-  if(key in resultObject) {
+  if (key in resultObject) {
     //if both the existing value and the new value are objects, we can merge them
-    if(result && resultObject[key] && typeof result === 'object' && typeof resultObject[key] === 'object') {
-      resultObject[key] = { ...resultObject[key], ...result };
+    if (
+      result &&
+      resultObject[key] &&
+      typeof result === 'object' &&
+      typeof resultObject[key] === 'object'
+    ) {
+      resultObject[key] = {...resultObject[key], ...result};
       return;
-    } else if(result && result[key] !== null) {
-      console.warn('Overwriting existing value for key: ' + key + ' in result object. Existing value: ' + JSON.stringify(resultObject[key]) + ', new value: ' + JSON.stringify(result));
+    } else if (result && result[key] !== null) {
+      console.warn(
+        'Overwriting existing value for key: ' +
+          key +
+          ' in result object. Existing value: ' +
+          JSON.stringify(resultObject[key]) +
+          ', new value: ' +
+          JSON.stringify(result),
+      );
     }
   }
   resultObject[key] = result;
@@ -693,7 +823,7 @@ export function resolveLocalEndResults<S extends SelectQueryFactory<any>>(
     //does that also work if there is multiple values?
     //do we need to check the size of the traceresponse
     //why is a CoreSet created? start there
-    return results.length > 0 ? [...results[0]]  as any: ([] as any);
+    return results.length > 0 ? ([...results[0]] as any) : ([] as any);
   } else if (typeof query.traceResponse === 'object') {
     throw new Error('Objects are not yet supported');
   }
@@ -723,15 +853,16 @@ function resolveQueryPathEndResults(
   queryPath: QueryPath | ComponentQueryPath,
 ) {
   //start with the local instance as the subject
-  let result: NodeSet<NamedNode> | NamedNode[] | NamedNode | boolean[] = subject;
+  let result: NodeSet<NamedNode> | NamedNode[] | NamedNode | boolean[] =
+    subject;
   if (Array.isArray(queryPath)) {
-    for(let queryStep of queryPath) {
+    for (let queryStep of queryPath) {
       //then resolve each of the query steps and use the result as the new subject for the next step
       result = resolveQueryStepEndResults(
         result as NodeSet<NamedNode> | NamedNode,
         queryStep,
       );
-      if(!result) {
+      if (!result) {
         break;
       }
     }
@@ -741,7 +872,12 @@ function resolveQueryPathEndResults(
     });
   }
   //return the final value at the end of the path
-  return result as NodeSet<NamedNode> | NamedNode[] | NamedNode | JSPrimitive | JSPrimitive[];
+  return result as
+    | NodeSet<NamedNode>
+    | NamedNode[]
+    | NamedNode
+    | JSPrimitive
+    | JSPrimitive[];
 }
 
 function evaluateWhere(node: NamedNode, method: string, args: any[]): boolean {
@@ -758,9 +894,11 @@ function evaluateWhere(node: NamedNode, method: string, args: any[]): boolean {
   return filterMethod.apply(null, [node, ...args]);
 }
 
-function sortResults(subject: NodeSet<NamedNode> | NamedNode, sortBy: SortByPath) {
-
-  if(subject instanceof NamedNode) return subject;
+function sortResults(
+  subject: NodeSet<NamedNode> | NamedNode,
+  sortBy: SortByPath,
+) {
+  if (subject instanceof NamedNode) return subject;
 
   //SORTING - how it works
   //If a query is sorted by 2 paths (e.g. sort by lastName then by firstName), it will first sort by the first, then by the second if the first one didn't give a result
@@ -768,7 +906,7 @@ function sortResults(subject: NodeSet<NamedNode> | NamedNode, sortBy: SortByPath
   let ascending = sortBy.direction === 'ASC';
   let sorted = [...subject].sort((a, b) => {
     //go over each sort path (sortBy contains an array with 1 or more paths to sort by)
-    for(let sortPath of sortBy.paths) {
+    for (let sortPath of sortBy.paths) {
       //resolve the value of the sort path for both a and b
       let aValue = resolveQueryPathEndResults(a, sortPath);
       let bValue = resolveQueryPathEndResults(b, sortPath);
@@ -819,7 +957,7 @@ function filterResults(
     return evaluate(subject, where as WhereEvaluationPath)
       ? subject
       : undefined;
-  } else if(typeof subject === 'undefined') {
+  } else if (typeof subject === 'undefined') {
     //this can happen when comparing literals, and there is no value
     return undefined;
   } else {
@@ -835,34 +973,38 @@ function filterResults(
 function preProcessWhere(where: WhereEvaluationPath): any[] {
   //if the where clause is a path, we need to resolve the args
   if (where.path && where.args) {
-    (where as ProcessedWhereEvaluationPath).processedArgs = resolveWhereArgs(where.args);
+    (where as ProcessedWhereEvaluationPath).processedArgs = resolveWhereArgs(
+      where.args,
+    );
     return (where as ProcessedWhereEvaluationPath).processedArgs;
   }
   return [];
 }
 
-function resolveWhereArgs(args:QueryArg[]) {
-  if(!args || !Array.isArray(args)) {
+function resolveWhereArgs(args: QueryArg[]) {
+  if (!args || !Array.isArray(args)) {
     return [];
   }
-  return args.map(arg => {
+  return args.map((arg) => {
     //if this is an argpath
-    if((arg as ArgPath).path && !(arg as WhereEvaluationPath).args) {
+    if ((arg as ArgPath).path && !(arg as WhereEvaluationPath).args) {
       //in this case we need to follow the path to the end value
-      if(!(arg as ArgPath).subject) {
+      if (!(arg as ArgPath).subject) {
         //if this happens, we probably need to NOT pre-process the where clause for args coming from the main query (as opposed to args from query context)
-        throw new Error('Expected a subject for arg path: ' + JSON.stringify(arg));
+        throw new Error(
+          'Expected a subject for arg path: ' + JSON.stringify(arg),
+        );
       }
       const node = NamedNode.getNamedNode((arg as ArgPath).subject.id);
-      if(!node) {
+      if (!node) {
         return [];
       }
       // const shapeClass = getShapeClass(node);
       // const shape = (shapeClass as ShapeType).getFromURI((arg as ArgPath).subject.id) as Shape;
-      return resolveQueryPath(node,(arg as ArgPath).path)
+      return resolveQueryPath(node, (arg as ArgPath).path);
     }
     return arg;
-  })
+  });
 }
 function evaluate(singleNode: NamedNode, where: WherePath): boolean {
   if ((where as WhereEvaluationPath).path) {
@@ -871,7 +1013,9 @@ function evaluate(singleNode: NamedNode, where: WherePath): boolean {
       (where as WhereEvaluationPath).path,
     );
 
-    let args:any[] = (where as ProcessedWhereEvaluationPath).processedArgs || preProcessWhere(where as WhereEvaluationPath);
+    let args: any[] =
+      (where as ProcessedWhereEvaluationPath).processedArgs ||
+      preProcessWhere(where as WhereEvaluationPath);
 
     //when multiple values are the subject of the evaluation
     //and, we're NOT evaluating some() or every()
@@ -983,8 +1127,11 @@ function evaluate(singleNode: NamedNode, where: WherePath): boolean {
 }
 
 function resolveWhereEquals(queryEndValue, otherValue: any) {
-  if(queryEndValue instanceof NamedNode && (otherValue as NodeReferenceValue).id) {
-      return queryEndValue.uri === otherValue.id
+  if (
+    queryEndValue instanceof NamedNode &&
+    (otherValue as NodeReferenceValue).id
+  ) {
+    return queryEndValue.uri === otherValue.id;
   }
   return queryEndValue === otherValue;
 }
@@ -1011,7 +1158,12 @@ function resolveWhereEvery(nodes, evaluation: WhereEvaluationPath) {
 }
 
 function resolveQuerySteps(
-  subject: NamedNode[] | JSPrimitive | JSPrimitive[] | NamedNode | NodeSet<NamedNode>,
+  subject:
+    | NamedNode[]
+    | JSPrimitive
+    | JSPrimitive[]
+    | NamedNode
+    | NodeSet<NamedNode>,
   queryPath: (QueryStep | SubQueryPaths)[],
   resultObjects?: NodeResultMap | QResult<any, any>,
 ) {
@@ -1023,7 +1175,10 @@ function resolveQuerySteps(
 
   //if the first step is a ShapeReferenceValue, it comes from a QueryContextVariable
   //and it serves as a replacement for the subject
-  if((currentStep as ShapeReferenceValue).id && (currentStep as ShapeReferenceValue).shape) {
+  if (
+    (currentStep as ShapeReferenceValue).id &&
+    (currentStep as ShapeReferenceValue).shape
+  ) {
     // let shape = getShapeClass(NamedNode.getNamedNode((currentStep as ShapeReferenceValue).shape.id));
     // const shapeInstance = (shape as any).getFromURI((currentStep as ShapeReferenceValue).id) as Shape;
     // subject = shapeInstance;
@@ -1049,7 +1204,6 @@ function resolveQuerySteps(
     );
     // } else if (subject instanceof CoreMap) {
   } else if (subject instanceof NodeSet) {
-
     if (Array.isArray(currentStep)) {
       resolveQueryPathsForNodes(currentStep, subject, restPath, resultObjects);
     } else {
@@ -1081,17 +1235,17 @@ function namedNodeToResultObject(subject: NamedNode) {
     id: subject.uri,
   };
 }
-function literalNodeToResultObject(literal:Literal,property:PropertyShape) {
+function literalNodeToResultObject(literal: Literal, property: PropertyShape) {
   let datatype = property.datatype;
   let value = literal.value;
-  if(datatype) {
-    if(datatype.equals(xsd.boolean)) {
+  if (datatype) {
+    if (datatype.equals(xsd.boolean)) {
       return value === 'true';
-    } else if(datatype.equals(xsd.integer)) {
+    } else if (datatype.equals(xsd.integer)) {
       return parseInt(value);
-    } else if(datatype.equals(xsd.decimal) || datatype.equals(xsd.double)) {
+    } else if (datatype.equals(xsd.decimal) || datatype.equals(xsd.double)) {
       return parseFloat(value);
-    } else if(datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
+    } else if (datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
       return new Date(value);
     }
   }
@@ -1238,7 +1392,10 @@ function resolveQueryStepForNodeEndResults(
   subject: NamedNode,
 ) {
   if ((queryStep as PropertyQueryStep).property) {
-    let result = resolveQueryPropertyPath(subject,(queryStep as PropertyQueryStep).property)
+    let result = resolveQueryPropertyPath(
+      subject,
+      (queryStep as PropertyQueryStep).property,
+    );
     if ((queryStep as PropertyQueryStep).where) {
       result = filterResults(result, (queryStep as PropertyQueryStep).where);
     }
@@ -1261,7 +1418,7 @@ function resolveQueryStepForNodeEndResults(
   }
 }
 
-function stepResultToSubResult(stepResult,property:PropertyShape) {
+function stepResultToSubResult(stepResult, property: PropertyShape) {
   //TODO: review if this ever happens once we move away from relying on accessor implementation, review where this method is used
   // and if this code ever triggers
   if (stepResult instanceof NodeSet) {
@@ -1271,53 +1428,59 @@ function stepResultToSubResult(stepResult,property:PropertyShape) {
   //   return shapeToResultObject(stepResult);
   // }
   //temporary support for accessors returning named nodes
-  else if(stepResult instanceof NamedNode) {
-    return namedNodeToResultObject(stepResult)
-  }
-  else if(stepResult instanceof Literal) {
-    return literalNodeToResultObject(stepResult,property);
-  }
-  else if(Array.isArray(stepResult)) {
-    return stepResult.map(r => stepResultToSubResult(r,property));
+  else if (stepResult instanceof NamedNode) {
+    return namedNodeToResultObject(stepResult);
+  } else if (stepResult instanceof Literal) {
+    return literalNodeToResultObject(stepResult, property);
+  } else if (Array.isArray(stepResult)) {
+    return stepResult.map((r) => stepResultToSubResult(r, property));
   } else {
     //strings,numbers,booleans,dates can just pass. but not other objects
-    if(stepResult && typeof stepResult === 'object') {
-      if(!(stepResult instanceof Date)) {
-        console.warn("New warning, is this a warning? Unknown step result type: ",stepResult);
+    if (stepResult && typeof stepResult === 'object') {
+      if (!(stepResult instanceof Date)) {
+        console.warn(
+          'New warning, is this a warning? Unknown step result type: ',
+          stepResult,
+        );
       }
     }
     return stepResult;
   }
 }
-function resolveQueryPropertyPath(node:NamedNode, property: PropertyShape) {
+export function resolveQueryPropertyPath(
+  node: NamedNode,
+  property: PropertyShape,
+) {
   const singleValueProperty = property.maxCount === 1;
   let pathResult;
   let path = property.path;
-  if(!Array.isArray(path)) {
+  if (!Array.isArray(path)) {
     path = [path];
   }
   let lastProp = path.pop();
-  let target:any = node;
-  while(path.length > 0) {
+  let target: any = node;
+  while (path.length > 0) {
     let prop = path.pop();
     target = target.getAll(prop);
   }
 
-  if(singleValueProperty) {
-    pathResult = convertLiteralToPrimitive(target.getOne(lastProp),property);
+  if (singleValueProperty) {
+    pathResult = convertLiteralToPrimitive(target.getOne(lastProp), property);
   } else {
     pathResult = target.getAll(lastProp);
     //if every value is a literal, we convert it to a plain array of plain/primitive values
     //if not, we keep using NodeSet, so we can more easily access sub paths from this potentially intermediate result.
-    if(pathResult.every(n => n instanceof Literal) && pathResult.size > 0) {
-      pathResult = pathResult.map(v => convertLiteralToPrimitive(v,property));
+    if (pathResult.every((n) => n instanceof Literal) && pathResult.size > 0) {
+      pathResult = pathResult.map((v) =>
+        convertLiteralToPrimitive(v, property),
+      );
     }
   }
   return pathResult;
 }
-function convertLiteralToPrimitive(node:Node,property:PropertyShape) {
-  if(node instanceof Literal) {
-    return literalNodeToResultObject(node,property);
+function convertLiteralToPrimitive(node: Node, property: PropertyShape) {
+  if (node instanceof Literal) {
+    return literalNodeToResultObject(node, property);
   }
   return node;
 }
@@ -1337,7 +1500,7 @@ function resolvePropertyStep(
 
   //directly access the get/set method of the shape
   // let stepResult = singleShape[(queryStep as PropertyQueryStep).property.label];
-  let subResultObjects = stepResultToSubResult(stepResult,queryStep.property);
+  let subResultObjects = stepResultToSubResult(stepResult, queryStep.property);
 
   if ((queryStep as PropertyQueryStep).where) {
     stepResult = filterResults(
@@ -1371,17 +1534,16 @@ function resolvePropertyStep(
       : subResultObjects;
 
   if (typeof resultObjects !== 'undefined') {
+    // }
+    // if (stepResult instanceof ShapeSet) {
+    //   stepResult = [...subResultObjects.values()];
+    // }
+    // if (stepResult instanceof Shape) {
+    //   stepResult = subResultObjects;
+    // }
 
-  // }
-  // if (stepResult instanceof ShapeSet) {
-  //   stepResult = [...subResultObjects.values()];
-  // }
-  // if (stepResult instanceof Shape) {
-  //   stepResult = subResultObjects;
-  // }
-
-  //get the current result object for this shape
-  // if (typeof resultObjects !== 'undefined') {
+    //get the current result object for this shape
+    // if (typeof resultObjects !== 'undefined') {
     let nodeResult =
       resultObjects instanceof Map
         ? resultObjects.get(singleNode.uri)
@@ -1441,7 +1603,11 @@ function updateResultObjects(
         ? resultObjects.get(node.uri)
         : resultObjects;
     if (nodeResult) {
-      writeResultObject(nodeResult, (queryStep as SizeStep).label || defaultLabel, result);
+      writeResultObject(
+        nodeResult,
+        (queryStep as SizeStep).label || defaultLabel,
+        result,
+      );
     }
   }
 }
@@ -1512,7 +1678,10 @@ function resolveQueryStepForNodesEndResults(
       // let stepResult =
       //   singleNode[(queryStep as PropertyQueryStep).property.label];
       // let stepResult:NodeSet<NamedNode>|NamedNode[]|NamedNode|number = getPropertyPath(singleNode,(queryStep as PropertyQueryStep).property.path);
-      let stepResult = resolveQueryPropertyPath(singleNode, (queryStep as PropertyQueryStep).property);
+      let stepResult = resolveQueryPropertyPath(
+        singleNode,
+        (queryStep as PropertyQueryStep).property,
+      );
 
       if ((queryStep as PropertyQueryStep).where) {
         stepResult = filterResults(
@@ -1570,13 +1739,12 @@ function resolveQueryStepForNodesEndResults(
   }
 }
 
-function XSDDate_fromNativeDate(nativeDate: Date,datatype) {
+function XSDDate_fromNativeDate(nativeDate: Date, datatype) {
   if (!nativeDate) return null;
 
   var value = nativeDate.toISOString();
   let literal = new Literal(value, datatype);
   return literal;
-
 }
 function Boolean_toLiteral(value: boolean) {
   return new Literal(value.toString(), xsd.boolean);
