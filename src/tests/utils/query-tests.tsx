@@ -141,7 +141,7 @@ export class Person extends Shape
 
   @literalProperty({
     path: birthDate,
-    datatype:xsd.date,
+    datatype:xsd.dateTime,
     maxCount:1,
   })
   get birthDate(): Date
@@ -196,7 +196,7 @@ function fromNativeDate(nativeDate: Date)
   if (!nativeDate) return null;
 
   var value = nativeDate.toISOString();
-  return new Literal(value,xsd.date);
+  return new Literal(value,xsd.dateTime);
 }
 
 function toNativeDate(literal: Literal)
