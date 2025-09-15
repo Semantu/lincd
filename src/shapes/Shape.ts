@@ -37,7 +37,7 @@ import {
   QShapeSet,
   QResult,QueryShape,
 } from '../queries/SelectQuery.js';
-import {IQueryParser, staticImplements} from '../interfaces/IQueryParser';
+import {IQueryParser, staticImplements} from '../interfaces/IQueryParser.js';
 import {TestNode} from '../utils/TraceShape.js';
 import {UpdatePartial,AddId,NodeReferenceValue} from '../queries/QueryFactory.js';
 import {ClassOf} from '../utils/Types.js';

@@ -44,6 +44,7 @@ import * as NameSpace from './utils/NameSpace.js';
 import * as Hooks from './utils/Hooks.js';
 import * as ShapeClass from './utils/ShapeClass.js';
 import * as ClassNames from './utils/ClassNames.js';
+import * as cached from './utils/cached.js';
 import * as List from './shapes/List.js';
 import * as IGraphObject from './interfaces/IGraphObject.js';
 import * as IGraphObjectSet from './interfaces/IGraphObjectSet.js';
@@ -88,6 +89,7 @@ export function initModularApp() {
     NameSpace,
     List,
     ClassNames,
+    cached,
     URI,
     Hooks,
     ShapeClass,

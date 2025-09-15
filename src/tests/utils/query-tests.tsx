@@ -1,16 +1,16 @@
-import {getPackageShape,linkedComponent,linkedSetComponent,linkedShape} from '../../package';
-import { Shape } from '../../shapes/Shape';
-import { literalProperty,objectProperty } from '../../shapes/SHACL';
-import { Literal,NamedNode } from '../../models';
-import { xsd } from '../../ontologies/xsd';
-import { TestNode } from '../../utils/TraceShape';
+import {getPackageShape,linkedComponent,linkedSetComponent,linkedShape} from '../../package.js';
+import { Shape } from '../../shapes/Shape.js';
+import { literalProperty,objectProperty } from '../../shapes/SHACL.js';
+import { Literal,NamedNode } from '../../models.js';
+import { xsd } from '../../ontologies/xsd.js';
+import { TestNode } from '../../utils/TraceShape.js';
 import { describe,expect,test } from '@jest/globals';
-import { QResult,QShape,QueryBuilderObject } from '../../queries/SelectQuery';
+import { QResult,QShape,QueryBuilderObject } from '../../queries/SelectQuery.js';
 import { render,waitFor } from '@testing-library/react';
-import { ShapeSet } from '../../collections/ShapeSet';
-import { setDefaultPageLimit } from '../../utils/Package';
+import { ShapeSet } from '../../collections/ShapeSet.js';
+import { setDefaultPageLimit } from '../../utils/Package.js';
 import React from 'react';
-import {getQueryContext, setQueryContext} from '../../queries/QueryContext';
+import {getQueryContext, setQueryContext} from '../../queries/QueryContext.js';
 
 let dogClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Dog');
 let petClass = NamedNode.getOrCreate(NamedNode.TEMP_URI_BASE + 'Pet');

@@ -48,8 +48,6 @@ import {rdf} from '../ontologies/rdf.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {CreateQuery} from '../queries/CreateQuery.js';
 import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
-import {getShapeClass} from './ShapeClass.js';
-import {NodeValuesSet} from '../collections/NodeValuesSet';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 
@@ -594,11 +592,17 @@ function convertLiteral(
       if (value instanceof Date) {
         res = XSDDate_fromNativeDate(value, datatype);
       } else {
-        throw new Error(`Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.dateTime, so it expects a Date value. Given value: ` + JSON.stringify(value)+' of type: ' + typeof value);
+        throw new Error(
+          `Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.dateTime, so it expects a Date value. Given value: ` +
+            JSON.stringify(value) +
+            ' of type: ' +
+            typeof value,
+        );
       }
-    }
-    else {
-      console.warn(`Unknown datatype :${datatype.toString()}. Assuming it's a string value`);
+    } else {
+      console.warn(
+        `Unknown datatype :${datatype.toString()}. Assuming it's a string value`,
+      );
     }
   }
   if (typeof value === 'undefined') {
