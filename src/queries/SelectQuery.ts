@@ -14,6 +14,7 @@ import {
 import {QueryFactory} from './QueryFactory.js';
 import { NodeSet } from '../collections/NodeSet';
 import { xsd } from '../ontologies/xsd.js';
+import {NamedNode} from '../models';
 
 /**
  * ###################################
@@ -186,7 +187,10 @@ export type ToQueryBuilderObject<
             : AT extends boolean
               ? QueryBoolean
               : AT[]
-          : QueryBuilderObject<T, Source, Property>;
+          //added support for get/set methods that return NamedNodes, treating them as plain Shapes
+          : T extends NamedNode
+            ? QShape<Shape, Source, Property>
+            : QueryBuilderObject<T, Source, Property>;
 
 export type ToQueryPrimitive<
   T extends string | number | Date | boolean,
@@ -268,6 +272,10 @@ export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
         : never;
     }
   : [];
+
+export type QueryIndividualResultType<T extends SelectQueryFactory<any>> = T extends SelectQueryFactory<infer ShapeType, infer ResponseType>
+  ? QueryResponseToResultType<ResponseType, ShapeType>
+  : null;
 
 export type ToQueryResultSet<T> =
   T extends SelectQueryFactory<infer ShapeType, infer ResponseType>
@@ -932,11 +940,9 @@ export class QueryShapeSet<
           //As in Shape.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Shapes
           //So here we find back the shape that all items have in common, and then find the property shape that matches the key
           //NOTE: this will only work if the key corresponds with an accessor in the shape that uses a @linkedProperty decorator
-          let leastSpecificShape = queryShapeSet
-            .getOriginalValue()
-            .getLeastSpecificShape();
-          let propertyShape: PropertyShape = leastSpecificShape?.shape
-            .getPropertyShapes()
+          let leastSpecificShape = queryShapeSet.getOriginalValue().getLeastSpecificShape();
+          let valueShape = leastSpecificShape ? leastSpecificShape.shape : queryShapeSet.property.valueShape;
+            let propertyShape: PropertyShape = valueShape?.getPropertyShapes(true)
             .find((propertyShape) => propertyShape.label === key);
 
           //if the property shape is found
@@ -956,7 +962,7 @@ export class QueryShapeSet<
               'Could not find property shape for key ' +
                 key +
                 ' on shape ' +
-                leastSpecificShape +
+                valueShape.label +
                 '. Make sure the get method exists and is decorated with @linkedProperty / @objectProperty / @literalProperty',
             );
           }
@@ -966,6 +972,10 @@ export class QueryShapeSet<
       },
     });
     return queryShapeSet.proxy;
+  }
+
+  add(item) {
+    this.queryShapes.add(item);
   }
 
   concat(other: QueryShapeSet): QueryShapeSet {
@@ -1654,7 +1664,7 @@ export class SelectQueryFactory<
     return this;
   }
 
-  exec(): Promise<QueryResponseToResultType<ResponseType>> {
+  exec(): Promise<QueryResponseToResultType<ResponseType>[]> {
     return Shape.queryParser.selectQuery(this);
   }
 

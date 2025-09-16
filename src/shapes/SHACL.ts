@@ -15,6 +15,7 @@ import {CoreMap} from '../collections/CoreMap.js';
 import {ForwardReasoning} from '../utils/ForwardReasoning.js';
 import { getShapeClass,getShapeOrSubShape } from '../utils/ShapeClass.js';
 import { ShapeValuesSet } from '../collections/ShapeValuesSet.js';
+import {rdfs} from '../ontologies/rdfs.js';
 
 
 
@@ -379,6 +380,15 @@ export class SHACL_Shape extends Shape {
     this.overwrite(rdf.type, val);
   }
 
+  /**
+   * A human-readable description for this shape
+   */
+  get description() {
+    return this.getValue(rdfs.comment);
+  }
+  set description(val: string) {
+    this.overwrite(rdfs.comment, new Literal(val));
+  }
 
   protected _validateNode(
     node: NamedNode,

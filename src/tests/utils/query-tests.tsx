@@ -1496,7 +1496,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
       const p3Res = persons.find(p => p.id === p3.uri);
       expect(Array.isArray(p3Res.friends)).toBe(true);
-      expect(Array.isArray(p3Res.friends.length)).toBe(0);
+      expect(p3Res.friends.length).toBe(0);
       expect(p3Res.bestFriend).toBeNull();
     })
 

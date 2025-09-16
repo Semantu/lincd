@@ -2,8 +2,17 @@ import {Shape} from '../shapes/Shape.js';
 import {NamedNode} from '../models.js';
 const _cache = new Map<string, {timeout: number; value: any}>();
 
-export function cached(fn: () => any, args: any[], cacheTime?: number) {
-  if (cacheTime) {
+/**
+ * Caches the result of a function call based on its arguments for a specified time.
+ * Arguments are converted to strings for comparison.
+ * Use cacheTimeMs = 0 to disable caching.
+ * Use cacheTimeMs = Infinity to never expire the cache.
+ * @param fn
+ * @param args
+ * @param cacheTimeMs
+ */
+export function cached(fn: () => any, args: any[], cacheTimeMs?: number) {
+  if (cacheTimeMs !== 0) {
     const now = Date.now();
     args = args.map((a) => {
       if (a instanceof Shape) {
@@ -23,7 +32,7 @@ export function cached(fn: () => any, args: any[], cacheTime?: number) {
     if (!cache) {
       let value = fn();
       _cache.set(key, {
-        timeout: now + cacheTime,
+        timeout: now + cacheTimeMs,
         value,
       });
     }
