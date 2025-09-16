@@ -6,14 +6,15 @@ import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import { getPropertyShapeByLabel,getShapeClass } from '../utils/ShapeClass.js';
+import {getPropertyShapeByLabel, getShapeClass} from '../utils/ShapeClass.js';
 import {
   NodeReferenceValue,
-  Prettify,ShapeReferenceValue,
+  Prettify,
+  ShapeReferenceValue,
 } from './QueryFactory.js';
 import {QueryFactory} from './QueryFactory.js';
-import { NodeSet } from '../collections/NodeSet';
-import { xsd } from '../ontologies/xsd.js';
+import {NodeSet} from '../collections/NodeSet';
+import {xsd} from '../ontologies/xsd.js';
 import {NamedNode} from '../models';
 
 /**
@@ -25,11 +26,12 @@ import {NamedNode} from '../models';
 export type JSPrimitive = JSNonNullPrimitive | null | undefined;
 export type JSNonNullPrimitive = string | number | boolean | Date;
 
-export type SingleResult<ResultType> = ResultType extends Array<infer R>
-  ? R
-  : ResultType extends Set<infer R>
+export type SingleResult<ResultType> =
+  ResultType extends Array<infer R>
     ? R
-    : ResultType;
+    : ResultType extends Set<infer R>
+      ? R
+      : ResultType;
 
 /**
  * All the possible types that a regular get/set method of a Shape can return
@@ -97,7 +99,11 @@ export type QueryPropertyPath = QueryStep[];
  * A QueryStep is a single step in a query path
  * It contains the property that was requested, and optionally a where clause
  */
-export type QueryStep = PropertyQueryStep | SizeStep | CustomQueryObject | ShapeReferenceValue;
+export type QueryStep =
+  | PropertyQueryStep
+  | SizeStep
+  | CustomQueryObject
+  | ShapeReferenceValue;
 export type SizeStep = {
   count: QueryPropertyPath;
   label?: string;
@@ -154,9 +160,9 @@ export type QShapeSet<
   ShapeSetType extends Shape,
   Source = null,
   Property extends string | number | symbol = null,
-> = QueryShapeSet<ShapeSetType,Source,Property> &
+> = QueryShapeSet<ShapeSetType, Source, Property> &
   QueryShapeSetProps<
-    QueryShapeSet<ShapeSetType,Source,Property>,
+    QueryShapeSet<ShapeSetType, Source, Property>,
     ShapeSetType
   >;
 
@@ -187,8 +193,8 @@ export type ToQueryBuilderObject<
             : AT extends boolean
               ? QueryBoolean
               : AT[]
-          //added support for get/set methods that return NamedNodes, treating them as plain Shapes
-          : T extends NamedNode
+          : //added support for get/set methods that return NamedNodes, treating them as plain Shapes
+            T extends NamedNode
             ? QShape<Shape, Source, Property>
             : QueryBuilderObject<T, Source, Property>;
 
@@ -218,11 +224,15 @@ export type WhereEvaluationPath = {
  * An argument can be a direct reference to a node, a js primitive (boolean,number), a path to resolve (like from a query context variables)
  * Or a wherePath in the case of some() or every() (e.g. x.where(x.friends.some(f => f.age > 18) -> the argument is a wherePath)
  */
-export type QueryArg = NodeReferenceValue | JSNonNullPrimitive | ArgPath | WherePath;
+export type QueryArg =
+  | NodeReferenceValue
+  | JSNonNullPrimitive
+  | ArgPath
+  | WherePath;
 export type ArgPath = {
   path: QueryPropertyPath;
-  subject:ShapeReferenceValue;
-}
+  subject: ShapeReferenceValue;
+};
 export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
 
 /**
@@ -262,7 +272,7 @@ export type PatchedQueryPromise<ResultType, ShapeType extends Shape> = {
     sortParam: any,
     direction?: 'ASC' | 'DESC',
   ): PatchedQueryPromise<ResultType, ShapeType>;
-  one():PatchedQueryPromise<SingleResult<ResultType>, ShapeType>;
+  one(): PatchedQueryPromise<SingleResult<ResultType>, ShapeType>;
 } & Promise<ResultType>;
 
 export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
@@ -273,9 +283,10 @@ export type GetCustomObjectKeys<T> = T extends QueryWrapperObject
     }
   : [];
 
-export type QueryIndividualResultType<T extends SelectQueryFactory<any>> = T extends SelectQueryFactory<infer ShapeType, infer ResponseType>
-  ? QueryResponseToResultType<ResponseType, ShapeType>
-  : null;
+export type QueryIndividualResultType<T extends SelectQueryFactory<any>> =
+  T extends SelectQueryFactory<infer ShapeType, infer ResponseType>
+    ? QueryResponseToResultType<ResponseType, ShapeType>
+    : null;
 
 export type ToQueryResultSet<T> =
   T extends SelectQueryFactory<infer ShapeType, infer ResponseType>
@@ -317,51 +328,52 @@ export type GetQueryObjectResultType<
   PrimitiveArray = false,
   HasName = false,
 > =
-      //note: count needs to be above primitive
-      QV extends SetSize<infer Source>
-      ? SetSizeToQueryResult<Source, HasName>
-      : QV extends QueryPrimitive<infer Primitive,infer Source, infer Property>
-        ? CreateQResult<
-            Source,
-            PrimitiveArray extends true ? Primitive[] : Primitive,
-            Property,
-            {},
-            HasName
-          >
-        : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
-          ? CreateQResult<Source, ShapeType, Property, SubProperties, HasName>
-          : //   CreateQResult<Source, ShapeType, Property>
-            QV extends BoundComponent<
-                infer Source,
+  //note: count needs to be above primitive
+  QV extends SetSize<infer Source>
+    ? SetSizeToQueryResult<Source, HasName>
+    : QV extends QueryPrimitive<infer Primitive, infer Source, infer Property>
+      ? CreateQResult<
+          Source,
+          PrimitiveArray extends true ? Primitive[] : Primitive,
+          Property,
+          {},
+          HasName
+        >
+      : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
+        ? CreateQResult<Source, ShapeType, Property, SubProperties, HasName>
+        : //   CreateQResult<Source, ShapeType, Property>
+          QV extends BoundComponent<
+              infer Source,
+              infer ShapeType,
+              infer ComponentResultType
+            >
+          ? // ? ComponentResultType
+            GetQueryObjectResultType<
+              Source,
+              SubProperties & ComponentResultType,
+              PrimitiveArray,
+              HasName
+            >
+          : QV extends QueryShapeSet<
                 infer ShapeType,
-                infer ComponentResultType
+                infer Source,
+                infer Property
               >
-            ? // ? ComponentResultType
-              GetQueryObjectResultType<
+            ? CreateShapeSetQResult<
+                ShapeType,
                 Source,
-                SubProperties & ComponentResultType,
-                PrimitiveArray,
+                Property,
+                SubProperties,
                 HasName
               >
-            : QV extends QueryShapeSet<
-                  infer ShapeType,
-                  infer Source,
-                  infer Property
+            : QV extends QueryPrimitiveSet<
+                  infer QPrim extends QueryPrimitive<any>
                 >
-              ? CreateShapeSetQResult<
-                  ShapeType,
-                  Source,
-                  Property,
-                  SubProperties,
-                  HasName
-                >
-              : QV extends QueryPrimitiveSet<
-                    infer QPrim extends QueryPrimitive<any>
-                  >
-                ? GetQueryObjectResultType<QPrim, null, null, true>
-                : QV extends Array<infer Type>
-                  ? UnionToIntersection<QueryResponseToResultType<Type>>
-                  : QV extends QueryBoolean< any,any> ? 'bool'
+              ? GetQueryObjectResultType<QPrim, null, null, true>
+              : QV extends Array<infer Type>
+                ? UnionToIntersection<QueryResponseToResultType<Type>>
+                : QV extends QueryBoolean<any, any>
+                  ? 'bool'
                   : never;
 
 //for now, we don't pass result types of nested queries of bound components
@@ -380,12 +392,25 @@ export type GetShapesResultTypeWithSource<Source> =
 //       : never;
 
 type GetQueryObjectProperty<T> =
-  T extends QueryBuilderObject<any, any, infer Property> ? Property :
-    T extends SelectQueryFactory<infer SubShapeType, infer SubResponse,infer SubSource> ? GetQueryObjectProperty<SubSource>
+  T extends QueryBuilderObject<any, any, infer Property>
+    ? Property
+    : T extends SelectQueryFactory<
+          infer SubShapeType,
+          infer SubResponse,
+          infer SubSource
+        >
+      ? GetQueryObjectProperty<SubSource>
       : never;
 type GetQueryObjectOriginal<T> =
-  T extends QueryBuilderObject<infer Original> ? Original : T extends SelectQueryFactory<infer SubShapeType, infer SubResponse,infer SubSource> ? GetNestedQueryResultType<SubResponse, SubSource>
-    : never;
+  T extends QueryBuilderObject<infer Original>
+    ? Original
+    : T extends SelectQueryFactory<
+          infer SubShapeType,
+          infer SubResponse,
+          infer SubSource
+        >
+      ? GetNestedQueryResultType<SubResponse, SubSource>
+      : never;
 /**
  * Converts an intersection of QueryBuilderObjects into a plain JS object
  * i.e. QueryString<Person,"name"> | QueryString<Person,"hobby"> --> {name: string, hobby: string}
@@ -393,7 +418,7 @@ type GetQueryObjectOriginal<T> =
  * and, we get the Original type of each QueryBuilderObject, and use it as the value in the resulting object
  */
 type QueryValueIntersectionToObject<Items> = {
-  [Type in Items as GetQueryObjectProperty<Type>]: true;//GetQueryObjectOriginal<Type>;
+  [Type in Items as GetQueryObjectProperty<Type>]: true; //GetQueryObjectOriginal<Type>;
 };
 
 export type SetSizeToQueryResult<Source, HasName = false> =
@@ -430,13 +455,12 @@ export type CreateQResult<
       ParentSource extends null
       ? HasName extends true
         ? Value
-
-        //TODO: this must be simplified and rewritten
-        // it is likely the most complex part of the type system currently
-        // It turns out that sub-.select() on a QueryShapeSet ends up here with Value being null, and sub properties need to be added to the QResult itself
-        // Whilst sub-.select() on a single QueryShape ends up here with Value being defined, in which case the SubProperties need to be included in the inner QResult
-        : Value extends null ?
-            //hence we create a single QResult, but do not use CreateQResult (which will keep creating nested QResults)
+        : //TODO: this must be simplified and rewritten
+          // it is likely the most complex part of the type system currently
+          // It turns out that sub-.select() on a QueryShapeSet ends up here with Value being null, and sub properties need to be added to the QResult itself
+          // Whilst sub-.select() on a single QueryShape ends up here with Value being defined, in which case the SubProperties need to be included in the inner QResult
+          Value extends null
+          ? //hence we create a single QResult, but do not use CreateQResult (which will keep creating nested QResults)
             QResult<
               SourceShapeType,
               {
@@ -445,17 +469,16 @@ export type CreateQResult<
                 [P in Property]: CreateQResult<Value, Value>;
               } & SubProperties
             >
-          :
-            //hence we create a single QResult, but do not use CreateQResult (which will keep creating nested QResults)
+          : //hence we create a single QResult, but do not use CreateQResult (which will keep creating nested QResults)
             QResult<
               SourceShapeType,
               {
                 //we pass Value and Value but not Property, so that when the value is a Shape or ShapeSet, there is recursion
                 //but for all other cases (like string, number, boolean) the value is just passed through
-                [P in Property]: CreateQResult<Value, Value,'',SubProperties>;
+                [P in Property]: CreateQResult<Value, Value, '', SubProperties>;
               }
             >
-        : CreateQResult<
+      : CreateQResult<
           ParentSource,
           QResult<
             SourceShapeType,
@@ -492,12 +515,11 @@ export type CreateQResult<
       : //Source is not a QueryShape or QueryShape set (currently sometimes used by end QueryPrimitives) ..
         // this needs to convert to value (amongst other things) for .select({customKeys}) and ObjectToPlainResult
         Value extends Shape
-          ? QResult<Value, SubProperties>
-          // : Value extends boolean ? 'boolean' : Value;
-          : NormaliseBoolean<Value>;
+        ? QResult<Value, SubProperties>
+        : // : Value extends boolean ? 'boolean' : Value;
+          NormaliseBoolean<Value>;
 
 type NormaliseBoolean<T> = [T] extends [boolean] ? boolean : T;
-
 
 export type CreateShapeSetQResult<
   ShapeType = undefined,
@@ -648,9 +670,11 @@ export class QueryBuilderObject<
       //Temporary solution to support accessors with decorators that return named nodes.
       //As long as the decorator indicates the shape the values should have, we can still use it.
       //In the future queries will only use the decorators, not the actually returned value. Then this can go
-      if(property.valueShape) {
-        const shape = new (getShapeClass(property.valueShape.namedNode) as any)(originalValue);
-        return QueryShape.create(shape,property,subject);
+      if (property.valueShape) {
+        const shape = new (getShapeClass(property.valueShape.namedNode) as any)(
+          originalValue,
+        );
+        return QueryShape.create(shape, property, subject);
       }
       throw new Error(
         subject.getOriginalValue().nodeShape.label +
@@ -674,77 +698,81 @@ export class QueryBuilderObject<
     let datatype = property.datatype;
     let valueShape = property.valueShape;
     let singleValue = property.maxCount <= 1;
-    if(datatype)
-    {
-      if (singleValue)
-      {
-        if (datatype.equals(xsd.integer))
-        {
-          return new QueryNumber(0,property,subject);
+    if (datatype) {
+      if (singleValue) {
+        if (datatype.equals(xsd.integer)) {
+          return new QueryNumber(0, property, subject);
+        } else if (datatype.equals(xsd.boolean)) {
+          return new QueryBoolean(false, property, subject);
+        } else if (datatype.equals(xsd.dateTime) || datatype.equals(xsd.date)) {
+          return new QueryDate(new Date(), property, subject);
+        } else if (datatype.equals(xsd.string)) {
+          return new QueryString('', property, subject);
         }
-        else if (datatype.equals(xsd.boolean))
-        {
-          return new QueryBoolean(false,property,subject);
-        }
-        else if (datatype.equals(xsd.dateTime) || datatype.equals(xsd.date))
-        {
-          return new QueryDate(new Date(),property,subject);
-        }
-        else if (datatype.equals(xsd.string))
-        {
-          return new QueryString('',property,subject);
-        }
-      }
-      else
-      {
+      } else {
         //TODO review this, do we need property & subject in both of these? currently yes, but why
-        return new QueryPrimitiveSet([''], property, subject,[new QueryString('',property,subject)]);
+        return new QueryPrimitiveSet([''], property, subject, [
+          new QueryString('', property, subject),
+        ]);
       }
     }
     let path = property.path;
-    if(Array.isArray(path)) {
-      console.error("Unimplemented: property shape has multiple paths, using the first one for query generation. This is WRONG",property);
+    if (Array.isArray(path)) {
+      console.error(
+        'Unimplemented: property shape has multiple paths, using the first one for query generation. This is WRONG',
+        property,
+      );
       path = path[0];
     }
 
-    if(valueShape) {
+    if (valueShape) {
       if (singleValue) {
-        const shapeValue = new (getShapeClass(valueShape.namedNode) as any)(new TestNode(path));
-        return QueryShape.create(shapeValue,property,subject);
+        const shapeValue = new (getShapeClass(valueShape.namedNode) as any)(
+          new TestNode(path),
+        );
+        return QueryShape.create(shapeValue, property, subject);
       } else {
-        const shapeValue = new (getShapeClass(valueShape.namedNode) as any)(new TestNode(path));
-        return QueryShapeSet.create(new ShapeSet([shapeValue]), property, subject);
+        const shapeValue = new (getShapeClass(valueShape.namedNode) as any)(
+          new TestNode(path),
+        );
+        return QueryShapeSet.create(
+          new ShapeSet([shapeValue]),
+          property,
+          subject,
+        );
       }
     }
 
     //no value shape and no data type.
     //Lets look at the node kind
-    if(property.nodeKind.equals(shacl.Literal) || property.nodeKind.equals(shacl.BlankNodeOrLiteral)) {
-      if (singleValue)
-      {
+    if (
+      property.nodeKind.equals(shacl.Literal) ||
+      property.nodeKind.equals(shacl.BlankNodeOrLiteral)
+    ) {
+      if (singleValue) {
         //default to string if no datatype is set
-        return new QueryString('',property,subject);
-      }
-      else
-      {
+        return new QueryString('', property, subject);
+      } else {
         //TODO review this, do we need property & subject in both of these? currently yes, but why
-        return new QueryPrimitiveSet([''], property, subject,[new QueryString('',property,subject)]);
+        return new QueryPrimitiveSet([''], property, subject, [
+          new QueryString('', property, subject),
+        ]);
       }
     }
 
     //if an object is expected and no value shape is set, then warn
-    console.warn(`No shape set for objectProperty ${property.parentNodeShape.label}.${property.label}`);
+    console.warn(
+      `No shape set for objectProperty ${property.parentNodeShape.label}.${property.label}`,
+    );
 
     //and use a generic shape
     const shapeValue = new (Shape as any)(new TestNode(path));
-    if(singleValue)
-    {
-      return QueryShape.create(shapeValue,property,subject);
+    if (singleValue) {
+      return QueryShape.create(shapeValue, property, subject);
     } else {
       return QueryShapeSet.create(new ShapeSet(shapeValue), property, subject);
     }
   }
-
 
   static getOriginalSource(
     endValue: ShapeSet<Shape> | Shape[] | QueryPrimitiveSet,
@@ -838,7 +866,7 @@ export class QueryBuilderObject<
       return this.subject.getPropertyPath(path);
     }
     //when query context is used as the first step, then the first step is just a pointer to the subject it represents
-    if(((this.originalValue as Shape).node as TestNode)?.targetID) {
+    if (((this.originalValue as Shape).node as TestNode)?.targetID) {
       path.unshift(convertQueryContext(this.originalValue as Shape));
     }
     return path;
@@ -852,9 +880,9 @@ const convertQueryContext = (shape: Shape): ShapeReferenceValue => {
     id: (shape.node as TestNode)?.targetID,
     shape: {
       id: shape.nodeShape.uri,
-    }
-  } as ShapeReferenceValue
-}
+    },
+  } as ShapeReferenceValue;
+};
 
 const processWhereClause = (
   validation: WhereClause<any>,
@@ -895,11 +923,17 @@ export class QueryShapeSet<
     );
   }
 
-  as<ShapeClass extends typeof Shape>(shape: ShapeClass): QShapeSet<InstanceType<ShapeClass>, Source, Property> {
+  as<ShapeClass extends typeof Shape>(
+    shape: ShapeClass,
+  ): QShapeSet<InstanceType<ShapeClass>, Source, Property> {
     //if the shape is not the same as the original value, then we need to create a new query shape
     if (!shape.shape.equals(this.originalValue.getLeastSpecificShape().shape)) {
       let newOriginal = (shape as any).getSetOf(this.originalValue.getNodes());
-      return QueryShapeSet.create(newOriginal, this.property, this.subject as any);
+      return QueryShapeSet.create(
+        newOriginal,
+        this.property,
+        this.subject as any,
+      );
     }
     // else return this
     return this as any as QShapeSet<InstanceType<ShapeClass>, Source, Property>;
@@ -940,9 +974,14 @@ export class QueryShapeSet<
           //As in Shape.friends.name -> key would be name, which is requested from (each item in!) a ShapeSet of Shapes
           //So here we find back the shape that all items have in common, and then find the property shape that matches the key
           //NOTE: this will only work if the key corresponds with an accessor in the shape that uses a @linkedProperty decorator
-          let leastSpecificShape = queryShapeSet.getOriginalValue().getLeastSpecificShape();
-          let valueShape = leastSpecificShape ? leastSpecificShape.shape : queryShapeSet.property.valueShape;
-            let propertyShape: PropertyShape = valueShape?.getPropertyShapes(true)
+          let leastSpecificShape = queryShapeSet
+            .getOriginalValue()
+            .getLeastSpecificShape();
+          let valueShape = leastSpecificShape
+            ? leastSpecificShape.shape
+            : queryShapeSet.property.valueShape;
+          let propertyShape: PropertyShape = valueShape
+            ?.getPropertyShapes(true)
             .find((propertyShape) => propertyShape.label === key);
 
           //if the property shape is found
@@ -955,7 +994,7 @@ export class QueryShapeSet<
           ) {
             //then return that method and bind the original value as 'this'
             return originalShapeSet[key].bind(originalShapeSet);
-          } else if(key !== 'then') {
+          } else if (key !== 'then') {
             //TODO: there is a strange bug with "then" being called, only for queries that access ShapeSets (multi value props), but I'm not sure where it comes from
             //hiding the warning for now in that case as it doesn't seem to affect the results
             console.warn(
@@ -973,7 +1012,6 @@ export class QueryShapeSet<
     });
     return queryShapeSet.proxy;
   }
-
   add(item) {
     this.queryShapes.add(item);
   }
@@ -1120,7 +1158,11 @@ export class QueryShape<
 
   get id() {
     //if the QueryShape was created for a TestNode that points to a specific node, then return that node's targetID
-    return (this.originalValue.node as TestNode)?.targetID || this.originalValue['id'] || this.originalValue.uri;
+    return (
+      (this.originalValue.node as TestNode)?.targetID ||
+      this.originalValue['id'] ||
+      this.originalValue.uri
+    );
   }
 
   // where(validation: WhereClause<S>): this {
@@ -1177,7 +1219,7 @@ export class QueryShape<
             //   nodeValue = new NodeSet(new TestNode(propertyShape.path));
             // }
 
-            return QueryBuilderObject.generatePathValue(propertyShape,target);
+            return QueryBuilderObject.generatePathValue(propertyShape, target);
 
             //get the value of the property from the original shape
             // let value = originalShape[key];
@@ -1189,13 +1231,13 @@ export class QueryShape<
             // );
           }
         }
-        if(key !== 'then') {
-        //   //otherwise return the value of the property on the original shape
+        if (key !== 'then') {
+          //   //otherwise return the value of the property on the original shape
           console.warn(
             `${originalShape.constructor.name}.${key.toString()} is accessed in a query, but it does not have a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
           );
-        // } else {
-        //   console.error('Proxy is accessed like a promise');
+          // } else {
+          //   console.error('Proxy is accessed like a promise');
         }
         return originalShape[key];
       },
@@ -1203,7 +1245,9 @@ export class QueryShape<
     return queryShape.proxy;
   }
 
-  as<ShapeClass extends typeof Shape>(shape: ShapeClass): QShape<InstanceType<ShapeClass>, Source, Property> {
+  as<ShapeClass extends typeof Shape>(
+    shape: ShapeClass,
+  ): QShape<InstanceType<ShapeClass>, Source, Property> {
     //if the shape is not the same as the original value, then we need to create a new query shape
     if (!shape.shape.equals(this.originalValue.nodeShape)) {
       let newOriginal = new (shape as any)(this.originalValue.namedNode);
@@ -1214,19 +1258,23 @@ export class QueryShape<
     // return this.proxy;
   }
 
-  equals(otherValue: NodeReferenceValue|QShape<any>) {
+  equals(otherValue: NodeReferenceValue | QShape<any>) {
     return new Evaluation(this, WhereMethods.EQUALS, [otherValue]);
   }
 
   select<QF = unknown>(
     subQueryFn: QueryBuildFn<S, QF>,
   ): SelectQueryFactory<S, QF, QueryShape<S, Source, Property>> {
-    let leastSpecificShape = getShapeClass((this.getOriginalValue() as Shape).nodeShape.namedNode);
-    let subQuery = new SelectQueryFactory(leastSpecificShape as ShapeType, subQueryFn);
+    let leastSpecificShape = getShapeClass(
+      (this.getOriginalValue() as Shape).nodeShape.namedNode,
+    );
+    let subQuery = new SelectQueryFactory(
+      leastSpecificShape as ShapeType,
+      subQueryFn,
+    );
     subQuery.parentQueryPath = this.getPropertyPath();
     return subQuery as any;
   }
-
 
   // count(countable: QueryBuilderObject, resultKey?: string): SetSize<this> {
   //   return new SetSize(this, countable, resultKey);
@@ -1248,9 +1296,9 @@ export class BoundComponent<
     super(null, null);
   }
 
-  getParentQueryFactory(
-  ): SelectQueryFactory<any> {
-    let parentQuery:SelectQueryFactory<any> | Object = this.originalValue.query;
+  getParentQueryFactory(): SelectQueryFactory<any> {
+    let parentQuery: SelectQueryFactory<any> | Object =
+      this.originalValue.query;
 
     //if a Shape class was given (the actual class that extends Shape)
     if (parentQuery instanceof SelectQueryFactory) {
@@ -1318,9 +1366,9 @@ export class Evaluation {
   getPropertyPath() {
     return this.getWherePath();
   }
-  processArgs():QueryArg[] {
+  processArgs(): QueryArg[] {
     //if the args are not an array, then we convert them to an array
-    if(!this.args || !Array.isArray(this.args)) {
+    if (!this.args || !Array.isArray(this.args)) {
       return [];
     }
     //convert each arg to a QueryBuilderObject
@@ -1328,15 +1376,15 @@ export class Evaluation {
       if (arg instanceof QueryBuilderObject) {
         let path = arg.getPropertyPath();
         let subject;
-        if(path[0] && (path[0] as ShapeReferenceValue).id) {
+        if (path[0] && (path[0] as ShapeReferenceValue).id) {
           subject = path.shift();
         }
-        if((!path || path.length === 0) && subject) {
+        if ((!path || path.length === 0) && subject) {
           return subject as ShapeReferenceValue;
         }
         return {
           path,
-          subject
+          subject,
         } as ArgPath;
       } else {
         return arg;
@@ -1403,7 +1451,7 @@ export abstract class QueryPrimitive<
     super(property, subject);
   }
 
-  equals(otherValue: JSPrimitive|QueryBuilderObject) {
+  equals(otherValue: JSPrimitive | QueryBuilderObject) {
     //TODO: review types, this is working but currently QueryBuilderObject is not accepted as a type of args
     return new Evaluation(this, WhereMethods.EQUALS, [otherValue as any]);
   }
@@ -1495,12 +1543,14 @@ export class QueryPrimitiveSet<
     //however, sometimes the path goes through the subject of this SET rather than the individual items (which have an individual shape as subject)
     //so we pass the subject of this set so it can be used
     let first = this.contents.first();
-    if(first) {
+    if (first) {
       (first.subject as QueryShapeSet).wherePath =
         (first.subject as QueryShapeSet).wherePath || this.subject.wherePath;
       return first.getPropertyPath();
     } else {
-      console.warn(`QueryPrimitiveSet without items. From ${this.subject.getOriginalValue().nodeShape.label}.${this.property.label}.  What to return as property path?`);
+      console.warn(
+        `QueryPrimitiveSet without items. From ${this.subject.getOriginalValue().nodeShape.label}.${this.property.label}.  What to return as property path?`,
+      );
       return this.subject.getPropertyPath();
     }
   }
@@ -1518,11 +1568,8 @@ const docReady = () => {
   documentLoaded = true;
   callbackStack.forEach((callback) => callback());
   callbackStack = [];
-}
-if (
-  typeof document === 'undefined' ||
-  document.readyState !== 'loading'
-) {
+};
+if (typeof document === 'undefined' || document.readyState !== 'loading') {
   docReady();
 } else {
   documentLoaded = false;
@@ -1530,7 +1577,7 @@ if (
     docReady();
   });
   setTimeout(() => {
-    if(!documentLoaded) {
+    if (!documentLoaded) {
       console.warn('⚠️ Forcing init after timeout');
       docReady();
     }
@@ -1538,13 +1585,12 @@ if (
 }
 //only continue to parse the query if the document is ready, and all shapes from initial bundles are loaded
 export var onQueriesReady = (callback) => {
-  if(!documentLoaded) {
+  if (!documentLoaded) {
     callbackStack.push(callback);
   } else {
     callback();
   }
 };
-
 
 export class SelectQueryFactory<
   S extends Shape,
@@ -1564,28 +1610,29 @@ export class SelectQueryFactory<
   private limit: number;
   private offset: number;
   private wherePath: WherePath;
-  private initPromise: {promise:Promise<any>,resolve,reject,complete?: boolean};
+  private initPromise: {
+    promise: Promise<any>;
+    resolve;
+    reject;
+    complete?: boolean;
+  };
 
   constructor(
     public shape: ShapeType<S>,
     private queryBuildFn?: QueryBuildFn<S, ResponseType>,
     public subject?: S | ShapeSet<S> | QResult<S>,
-  )
-  {
+  ) {
     super();
 
-    let promise,resolve,reject;
-    promise = new Promise((res,rej)=>{
-        resolve = res;
-        reject = rej;
+    let promise, resolve, reject;
+    promise = new Promise((res, rej) => {
+      resolve = res;
+      reject = rej;
     });
-    this.initPromise = {promise, resolve, reject, complete:false};
+    this.initPromise = {promise, resolve, reject, complete: false};
 
     //only continue to parse the query if the document is ready, and all shapes from initial bundles are loaded
-    if (
-      typeof document === 'undefined' ||
-      document.readyState !== 'loading'
-    ) {
+    if (typeof document === 'undefined' || document.readyState !== 'loading') {
       this.init();
     } else {
       document.addEventListener('DOMContentLoaded', () => this.init());
@@ -1607,11 +1654,9 @@ export class SelectQueryFactory<
     this.initPromise.resolve(this.traceResponse);
     this.initPromise.complete = true;
   }
-  private initialized()
-  {
+  private initialized() {
     return this.initPromise.promise;
   }
-
 
   /**
    * Returns the dummy shape instance who's properties can be accessed freely inside a queryBuildFn
@@ -1672,8 +1717,7 @@ export class SelectQueryFactory<
    * Turns the LinkedQuery into a SelectQuery, which is a plain JS object that can be serialized to JSON
    */
   getQueryObject(): SelectQuery<S> {
-    try
-    {
+    try {
       let queryPaths = this.getQueryPaths();
       let selectQuery = {
         type: 'select',
@@ -1684,29 +1728,27 @@ export class SelectQueryFactory<
         shape: this.shape,
         sortBy: this.getSortByPath(),
       } as SelectQuery<S>;
-      if(this.singleResult) {
+      if (this.singleResult) {
         selectQuery.singleResult = this.singleResult;
       }
-      if (this.wherePath)
-      {
+      if (this.wherePath) {
         selectQuery.where = this.wherePath;
       }
       return selectQuery;
-    }
-    catch (err) {
-        console.error('Error in getQueryObject', err);
-        throw err;
+    } catch (err) {
+      console.error('Error in getQueryObject', err);
+      throw err;
     }
   }
   getSubject() {
     //if the subject is a QueryShape which comes from query context
     //then it will point to a target node with "targetID"
     //and we convert it to a node reference
-    if(((this.subject as Shape)?.node as TestNode)?.targetID) {
+    if (((this.subject as Shape)?.node as TestNode)?.targetID) {
       return convertQueryContext(this.subject as Shape);
     }
-  return this.subject;
-}
+    return this.subject;
+  }
 
   private getSortByPath() {
     if (!this.sortResponse) return null;
@@ -1737,12 +1779,11 @@ export class SelectQueryFactory<
       queryPaths.push(response.getPropertyPath());
     } else if (Array.isArray(response) || response instanceof Set) {
       response.forEach((endValue) => {
-        if(endValue instanceof QueryBuilderObject) {
+        if (endValue instanceof QueryBuilderObject) {
           queryPaths.push(endValue.getPropertyPath());
-        }
-        else if(endValue instanceof SelectQueryFactory) {
+        } else if (endValue instanceof SelectQueryFactory) {
           queryPaths.push(
-              (endValue as SelectQueryFactory<any>).getQueryPaths() as any,
+            (endValue as SelectQueryFactory<any>).getQueryPaths() as any,
           );
         }
       });
@@ -1845,7 +1886,7 @@ export class SelectQueryFactory<
       this.setLimit(1);
       this.singleResult = true;
       return pAdjusted;
-    }
+    };
 
     return p as any as PatchedQueryPromise<SingleResult<ResultType>, S>;
   }
@@ -1996,7 +2037,7 @@ export class SetSize<Source = null> extends QueryNumber<Source> {
     let countable = this.subject.getPropertyStep();
     let self: SizeStep = {
       count: [countable],
-      label: this.label || this.subject.property.label,//the default is property name + 'Size', i.e., friendsSize
+      label: this.label || this.subject.property.label, //the default is property name + 'Size', i.e., friendsSize
       //numFriends
       // label: this.label || 'num'+this.subject.property.label[0].toUpperCase()+this.subject.property.label.slice(1),//the default is property name + 'Size', i.e., friendsSize
     };

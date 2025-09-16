@@ -652,7 +652,10 @@ export function resolveLocal<ResultType>(
 
   let subject: NamedNode | NodeSet<NamedNode>;
   if (query.subject) {
-    if ((query.subject as QResult<any>).id) {
+    if ('id' in (query.subject as QResult<any>)) {
+      if(typeof (query.subject as QResult<any>).id !== 'string') {
+        throw new Error('When providing a subject in a query, the id must be a string. Given: ' + JSON.stringify((query.subject as QResult<any>).id));
+      }
       if (NamedNode.getNamedNode((query.subject as QResult<any>).id)) {
         // subject = query.shape.getFromURI((query.subject as QResult<any>).id) as Shape;
         subject = NamedNode.getOrCreate((query.subject as QResult<any>).id);

@@ -35,11 +35,16 @@ import {
   QueryResponseToResultType,
   QShape,
   QShapeSet,
-  QResult,QueryShape,
+  QResult,
+  QueryShape,
 } from '../queries/SelectQuery.js';
 import {IQueryParser, staticImplements} from '../interfaces/IQueryParser.js';
 import {TestNode} from '../utils/TraceShape.js';
-import {UpdatePartial,AddId,NodeReferenceValue} from '../queries/QueryFactory.js';
+import {
+  UpdatePartial,
+  AddId,
+  NodeReferenceValue,
+} from '../queries/QueryFactory.js';
 import {ClassOf} from '../utils/Types.js';
 import {CreateResponse} from '../queries/CreateQuery.js';
 import {NodeId} from '../queries/MutationQuery.js';
@@ -116,6 +121,7 @@ export abstract class Shape implements IShape {
   static typesToShapes: Map<NamedNode, CoreSet<IClassConstruct>> = new Map();
   //TODO: rename to nodeShape to avoid confusing things like shape.shape
   static shape: NodeShape;
+  static shapeCallbacks: ((shape) => void)[] = [];
   protected static instancesLoaded: Map<
     NamedNode,
     {promise: Promise<NodeSet<NamedNode>>; done: boolean}
@@ -268,7 +274,7 @@ export abstract class Shape implements IShape {
 
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
-    subject:S|QShape<S>|QResult<S>,
+    subject: S | QShape<S> | QResult<S>,
     queryFn: QueryBuildFn<S, R>,
   ): SelectQueryFactory<S, R>;
   static query<S extends Shape, R = unknown>(
@@ -277,15 +283,16 @@ export abstract class Shape implements IShape {
   ): SelectQueryFactory<S, R>;
   static query<S extends Shape, R = unknown>(
     this: {new (node: Node): S; targetClass: any},
-    subject:S|QShape<S>|QResult<S>|QueryBuildFn<S,R>,
+    subject: S | QShape<S> | QResult<S> | QueryBuildFn<S, R>,
     queryFn?: QueryBuildFn<S, R>,
   ): SelectQueryFactory<S, R> {
-    const _queryFn = (subject && queryFn) ? queryFn : subject as QueryBuildFn<S,R>;
-    let _subject:S|QResult<S> = queryFn ? subject as S : undefined;
-    if(_subject instanceof QueryShape) {
-      _subject = {id:_subject.id} as QResult<S>;
+    const _queryFn =
+      subject && queryFn ? queryFn : (subject as QueryBuildFn<S, R>);
+    let _subject: S | QResult<S> = queryFn ? (subject as S) : undefined;
+    if (_subject instanceof QueryShape) {
+      _subject = {id: _subject.id} as QResult<S>;
     }
-    const query = new SelectQueryFactory<S>(this as any, _queryFn,_subject);
+    const query = new SelectQueryFactory<S>(this as any, _queryFn, _subject);
     return query;
   }
 
@@ -323,7 +330,7 @@ export abstract class Shape implements IShape {
     >,
   >(
     this: {new (node: Node): ShapeType; queryParser: IQueryParser},
-    subjects?: ShapeType|QResult<ShapeType>,
+    subjects?: ShapeType | QResult<ShapeType>,
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
@@ -335,7 +342,7 @@ export abstract class Shape implements IShape {
     >[],
   >(
     this: {new (node: Node): ShapeType; queryParser: IQueryParser},
-    subjects?: ICoreIterable<ShapeType>|QResult<ShapeType>[],
+    subjects?: ICoreIterable<ShapeType> | QResult<ShapeType>[],
     selectFn?: QueryBuildFn<ShapeType, S>,
   ): Promise<ResultType> & PatchedQueryPromise<ResultType, ShapeType>;
   static select<
@@ -502,7 +509,6 @@ export abstract class Shape implements IShape {
   ): ShapeSet<T> {
     return this.getSetOf(this.getLocalInstanceNodesByType());
   }
-
 
   /**
    * Finds all the instances whos rdf:type matches the targetClass of this shape
