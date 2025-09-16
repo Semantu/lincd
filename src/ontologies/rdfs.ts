@@ -17,6 +17,7 @@ var subClassOf: NamedNode = NamedNode.getOrCreate(base + 'subClassOf');
 var range: NamedNode = NamedNode.getOrCreate(base + 'range');
 var isDefinedBy: NamedNode = NamedNode.getOrCreate(base + 'isDefinedBy');
 var label: NamedNode = NamedNode.getOrCreate(base + 'label');
+var comment: NamedNode = NamedNode.getOrCreate(base + 'comment');
 var Literal: NamedNode = NamedNode.getOrCreate(base + 'Literal');
 var Datatype: NamedNode = NamedNode.getOrCreate(base + 'Datatype');
 var Class: NamedNode = NamedNode.getOrCreate(base + 'Class');
@@ -29,6 +30,7 @@ export const rdfs = {
   range,
   isDefinedBy,
   label,
+  comment,
   Literal,
   Datatype,
   Class,
