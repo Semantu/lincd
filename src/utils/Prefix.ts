@@ -60,7 +60,7 @@ export class Prefix {
     let match = this.findMatch(fullURI);
     if (match.length > 0) {
       const postFix = fullURI.substring(match[0].length);
-      if(!postFix.includes('/')) {
+      if (!postFix.includes('/')) {
         return match[1] + ':' + postFix;
       }
     }

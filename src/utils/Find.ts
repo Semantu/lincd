@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NodeSet} from '../collections/NodeSet.js';
-import {NamedNode, Node, Quad} from '../models.js';
+import {NamedNode,Node,Quad} from '../models.js';
 import {rdf} from '../ontologies/rdf.js';
 import {rdfs} from '../ontologies/rdfs.js';
 import {QuadSet} from '../collections/QuadSet.js';
@@ -115,7 +115,7 @@ export class Find {
       } else {
         //if not, then we look through ALL LOCALLY KNOWN USAGES of this property
         //TODO: this has been deprecated, probably in new LINCD with Queries this is not necessary anymore
-        throw new Error("Deprecated. Using find is discouraged.");
+        throw new Error('Deprecated. Using find is discouraged.');
         // potentialQuads = searchProp.getAsPredicateQuads();
       }
       if (!potentialQuads) return;

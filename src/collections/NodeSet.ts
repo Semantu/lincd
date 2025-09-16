@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {CoreSet} from './CoreSet.js';
-import {Literal, NamedNode, Node} from '../models.js';
+import {Literal,NamedNode,Node} from '../models.js';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
 import {QuadSet} from './QuadSet.js';
 import {QuadArray} from './QuadArray.js';

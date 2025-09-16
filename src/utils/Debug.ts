@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {Literal, NamedNode, Node} from '../models.js';
+import {Literal,NamedNode,Node} from '../models.js';
 
 export class Debug {
   //TODO: move stuff back into actual models, keep a general method here that handles numbers etc, so that imports of this file are minimal

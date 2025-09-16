@@ -5,7 +5,7 @@
  */
 import {CoreMap} from './CoreMap.js';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
-import {NamedNode, Node} from '../models.js';
+import {NamedNode,Node} from '../models.js';
 import {QuadSet} from './QuadSet.js';
 import {QuadArray} from './QuadArray.js';
 import {NodeSet} from './NodeSet.js';

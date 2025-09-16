@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {BlankNode, NamedNode} from '../models.js';
+import {BlankNode,NamedNode} from '../models.js';
 import {NodeMap} from './NodeMap.js';
 import {NodeSet} from './NodeSet.js';
 

@@ -1,14 +1,18 @@
-import {getPackageShape,linkedComponent,linkedSetComponent,linkedShape} from '../../package.js';
-import { Shape } from '../../shapes/Shape.js';
-import { literalProperty,objectProperty } from '../../shapes/SHACL.js';
-import { Literal,NamedNode } from '../../models.js';
-import { xsd } from '../../ontologies/xsd.js';
-import { TestNode } from '../../utils/TraceShape.js';
-import { describe,expect,test } from '@jest/globals';
-import { QResult,QShape,QueryBuilderObject } from '../../queries/SelectQuery.js';
-import { render,waitFor } from '@testing-library/react';
-import { ShapeSet } from '../../collections/ShapeSet.js';
-import { setDefaultPageLimit } from '../../utils/Package.js';
+import {
+  linkedComponent,
+  linkedSetComponent,
+  linkedShape,
+} from '../../package.js';
+import {Shape} from '../../shapes/Shape.js';
+import {literalProperty, objectProperty} from '../../shapes/SHACL.js';
+import {Literal, NamedNode} from '../../models.js';
+import {xsd} from '../../ontologies/xsd.js';
+import {TestNode} from '../../utils/TraceShape.js';
+import {describe, expect, test} from '@jest/globals';
+import {QResult} from '../../queries/SelectQuery.js';
+import {render, waitFor} from '@testing-library/react';
+import {ShapeSet} from '../../collections/ShapeSet.js';
+import {setDefaultPageLimit} from '../../utils/Package.js';
 import React from 'react';
 import {getQueryContext, setQueryContext} from '../../queries/QueryContext.js';
 
@@ -29,7 +33,6 @@ let pluralTestProp = NamedNode.getOrCreate(
   NamedNode.TEMP_URI_BASE + 'pluralTestProp',
 );
 
-
 @linkedShape
 export class Pet extends Shape
 {
@@ -38,7 +41,7 @@ export class Pet extends Shape
   @literalProperty({
     path: bestFriend,
     maxCount: 1,
-    shape:Pet
+    shape: Pet,
   })
   get bestFriend(): Pet
   {
@@ -50,7 +53,6 @@ export class Pet extends Shape
     this.overwrite(bestFriend,val.namedNode);
   }
 }
-
 
 @linkedShape
 export class Person extends Shape
@@ -113,22 +115,25 @@ export class Person extends Shape
     path: hasPet,
     shape: Pet,
   })
-  get pets() {
+  get pets()
+  {
     return this.getAllAs<Pet>(hasPet,Pet);
   }
 
   @objectProperty({
     path: hasPet,
     shape: Pet,
-    maxCount:1
+    maxCount: 1,
   })
-  get firstPet() {
+  get firstPet()
+  {
     return this.getOneAs<Pet>(hasPet,Pet);
   }
-  set firstPet(val:Pet) {
-    this.overwrite(hasPet,val.namedNode)
-  }
 
+  set firstPet(val: Pet)
+  {
+    this.overwrite(hasPet,val.namedNode);
+  }
 
   @objectProperty({
     path: pluralTestProp,
@@ -141,8 +146,8 @@ export class Person extends Shape
 
   @literalProperty({
     path: birthDate,
-    datatype:xsd.dateTime,
-    maxCount:1,
+    datatype: xsd.dateTime,
+    maxCount: 1,
   })
   get birthDate(): Date
   {
@@ -157,18 +162,20 @@ export class Person extends Shape
   }
 
   @literalProperty({
-    path:isRealPerson,
+    path: isRealPerson,
     datatype: xsd.boolean,
-    maxCount:1
+    maxCount: 1,
   })
-  get isRealPerson(): boolean {
+  get isRealPerson(): boolean
+  {
     return this.hasProperty(isRealPerson) ? this.getValue(isRealPerson) === 'true' : undefined;
   }
-  set isRealPerson(val: boolean) {
-    this.overwrite(isRealPerson, new Literal(val ? 'true' : 'false', xsd.boolean));
+
+  set isRealPerson(val: boolean)
+  {
+    this.overwrite(isRealPerson,new Literal(val ? 'true' : 'false',xsd.boolean));
   }
 }
-
 
 @linkedShape
 export class Dog extends Pet
@@ -178,7 +185,7 @@ export class Dog extends Pet
   @literalProperty({
     path: guardDogLevel,
     maxCount: 1,
-    datatype:xsd.integer
+    datatype: xsd.integer,
   })
   get guardDogLevel(): number
   {
@@ -246,14 +253,12 @@ dog1.bestFriend = dog2;
 p1.pets.add(dog1);
 p2.pets.add(dog2);
 
-
 //kind of a duplicate (it replaces previously set pets), but helpful for testing .as() on singular values
 p1.firstPet = dog1;
 
 export const testPersons = [p1,p2,p3,p4];
 export const testProps = {name,nickName,bestFriend,hobby,hasFriend,birthDate};
-export const testTypes = {person:personClass};
-
+export const testTypes = {person: personClass};
 
 setQueryContext('user',p3,Person);
 
@@ -261,7 +266,7 @@ setQueryContext('user',p3,Person);
  *
  * @param startPromise if provided it will be awaited before running the tests
  */
-export const runQueryTests = (startPromise=Promise.resolve()) => {
+export const runQueryTests = (startPromise = Promise.resolve()) => {
   describe('query tests',() => {
     test('can select a literal property of all instances',async () => {
       await startPromise;
@@ -284,7 +289,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
       names.forEach((name) => {
 
-      })
+      });
 
       expect(Array.isArray(names)).toBe(true);
       expect(names.length).toBe(4);
@@ -350,19 +355,19 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
     });
 
     test('can select a boolean',async () => {
-        let isRealPersons = await Person.select((p) => {
-            return p.isRealPerson;
-        });
+      let isRealPersons = await Person.select((p) => {
+        return p.isRealPerson;
+      });
 
-        expect(Array.isArray(isRealPersons)).toBe(true);
-        expect(isRealPersons.length).toBe(4);
-        expect(isRealPersons.filter(p => p.isRealPerson !== null).length).toBe(3);
-        let p1Result = isRealPersons.find(p => p.id === p1.uri);
-        expect(p1Result.isRealPerson).toBe(true);
-        let p2Result = isRealPersons.find(p => p.id === p2.uri);
-        expect(p2Result.isRealPerson).toBe(false);
-        let p4Result = isRealPersons.find(p => p.id === p4.uri);
-        expect(p4Result.isRealPerson).toBeNull();
+      expect(Array.isArray(isRealPersons)).toBe(true);
+      expect(isRealPersons.length).toBe(4);
+      expect(isRealPersons.filter(p => p.isRealPerson !== null).length).toBe(3);
+      let p1Result = isRealPersons.find(p => p.id === p1.uri);
+      expect(p1Result.isRealPerson).toBe(true);
+      let p2Result = isRealPersons.find(p => p.id === p2.uri);
+      expect(p2Result.isRealPerson).toBe(false);
+      let p4Result = isRealPersons.find(p => p.id === p4.uri);
+      expect(p4Result.isRealPerson).toBeNull();
     });
 
     test('can select sub properties of a first property that returns a set',async () => {
@@ -502,12 +507,12 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(qRes.id).toBe(p1.uri);
     });
     test('can select properties of a specific subject by ID reference',async () => {
-      let qRes = await Person.select({id:p1.uri},p => p.name);
+      let qRes = await Person.select({id: p1.uri},p => p.name);
       expect(qRes.name).toBe(p1.name);
       expect(qRes.id).toBe(p1.uri);
     });
     test('select with a non existing returns null',async () => {
-      let qRes = await Person.select({id:'https://does.not/exist'},p => p.name);
+      let qRes = await Person.select({id: 'https://does.not/exist'},p => p.name);
       expect(qRes).toBeNull();
     });
 
@@ -558,7 +563,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
       //QResult<Person, {friends: QResult<Person, {}>[]}>[]
       let hasBestFriend = await Person.select().where(p => {
-        return p.bestFriend.equals({id:p3.uri});
+        return p.bestFriend.equals({id: p3.uri});
       });
 
       expect(Array.isArray(hasBestFriend)).toBe(true);
@@ -566,9 +571,9 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(hasBestFriend[0].id).toBe(p2.uri);
     });
 
-    test ('where on literal',async() => {
+    test('where on literal',async () => {
       const hobbies = await Person.select((p) => {
-        return p.hobby.where(h => h.equals(p2.hobby))
+        return p.hobby.where(h => h.equals(p2.hobby));
       });
       expect(Array.isArray(hobbies)).toBe(true);
       expect(hobbies.length).toBe(4);
@@ -670,7 +675,6 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       //   );
       // });
       //TODO: implement f.or(A,B)
-
 
       [persons,persons2].forEach((result) => {
         expect(Array.isArray(result)).toBe(true);
@@ -785,7 +789,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(namesHasBestFriendUser).toHaveLength(1);
       expect(first.id).toBe(p2.uri);
       expect(first.name).toBe(p2.name);
-    })
+    });
 
     test('where with query context as base of property path',async () => {
       //should return name of p2
@@ -801,7 +805,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(hasUserAsFriend).toHaveLength(2);
       expect(hasUserAsFriend.some(p => p.id === p1.uri && p.name === p1.name)).toBeTruthy();
       expect(hasUserAsFriend.some(p => p.id === p2.uri && p.name === p2.name)).toBeTruthy();
-    })
+    });
 
     //#### COUNT TESTS ####
     test('count a shapeset',async () => {
@@ -909,38 +913,38 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         //So ObjectToPlainResult should convert the SetSize to a number
         //if Source (SetSize<Source>) extends QueryShapeSet, then its an object, else a number
 
-      //SelectQueryFactory<
-      //  Person,
-      //  {
-      //    numFriends: SetSize<QShapeSet<Person,QShape<Person,null,''>,'friends'>>
-      //  },
-      //  QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
-      //>
-      //
-      //Step 1: QueryResponseToResultType
+        //SelectQueryFactory<
+        //  Person,
+        //  {
+        //    numFriends: SetSize<QShapeSet<Person,QShape<Person,null,''>,'friends'>>
+        //  },
+        //  QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
+        //>
+        //
+        //Step 1: QueryResponseToResultType
         // SelectQueryFactory extends GetNestedQueryResultType<
-          // any
-          // Response = {numFriends: SetSize<QShapeSet<Person,QShape<Person,null,''>,'friends'>>
-          // Source = QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
+        // any
+        // Response = {numFriends: SetSize<QShapeSet<Person,QShape<Person,null,''>,'friends'>>
+        // Source = QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
         //Step 2: GetNestedQueryResultType
         //Source extends QueryBuilderObject<Source, Response>
         //Step 3: GetQueryObjectResultType<
-          //QV = Source = QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
-          //SubProperties = ResponseToObject<Response>
+        //QV = Source = QueryShapeSet<Person,QShape<Person,null,''>,'friends'>
+        //SubProperties = ResponseToObject<Response>
         //QV extends QueryShapeSet<
-          //ShapeType = Person
-          //Source = QShape<Person,null,''>
-          //Property = 'friends'
+        //ShapeType = Person
+        //Source = QShape<Person,null,''>
+        //Property = 'friends'
         //Step 4: CreateShapeSetQResult<
-          //ShapeType=ShapeType=Person,
-          //Source=QShape<Person,null,''>,
-          //Property='friends,
-          //SubProperties=ResponseToObject<Response>
-          //HasName=false
+        //ShapeType=ShapeType=Person,
+        //Source=QShape<Person,null,''>,
+        //Property='friends,
+        //SubProperties=ResponseToObject<Response>
+        //HasName=false
         //>
         //Source extends QueryShape<
-          //SourceShapeType = Person
-          //ParentSource = null
+        //SourceShapeType = Person
+        //ParentSource = null
         //> -> QResult<
         //           SourceShapeType=Person,
         //           {[P in Property='friends']: CreateQResult<Source, null, null, SubProperties>[]}
@@ -955,8 +959,6 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         //  SourceShapeType = Person
         //  ParentSource = null
         //  SourceProperty = ''
-
-
 
       let first = numberOfFriends3[0];
       let firstNumFriends: number = first.friends[0].numFriends;
@@ -1028,7 +1030,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         });
         return res;
       }).where(p => {
-        return p.equals({id:p2.uri})
+        return p.equals({id: p2.uri});
       });
       // SelectQueryFactory<
       //  Person,
@@ -1044,32 +1046,32 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       // >
 
       //step 1: GetNestedQueryResultType<Response, Source>
-        //Response = (
-        //  QueryString<QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">, "name">|
-        //  QueryString<QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">, "hobby">
-        //)[]
-        //Source = QueryShape<
-        //  Person,
-        //  QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">,
-        //  "bestFriend"
-        // >
+      //Response = (
+      //  QueryString<QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">, "name">|
+      //  QueryString<QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">, "hobby">
+      //)[]
+      //Source = QueryShape<
+      //  Person,
+      //  QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">,
+      //  "bestFriend"
+      // >
       //Source extends QueryBuilderObject
       //--> step 2: GetQueryObjectResultType<QV=Source, SubProperties=ResponseToObject<Response>
-        //QV extends QueryShape<ShapeType,Source,Property>
-          //ShapeType = Person (value type of property?)
-          //Source = QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">
-          //Property = "bestFriend"
+      //QV extends QueryShape<ShapeType,Source,Property>
+      //ShapeType = Person (value type of property?)
+      //Source = QueryShape<Person, null, ""> & QueryShapeProps<Person, null, "">
+      //Property = "bestFriend"
       //--> step3: CreateQResult<Source,ShapeType,Property,SubProperties,HasName=false>
-        //Source=Source=QueryShape<Person, null, ""> & QueryShapeProps<Person, null, ""> (original request Person.select())
-        //Value=ShapeType=Person (value type of property?)
-        //Property="bestFriend"
-        //SubProperties=ResponseToObject<Response>
-        //HasName=false
+      //Source=Source=QueryShape<Person, null, ""> & QueryShapeProps<Person, null, ""> (original request Person.select())
+      //Value=ShapeType=Person (value type of property?)
+      //Property="bestFriend"
+      //SubProperties=ResponseToObject<Response>
+      //HasName=false
 
-        //Source extends QueryShape<SourceShapeType,ParentSource,SourceProperty>
-          //SourceShapeType = Person
-          //ParentSource = null
-          //SourceProperty = ''
+      //Source extends QueryShape<SourceShapeType,ParentSource,SourceProperty>
+      //SourceShapeType = Person
+      //ParentSource = null
+      //SourceProperty = ''
 
       //-->
       //QResult<
@@ -1089,8 +1091,6 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       //  SourceShapeType = Person
       //  ParentSource = null
       //  SourceProperty = ''
-
-
 
       //We want:
       //QResult<
@@ -1215,27 +1215,27 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         return p.pluralTestProp.where(pp => {
           //plularTestProp will return p1,p2,p3,p4, but here we
           //make sure that we only return name and friends of p2
-          return pp.equals({id:p2.uri})
+          return pp.equals({id: p2.uri});
         }).select(pp => {
           return [
             pp.name,
             pp.friends.select(f => {
-              return [f.name,f.hobby]
-            })
-          ]
-        })
+              return [f.name,f.hobby];
+            }),
+          ];
+        });
       }).where(p => {
-        return p.equals({id:p1.uri})
+        return p.equals({id: p1.uri});
       });
 
       //Expected Result: QResult<Person,{
       //  bestFriend: QResult<Person, {
-        //    name: string,
-        //    friends: QResult<Person, {
-        //      name: string,
-        //      hobby: string
-        //    }>[]
-        //  }[]
+      //    name: string,
+      //    friends: QResult<Person, {
+      //      name: string,
+      //      hobby: string
+      //    }>[]
+      //  }[]
       //}>[]
 
       //Should return 1 results, with 1 pluralTestProps (p2)
@@ -1274,26 +1274,26 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
     // //TODO: selectWhereOne()
 
     test('sub select all primitives',async () => {
-        //select all persons, but only select their name and hobby
-        //QResult<Person, {name:string,hobby:string}>[]
-        let bestFriendProps = await Person.select((p) => {
-          return p.bestFriend.select(f => [
-            f.name,
-            f.birthDate,
-            f.isRealPerson,
-            // f.friends.size().as('numFriends'),
-          ])
-        });
+      //select all persons, but only select their name and hobby
+      //QResult<Person, {name:string,hobby:string}>[]
+      let bestFriendProps = await Person.select((p) => {
+        return p.bestFriend.select(f => [
+          f.name,
+          f.birthDate,
+          f.isRealPerson,
+          // f.friends.size().as('numFriends'),
+        ]);
+      });
 
-        expect(Array.isArray(bestFriendProps)).toBe(true);
-        expect(bestFriendProps.length).toBe(4);
-        const p1Result = bestFriendProps.find(p => p.id === p2.uri);
-        const bestFriend = p1Result.bestFriend;
-        expect(p1Result.bestFriend.id === p3.uri).toBe(true);
-        expect(p1Result.bestFriend.name).toBe(p3.name);
-        expect(p1Result.bestFriend.birthDate).toBe(p3.birthDate);
-        expect(p1Result.bestFriend.isRealPerson).toBe(p3.isRealPerson);
-        // expect(p1Result.bestFriend.friends).toBe(p3.friends.size);
+      expect(Array.isArray(bestFriendProps)).toBe(true);
+      expect(bestFriendProps.length).toBe(4);
+      const p1Result = bestFriendProps.find(p => p.id === p2.uri);
+      const bestFriend = p1Result.bestFriend;
+      expect(p1Result.bestFriend.id === p3.uri).toBe(true);
+      expect(p1Result.bestFriend.name).toBe(p3.name);
+      expect(p1Result.bestFriend.birthDate).toBe(p3.birthDate);
+      expect(p1Result.bestFriend.isRealPerson).toBe(p3.isRealPerson);
+      // expect(p1Result.bestFriend.friends).toBe(p3.friends.size);
     });
 
     test('custom result object - equals without where returns a boolean',async () => {
@@ -1455,7 +1455,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
     test('select shapeset as',async () => {
       let personsWithGuardDogs = await Person.select((p) => {
-        return p.pets.as(Dog).guardDogLevel
+        return p.pets.as(Dog).guardDogLevel;
       });
 
       expect(Array.isArray(personsWithGuardDogs)).toBe(true);
@@ -1476,13 +1476,12 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
     test('select non existing returns null or empty array for multiple value properties',async () => {
       let persons = await Person.select((p) => {
-        return [p.bestFriend,p.friends]
+        return [p.bestFriend,p.friends];
       });
       //both multi value properties as well as single value properties should return null if no values exists
       //an empty array is NOT accepted
       //undefined is also not accepted.
       //only null works well with JSON
-
 
       expect(Array.isArray(persons)).toBe(true);
 
@@ -1498,11 +1497,11 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(Array.isArray(p3Res.friends)).toBe(true);
       expect(p3Res.friends.length).toBe(0);
       expect(p3Res.bestFriend).toBeNull();
-    })
+    });
 
     test('select shape as',async () => {
       let personsWithGuardDogs = await Person.select((p) => {
-        return p.firstPet.as(Dog).guardDogLevel
+        return p.firstPet.as(Dog).guardDogLevel;
       });
 
       expect(Array.isArray(personsWithGuardDogs)).toBe(true);
@@ -1523,15 +1522,15 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
     test('select one',async () => {
       let singleResult = await Person.select((p) => {
-        return p.name
-      }).where(p => p.equals({id:p1.uri})).one();
+        return p.name;
+      }).where(p => p.equals({id: p1.uri})).one();
 
       expect(Array.isArray(singleResult)).toBe(false);
       expect(singleResult).toBeDefined();
       expect(singleResult.name).toBe(p1.name);
     });
 
-    test('nested queries 2',async() => {
+    test('nested queries 2',async () => {
       const nested = await Person.select((p) => {
         return [
           p.name,
@@ -1544,7 +1543,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
             ];
           }),
         ];
-      }).where(p => p.equals({id:p1.uri}));
+      }).where(p => p.equals({id: p1.uri}));
 
       //p1 -> p2 (friends) -> p3 (bestFriend)
       //p2 -> dog2 (firstPet)
@@ -1559,7 +1558,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(result2.bestFriend.id).toBe(p3.uri);
       expect(result2.bestFriend.name).toBe(p3.name);
 
-    })
+    });
 
     test('select duplicate paths',async () => {
       let bestFriendProps = await Person.select((p) => {
@@ -1567,7 +1566,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
           p.bestFriend.name,
           p.bestFriend.hobby,
           p.bestFriend.isRealPerson,
-        ]
+        ];
       });
 
       expect(Array.isArray(bestFriendProps)).toBe(true);
@@ -1580,8 +1579,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(bestFriend.name).toBe(p3.name);
       expect(bestFriend.hobby).toBe(null);
       expect(bestFriend.isRealPerson).toBe(true);
-    })
-
+    });
 
     test('component with single property query',async () => {
       const Component = linkedComponent(
@@ -1651,8 +1649,6 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 
     });
 
-
-
     test('component with custom props',async () => {
       //Typescript has some limitations, which mean we cannot infer the type of the query AND define custom props at the same time
       //https://stackoverflow.com/questions/60377365/typescript-infer-type-of-generic-after-optional-first-generic/60378308#60378308
@@ -1681,7 +1677,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         return (
           <div>
             <span>{friends[0].name}</span>
-          <span>{custom1.toString()}</span>
+            <span>{custom1.toString()}</span>
           </div>
         );
       });
@@ -1703,7 +1699,7 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       //And the query result should be
       // QResult<Person, {hobby: string, bestFriend: QResult<Person, {name: string}>}>
       let parentQuery = Person.query((p) => {
-        let res = [p.hobby, p.bestFriend.preloadFor(ChildComponent)];
+        let res = [p.hobby,p.bestFriend.preloadFor(ChildComponent)];
         // let res = [p.hobby, Component1.of(p.bestFriend)];
         //This would also work
         // let res = {
@@ -1725,9 +1721,9 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         return (
           <>
             <span>{hobby.toString()}</span>
-          <ChildComponent of={bestFriend} />
-        </>
-      );
+            <ChildComponent of={bestFriend} />
+          </>
+        );
       });
       let component = render(<ParentComponent of={p2} customasd1={true} />);
       await waitFor(() => expect(component.getByText('Jinx')).toBeTruthy());
@@ -1741,13 +1737,13 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
           return (
             <ul>
               {persons.map((person) => {
-                  return (
-                    <li key={person.id}>
-                      <span>{person.name}</span>
-                      <span>{person.hobby}</span>
-                      </li>
-                  );
-                })}
+                return (
+                  <li key={person.id}>
+                    <span>{person.name}</span>
+                    <span>{person.hobby}</span>
+                  </li>
+                );
+              })}
             </ul>
           );
         },
@@ -1771,13 +1767,13 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
           return (
             <ul>
               {persons.map((person) => {
-                  return (
-                    <li key={person.id}>
-                      <span>{person.name}</span>
-                      <span>{person.hobby}</span>
-                      </li>
-                  );
-                })}
+                return (
+                  <li key={person.id}>
+                    <span>{person.name}</span>
+                    <span>{person.hobby}</span>
+                  </li>
+                );
+              })}
             </ul>
           );
         },
@@ -1798,13 +1794,13 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         return (
           <ul>
             {persons.map((person) => {
-                return (
-                  <li key={person.id}>
-                    <span>{person.name}</span>
-                    <span>{person.hobby}</span>
-                    </li>
-                );
-              })}
+              return (
+                <li key={person.id}>
+                  <span>{person.name}</span>
+                  <span>{person.hobby}</span>
+                </li>
+              );
+            })}
           </ul>
         );
       });
@@ -1824,13 +1820,13 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         return (
           <ul>
             {persons.map((person) => {
-                return (
-                  <li key={person.id}>
-                    <span>{person.name}</span>
-                    <span>{person.hobby}</span>
-                    </li>
-                );
-              })}
+              return (
+                <li key={person.id}>
+                  <span>{person.name}</span>
+                  <span>{person.hobby}</span>
+                </li>
+              );
+            })}
           </ul>
         );
       });
@@ -1843,9 +1839,9 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
           return (
             <div>
               <span>{name}</span>
-            <NameList of={friends} />
-          </div>
-        );
+              <NameList of={friends} />
+            </div>
+          );
         },
       );
 
@@ -1869,12 +1865,12 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
           return (
             <ul>
               {persons.map((person) => {
-                  return (
-                    <li key={person.id}>
+                return (
+                  <li key={person.id}>
                     <span role="name">{person.name}</span>
-                      </li>
-                  );
-                })}
+                  </li>
+                );
+              })}
             </ul>
           );
         },
@@ -2135,35 +2131,35 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       expect(res.friends.some(f => f.id === p1.uri)).toBe(true);
     });
     test('create query 3 - create a new person with a fixed ID',async () => {
-        const fixedId = NamedNode.TEMP_URI_BASE + 'p6-test-person';
-        const fixedId2 = NamedNode.TEMP_URI_BASE + 'p6-test-person-friend';
-        const res = await Person.create({
-          __id: fixedId,
-          name: 'Test Create Fixed ID',
-          hobby: 'Swimming',
-          bestFriend:{
-            __id:fixedId2,
-            name: 'Test Create Fixed ID Friend',
-          }
-        });
+      const fixedId = NamedNode.TEMP_URI_BASE + 'p6-test-person';
+      const fixedId2 = NamedNode.TEMP_URI_BASE + 'p6-test-person-friend';
+      const res = await Person.create({
+        __id: fixedId,
+        name: 'Test Create Fixed ID',
+        hobby: 'Swimming',
+        bestFriend: {
+          __id: fixedId2,
+          name: 'Test Create Fixed ID Friend',
+        },
+      });
 
-        expect(res.id).toBeDefined();
-        expect(res.id).toBe(fixedId);
-        expect(res.name).toBe('Test Create Fixed ID');
-        expect(res.hobby).toBe('Swimming');
+      expect(res.id).toBeDefined();
+      expect(res.id).toBe(fixedId);
+      expect(res.name).toBe('Test Create Fixed ID');
+      expect(res.hobby).toBe('Swimming');
 
-        const qRes = await Person.select(p => [p.name,p.hobby,p.bestFriend.name]).where(p => p.equals({id:fixedId}));
-        expect(qRes[0].id).toBe(fixedId);
-        expect(qRes[0].name).toBe('Test Create Fixed ID');
-        expect(qRes[0].hobby).toBe('Swimming');
-        expect(qRes[0].bestFriend).toBeDefined();
-        expect(qRes[0].bestFriend.name).toBe('Test Create Fixed ID Friend');
-        expect(qRes[0].bestFriend.id).toBe(fixedId2);
+      const qRes = await Person.select(p => [p.name,p.hobby,p.bestFriend.name]).where(p => p.equals({id: fixedId}));
+      expect(qRes[0].id).toBe(fixedId);
+      expect(qRes[0].name).toBe('Test Create Fixed ID');
+      expect(qRes[0].hobby).toBe('Swimming');
+      expect(qRes[0].bestFriend).toBeDefined();
+      expect(qRes[0].bestFriend.name).toBe('Test Create Fixed ID Friend');
+      expect(qRes[0].bestFriend.id).toBe(fixedId2);
 
-        //Clean up the created node
-        await Person.delete(fixedId);
-        await Person.delete(fixedId2);
-    })
+      //Clean up the created node
+      await Person.delete(fixedId);
+      await Person.delete(fixedId2);
+    });
 
     test('delete query 1 - delete newly created node',async () => {
       const created = await Person.create({
@@ -2528,11 +2524,11 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         bestFriend: {
           __id: NamedNode.TEMP_URI_BASE + 'p3-best-friend',
           name: 'Bestie',
-        }
+        },
       });
-      expect (updateRes.id).toBe(p3.uri);
-      expect (updateRes.bestFriend.id).toBe(NamedNode.TEMP_URI_BASE + 'p3-best-friend');
-      expect (updateRes.bestFriend.name).toBe('Bestie');
+      expect(updateRes.id).toBe(p3.uri);
+      expect(updateRes.bestFriend.id).toBe(NamedNode.TEMP_URI_BASE + 'p3-best-friend');
+      expect(updateRes.bestFriend.name).toBe('Bestie');
 
       //double check it worked
       let res1 = await Person.select(p3,p => {
@@ -2558,12 +2554,10 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
         birthDate: new Date('1990-01-01'),
       });
 
-
       expect(res.id).toBeDefined();
       expect(res.id).toEqual(p1.uri);
       expect(res.birthDate).toBeDefined();
       expect(res.birthDate.toISOString()).toBe('1990-01-01T00:00:00.000Z');
-
 
       // Check database
       let qRes = await Person.select(p1,(p) => p.birthDate);
@@ -2576,198 +2570,197 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
       let qRes2 = await Person.select(p1,(p) => p.birthDate);
       expect(qRes2).toBeDefined();
       expect(qRes2.birthDate.toISOString()).toBe(originalBirthDate.toISOString());
-    })
+    });
 
   });
 };
 
+//@TODO: add tests for updating ALL items without passing an id as first param
+// test('update all items (without id)',async () => {
+//   //original:
+//   // p1.birthDate = new Date('1990-01-01');
+//   const res = await Person.update({
+//     birthDate: new Date('1990-01-02'),
+//   });
+//
+//   expect(res.length).toBe(4);
+//   res.forEach((person) => {
+//     expect(person.birthDate.toISOString()).toBe('1990-01-02T00:00:00.000Z');
+//   });
+//
+//   // Restore original values
+//   //1) remove the birthDate from all
+//   await Person.update({
+//     birthDate: undefined,
+//   });
+//   //2) set the original value for p1
+//   await Person.update(p1,{
+//     birthDate: new Date('1990-01-01'),
+//   });
+// })
 
-    //@TODO: add tests for updating ALL items without passing an id as first param
-    // test('update all items (without id)',async () => {
-    //   //original:
-    //   // p1.birthDate = new Date('1990-01-01');
-    //   const res = await Person.update({
-    //     birthDate: new Date('1990-01-02'),
-    //   });
-    //
-    //   expect(res.length).toBe(4);
-    //   res.forEach((person) => {
-    //     expect(person.birthDate.toISOString()).toBe('1990-01-02T00:00:00.000Z');
-    //   });
-    //
-    //   // Restore original values
-    //   //1) remove the birthDate from all
-    //   await Person.update({
-    //     birthDate: undefined,
-    //   });
-    //   //2) set the original value for p1
-    //   await Person.update(p1,{
-    //     birthDate: new Date('1990-01-01'),
-    //   });
-    // })
+// test('remove query - remove a single value property', async () => {
+//
+//   //create a new person and then delete it
+//   const pNew = await Person.create({
+//     name: 'New Person',
+//     hobby: 'Gaming',
+//   })
+// });
 
-    // test('remove query - remove a single value property', async () => {
-    //
-    //   //create a new person and then delete it
-    //   const pNew = await Person.create({
-    //     name: 'New Person',
-    //     hobby: 'Gaming',
-    //   })
-    // });
+// test('update query 6 - function-based set single property', async () => {
+//   const originalHobby = p1.hobby || 'Swimming';
+//
+//   const res = await Person.update(p1, (p) => {
+//     return [p.hobby = 'Skating'];
+//   });
+//
+//   expect(res.id).toEqual(p1.uri);
+//   expect(res.hobby).toBe('Skating');
+//
+//   const qRes = await Person.select(p1, p => p.hobby);
+//   expect(qRes.hobby).toBe('Skating');
+//
+//   await Person.update(p1, p => [p.hobby = originalHobby]);
+// });
+// test('update query 7 - function-based unset single property', async () => {
+//   const originalHobby = p1.hobby;
+//
+//   const res = await Person.update(p1, (p) => {
+//     return [p.hobby = undefined];
+//   });
+//
+//   expect(res.hobby).toBeUndefined();
+//
+//   const qRes = await Person.select(p1, p => p.hobby);
+//   expect(qRes.hobby).toBeUndefined();
+//
+//   await Person.update(p1, p => [p.hobby = originalHobby]);
+// });
+//
+// test('update query 8 - function-based overwrite Multi-Value Property', async () => {
+//   const res = await Person.update(p1, (p) => {
+//     return [
+//       p.friends = [{ name: 'New Pal' }]
+//     ];
+//   });
+//
+//   expect(res.friends.length).toBe(1);
+//   expect(res.friends[0].name).toBe('New Pal');
+//
+//   const qRes = await Person.select(p1, p => p.friends.name);
+//   expect(qRes.friends.length).toBe(1);
+//   expect(qRes.friends[0].name).toBe('New Pal');
+// });
+//
+// test('update query 10 - function-based remove from Multi-Value Property', async () => {
+//   const resAdd = await Person.update(p1, p => [
+//     p.friends.add({ name: 'TempRemove' })
+//   ]);
+//   const toRemove = resAdd.friends.find(f => f.name === 'TempRemove');
+//   expect(toRemove).toBeDefined();
+//
+//   const res = await Person.update(p1, (p) => {
+//     return [
+//       p.friends.remove(toRemove.id)
+//     ];
+//   });
+//
+//   const qRes = await Person.select(p1, p => p.friends.name);
+//   expect(qRes.friends.find(f => f.name === 'TempRemove')).toBeUndefined();
+// });
+//
+// test('update query 11 - function-based nested update of bestFriend', async () => {
+//   let res = await Person.update(p1, (p) => {
+//     return [
+//       p.bestFriend = { name: 'Bestie McBestFace' }
+//     ];
+//   });
+//
+//   expect(res.bestFriend).toBeDefined();
+//   expect(res.bestFriend.name).toBe('Bestie McBestFace');
+//
+//   let qRes = await Person.select(p1, p => p.bestFriend.name);
+//   expect(qRes.bestFriend.name).toBe('Bestie McBestFace');
+// });
 
-    // test('update query 6 - function-based set single property', async () => {
-    //   const originalHobby = p1.hobby || 'Swimming';
-    //
-    //   const res = await Person.update(p1, (p) => {
-    //     return [p.hobby = 'Skating'];
-    //   });
-    //
-    //   expect(res.id).toEqual(p1.uri);
-    //   expect(res.hobby).toBe('Skating');
-    //
-    //   const qRes = await Person.select(p1, p => p.hobby);
-    //   expect(qRes.hobby).toBe('Skating');
-    //
-    //   await Person.update(p1, p => [p.hobby = originalHobby]);
-    // });
-    // test('update query 7 - function-based unset single property', async () => {
-    //   const originalHobby = p1.hobby;
-    //
-    //   const res = await Person.update(p1, (p) => {
-    //     return [p.hobby = undefined];
-    //   });
-    //
-    //   expect(res.hobby).toBeUndefined();
-    //
-    //   const qRes = await Person.select(p1, p => p.hobby);
-    //   expect(qRes.hobby).toBeUndefined();
-    //
-    //   await Person.update(p1, p => [p.hobby = originalHobby]);
-    // });
-    //
-    // test('update query 8 - function-based overwrite Multi-Value Property', async () => {
-    //   const res = await Person.update(p1, (p) => {
-    //     return [
-    //       p.friends = [{ name: 'New Pal' }]
-    //     ];
-    //   });
-    //
-    //   expect(res.friends.length).toBe(1);
-    //   expect(res.friends[0].name).toBe('New Pal');
-    //
-    //   const qRes = await Person.select(p1, p => p.friends.name);
-    //   expect(qRes.friends.length).toBe(1);
-    //   expect(qRes.friends[0].name).toBe('New Pal');
-    // });
-    //
-    // test('update query 10 - function-based remove from Multi-Value Property', async () => {
-    //   const resAdd = await Person.update(p1, p => [
-    //     p.friends.add({ name: 'TempRemove' })
-    //   ]);
-    //   const toRemove = resAdd.friends.find(f => f.name === 'TempRemove');
-    //   expect(toRemove).toBeDefined();
-    //
-    //   const res = await Person.update(p1, (p) => {
-    //     return [
-    //       p.friends.remove(toRemove.id)
-    //     ];
-    //   });
-    //
-    //   const qRes = await Person.select(p1, p => p.friends.name);
-    //   expect(qRes.friends.find(f => f.name === 'TempRemove')).toBeUndefined();
-    // });
-    //
-    // test('update query 11 - function-based nested update of bestFriend', async () => {
-    //   let res = await Person.update(p1, (p) => {
-    //     return [
-    //       p.bestFriend = { name: 'Bestie McBestFace' }
-    //     ];
-    //   });
-    //
-    //   expect(res.bestFriend).toBeDefined();
-    //   expect(res.bestFriend.name).toBe('Bestie McBestFace');
-    //
-    //   let qRes = await Person.select(p1, p => p.bestFriend.name);
-    //   expect(qRes.bestFriend.name).toBe('Bestie McBestFace');
-    // });
+// test('update query with object argument', async () => {
+//   const res = await Person.update(p1,{
+//     hobby: 'Gaming',
+//     friends: [{
+//       name: 'Jinx',
+//       friends:[{
+//         name:'Friend 1',
+//         friends:[{
+//           name:'Nested friend'
+//         }]
+//       },{
+//         //it should be possible to pass an object with just the ID
+//         id:p4.uri
+//       },{
+//         name:'Friend 2'
+//       }]
+//       // name2:'asdf',
+//       // clone: true,
+//       // targetClass:Person,
+//       // namedNode:null,
+//     }]
+//   });
+//   //queryObject will be
+//   //{
+//   //   id: p1.uri,
+//   //   type:'update',
+//   //   fields: [
+//   //     {field: hobbyPropShape, value: 'Gaming'},
+//   //     {field: friendsPropShape, value: [
+//   //       "string alsp possible here",
+//   //       [or an array of PropertyValueUpdate]
+//   //       {id:singleItemURI} //<-- or a reference to a node
+//   //     ]}
+//   //   ]
+//   //}
+//   //so fields is an array of 3 different types of objects
+//   //1. A single value that converts to a literal (string, number, boolean, Date)
+//   //2. An array of PropertyValueUpdate objects
+//   //3. An object with 'id', which is a reference to a node
+//
+//   //check that the result object is correct
+//   expect(res.id).toBeDefined()
+//   expect(typeof res.id).toBe('string')
+//   expect(res.hobby).toBeDefined()
+//   expect(res['name']).toBeUndefined();
+//   let f1 = res.friends[0];
+//   expect(f1.id).toBeDefined();
+//   expect(f1.name).toBeDefined();
+//   expect(Array.isArray(f1.friends)).toEqual(true);
+//   let f2 = f1.friends[0];
+//   expect(f2.id).toBeDefined();
+//   expect(f2.name).toBeDefined();
+//   expect(Array.isArray(f2.friends)).toEqual(true);
+//   let f3 = f2.friends && f2.friends[0];
+//   expect(f2.friends[0].id).toBeDefined();
+//   expect(f2.friends[0].name).toBeDefined();
+//   expect(f1.friends[1].id).toBeDefined();
+//   expect(f1.friends[1].name).toBeUndefined();
+//   // expect(f1.friends[1].friends).toUnBeDefined();
+//   expect(f1.friends[0].id).toBeDefined();
+//   expect(f1.friends[1].name).toBeUndefined();
+//
+//   let qRes = await Person.select((p) => [p.name,p.hobby]).where(p => p.name.equals('Semmy'));
+//   expect(qRes[0].name).toBe('Semmy');
+//   expect(qRes[0].hobby).toBe('Gaming');
+//
+//   //now change again
+//   await Person.update(p1.uri,{
+//     hobby: 'Jogging'
+//   });
+//   let res2 = await Person.select((p) => [p.name,p.hobby]).where(p => p.name.equals('Semmy'));
+//   expect(res2[0].hobby).toBe('Jogging');
+// });
 
-    // test('update query with object argument', async () => {
-    //   const res = await Person.update(p1,{
-    //     hobby: 'Gaming',
-    //     friends: [{
-    //       name: 'Jinx',
-    //       friends:[{
-    //         name:'Friend 1',
-    //         friends:[{
-    //           name:'Nested friend'
-    //         }]
-    //       },{
-    //         //it should be possible to pass an object with just the ID
-    //         id:p4.uri
-    //       },{
-    //         name:'Friend 2'
-    //       }]
-    //       // name2:'asdf',
-    //       // clone: true,
-    //       // targetClass:Person,
-    //       // namedNode:null,
-    //     }]
-    //   });
-    //   //queryObject will be
-    //   //{
-    //   //   id: p1.uri,
-    //   //   type:'update',
-    //   //   fields: [
-    //   //     {field: hobbyPropShape, value: 'Gaming'},
-    //   //     {field: friendsPropShape, value: [
-    //   //       "string alsp possible here",
-    //   //       [or an array of PropertyValueUpdate]
-    //   //       {id:singleItemURI} //<-- or a reference to a node
-    //   //     ]}
-    //   //   ]
-    //   //}
-    //   //so fields is an array of 3 different types of objects
-    //   //1. A single value that converts to a literal (string, number, boolean, Date)
-    //   //2. An array of PropertyValueUpdate objects
-    //   //3. An object with 'id', which is a reference to a node
-    //
-    //   //check that the result object is correct
-    //   expect(res.id).toBeDefined()
-    //   expect(typeof res.id).toBe('string')
-    //   expect(res.hobby).toBeDefined()
-    //   expect(res['name']).toBeUndefined();
-    //   let f1 = res.friends[0];
-    //   expect(f1.id).toBeDefined();
-    //   expect(f1.name).toBeDefined();
-    //   expect(Array.isArray(f1.friends)).toEqual(true);
-    //   let f2 = f1.friends[0];
-    //   expect(f2.id).toBeDefined();
-    //   expect(f2.name).toBeDefined();
-    //   expect(Array.isArray(f2.friends)).toEqual(true);
-    //   let f3 = f2.friends && f2.friends[0];
-    //   expect(f2.friends[0].id).toBeDefined();
-    //   expect(f2.friends[0].name).toBeDefined();
-    //   expect(f1.friends[1].id).toBeDefined();
-    //   expect(f1.friends[1].name).toBeUndefined();
-    //   // expect(f1.friends[1].friends).toUnBeDefined();
-    //   expect(f1.friends[0].id).toBeDefined();
-    //   expect(f1.friends[1].name).toBeUndefined();
-    //
-    //   let qRes = await Person.select((p) => [p.name,p.hobby]).where(p => p.name.equals('Semmy'));
-    //   expect(qRes[0].name).toBe('Semmy');
-    //   expect(qRes[0].hobby).toBe('Gaming');
-    //
-    //   //now change again
-    //   await Person.update(p1.uri,{
-    //     hobby: 'Jogging'
-    //   });
-    //   let res2 = await Person.select((p) => [p.name,p.hobby]).where(p => p.name.equals('Semmy'));
-    //   expect(res2[0].hobby).toBe('Jogging');
-    // });
-
-    // test('update query with update function',async () => {
-    //
-    // })
+// test('update query with update function',async () => {
+//
+// })
 
 //NEXT:
 //bring back flat
@@ -2786,11 +2779,11 @@ export const runQueryTests = (startPromise=Promise.resolve()) => {
 // // });
 
 //a view that shows each person of a set as a avatar + name, with pagination or something
-  /**
-   * View 1: PersonOverview, shows the name of person + its friends as PersonAvatar
-   * View 2: PersonAvatar, shows name + avatar.source
-   * The combined query
-   */
+/**
+ * View 1: PersonOverview, shows the name of person + its friends as PersonAvatar
+ * View 2: PersonAvatar, shows name + avatar.source
+ * The combined query
+ */
 // let res = Person.select((p) => [
 //   p.friends.select((f) => [f.name, f.avatar]),
 // ]).local();

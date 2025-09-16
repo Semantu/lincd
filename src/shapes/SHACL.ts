@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import { BlankNode,Literal,NamedNode,Node } from '../models.js';
+import {BlankNode,Literal,NamedNode,Node} from '../models.js';
 import {Shape} from './Shape.js';
 import {shacl} from '../ontologies/shacl.js';
 import {List} from './List.js';
@@ -13,13 +13,12 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {rdf} from '../ontologies/rdf.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ForwardReasoning} from '../utils/ForwardReasoning.js';
-import { getShapeClass,getShapeOrSubShape } from '../utils/ShapeClass.js';
-import { ShapeValuesSet } from '../collections/ShapeValuesSet.js';
+import {getShapeClass,getShapeOrSubShape} from '../utils/ShapeClass.js';
+import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {rdfs} from '../ontologies/rdfs.js';
 
-
-
-export interface NodeShapeConfig {
+export interface NodeShapeConfig
+{
   /**
    * Set to true to close the shape. This means any target node of this shape that has properties outside the defined properties of this shape is invalid.
    */
@@ -30,7 +29,8 @@ export interface NodeShapeConfig {
   ignoredProperties: NodeSet<NamedNode>;
 }
 
-export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
+export interface LiteralPropertyShapeConfig extends PropertyShapeConfig
+{
   nodeKind?: typeof Literal;
   /**
    * Values of the configured property must be less than the values of this 'lessThan' property
@@ -88,7 +88,8 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
   in?: NodeSet | Node[];
 }
 
-export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
+export interface ObjectPropertyShapeConfig extends PropertyShapeConfig
+{
   nodeKind?: typeof NamedNode | typeof BlankNode;
   /**
    * Each value of this property must have this class as its rdf:type
@@ -96,7 +97,8 @@ export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
   class?: NamedNode;
 }
 
-export interface PropertyShapeConfig {
+export interface PropertyShapeConfig
+{
   /**
    * The property path of this property shape.
    *
@@ -104,7 +106,7 @@ export interface PropertyShapeConfig {
    *
    * Provide a NamedNode that has is a `rdf:Property`
    */
-  path: NamedNode|NamedNode[];
+  path: NamedNode | NamedNode[];
 
   /**
    * Indicates that this property must exist.
@@ -172,9 +174,8 @@ export interface PropertyShapeConfig {
   /**
    * Values of the configured property path are sorted by the values of this property path.
    */
-  sortBy?: NamedNode|NamedNode[];
+  sortBy?: NamedNode | NamedNode[];
 }
-
 
 /**
  * The most general decorator to indicate a get/set method requires & provides a certain linked data property.
@@ -202,7 +203,7 @@ const _linkedProperty = (
   config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
   defaultNodeKind: NamedNode = null,
 ) => {
-  return function (
+  return function(
     target: any,
     propertyKey: string,
     descriptor: PropertyDescriptor,
@@ -216,8 +217,8 @@ const _linkedProperty = (
     );
 
     //once the NodeShape is available, we can add the property shape to it
-    onShapeSetup(target.constructor, (shape: NodeShape) => {
-      registerPropertyShape(shape, propertyShape);
+    onShapeSetup(target.constructor,(shape: NodeShape) => {
+      registerPropertyShape(shape,propertyShape);
     });
   };
 };
@@ -225,11 +226,12 @@ const _linkedProperty = (
 export function registerPropertyShape(
   shape: NodeShape,
   propertyShape: PropertyShape,
-) {
+)
+{
   let uri = `${shape.namedNode.uri}/${propertyShape.label}`;
   //with react hot reload, sometimes the same code gets loaded twice, recreating the same property shape
   //so if this URI already existed, we can ignore the new one, since its already registered
-  if(!NamedNode.getNamedNode(uri))
+  if (!NamedNode.getNamedNode(uri))
   {
     //update the URI (by extending the URI of the shape)
     propertyShape.namedNode.uri = uri;
@@ -238,68 +240,88 @@ export function registerPropertyShape(
     shape.addPropertyShape(propertyShape);
   }
 }
+
 export function createPropertyShape(
   config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
   propertyKey: string,
   defaultNodeKind: NamedNode = null,
-) {
+)
+{
   let propertyShape = new PropertyShape();
   propertyShape.path = config.path;
   propertyShape.label = propertyKey;
 
-  if (config.required) {
+  if (config.required)
+  {
     propertyShape.minCount = 1;
-  } else if (config.minCount) {
+  }
+  else if (config.minCount)
+  {
     propertyShape.minCount = config.minCount;
   }
 
-  if (config.maxCount) {
+  if (config.maxCount)
+  {
     propertyShape.maxCount = config.maxCount;
   }
-  if (config['datatype']) {
+  if (config['datatype'])
+  {
     propertyShape.datatype = config['datatype'];
   }
 
-  if (config.nodeKind) {
+  if (config.nodeKind)
+  {
     let nodeKind = config.nodeKind;
     //for @linkedProperty, nodeKind will be Literal
-    if (nodeKind === Literal) {
+    if (nodeKind === Literal)
+    {
       propertyShape.nodeKind = shacl.Literal;
     }
     //for @objectProperty, by default nodeKind will be NamedNode
     // stored as shacl.IRI
-    if (nodeKind === NamedNode) {
+    if (nodeKind === NamedNode)
+    {
       propertyShape.nodeKind = shacl.IRI;
     }
-    if (nodeKind === BlankNode) {
+    if (nodeKind === BlankNode)
+    {
       propertyShape.nodeKind = shacl.BlankNode;
     }
-    if (Array.isArray(nodeKind)) {
-      if (nodeKind.includes(BlankNode) && nodeKind.includes(NamedNode)) {
+    if (Array.isArray(nodeKind))
+    {
+      if (nodeKind.includes(BlankNode) && nodeKind.includes(NamedNode))
+      {
         propertyShape.nodeKind = shacl.BlankNodeOrIRI;
       }
-      if (nodeKind.includes(Literal) && nodeKind.includes(NamedNode)) {
+      if (nodeKind.includes(Literal) && nodeKind.includes(NamedNode))
+      {
         propertyShape.nodeKind = shacl.IRIOrLiteral;
       }
-      if (nodeKind.includes(Literal) && nodeKind.includes(BlankNode)) {
+      if (nodeKind.includes(Literal) && nodeKind.includes(BlankNode))
+      {
         propertyShape.nodeKind = shacl.BlankNodeOrLiteral;
       }
     }
-  } else {
+  }
+  else
+  {
     //if no nodeKind was provided, use the default, if given
-    if (defaultNodeKind) {
+    if (defaultNodeKind)
+    {
       propertyShape.nodeKind = defaultNodeKind;
     }
   }
   //we accept a shape configuration, which translates to a sh:nodeShape
-  if (config.shape) {
+  if (config.shape)
+  {
     //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
-    onShapeSetup(config.shape, (nodeShape: NodeShape) => {
+    onShapeSetup(config.shape,(nodeShape: NodeShape) => {
       propertyShape.valueShape = nodeShape;
     });
   }
 
-  if (config.in) {
+  if (config.in)
+  {
     //assuming config.in is a NodeSet already:
     propertyShape.inList = List.createFrom(config.in);
   }
@@ -351,11 +373,17 @@ export function createPropertyShape(
   // (2 props must have same value)
   //sh.equals
 }
-export function onShapeSetup(shapeClass: typeof Shape, callback: (shape: NodeShape) => void) {
-  if (shapeClass.hasOwnProperty('shape')) {
+
+export function onShapeSetup(shapeClass: typeof Shape,callback: (shape: NodeShape) => void)
+{
+  if (shapeClass.hasOwnProperty('shape'))
+  {
     callback(shapeClass.shape);
-  } else {
-    if (!shapeClass['shapeCallbacks']) {
+  }
+  else
+  {
+    if (!shapeClass['shapeCallbacks'])
+    {
       shapeClass['shapeCallbacks'] = [];
     }
     shapeClass['shapeCallbacks'].push(callback);
@@ -363,90 +391,132 @@ export function onShapeSetup(shapeClass: typeof Shape, callback: (shape: NodeSha
 }
 
 export const literalProperty = (config: LiteralPropertyShapeConfig) => {
-  return _linkedProperty(config, shacl.Literal);
+  return _linkedProperty(config,shacl.Literal);
 };
 export const objectProperty = (config: ObjectPropertyShapeConfig) => {
-  return _linkedProperty(config, shacl.IRI);
+  return _linkedProperty(config,shacl.IRI);
 };
 
-export class SHACL_Shape extends Shape {
+export class SHACL_Shape extends Shape
+{
   static targetClass: NamedNode = shacl.Shape;
 
-  get type() {
+  get type()
+  {
     return this.getOne(rdf.type) as NamedNode;
   }
 
-  set type(val: NamedNode) {
-    this.overwrite(rdf.type, val);
+  set type(val: NamedNode)
+  {
+    this.overwrite(rdf.type,val);
   }
 
   /**
    * A human-readable description for this shape
    */
-  get description() {
+  get description()
+  {
     return this.getValue(rdfs.comment);
   }
-  set description(val: string) {
-    this.overwrite(rdfs.comment, new Literal(val));
+
+  set description(val: string)
+  {
+    this.overwrite(rdfs.comment,new Literal(val));
   }
 
   protected _validateNode(
     node: NamedNode,
-    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
-  ): boolean {
+    validated: CoreMap<Node,boolean> = new CoreMap<Node,boolean>(),
+  ): boolean
+  {
     return false;
   }
 }
 
 //Note: this shape is linked in Module.ts to avoid cyclical dependencies
-export class NodeShape extends SHACL_Shape {
+export class NodeShape extends SHACL_Shape
+{
   static targetClass: NamedNode = shacl.NodeShape;
   private static _instances: ShapeSet<NodeShape>;
 
-  get targetNode(): NamedNode {
+  /**
+   * Because (currently) all NodeShapes are initialized immediately upon initialisation
+   * We can cache the instances of NodeShapes to speed up frequent methods used in Storage
+   */
+  static get instances()
+  {
+    if (!this._instances)
+    {
+      this._instances = this.getLocalInstancesByType();
+    }
+    return this._instances;
+  }
+
+  get targetNode(): NamedNode
+  {
     return this.getOne(shacl.targetNode) as NamedNode;
   }
 
-  set targetNode(value) {
-    this.overwrite(shacl.targetNode, value);
+  set targetNode(value)
+  {
+    this.overwrite(shacl.targetNode,value);
   }
 
-  get targetClass(): NamedNode {
+  get targetClass(): NamedNode
+  {
     return this.getOne(shacl.targetClass) as NamedNode;
   }
 
-  set targetClass(value) {
-    this.overwrite(shacl.targetClass, value);
+  set targetClass(value)
+  {
+    this.overwrite(shacl.targetClass,value);
   }
 
-  addPropertyShape(property: PropertyShape) {
-    this.set(shacl.property, property.namedNode);
-  }
-
-  get properties() {
+  get properties()
+  {
     return this.getPropertyShapes(false);
   }
 
-  getPropertyShapes(includeSuperClasses:boolean=false): ShapeSet<PropertyShape> {
-    let res:NodeSet;
-    if(includeSuperClasses) {
+  static getShapesOf(node: Node)
+  {
+    return this.getLocalInstances().filter((shape) => {
+      return shape.validateNode(node);
+    });
+  }
+
+  addPropertyShape(property: PropertyShape)
+  {
+    this.set(shacl.property,property.namedNode);
+  }
+
+  getPropertyShapes(includeSuperClasses: boolean = false): ShapeSet<PropertyShape>
+  {
+    let res: NodeSet;
+    if (includeSuperClasses)
+    {
       res = new NodeSet();
       let shapeClass = getShapeClass(this.namedNode).prototype;
-      while(shapeClass && shapeClass.nodeShape) {
+      while (shapeClass && shapeClass.nodeShape)
+      {
         shapeClass.nodeShape.getAll(shacl.property).forEach(res.add.bind(res));
         shapeClass = Object.getPrototypeOf(shapeClass);
       }
-    } else {
+    }
+    else
+    {
       res = this.getAll(shacl.property);
     }
     return PropertyShape.getSetOf(res);
   }
-  getPropertyShape(label:string,checkSubShapes:boolean=true): PropertyShape {
+
+  getPropertyShape(label: string,checkSubShapes: boolean = true): PropertyShape
+  {
 
     //look at this nodeShape, but also the nodeshapes of the parent classes of the class that created this nodeshape
     let shapeClass = getShapeClass(this.namedNode).prototype;
-    let res
-    while(!res && shapeClass) {
+    let res;
+    while (!res && shapeClass)
+    {
       res = shapeClass.nodeShape.getPropertyShapes().find((shape) => shape.label === label);
       shapeClass = checkSubShapes ? Object.getPrototypeOf(shapeClass) : null;
     }
@@ -456,9 +526,11 @@ export class NodeShape extends SHACL_Shape {
   /**
    * Returns all the classes and properties that are references by this shape
    */
-  getOntologyEntities(): NodeSet<NamedNode> {
+  getOntologyEntities(): NodeSet<NamedNode>
+  {
     let entities = new NodeSet<NamedNode>();
-    if (this.targetClass) {
+    if (this.targetClass)
+    {
       entities.add(this.targetClass);
     }
     //add ontology entities of all property shapes
@@ -468,22 +540,27 @@ export class NodeShape extends SHACL_Shape {
     return entities;
   }
 
-  validateNode(node: Node): boolean {
+  validateNode(node: Node): boolean
+  {
     return this._validateNode(node);
   }
-  validateNodeByType(node: Node): boolean {
+
+  validateNodeByType(node: Node): boolean
+  {
     return node.has(rdf.type,this.targetClass);
   }
 
   protected _validateNode(
     node: Node,
-    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean | null>(),
-  ): boolean {
-    if (validated.has(node)) {
+    validated: CoreMap<Node,boolean> = new CoreMap<Node,boolean | null>(),
+  ): boolean
+  {
+    if (validated.has(node))
+    {
       return validated.get(node);
     }
     //whilst validating, if a connected node wants to validate THIS node, we consider this node to be valid until proven otherwise below
-    validated.set(node, true);
+    validated.set(node,true);
 
     //EDIT: targetClass is just for selecting nodes. It's not an enforcement, for that shacl:class should be used.
     // if (this.targetClass) {
@@ -500,17 +577,22 @@ export class NodeShape extends SHACL_Shape {
     //   }
     // }
     const propertyShapes = this.getPropertyShapes();
-    if (propertyShapes.size > 0) {
-      if (node instanceof Literal) {
-        validated.set(node, false);
+    if (propertyShapes.size > 0)
+    {
+      if (node instanceof Literal)
+      {
+        validated.set(node,false);
         return false;
-      } else if (node instanceof NamedNode) {
+      }
+      else if (node instanceof NamedNode)
+      {
         if (
           !this.getPropertyShapes().every((propertyShape) => {
-            return (propertyShape as any)._validateNode(node, validated);
+            return (propertyShape as any)._validateNode(node,validated);
           })
-        ) {
-          validated.set(node, false);
+        )
+        {
+          validated.set(node,false);
           return false;
         }
       }
@@ -518,35 +600,21 @@ export class NodeShape extends SHACL_Shape {
     // validated.set(node,true);
     return true;
   }
-
-  /**
-   * Because (currently) all NodeShapes are initialized immediately upon initialisation
-   * We can cache the instances of NodeShapes to speed up frequent methods used in Storage
-   */
-  static get instances() {
-    if(!this._instances) {
-      this._instances = this.getLocalInstancesByType()
-    }
-    return this._instances;
-  }
-
-  static getShapesOf(node: Node) {
-    return this.getLocalInstances().filter((shape) => {
-      return shape.validateNode(node);
-    });
-  }
 }
 
 //Note: this shape is linked in Module.ts to avoid cyclical dependencies
-export class PropertyShape extends SHACL_Shape {
+export class PropertyShape extends SHACL_Shape
+{
   static targetClass: NamedNode = shacl.PropertyShape;
 
-  get class(): NamedNode {
+  get class(): NamedNode
+  {
     return this.getOne(shacl.class) as NamedNode;
   }
 
-  set class(value: NamedNode) {
-    this.overwrite(shacl.class, value);
+  set class(value: NamedNode)
+  {
+    this.overwrite(shacl.class,value);
   }
 
   /**
@@ -557,97 +625,122 @@ export class PropertyShape extends SHACL_Shape {
    *
    */
   //@NOTE: If the name valueShape is an issue we could always rename `get nodeShape` to `get shaclShape` in Shape.ts
-  get valueShape(): NodeShape {
-    return this.hasProperty(shacl.node) ? new NodeShape(this.getOne(shacl.node)) : null;  }
-
-  set valueShape(value: NodeShape) {
-    this.overwrite(shacl.node, value.node);
+  get valueShape(): NodeShape
+  {
+    return this.hasProperty(shacl.node) ? new NodeShape(this.getOne(shacl.node)) : null;
   }
 
-  get nodeKind(): NamedNode {
+  set valueShape(value: NodeShape)
+  {
+    this.overwrite(shacl.node,value.node);
+  }
+
+  get nodeKind(): NamedNode
+  {
     return this.getOne(shacl.nodeKind) as NamedNode;
   }
 
-  set nodeKind(value: NamedNode) {
-    this.overwrite(shacl.nodeKind, value);
+  set nodeKind(value: NamedNode)
+  {
+    this.overwrite(shacl.nodeKind,value);
   }
 
-  get datatype(): NamedNode {
+  get datatype(): NamedNode
+  {
     return this.getOne(shacl.datatype) as NamedNode;
   }
 
-  set datatype(value: NamedNode) {
-    this.overwrite(shacl.datatype, value);
+  set datatype(value: NamedNode)
+  {
+    this.overwrite(shacl.datatype,value);
   }
 
-  get maxCount(): number {
+  get maxCount(): number
+  {
     return parseInt(this.getValue(shacl.maxCount));
   }
 
-  set maxCount(value: number) {
-    this.overwrite(shacl.maxCount, new Literal(value.toString(), xsd.integer));
+  set maxCount(value: number)
+  {
+    this.overwrite(shacl.maxCount,new Literal(value.toString(),xsd.integer));
   }
 
-  get minCount(): number {
+  get minCount(): number
+  {
     return parseInt(this.getValue(shacl.minCount));
   }
 
-  set minCount(value: number) {
-    this.overwrite(shacl.minCount, new Literal(value.toString(), xsd.integer));
+  set minCount(value: number)
+  {
+    this.overwrite(shacl.minCount,new Literal(value.toString(),xsd.integer));
   }
 
-  get name(): string {
+  get name(): string
+  {
     return this.getValue(shacl.name);
   }
 
   // Setter overloading - would be nice to have one for String and another for Literal:
   // https://github.com/microsoft/TypeScript/issues/2521
-  set name(value: string) {
-    this.overwrite(shacl.name, new Literal(value));
+  set name(value: string)
+  {
+    this.overwrite(shacl.name,new Literal(value));
   }
 
-  get description(): string {
+  get description(): string
+  {
     return this.getValue(shacl.description);
   }
 
-  set description(value: string) {
-    this.overwrite(shacl.description, new Literal(value));
+  set description(value: string)
+  {
+    this.overwrite(shacl.description,new Literal(value));
   }
 
-  get path(): NamedNode|NamedNode[] {
+  get path(): NamedNode | NamedNode[]
+  {
     let propertyPath = this.getAll(shacl.path);
-    if(propertyPath.size === 1) {
+    if (propertyPath.size === 1)
+    {
       return propertyPath.first() as NamedNode;
-    } else {
+    }
+    else
+    {
       return [...propertyPath] as NamedNode[];
     }
   }
 
-  set path(value: NamedNode|NamedNode[]) {
-    (value instanceof NamedNode) ? this.overwrite(shacl.path, value) : this.moverwrite(shacl.path, value);
+  set path(value: NamedNode | NamedNode[])
+  {
+    (value instanceof NamedNode) ? this.overwrite(shacl.path,value) : this.moverwrite(shacl.path,value);
   }
 
   //@TODO: property decorators should support properties that hold List values
   // Queries should return arrays for these type of values
-  get in(): NamedNode {
+  get in(): NamedNode
+  {
     return this.getOne(shacl.in) as NamedNode;
   }
 
-  set in(value: NamedNode) {
-    this.overwrite(shacl.in, value);
+  set in(value: NamedNode)
+  {
+    this.overwrite(shacl.in,value);
   }
 
-  get inList(): List {
+  get inList(): List
+  {
     return this.hasProperty(shacl.in)
       ? List.getOf(this.getOne(shacl.in))
       : null;
   }
 
-  set inList(value: List) {
-    this.overwrite(shacl.in, value.node);
+  set inList(value: List)
+  {
+    this.overwrite(shacl.in,value.node);
   }
 
-  get parentNodeShape(): NodeShape {
+  get parentNodeShape(): NodeShape
+  {
     return this.hasInverseProperty(shacl.property)
       ? new NodeShape(this.getOneInverse(shacl.property))
       : null;
@@ -656,16 +749,20 @@ export class PropertyShape extends SHACL_Shape {
   /**
    * Returns all the classes and properties that are references by this shape
    */
-  getOntologyEntities(): NodeSet<NamedNode> {
-    let pathNodes:NamedNode[];
-    if(this.path instanceof NamedNode) {
+  getOntologyEntities(): NodeSet<NamedNode>
+  {
+    let pathNodes: NamedNode[];
+    if (this.path instanceof NamedNode)
+    {
       pathNodes = [this.path];
-    } else {
+    }
+    else
+    {
       pathNodes = this.path;
     }
     //start with values of those properties that have a NamedNode as value
     const entities = new NodeSet<NamedNode>(
-      [this.class, ...pathNodes, this.datatype].filter((value) => value && true),
+      [this.class,...pathNodes,this.datatype].filter((value) => value && true),
     );
     //this caused loops!
     // if (this.nodeShape) {
@@ -675,18 +772,24 @@ export class PropertyShape extends SHACL_Shape {
     return entities;
   }
 
-  validateNode(node: NamedNode): boolean {
+  validateNode(node: NamedNode): boolean
+  {
     return this._validateNode(node);
   }
 
-  resolveFor(node: NamedNode) {
+  resolveFor(node: NamedNode)
+  {
     //TODO: support more complex property paths
     let path = this.path;
-    if(path instanceof NamedNode) {
+    if (path instanceof NamedNode)
+    {
       return node.getAll(path);
-    } else {
-      let target:NamedNode|NodeSet = node
-      for(let prop of path) {
+    }
+    else
+    {
+      let target: NamedNode | NodeSet = node;
+      for (let prop of path)
+      {
         target = target.getAll(prop);
       }
       return target;
@@ -695,43 +798,53 @@ export class PropertyShape extends SHACL_Shape {
 
   protected _validateNode(
     node: NamedNode,
-    validated: CoreMap<Node, boolean> = new CoreMap<Node, boolean>(),
-  ): boolean {
+    validated: CoreMap<Node,boolean> = new CoreMap<Node,boolean>(),
+  ): boolean
+  {
     const path = this.path;
     let values;
-    if(path instanceof NamedNode) {
+    if (path instanceof NamedNode)
+    {
       values = node.getAll(path);
-    } else {
-      let target:NamedNode|NodeSet = node
-      for(let prop of path) {
+    }
+    else
+    {
+      let target: NamedNode | NodeSet = node;
+      for (let prop of path)
+      {
         target = target.getAll(prop);
       }
       values = target;
     }
     //validate shacl:class
-    if (this.class) {
+    if (this.class)
+    {
       if (
         !values.every(
           (value) =>
-            value instanceof NamedNode && value.has(rdf.type, this.class),
+            value instanceof NamedNode && value.has(rdf.type,this.class),
         )
-      ) {
+      )
+      {
         return false;
       }
     }
     //validate shacl:datatype
-    if (this.datatype) {
+    if (this.datatype)
+    {
       if (
         !values.every(
           (value) =>
             value instanceof Literal && value.datatype === this.datatype,
         )
-      ) {
+      )
+      {
         return false;
       }
     }
     //validate shacl:node
-    if (this.valueShape) {
+    if (this.valueShape)
+    {
       //every value should be a valid instance of this nodeShape
       const nodeShape = this.valueShape;
       if (
@@ -739,27 +852,33 @@ export class PropertyShape extends SHACL_Shape {
           //nodes referring to each other or to themselves may cause loops here
           //this is currently avoided by keeping track of which nodes have already been validated, during the validation of the root most node
           //TODO: perhaps at some point we may want to store validation results in the shape or even the node, and invalidate whenever the node changes any of its properties. (though for complex property paths that would mean more complex invalidation as well. i.e. back tracing property shapes on a change in node 1 to invalidate a distant node 2)
-          if (validated.has(value)) {
+          if (validated.has(value))
+          {
             return validated.get(value);
           }
           return (
             (value === node && this.parentNodeShape.equals(nodeShape)) ||
-            (nodeShape as any)._validateNode(value, validated)
+            (nodeShape as any)._validateNode(value,validated)
           );
         })
-      ) {
+      )
+      {
         return false;
       }
     }
     //validate shacl:minCount
-    if (this.minCount) {
-      if (values.size < this.minCount) {
+    if (this.minCount)
+    {
+      if (values.size < this.minCount)
+      {
         return false;
       }
     }
     //validate shacl:maxCount
-    if (this.maxCount) {
-      if (values.size > this.maxCount) {
+    if (this.maxCount)
+    {
+      if (values.size > this.maxCount)
+      {
         return false;
       }
     }
@@ -767,98 +886,117 @@ export class PropertyShape extends SHACL_Shape {
   }
 }
 
-export class ValidationResult extends Shape {
+export class ValidationResult extends Shape
+{
   static targetClass: NamedNode = shacl.ValidationResult;
 
   @objectProperty({
     path: shacl.focusNode,
     maxCount: 1,
   })
-  get focusNode(): Node {
+  get focusNode(): Node
+  {
     return this.getOne(shacl.focusNode) as Node;
   }
 
-  set focusNode(value: Node) {
-    this.overwrite(shacl.focusNode, value);
+  set focusNode(value: Node)
+  {
+    this.overwrite(shacl.focusNode,value);
   }
 
   @objectProperty({
     path: shacl.sourceShape,
     maxCount: 1,
   })
-  get sourceShape(): SHACL_Shape {
-    return getShapeOrSubShape(this.getOne(shacl.sourceShape), SHACL_Shape);
+  get sourceShape(): SHACL_Shape
+  {
+    return getShapeOrSubShape(this.getOne(shacl.sourceShape),SHACL_Shape);
   }
 
-  set sourceShape(value: SHACL_Shape) {
-    this.overwrite(shacl.sourceShape, value.node);
+  set sourceShape(value: SHACL_Shape)
+  {
+    this.overwrite(shacl.sourceShape,value.node);
   }
 
   @objectProperty({
     path: shacl.resultSeverity,
     maxCount: 1,
   })
-  get resultSeverity(): NamedNode {
+  get resultSeverity(): NamedNode
+  {
     return this.getOne(shacl.resultSeverity) as NamedNode;
   }
 
-  set resultSeverity(value: NamedNode) {
-    this.overwrite(shacl.resultSeverity, value);
+  set resultSeverity(value: NamedNode)
+  {
+    this.overwrite(shacl.resultSeverity,value);
   }
 
   @objectProperty({
     path: shacl.resultPath,
     maxCount: 1,
   })
-  get resultPath(): NamedNode|NamedNode[] {
+  get resultPath(): NamedNode | NamedNode[]
+  {
     let propertyPath = this.getAll(shacl.resultPath);
-    if(propertyPath.size === 1) {
+    if (propertyPath.size === 1)
+    {
       return propertyPath.first() as NamedNode;
-    } else {
+    }
+    else
+    {
       return [...propertyPath] as NamedNode[];
     }
   }
 
-  set resultPath(value: NamedNode|NamedNode[]) {
-    (value instanceof NamedNode) ? this.overwrite(shacl.resultPath, value) : this.moverwrite(shacl.resultPath, value);
+  set resultPath(value: NamedNode | NamedNode[])
+  {
+    (value instanceof NamedNode) ? this.overwrite(shacl.resultPath,value) : this.moverwrite(shacl.resultPath,value);
   }
 
   @objectProperty({
     path: shacl.value,
     maxCount: 1,
   })
-  get validatedValue(): Node {
+  get validatedValue(): Node
+  {
     return this.getOne(shacl.value);
   }
 
-  set validatedValue(value: Node) {
-    this.overwrite(shacl.value, value);
+  set validatedValue(value: Node)
+  {
+    this.overwrite(shacl.value,value);
   }
 
   @literalProperty({
     path: shacl.message,
     maxCount: 1,
   })
-  get message(): string {
+  get message(): string
+  {
     return this.getOne(shacl.message).value;
   }
 
-  set message(value: string) {
-    this.overwrite(shacl.message, new Literal(value));
+  set message(value: string)
+  {
+    this.overwrite(shacl.message,new Literal(value));
   }
 
-  get sourceConstraintComponent(): NamedNode {
+  get sourceConstraintComponent(): NamedNode
+  {
     return this.getOne(shacl.sourceConstraintComponent) as NamedNode;
   }
 
-  set sourceConstraintComponent(value: NamedNode) {
-    this.overwrite(shacl.sourceConstraintComponent, value);
+  set sourceConstraintComponent(value: NamedNode)
+  {
+    this.overwrite(shacl.sourceConstraintComponent,value);
   }
 
   static createForNodeAgainstPropertyShape(
     focusNode: NamedNode,
     propertyShape: PropertyShape,
-  ) {
+  )
+  {
     let validationResult = new ValidationResult();
     validationResult.focusNode = focusNode;
     validationResult.sourceShape = propertyShape;
@@ -867,23 +1005,30 @@ export class ValidationResult extends Shape {
 
     let path = propertyShape.path;
     let values;
-    if(path instanceof NamedNode) {
+    if (path instanceof NamedNode)
+    {
       values = focusNode instanceof NamedNode ? focusNode.getAll(path) : null;
-    } else {
+    }
+    else
+    {
       values = focusNode;
-      for(let prop of path) {
+      for (let prop of path)
+      {
         values = values.getAll(prop);
       }
     }
-    for (let value of values) {
+    for (let value of values)
+    {
       //validate shacl:class
-      if (propertyShape.class) {
+      if (propertyShape.class)
+      {
         if (
           !(
             value instanceof NamedNode &&
-            value.has(rdf.type, propertyShape.class)
+            value.has(rdf.type,propertyShape.class)
           )
-        ) {
+        )
+        {
           validationResult.validatedValue = value;
           validationResult.message = `Value does not have the required class ${propertyShape.class.uri}`;
           validationResult.sourceConstraintComponent =
@@ -892,13 +1037,15 @@ export class ValidationResult extends Shape {
         }
       }
       //validate shacl:datatype
-      if (propertyShape.datatype) {
+      if (propertyShape.datatype)
+      {
         if (
           !(
             value instanceof Literal &&
             value.datatype === propertyShape.datatype
           )
-        ) {
+        )
+        {
           validationResult.validatedValue = value;
           validationResult.message = `Value does not have the required datatype ${propertyShape.datatype.uri}`;
           validationResult.sourceConstraintComponent =
@@ -907,7 +1054,8 @@ export class ValidationResult extends Shape {
         }
       }
       //validate shacl:node
-      if (propertyShape.valueShape) {
+      if (propertyShape.valueShape)
+      {
         //every value should be a valid instance of propertyShape nodeShape
         let nodeShape = propertyShape.valueShape;
         //TODO: / NOTE: for validation else where in this file we save validation results to avoid infinite loops
@@ -915,21 +1063,24 @@ export class ValidationResult extends Shape {
         let valueIsSelf = value === focusNode && propertyShape.parentNodeShape.equals(nodeShape);
         if (
           !valueIsSelf && !(nodeShape as any)._validateNode(value)
-        ) {
+        )
+        {
           //get extra information why the value doesn't match the shape
-          let valueReport = ValidationReport.forNodeAgainstShape(value, nodeShape);
+          let valueReport = ValidationReport.forNodeAgainstShape(value,nodeShape);
 
           validationResult.sourceConstraintComponent =
             shacl.NodeConstraintComponent;
           validationResult.validatedValue = value;
-          validationResult.message = `Value does not conform to the required shape ${propertyShape.valueShape.uri}:\n\t${valueReport.toString().replace(/\n/g, '\n\t')}`;
+          validationResult.message = `Value does not conform to the required shape ${propertyShape.valueShape.uri}:\n\t${valueReport.toString().replace(/\n/g,'\n\t')}`;
           return validationResult;
         }
       }
     }
     //validate shacl:minCount
-    if (propertyShape.minCount) {
-      if (values.size < propertyShape.minCount) {
+    if (propertyShape.minCount)
+    {
+      if (values.size < propertyShape.minCount)
+      {
         validationResult.message = `Minimum ${
           propertyShape.minCount
         } values required for ${propertyShape.path.toString()}. But only ${
@@ -941,8 +1092,10 @@ export class ValidationResult extends Shape {
       }
     }
     //validate shacl:maxCount
-    if (propertyShape.maxCount) {
-      if (values.size > propertyShape.maxCount) {
+    if (propertyShape.maxCount)
+    {
+      if (values.size > propertyShape.maxCount)
+      {
         validationResult.message = `Maximum ${
           propertyShape.maxCount
         } values allowed for  ${propertyShape.path.toString()}. But ${
@@ -956,60 +1109,74 @@ export class ValidationResult extends Shape {
     return null;
   }
 
-  toString(): string {
+  toString(): string
+  {
     let result = '';
     // if(this.sourceShape) {
     //   result += '\tSource Shape:\t'+this.sourceShape.uri + '\n';
     // }
     let resultPathStr = '';
     let resultPath = this.resultPath;
-    if(resultPath instanceof NamedNode) {
+    if (resultPath instanceof NamedNode)
+    {
       resultPathStr = resultPath.uri;
-    } else
+    }
+    else
     {
       resultPathStr = resultPath.map((path) => path.uri).join(' -> ');
     }
-    if (this.focusNode) {
+    if (this.focusNode)
+    {
       result += '\tFocus Node:\t' + this.focusNode.toString() + '\n';
     }
-    if (this.resultPath) {
+    if (this.resultPath)
+    {
       result += '\tPath:\t\t' + resultPathStr + '\n';
     }
-    if (this.validatedValue) {
+    if (this.validatedValue)
+    {
       result += '\tValue:\t' + this.validatedValue.toString() + '\n';
     }
-    if (this.sourceConstraintComponent) {
+    if (this.sourceConstraintComponent)
+    {
       result += '\tConstraint:\t' + this.sourceConstraintComponent.uri + '\n';
     }
-    if (this.message) {
+    if (this.message)
+    {
       result += '\tMessage:\t' + this.message + '\n';
     }
-    if (this.resultSeverity) {
+    if (this.resultSeverity)
+    {
       result += '\tSeverity:\t' + this.resultSeverity.uri + '\n';
     }
     return result;
   }
 }
-export class ValidationReport extends Shape {
+
+export class ValidationReport extends Shape
+{
   static targetClass: NamedNode = shacl.ValidationReport;
 
   @literalProperty({
     path: shacl.conforms,
     datatype: xsd.boolean,
   })
-  get conforms(): boolean {
-    return this.getValue(shacl.conforms) === 'true'
+  get conforms(): boolean
+  {
+    return this.getValue(shacl.conforms) === 'true';
   }
 
-  set conforms(val: boolean) {
-    this.overwrite(shacl.conforms, new Literal(val ? 'true' : 'false', xsd.boolean));
+  set conforms(val: boolean)
+  {
+    this.overwrite(shacl.conforms,new Literal(val ? 'true' : 'false',xsd.boolean));
   }
 
   @objectProperty({
     path: shacl.result,
     shape: ValidationResult,
   })
-  get validationResults(): ShapeValuesSet<ValidationResult> {
+  get validationResults(): ShapeValuesSet<ValidationResult>
+  {
     return ValidationResult.getSetOf(
       this.getAll(shacl.result),
     ) as ShapeValuesSet<ValidationResult>;
@@ -1024,18 +1191,21 @@ export class ValidationReport extends Shape {
   static forNodeAgainstShape(
     focusNode: Node,
     shape: NodeShape,
-  ): ValidationReport {
+  ): ValidationReport
+  {
     let report = new ValidationReport();
     report.conforms = shape.validateNode(focusNode);
-    if (shape.targetClass) {
+    if (shape.targetClass)
+    {
       //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
       //this would not be needed if a Forwards reasoning engine was in place
       if (
         !(
           focusNode instanceof NamedNode &&
-          ForwardReasoning.hasType(focusNode, shape.targetClass)
+          ForwardReasoning.hasType(focusNode,shape.targetClass)
         )
-      ) {
+      )
+      {
         // let validationResult = new ValidationResult();
         // validationResult.focusNode = focusNode;
         // validationResult.sourceShape = shape;
@@ -1051,13 +1221,16 @@ export class ValidationReport extends Shape {
         );
       }
     }
-    if (report.conforms) {
+    if (report.conforms)
+    {
       return report;
     }
 
     let propertyShapes = shape.getPropertyShapes();
-    if (propertyShapes.size > 0) {
-      if (focusNode instanceof Literal) {
+    if (propertyShapes.size > 0)
+    {
+      if (focusNode instanceof Literal)
+      {
         //literals can not match NodeShapes (?)
         //TODO: this is not fully standard compliant? for now we do a custom message to match the way LINCD does it
         let validationResult = new ValidationResult();
@@ -1067,14 +1240,17 @@ export class ValidationReport extends Shape {
           'A literal currently cannot be a valid instance of a NodeShape.';
         report.validationResults.add(validationResult);
         // return false;
-      } else if (focusNode instanceof NamedNode) {
+      }
+      else if (focusNode instanceof NamedNode)
+      {
         propertyShapes.forEach((propertyShape) => {
           let validationResult =
             ValidationResult.createForNodeAgainstPropertyShape(
               focusNode,
               propertyShape,
             );
-          if (validationResult) {
+          if (validationResult)
+          {
             report.validationResults.add(validationResult);
           }
         });
@@ -1083,7 +1259,8 @@ export class ValidationReport extends Shape {
     return report;
   }
 
-  static printForShapeInstances(shape: typeof Shape) {
+  static printForShapeInstances(shape: typeof Shape)
+  {
     let potentialNodes = shape.targetClass.getAllInverse(rdf.type);
     console.log(
       'Checking ' +
@@ -1093,22 +1270,28 @@ export class ValidationReport extends Shape {
     );
     let allConfirm = true;
     potentialNodes.forEach((node) => {
-      let report = ValidationReport.forNodeAgainstShape(node, shape.shape);
-      if (!report.conforms) {
+      let report = ValidationReport.forNodeAgainstShape(node,shape.shape);
+      if (!report.conforms)
+      {
         console.log(report.toString());
         allConfirm = false;
       }
     });
-    if(allConfirm) {
+    if (allConfirm)
+    {
       console.log('All instances conform to the shape');
     }
   }
 
-  toString() {
+  toString()
+  {
     let str = `ValidationReport:`;
-    if (this.conforms) {
+    if (this.conforms)
+    {
       str += ` valid shape`;
-    } else {
+    }
+    else
+    {
       str += '\n' + this.validationResults.size + ' validation results:\n';
       this.validationResults.forEach((validationResult) => {
         str += validationResult.toString();

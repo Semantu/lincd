@@ -9,7 +9,7 @@ import {
   NamedNode as INamedNode,
   Term,
 } from 'rdflib/lib/tf-types.js';
-import {DefaultGraphTermType, TermType} from 'rdflib/lib/types.js';
+import {DefaultGraphTermType,TermType} from 'rdflib/lib/types.js';
 import {defaultGraphURI} from 'rdflib/lib/utils/default-graph-uri.js';
 
 import {QuadSet} from './collections/QuadSet.js';
@@ -23,7 +23,7 @@ import {IShape} from './interfaces/IShape.js';
 import {IGraphObject} from './interfaces/IGraphObject.js';
 
 import {NodeValuesSet} from './collections/NodeValuesSet.js';
-import {BatchedEventEmitter, eventBatcher} from './events/EventBatcher.js';
+import {BatchedEventEmitter,eventBatcher} from './events/EventBatcher.js';
 import {EventEmitter} from './events/EventEmitter.js';
 import {NodeMap} from './collections/NodeMap.js';
 import {NodeURIMappings} from './collections/NodeURIMappings.js';
@@ -717,6 +717,26 @@ export class NamedNode
     return this.namedNodes.get(uri);
   }
 
+  static emitClearedProperty(node: NamedNode, property: NamedNode) {
+    //if not a local node we will emit events for storage controllers to be picked up
+    if (!node.isTemporaryNode) {
+      //regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
+      if (!NamedNode.clearedProperties.has(node)) {
+        NamedNode.clearedProperties.set(node, []);
+        eventBatcher.register(NamedNode);
+      }
+      //we save the property that was cleared AND the quads that were cleared
+      NamedNode.clearedProperties
+        .get(node)
+        .push([
+          property,
+          node.asSubject.has(property)
+            ? new QuadArray(...node.asSubject.get(property).getQuadSet())
+            : null,
+        ]);
+    }
+  }
+
   private static _create(uri: string, isLocalNode: boolean = false): NamedNode {
     var node = new NamedNode(uri, isLocalNode);
     this.register(node);
@@ -816,25 +836,6 @@ export class NamedNode
   }
 
   /**
-   * This method is used by the class Quad to communicate with its nodes
-   * @internal
-   * @param quad
-   * @param alteration
-   */
-  registerValueChange(quad: Quad, alteration: boolean = false) {
-    if (!this.changedProperties) this.changedProperties = new CoreMap();
-    if (alteration) {
-      if (!this.alteredProperties) this.alteredProperties = new CoreMap();
-    }
-    this.registerPropertyChange(
-      quad,
-      alteration
-        ? [this.changedProperties, this.alteredProperties]
-        : [this.changedProperties],
-    );
-  }
-
-  /**
    * Called when this node occurs as predicate in a quad
    * @internal
    */
@@ -857,6 +858,25 @@ export class NamedNode
   /**
    * This method is used by the class Quad to communicate with its nodes
    * @internal
+   * @param quad
+   * @param alteration
+   */
+  registerValueChange(quad: Quad, alteration: boolean = false) {
+    if (!this.changedProperties) this.changedProperties = new CoreMap();
+    if (alteration) {
+      if (!this.alteredProperties) this.alteredProperties = new CoreMap();
+    }
+    this.registerPropertyChange(
+      quad,
+      alteration
+        ? [this.changedProperties, this.alteredProperties]
+        : [this.changedProperties],
+    );
+  }
+
+  /**
+   * This method is used by the class Quad to communicate with its nodes
+   * @internal
    */
   unregisterProperty(
     quad: Quad,
@@ -869,7 +889,7 @@ export class NamedNode
     var quadMap: QuadMap = this.asSubject.get(predicate);
     if (quadMap) {
       let valueQuads = quadMap.get(quad.object);
-      if(!valueQuads) return;
+      if (!valueQuads) return;
       valueQuads.delete(quad);
       //if we no longer hold any quads for this object
       if (valueQuads.size == 0) {
@@ -924,6 +944,31 @@ export class NamedNode
    * This method is used by the class Quad to communicate with its nodes
    * @internal
    */
+  // unregisterAsPredicate(
+  //   quad: Quad,
+  //   alteration: boolean = false,
+  //   emitEvents: boolean = true,
+  // ) {
+  //   this.asPredicate.splice(this.asPredicate.indexOf(quad), 1);
+  //
+  //   if (emitEvents) {
+  //     this.registerPredicateChange(quad, alteration);
+  //   }
+  // }
+  //
+  // /**
+  //  * Returns a list of quads in which this node is now used as predicate
+  //  * BEFORE these changes are sent as events in the normal event flow
+  //  * Currently used by Reasoner to allow for immediate application of reasoning
+  //  */
+  // getPendingPredicateChanges(): QuadArray {
+  //   return this.changedAsPredicate;
+  // }
+
+  /**
+   * This method is used by the class Quad to communicate with its nodes
+   * @internal
+   */
   unregisterInverseProperty(
     quad: Quad,
     alteration: boolean = false,
@@ -934,7 +979,7 @@ export class NamedNode
     var quadMap: QuadMap = this.asObject.get(quad.predicate);
     if (quadMap) {
       let quadSet = quadMap.get(quad.subject);
-      if(!quadSet) return;
+      if (!quadSet) return;
       //remove this quad
       quadSet.delete(quad);
       //if we no longer hold any quads for this subject
@@ -962,31 +1007,6 @@ export class NamedNode
       );
     }
   }
-
-  /**
-   * This method is used by the class Quad to communicate with its nodes
-   * @internal
-   */
-  // unregisterAsPredicate(
-  //   quad: Quad,
-  //   alteration: boolean = false,
-  //   emitEvents: boolean = true,
-  // ) {
-  //   this.asPredicate.splice(this.asPredicate.indexOf(quad), 1);
-  //
-  //   if (emitEvents) {
-  //     this.registerPredicateChange(quad, alteration);
-  //   }
-  // }
-  //
-  // /**
-  //  * Returns a list of quads in which this node is now used as predicate
-  //  * BEFORE these changes are sent as events in the normal event flow
-  //  * Currently used by Reasoner to allow for immediate application of reasoning
-  //  */
-  // getPendingPredicateChanges(): QuadArray {
-  //   return this.changedAsPredicate;
-  // }
 
   /**
    * Returns a list of quads in which this node is now used as object
@@ -1663,6 +1683,12 @@ export class NamedNode
   }
 
   /**
+   * #######################################################################
+   * ######################## EVENT METHODS / LISTENERS ####################
+   * #######################################################################
+   **/
+
+  /**
    * Update a certain property so that only the given value is a value of this property.
    * Overwrites (and thus removes) any previously set values
    * @param property - a NamedNode with rdf:type rdf:Property, the edge in the graph, the predicate of a quad
@@ -1679,12 +1705,6 @@ export class NamedNode
       return this.set(property, value);
     }
   }
-
-  /**
-   * #######################################################################
-   * ######################## EVENT METHODS / LISTENERS ####################
-   * #######################################################################
-   **/
 
   /**
    * Update a certain property so that only the given values are the values of this property.
@@ -1761,26 +1781,6 @@ export class NamedNode
     return false;
   }
 
-  static emitClearedProperty(node: NamedNode, property: NamedNode) {
-    //if not a local node we will emit events for storage controllers to be picked up
-    if (!node.isTemporaryNode) {
-      //regardless of how many values are known 'locally', we want to emit this event so that the source of data can eventually properly clear all values
-      if (!NamedNode.clearedProperties.has(node)) {
-        NamedNode.clearedProperties.set(node, []);
-        eventBatcher.register(NamedNode);
-      }
-      //we save the property that was cleared AND the quads that were cleared
-      NamedNode.clearedProperties
-        .get(node)
-        .push([
-          property,
-          node.asSubject.has(property)
-            ? new QuadArray(...node.asSubject.get(property).getQuadSet())
-            : null,
-        ]);
-    }
-  }
-
   /**
    * returns true if ANY node has this node as the value of the given property
    * Example: if 'this' is a person, this.hasInverseProperty(hasChild) returns true if any facts stating `someParent hasChild thisPerson` are known
@@ -1811,15 +1811,6 @@ export class NamedNode
    */
   equals(other: Term): boolean {
     return other === this;
-  }
-
-  private createPromise() {
-    var resolve, reject;
-    var promise = new Promise((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    return {promise, resolve, reject};
   }
 
   /**
@@ -1957,11 +1948,6 @@ export class NamedNode
     this.off(NamedNode.INVERSE_PROPERTY_CHANGED, callback, context);
   }
 
-  /* #######################################################################
-   * ######################### STATIC METHODS ##############################
-   * #######################################################################
-   */
-
   /**
    * Call this when you want to stop listening for onChange events. Make sure to provide the exact same BOUND instance of a method as callback to properly clear the listener. OR make sure to provide a context both when setting and clearing the listener.
    * @param callback the exact same method you supplied to onChange
@@ -1974,6 +1960,11 @@ export class NamedNode
   ) {
     this.off(NamedNode.PROPERTY_CHANGED + property.uri, callback, context);
   }
+
+  /* #######################################################################
+   * ######################### STATIC METHODS ##############################
+   * #######################################################################
+   */
 
   /**
    * Call this when you want to stop listening for onChangeInverse events. Make sure to provide the exact same BOUND instance of a method as callback to properly clear the listener. OR make sure to provide a context both when setting and clearing the listener.
@@ -2083,12 +2074,21 @@ export class NamedNode
     return this.asSubject;
   }
 
+  getAsObjectQuads() {
+    return this.asObject;
+  }
+
   // getAsPredicateQuads() {
   //   return this.asPredicate;
   // }
 
-  getAsObjectQuads() {
-    return this.asObject;
+  private createPromise() {
+    var resolve, reject;
+    var promise = new Promise((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return {promise, resolve, reject};
   }
 
   /**
@@ -3057,6 +3057,34 @@ export class Quad extends EventEmitter {
     return result;
   }
 
+  static emitRemovedQuad(quad: Quad, alteration: boolean = false) {
+    //removed quad events are batched together and emitted on the next tick
+    //so here we make sure the Quad class will emit its batched events on the next tick
+    eventBatcher.register(Quad);
+    //and here we save this quad to a set of removedQuads which is a static property of the Quad class
+    Quad.removedQuads.add(quad);
+
+    if (alteration && !quad.implicit) {
+      Quad.removedQuadsAltered.add(quad);
+    }
+
+    //we need to let this quad emit this event straight away because for example the reasoner needs to listen to this exact quad to retract
+    quad.emit(Quad.QUAD_REMOVED);
+  }
+
+  static emitCreatedQuad(quad: Quad, alteration: boolean = false) {
+    //new quad events are batched together and emitted on the next tick
+    //so here we make sure the Quad class will emit its batched events on the next tick
+    eventBatcher.register(Quad);
+    //and here we save this quad to a set of newQuads which is a static property of the Quad class
+    Quad.createdQuads.add(quad);
+
+    //only if it's an alteration AND it's relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
+    if (alteration && !quad.implicit) {
+      Quad.createdQuadsAltered.add(quad);
+    }
+  }
+
   /**
    * Removes this quad and creates a new quad with the same subject,predicate,object, but a new graph.
    * Returns the new quad
@@ -3136,21 +3164,6 @@ export class Quad extends EventEmitter {
     Quad.globalNumQuads--;
   }
 
-  static emitRemovedQuad(quad: Quad, alteration: boolean = false) {
-    //removed quad events are batched together and emitted on the next tick
-    //so here we make sure the Quad class will emit its batched events on the next tick
-    eventBatcher.register(Quad);
-    //and here we save this quad to a set of removedQuads which is a static property of the Quad class
-    Quad.removedQuads.add(quad);
-
-    if (alteration && !quad.implicit) {
-      Quad.removedQuadsAltered.add(quad);
-    }
-
-    //we need to let this quad emit this event straight away because for example the reasoner needs to listen to this exact quad to retract
-    quad.emit(Quad.QUAD_REMOVED);
-  }
-
   /**
    * Cancel the removal of a quad
    */
@@ -3217,19 +3230,6 @@ export class Quad extends EventEmitter {
       Quad.emitCreatedQuad(this, alteration);
     }
     Quad.globalNumQuads++;
-  }
-
-  static emitCreatedQuad(quad: Quad, alteration: boolean = false) {
-    //new quad events are batched together and emitted on the next tick
-    //so here we make sure the Quad class will emit its batched events on the next tick
-    eventBatcher.register(Quad);
-    //and here we save this quad to a set of newQuads which is a static property of the Quad class
-    Quad.createdQuads.add(quad);
-
-    //only if it's an alteration AND it's relevant to storage controllers do we emit the QUADS_ALTERED event for this quad
-    if (alteration && !quad.implicit) {
-      Quad.createdQuadsAltered.add(quad);
-    }
   }
 
   private mimicEventsOnUpdate(oldQuad: Quad) {

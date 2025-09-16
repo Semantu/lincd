@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NodeSet} from '../collections/NodeSet.js';
-import {NamedNode, Node} from '../models.js';
+import {NamedNode,Node} from '../models.js';
 import {rdfs} from '../ontologies/rdfs.js';
 
 export class Order {

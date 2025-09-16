@@ -1,13 +1,13 @@
-import { Shape } from '../shapes/Shape.js';
-import { NodeShape } from '../shapes/SHACL.js';
-import { LinkedQuery } from './SelectQuery.js';
-import { AddId,QueryFactory,NodeDescriptionValue,UpdatePartial,NodeReferenceValue } from './QueryFactory.js';
-import { MutationQueryFactory,NodeId } from './MutationQuery.js';
+import {Shape} from '../shapes/Shape.js';
+import {NodeShape} from '../shapes/SHACL.js';
+import {LinkedQuery} from './SelectQuery.js';
+import {NodeReferenceValue, UpdatePartial} from './QueryFactory.js';
+import {MutationQueryFactory, NodeId} from './MutationQuery.js';
 
 export interface DeleteQuery extends LinkedQuery {
-  type:'delete',
-  shape:NodeShape,
-  ids:NodeReferenceValue[]
+  type: 'delete';
+  shape: NodeShape;
+  ids: NodeReferenceValue[];
 }
 
 export type DeleteResponse = {
@@ -31,21 +31,24 @@ export type DeleteResponse = {
 
 export class DeleteQueryFactory<
   ShapeType extends Shape,
-  U extends UpdatePartial<ShapeType>
-> extends MutationQueryFactory
-{
-  readonly id:string;
-  readonly ids:NodeReferenceValue[];
-  constructor(public shapeClass: typeof Shape,ids:NodeId[]|NodeId)
-  {
+  U extends UpdatePartial<ShapeType>,
+> extends MutationQueryFactory {
+  readonly id: string;
+  readonly ids: NodeReferenceValue[];
+
+  constructor(
+    public shapeClass: typeof Shape,
+    ids: NodeId[] | NodeId,
+  ) {
     super();
     this.ids = this.convertNodeReferences(ids);
   }
-  getQueryObject():DeleteQuery {
+
+  getQueryObject(): DeleteQuery {
     return {
-      type:'delete',
-      shape:this.shapeClass.shape,
-      ids:this.ids
-    }
+      type: 'delete',
+      shape: this.shapeClass.shape,
+      ids: this.ids,
+    };
   }
 }

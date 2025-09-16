@@ -20,7 +20,15 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
     return res;
   }
 
-  reduce<U>(fn: (previousValue: U, currentValue: R, currentIndex: number, thisInstance: any) => U, initialValue: U): U {
+  reduce<U>(
+    fn: (
+      previousValue: U,
+      currentValue: R,
+      currentIndex: number,
+      thisInstance: any,
+    ) => U,
+    initialValue: U,
+  ): U {
     let i = 0;
     let res = initialValue;
     for (let item of this) {

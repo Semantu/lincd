@@ -1,10 +1,10 @@
 import {NodeValuesSet} from '../collections/NodeValuesSet.js';
-import {useCallback, useEffect} from 'react';
+import {useCallback,useEffect} from 'react';
 import useState from 'react-usestateref';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {Shape} from '../shapes/Shape.js';
 import {NamedNode} from '../models.js';
-import {getShapeClass, getSuperShapesClasses} from './ShapeClass.js';
+import {getShapeClass,getSuperShapesClasses} from './ShapeClass.js';
 
 /**
  * Merges styles and class names from props with the classnames & styles given as arguments

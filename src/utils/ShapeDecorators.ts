@@ -3,14 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {BlankNode, Literal, NamedNode, Node} from '../models.js';
+import {BlankNode,Literal,NamedNode,Node} from '../models.js';
 import {Shape} from '../shapes/Shape.js';
 import {NodeSet} from '../collections/NodeSet.js';
-import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
+import {NodeShape,PropertyShape} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
 import {List} from '../shapes/List.js';
-import { getShapeClass } from './ShapeClass.js';
-import { getNodeShapeUri } from './Package.js';
+import {getShapeClass} from './ShapeClass.js';
+import {getNodeShapeUri} from './Package.js';
 
 export interface NodeShapeConfig {
   /**
@@ -191,10 +191,14 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
  * }
  * ```
  */
-export const linkedProperty = (config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig) => {
+export const linkedProperty = (
+  config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
+) => {
   return _linkedProperty(config);
 };
-const _linkedProperty = <Config extends ObjectPropertyShapeConfig | LiteralPropertyShapeConfig>(
+const _linkedProperty = <
+  Config extends ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
+>(
   config: Config,
   defaultNodeKind: NamedNode = null,
 ) => {
@@ -203,11 +207,19 @@ const _linkedProperty = <Config extends ObjectPropertyShapeConfig | LiteralPrope
     propertyKey: string,
     descriptor: PropertyDescriptor,
   ) {
-    createAndRegisterPropertyShape(target.constructor, propertyKey, config, defaultNodeKind);
+    createAndRegisterPropertyShape(
+      target.constructor,
+      propertyKey,
+      config,
+      defaultNodeKind,
+    );
   };
 };
-function createAndRegisterPropertyShape<Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig>(
-  shapeClass: typeof Shape | [string,string],
+
+function createAndRegisterPropertyShape<
+  Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig,
+>(
+  shapeClass: typeof Shape | [string, string],
   propertyKey: string,
   config: Config,
   defaultNodeKind: NamedNode = null,
@@ -232,8 +244,7 @@ export function registerPropertyShape(
   let uri = `${shape.namedNode.uri}/${propertyShape.label}`;
   //with react hot reload, sometimes the same code gets loaded twice, recreating the same property shape
   //so if this URI already existed, we can ignore the new one, since its already registered
-  if(!NamedNode.getNamedNode(uri))
-  {
+  if (!NamedNode.getNamedNode(uri)) {
     //update the URI (by extending the URI of the shape)
     propertyShape.namedNode.uri = uri;
 
@@ -242,25 +253,24 @@ export function registerPropertyShape(
   } else {
     //this also happens when the shape is already in storage. in this case we should copy over all the properties
     let existing = NamedNode.getNamedNode(uri);
-    propertyShape.namedNode.getProperties().forEach(prop => {
-      existing.moverwrite(prop,propertyShape.namedNode.getAll(prop));
+    propertyShape.namedNode.getProperties().forEach((prop) => {
+      existing.moverwrite(prop, propertyShape.namedNode.getAll(prop));
     });
     // console.log('Updated shape:',existing.print());
   }
 }
-export function createPropertyShape<Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig>(
-  config: Config,
-  propertyKey: string,
-  defaultNodeKind: NamedNode = null,
-) {
+
+export function createPropertyShape<
+  Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig,
+>(config: Config, propertyKey: string, defaultNodeKind: NamedNode = null) {
   let propertyShape = new PropertyShape();
   propertyShape.path = config.path;
   propertyShape.label = propertyKey;
 
-  if(config.name) {
+  if (config.name) {
     propertyShape.name = config.name;
   }
-  if(config.description) {
+  if (config.description) {
     propertyShape.description = config.description;
   }
 
@@ -311,9 +321,13 @@ export function createPropertyShape<Config extends LiteralPropertyShapeConfig | 
   //we accept a shape configuration, which translates to a sh:nodeShape
   if ((config as ObjectPropertyShapeConfig).shape) {
     //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
-    onShapeSetup((config as ObjectPropertyShapeConfig).shape, (nodeShape: NodeShape) => {
-      propertyShape.valueShape = nodeShape;
-    },propertyKey);
+    onShapeSetup(
+      (config as ObjectPropertyShapeConfig).shape,
+      (nodeShape: NodeShape) => {
+        propertyShape.valueShape = nodeShape;
+      },
+      propertyKey,
+    );
   }
 
   if (config.in) {
@@ -370,27 +384,36 @@ export function createPropertyShape<Config extends LiteralPropertyShapeConfig | 
   // (2 props must have same value)
   //sh.equals
 }
-export function onShapeSetup(shapeClass: typeof Shape | [string,string], callback: (shape: NodeShape) => void,propertyName?:string) {
+
+export function onShapeSetup(
+  shapeClass: typeof Shape | [string, string],
+  callback: (shape: NodeShape) => void,
+  propertyName?: string,
+) {
   //if a string was provided, then this is a "lazy loaded" shape, probably to avoid circular dependencies
-  if(Array.isArray(shapeClass)) {
-    const [packageName,shapeName] = shapeClass;
-    const nodeShape = NamedNode.getOrCreate(getNodeShapeUri(packageName, shapeName));
-    if(typeof document !== 'undefined') {
+  if (Array.isArray(shapeClass)) {
+    const [packageName, shapeName] = shapeClass;
+    const nodeShape = NamedNode.getOrCreate(
+      getNodeShapeUri(packageName, shapeName),
+    );
+    if (typeof document !== 'undefined') {
       //wait until the DOM is ready, which is when all modules are loaded
       window.addEventListener('load', () => {
         shapeClass = getShapeClass(nodeShape);
-        if(!shapeClass) {
-          console.warn(`Could not find value shape (${packageName}/${shapeName}) for accessor get ${propertyName}(). Likely because it is not bundled.`);
+        if (!shapeClass) {
+          console.warn(
+            `Could not find value shape (${packageName}/${shapeName}) for accessor get ${propertyName}(). Likely because it is not bundled.`,
+          );
           return;
         }
         callback((shapeClass as typeof Shape).shape);
-      })
+      });
     } else {
       //for node.js we can wait until the next tick, which is when all modules of THIS package are loaded (as long as they are loaded from index)
       setTimeout(() => {
         shapeClass = getShapeClass(nodeShape);
         callback((shapeClass as typeof Shape).shape);
-      },0);
+      }, 0);
     }
   }
   if (shapeClass.hasOwnProperty('shape')) {
@@ -403,7 +426,10 @@ export function onShapeSetup(shapeClass: typeof Shape | [string,string], callbac
   }
 }
 
-export function registerProperty(shape:typeof Shape,label:string,config:ObjectPropertyShapeConfig|LiteralPropertyShapeConfig) {
-  createAndRegisterPropertyShape(shape,label,config as any)
+export function registerProperty(
+  shape: typeof Shape,
+  label: string,
+  config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
+) {
+  createAndRegisterPropertyShape(shape, label, config as any);
 }
-

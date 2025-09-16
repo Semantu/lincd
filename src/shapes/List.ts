@@ -5,7 +5,7 @@
  */
 import {NodeSet} from '../collections/NodeSet.js';
 import {rdf} from '../ontologies/rdf.js';
-import {BlankNode, NamedNode, Node} from '../models.js';
+import {BlankNode,NamedNode,Node} from '../models.js';
 import {Shape} from './Shape.js';
 
 /**
@@ -42,7 +42,10 @@ export class List extends Shape {
    * Most performant way to create a new list if you already have the items in the list
    * @param items
    */
-  static createFrom(items: NodeSet | Node[],isTemporaryNode:boolean=true): List {
+  static createFrom(
+    items: NodeSet | Node[],
+    isTemporaryNode: boolean = true,
+  ): List {
     //NOTE: this method exists because new List(nodes) will not work because all shapes require a node as first parameter, hence a static method
 
     let firstItem = this.getFirstItem(items);
@@ -88,9 +91,9 @@ export class List extends Shape {
     }
   }
 
-  private static appendItems(currentEnd:BlankNode, items) {
+  private static appendItems(currentEnd: BlankNode, items) {
     items.forEach((item) => {
-      let rest = List._createListEntry(item,currentEnd.isTemporaryNode);
+      let rest = List._createListEntry(item, currentEnd.isTemporaryNode);
       currentEnd.set(rdf.rest, rest);
       currentEnd = rest;
     });
@@ -109,7 +112,10 @@ export class List extends Shape {
     return list || last;
   }
 
-  private static _createListEntry(item: Node,isTemporaryNode:boolean=true): BlankNode {
+  private static _createListEntry(
+    item: Node,
+    isTemporaryNode: boolean = true,
+  ): BlankNode {
     let list = BlankNode.create(isTemporaryNode);
     list.set(rdf.first, item);
     return list;
@@ -132,7 +138,7 @@ export class List extends Shape {
   // }
 
   private static _append(item: Node, last: NamedNode): NamedNode {
-    let next = this._createListEntry(item,last.isTemporaryNode);
+    let next = this._createListEntry(item, last.isTemporaryNode);
     last.overwrite(rdf.rest, next);
     //this newly appended item is now the end of the list
     next.set(rdf.rest, rdf.nil);

@@ -29,7 +29,6 @@ import * as URI from './utils/URI.js';
 import * as Find from './utils/Find.js';
 import * as Order from './utils/Order.js';
 import * as NQuads from './utils/NQuads.js';
-import * as QueryContext from './queries/QueryContext.js';
 import * as SelectQuery from './queries/SelectQuery.js';
 import * as UpdateQuery from './queries/UpdateQuery.js';
 import * as MutationQuery from './queries/MutationQuery.js';

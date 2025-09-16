@@ -2,7 +2,7 @@ import {describe, expect, test} from '@jest/globals';
 import {IQuadStore} from '../interfaces/IQuadStore.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {LinkedStorage} from '../utils/LinkedStorage.js';
-import {Graph, Literal, NamedNode, Quad, defaultGraph} from '../models.js';
+import {defaultGraph, Graph, Literal, NamedNode, Quad} from '../models.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {rdfs} from '../ontologies/rdfs.js';
 import {rdf} from '../ontologies/rdf.js';
@@ -12,22 +12,24 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {PropertyShape} from '../shapes/SHACL.js';
+import {SelectQuery} from '../queries/SelectQuery.js';
 import {
-  SelectQuery,
-} from '../queries/SelectQuery.js';
-import { createLocal,deleteLocal,resolveLocal } from '../utils/LocalQueryResolver.js';
-import { UpdateQuery } from '../queries/UpdateQuery.js';
-import { updateLocal } from '../utils/LocalQueryResolver.js';
-import { CreateQuery } from '../queries/CreateQuery.js';
-import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery.js';
+  createLocal,
+  deleteLocal,
+  resolveLocal,
+  updateLocal,
+} from '../utils/LocalQueryResolver.js';
+import {UpdateQuery} from '../queries/UpdateQuery.js';
+import {CreateQuery} from '../queries/CreateQuery.js';
+import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {
-  protected contents: QuadSet;
-  private initPromise: Promise<any>;
   /**
    * You can use this to define (overwrite) which graph this store uses for its quads
    */
   public targetGraph: Graph;
+  protected contents: QuadSet;
+  private initPromise: Promise<any>;
 
   constructor(n?) {
     super(n);
@@ -56,23 +58,17 @@ export class InMemoryStore extends Shape implements IQuadStore {
     return this.contents;
   }
 
-  updateQuery?<RType>(
-    query:UpdateQuery<RType>
-  ): Promise<RType> {
+  updateQuery?<RType>(query: UpdateQuery<RType>): Promise<RType> {
     return Promise.resolve(updateLocal(query));
   }
 
-  createQuery?<R>(q:CreateQuery<R>): Promise<R> {
+  createQuery?<R>(q: CreateQuery<R>): Promise<R> {
     return Promise.resolve(createLocal(q));
   }
-  deleteQuery(
-    query: DeleteQuery
-  ): Promise<DeleteResponse> {
-    return Promise.resolve(
-      deleteLocal(query)
-    ) as Promise<DeleteResponse>;
-  }
 
+  deleteQuery(query: DeleteQuery): Promise<DeleteResponse> {
+    return Promise.resolve(deleteLocal(query)) as Promise<DeleteResponse>;
+  }
 
   update(
     toAdd: ICoreIterable<Quad>,
@@ -117,11 +113,6 @@ export class InMemoryStore extends Shape implements IQuadStore {
     });
   }
 
-  private _addMultiple?(quads: ICoreIterable<Quad>): void {
-    this.addNewContents(quads as QuadArray);
-    // this.contents = this.contents.concat(quads);
-  }
-
   delete(quad: Quad): Promise<any> {
     return this.init().then(() => {
       // this.contents.delete(quad);
@@ -136,24 +127,6 @@ export class InMemoryStore extends Shape implements IQuadStore {
       this._deleteMultiple(quads);
       this.onContentsUpdated();
       return true;
-    });
-  }
-
-  private _deleteMultiple(quads: QuadArray | QuadSet): void {
-    //first we add the quads to the right graph (which effectively ADDS these quads to this store)
-    //then we remove them from the contents
-
-    //get the target graph for this store, if configured
-    let graph =
-      LinkedStorage.getGraphForStore(this) || this.targetGraph || defaultGraph;
-
-    //if there is one, move the quads into that graph
-    if (graph) {
-      quads = quads.moveTo(graph, false);
-    }
-    quads.forEach((quad) => {
-      this.contents.delete(quad);
-      quad.remove(false);
     });
   }
 
@@ -186,11 +159,6 @@ export class InMemoryStore extends Shape implements IQuadStore {
     return Promise.resolve([]);
   }
 
-  protected onContentsUpdated(): Promise<boolean> {
-    //by default in memory store does nothing here. But extending classes could choose to sync to a more permanent form of storage
-    return Promise.resolve(false);
-  }
-
   removeNodes(nodes: ICoreIterable<NamedNode>): Promise<any> {
     //when storage calls removeNodes, all quads have already been removed locally
     //and an in memory store always holds all data in memory,
@@ -198,9 +166,7 @@ export class InMemoryStore extends Shape implements IQuadStore {
     return Promise.resolve(true);
   }
 
-  selectQuery<ResultType>(
-    query: SelectQuery<any>
-  ): Promise<ResultType> {
+  selectQuery<ResultType>(query: SelectQuery<any>): Promise<ResultType> {
     return Promise.resolve(resolveLocal(query)).catch((e) => {
       console.error('Error in query', e);
       return new QuadArray();
@@ -244,6 +210,47 @@ export class InMemoryStore extends Shape implements IQuadStore {
     });
   }
 
+  protected onContentsUpdated(): Promise<boolean> {
+    //by default in memory store does nothing here. But extending classes could choose to sync to a more permanent form of storage
+    return Promise.resolve(false);
+  }
+
+  protected addNewContents(quads: QuadArray | QuadSet) {
+    //get the target graph for this store, if configured
+    let graph =
+      LinkedStorage.getGraphForStore(this) || this.targetGraph || defaultGraph;
+
+    //if there is one, move the quads into that graph
+    if (graph) {
+      quads = quads.moveTo(graph, false);
+    }
+    this.contents.addFrom(quads);
+    return quads;
+  }
+
+  private _addMultiple?(quads: ICoreIterable<Quad>): void {
+    this.addNewContents(quads as QuadArray);
+    // this.contents = this.contents.concat(quads);
+  }
+
+  private _deleteMultiple(quads: QuadArray | QuadSet): void {
+    //first we add the quads to the right graph (which effectively ADDS these quads to this store)
+    //then we remove them from the contents
+
+    //get the target graph for this store, if configured
+    let graph =
+      LinkedStorage.getGraphForStore(this) || this.targetGraph || defaultGraph;
+
+    //if there is one, move the quads into that graph
+    if (graph) {
+      quads = quads.moveTo(graph, false);
+    }
+    quads.forEach((quad) => {
+      this.contents.delete(quad);
+      quad.remove(false);
+    });
+  }
+
   private getRequestQuads(
     source: Shape | QuadSet,
     request: any,
@@ -263,7 +270,7 @@ export class InMemoryStore extends Shape implements IQuadStore {
       }
       if (propertyShape) {
         let path = propertyShape.path;
-        if(path instanceof NamedNode ) {
+        if (path instanceof NamedNode) {
           if (source instanceof QuadSet) {
             propertyShapeSource = (source as QuadSet)
               .getObjects()
@@ -273,13 +280,15 @@ export class InMemoryStore extends Shape implements IQuadStore {
           }
         } else {
           propertyShapeSource = source;
-          for(let i = 0; i < path.length; i++) {
-            if(propertyShapeSource instanceof QuadSet) {
+          for (let i = 0; i < path.length; i++) {
+            if (propertyShapeSource instanceof QuadSet) {
               propertyShapeSource = (propertyShapeSource as QuadSet)
                 .getObjects()
                 .getQuads(path[i]);
             } else if (propertyShapeSource instanceof Shape) {
-              propertyShapeSource = (propertyShapeSource as Shape).getQuads(path[i]);
+              propertyShapeSource = (propertyShapeSource as Shape).getQuads(
+                path[i],
+              );
             }
           }
         }
@@ -289,19 +298,6 @@ export class InMemoryStore extends Shape implements IQuadStore {
         this.getRequestQuads(propertyShapeSource, subRequest, quads);
       }
     });
-    return quads;
-  }
-
-  protected addNewContents(quads: QuadArray | QuadSet) {
-    //get the target graph for this store, if configured
-    let graph =
-      LinkedStorage.getGraphForStore(this) || this.targetGraph || defaultGraph;
-
-    //if there is one, move the quads into that graph
-    if (graph) {
-      quads = quads.moveTo(graph, false);
-    }
-    this.contents.addFrom(quads);
     return quads;
   }
 }
@@ -327,12 +323,9 @@ export class TestStore implements IQuadStore {
     return null;
   }
 
-  selectQuery<ResultType>(
-    query: SelectQuery<any>
-  ): Promise<ResultType> {
+  selectQuery<ResultType>(query: SelectQuery<any>): Promise<ResultType> {
     return null;
   }
-
 
   add(quad: Quad): Promise<any> {
     return null;

@@ -1,19 +1,13 @@
-import {Shape, ShapeType} from '../shapes/Shape.js';
+import {Shape,ShapeType} from '../shapes/Shape.js';
 import {TestNode} from '../utils/TraceShape.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
-import {LinkedComponent, LinkedSetComponent} from '../utils/LinkedComponent.js';
+import {LinkedComponent,LinkedSetComponent} from '../utils/LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {getPropertyShapeByLabel, getShapeClass} from '../utils/ShapeClass.js';
-import {
-  NodeReferenceValue,
-  Prettify,
-  ShapeReferenceValue,
-} from './QueryFactory.js';
-import {QueryFactory} from './QueryFactory.js';
-import {NodeSet} from '../collections/NodeSet';
+import {getPropertyShapeByLabel,getShapeClass} from '../utils/ShapeClass.js';
+import {NodeReferenceValue,Prettify,QueryFactory,ShapeReferenceValue} from './QueryFactory.js';
 import {xsd} from '../ontologies/xsd.js';
 import {NamedNode} from '../models';
 
@@ -90,6 +84,7 @@ export interface SelectQuery<S extends Shape = Shape, ResultType = any>
   shape?: ShapeType<S>;
   singleResult?: boolean;
 }
+
 /**
  * Much like a querypath, except it can only contain QuerySteps
  */
@@ -872,6 +867,7 @@ export class QueryBuilderObject<
     return path;
   }
 }
+
 /**
  * Converts query context to a ShapeReferenceValue
  */
@@ -921,22 +917,6 @@ export class QueryShapeSet<
         QueryShape.create(shape, property, subject),
       ),
     );
-  }
-
-  as<ShapeClass extends typeof Shape>(
-    shape: ShapeClass,
-  ): QShapeSet<InstanceType<ShapeClass>, Source, Property> {
-    //if the shape is not the same as the original value, then we need to create a new query shape
-    if (!shape.shape.equals(this.originalValue.getLeastSpecificShape().shape)) {
-      let newOriginal = (shape as any).getSetOf(this.originalValue.getNodes());
-      return QueryShapeSet.create(
-        newOriginal,
-        this.property,
-        this.subject as any,
-      );
-    }
-    // else return this
-    return this as any as QShapeSet<InstanceType<ShapeClass>, Source, Property>;
   }
 
   static create<S extends Shape = Shape>(
@@ -1012,6 +992,23 @@ export class QueryShapeSet<
     });
     return queryShapeSet.proxy;
   }
+
+  as<ShapeClass extends typeof Shape>(
+    shape: ShapeClass,
+  ): QShapeSet<InstanceType<ShapeClass>, Source, Property> {
+    //if the shape is not the same as the original value, then we need to create a new query shape
+    if (!shape.shape.equals(this.originalValue.getLeastSpecificShape().shape)) {
+      let newOriginal = (shape as any).getSetOf(this.originalValue.getNodes());
+      return QueryShapeSet.create(
+        newOriginal,
+        this.property,
+        this.subject as any,
+      );
+    }
+    // else return this
+    return this as any as QShapeSet<InstanceType<ShapeClass>, Source, Property>;
+  }
+
   add(item) {
     this.queryShapes.add(item);
   }
@@ -1324,6 +1321,7 @@ export class BoundComponent<
       );
     }
   }
+
   getPropertyPath() {
     //get the path that is passed to Component.of(some.path.here)
     let sourcePath: ComponentQueryPath = this.source.getPropertyPath();
@@ -1366,6 +1364,7 @@ export class Evaluation {
   getPropertyPath() {
     return this.getWherePath();
   }
+
   processArgs(): QueryArg[] {
     //if the args are not an array, then we convert them to an array
     if (!this.args || !Array.isArray(this.args)) {
@@ -1644,40 +1643,6 @@ export class SelectQueryFactory<
       }, 3500);
     }
   }
-  private init() {
-    let queryShape = this.getQueryShape();
-
-    if (this.queryBuildFn) {
-      let queryResponse = this.queryBuildFn(queryShape as any, this);
-      this.traceResponse = queryResponse;
-    }
-    this.initPromise.resolve(this.traceResponse);
-    this.initPromise.complete = true;
-  }
-  private initialized() {
-    return this.initPromise.promise;
-  }
-
-  /**
-   * Returns the dummy shape instance who's properties can be accessed freely inside a queryBuildFn
-   * It is used to trace the properties that are accessed in the queryBuildFn
-   * @private
-   */
-  private getQueryShape() {
-    let dummyNode = new TestNode();
-    let queryShape: QueryBuilderObject;
-    //if the given class already extends QueryValue
-    if (this.shape instanceof QueryBuilderObject) {
-      //then we're likely dealing with QueryPrimitives (end values like strings)
-      //and we can use the given query value directly for the query evaluation
-      queryShape = this.shape;
-    } else {
-      //else a shape class is given, and we need to create a dummy node to apply and trace the query
-      let dummyShape = new (this.shape as any)(dummyNode);
-      queryShape = QueryShape.create(dummyShape);
-    }
-    return queryShape;
-  }
 
   setLimit(limit: number) {
     this.limit = limit;
@@ -1699,10 +1664,6 @@ export class SelectQueryFactory<
     this.subject = subject;
     return this;
   }
-
-  // applyTo(subject) {
-  //   return new LinkedQuery(this.shape, this.queryBuildFn, subject);
-  // }
 
   where(validation: WhereClause<S>): this {
     this.wherePath = processWhereClause(validation, this.shape);
@@ -1740,6 +1701,11 @@ export class SelectQueryFactory<
       throw err;
     }
   }
+
+  // applyTo(subject) {
+  //   return new LinkedQuery(this.shape, this.queryBuildFn, subject);
+  // }
+
   getSubject() {
     //if the subject is a QueryShape which comes from query context
     //then it will point to a target node with "targetID"
@@ -1748,16 +1714,6 @@ export class SelectQueryFactory<
       return convertQueryContext(this.subject as Shape);
     }
     return this.subject;
-  }
-
-  private getSortByPath() {
-    if (!this.sortResponse) return null;
-    //TODO: we should put more restrictions on sortBy and getting query paths from the response
-    // currently it reuses much of the select logic, but for example using .where() should probably not be allowed in a sortBy function?
-    return {
-      paths: this.getQueryPaths(this.sortResponse),
-      direction: this.sortDirection,
-    };
   }
 
   /**
@@ -1898,6 +1854,52 @@ export class SelectQueryFactory<
       this.sortDirection = direction;
     }
     return this;
+  }
+
+  private init() {
+    let queryShape = this.getQueryShape();
+
+    if (this.queryBuildFn) {
+      let queryResponse = this.queryBuildFn(queryShape as any, this);
+      this.traceResponse = queryResponse;
+    }
+    this.initPromise.resolve(this.traceResponse);
+    this.initPromise.complete = true;
+  }
+
+  private initialized() {
+    return this.initPromise.promise;
+  }
+
+  /**
+   * Returns the dummy shape instance who's properties can be accessed freely inside a queryBuildFn
+   * It is used to trace the properties that are accessed in the queryBuildFn
+   * @private
+   */
+  private getQueryShape() {
+    let dummyNode = new TestNode();
+    let queryShape: QueryBuilderObject;
+    //if the given class already extends QueryValue
+    if (this.shape instanceof QueryBuilderObject) {
+      //then we're likely dealing with QueryPrimitives (end values like strings)
+      //and we can use the given query value directly for the query evaluation
+      queryShape = this.shape;
+    } else {
+      //else a shape class is given, and we need to create a dummy node to apply and trace the query
+      let dummyShape = new (this.shape as any)(dummyNode);
+      queryShape = QueryShape.create(dummyShape);
+    }
+    return queryShape;
+  }
+
+  private getSortByPath() {
+    if (!this.sortResponse) return null;
+    //TODO: we should put more restrictions on sortBy and getting query paths from the response
+    // currently it reuses much of the select logic, but for example using .where() should probably not be allowed in a sortBy function?
+    return {
+      paths: this.getQueryPaths(this.sortResponse),
+      direction: this.sortDirection,
+    };
   }
 
   private isValidQueryPathsResult(qResult: QResult<any>, select: QueryPath[]) {

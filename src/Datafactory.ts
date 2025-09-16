@@ -1,9 +1,17 @@
-import {BlankNode, defaultGraph as _default, Graph, Literal, NamedNode, Quad, Node} from './models.js';
+import {
+  defaultGraph as _default,
+  Graph,
+  Literal,
+  NamedNode,
+  Node,
+  Quad,
+} from './models.js';
 import {Term} from 'rdflib/lib/tf-types';
 import {NodeURIMappings} from './collections/NodeURIMappings.js';
 import {QuadSet} from './collections/QuadSet.js';
-import { CoreMap } from './collections/CoreMap.js';
-import { CoreSet } from './collections/CoreSet.js';
+import {CoreMap} from './collections/CoreMap.js';
+import {CoreSet} from './collections/CoreSet.js';
+
 interface DataFactoryConfig {
   preventNewQuads?: boolean;
   emitEvents?: boolean;
@@ -12,15 +20,17 @@ interface DataFactoryConfig {
   targetGraph?: Graph;
   overwriteData?: boolean;
 }
+
 export class Datafactory {
-  private nodeMap?:NodeURIMappings;
   public quads = new QuadSet();
+  private nodeMap?: NodeURIMappings;
   private preventNewQuads: boolean;
   private emitEvents: boolean = true;
   private triggerStorage: boolean = false;
   private targetGraph: Graph;
   private clearedProps: CoreMap<NamedNode, CoreSet<NamedNode>>;
   private overwriteData?: boolean;
+
   constructor(config?: DataFactoryConfig) {
     for (let key in config) {
       this[key] = config[key];
@@ -35,8 +45,8 @@ export class Datafactory {
     if (config?.overwriteData) {
       this.clearedProps = new CoreMap<NamedNode, CoreSet<NamedNode>>();
     }
-
   }
+
   //TODO:
   //   Variable variable(DOMString value);
   //   Term fromTerm(Term original);
@@ -45,6 +55,7 @@ export class Datafactory {
   namedNode(uri: string) {
     return NamedNode.getOrCreate(uri);
   }
+
   literal(value, languageOrDatatype) {
     if (languageOrDatatype instanceof NamedNode) {
       return new Literal(value, languageOrDatatype);
@@ -52,6 +63,7 @@ export class Datafactory {
       return new Literal(value, null, languageOrDatatype);
     }
   }
+
   blankNode(value) {
     //when using start/end blanknode space you can let the factory reuse the same blank nodes
     // if (this.nodeMap) {
@@ -59,16 +71,17 @@ export class Datafactory {
     // }
     // return BlankNode.getOrCreate(value);
   }
+
   defaultGraph() {
     return _default as any;
   }
+
   quad(subject: Term, predicate: Term, object: Term, graph: Term) {
     //if a target graph is given, we always use that, regardless of whether there was any graph present in the data
     //else if a graph was in the data, use that, or fall back to default graph
-    if(this.targetGraph) {
+    if (this.targetGraph) {
       graph = this.targetGraph;
-    }
-    else if (!graph) {
+    } else if (!graph) {
       graph = _default;
     }
 
@@ -83,7 +96,9 @@ export class Datafactory {
     if (
       this.overwriteData &&
       (!this.clearedProps.has(subject as NamedNode) ||
-        !this.clearedProps.get(subject as NamedNode).has(predicate as NamedNode))
+        !this.clearedProps
+          .get(subject as NamedNode)
+          .has(predicate as NamedNode))
     ) {
       //remove without triggering storage events
       (subject as NamedNode).getQuads(predicate as NamedNode).removeAll(false);
@@ -95,7 +110,12 @@ export class Datafactory {
 
     let quad;
     if (this.preventNewQuads) {
-      quad = Quad.get(subject as NamedNode, predicate as NamedNode, object as Node, graph as Graph);
+      quad = Quad.get(
+        subject as NamedNode,
+        predicate as NamedNode,
+        object as Node,
+        graph as Graph,
+      );
       if (quad) {
         this.quads.add(quad);
       } else {

@@ -5,7 +5,7 @@
  */
 import {NamedNode} from '../models.js';
 import {Prefix} from '../utils/Prefix.js';
-import { createNameSpace } from '../utils/NameSpace.js';
+import {createNameSpace} from '../utils/NameSpace.js';
 
 var base: string = 'http://www.w3.org/ns/shacl#';
 export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);
@@ -48,7 +48,6 @@ var BlankNodeOrLiteral: NamedNode = NamedNode.getOrCreate(
 );
 var IRIOrLiteral: NamedNode = ns('IRIOrLiteral');
 
-
 export var languageIn: NamedNode = ns('languageIn');
 export var lessThan: NamedNode = ns('lessThan');
 export var lessThanOrEquals: NamedNode = ns('lessThanOrEquals');
@@ -86,9 +85,6 @@ export var MaxLengthConstraintComponent: NamedNode = ns(
   'MaxLengthConstraintComponent',
 );
 export var result: NamedNode = ns('result');
-
-
-
 
 //make sure every node is also exported here
 export const shacl = {

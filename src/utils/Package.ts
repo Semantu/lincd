@@ -3,10 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {defaultGraph, Literal, NamedNode, Quad} from '../models.js';
+import {defaultGraph,Literal,NamedNode,Quad} from '../models.js';
 import {
+  createPropertyShape,
   NodeShape,
   PropertyShape,
+  registerPropertyShape,
   ValidationReport,
   ValidationResult,
 } from '../shapes/SHACL.js';
@@ -17,7 +19,7 @@ import {lincd as lincdOntology} from '../ontologies/lincd.js';
 import {npm} from '../ontologies/npm.js';
 import {rdf} from '../ontologies/rdf.js';
 import {URI} from './URI.js';
-import {addNodeShapeToShapeClass, getShapeClass} from './ShapeClass.js';
+import {addNodeShapeToShapeClass,getShapeClass} from './ShapeClass.js';
 import {
   Component,
   createLinkedComponentFn,
@@ -25,7 +27,6 @@ import {
   LinkedComponentFactoryFn,
   LinkedSetComponentFactoryFn,
 } from '../utils/LinkedComponent.js';
-import {createPropertyShape, registerPropertyShape} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
 import {rdfs} from '../ontologies/rdfs.js';
 import {xsd} from '../ontologies/xsd.js';
@@ -39,7 +40,7 @@ export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 
 // var packageParsePromises: Map<string,Promise<any>> = new Map();
 // var loadedPackages: Set<NamedNode> = new Set();
-let shapeToComponents: Map<typeof Shape, CoreSet<Component>> = new Map();
+let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
 let ontologies: Set<any> = new Set();
 let _autoLoadOntologyData = false;
 /**
@@ -62,7 +63,8 @@ export type ShapeConfig = {
  * This object, returned by [linkedPackage()](/docs/lincd.js/modules/utils_Module#linkedPackage),
  * contains the decorators to link different parts of a LINCD module.
  */
-export interface LinkedPackageObject {
+export interface LinkedPackageObject
+{
   /**
    * Class decorator that links a class-based component to its shape.
    * Once linked, the component receives an extra property "sourceShape" which will be an instance of the linked Shape.
@@ -261,30 +263,37 @@ const prefix = (n) => Prefix.toPrefixed(n.uri);
 
 export var DEFAULT_LIMIT = 12;
 
-export function setDefaultPageLimit(limit: number) {
+export function setDefaultPageLimit(limit: number)
+{
   DEFAULT_LIMIT = limit;
 }
 
-export function autoLoadOntologyData(value: boolean) {
+export function autoLoadOntologyData(value: boolean)
+{
   _autoLoadOntologyData = value;
   //this may be set to true after some ontologies have already indexed,
-  if (_autoLoadOntologyData) {
+  if (_autoLoadOntologyData)
+  {
     // so in that case we load all data of ontologies that are already indexed
     ontologies.forEach((ontologyExport) => {
       //see linkedOntology() where we store the data loading method under the _load key
-      if (ontologyExport['_load']) {
+      if (ontologyExport['_load'])
+      {
         ontologyExport['_load']();
       }
     });
   }
 }
-export function getNodeShapeUri(packageName, shapeName: string): string {
+
+export function getNodeShapeUri(packageName,shapeName: string): string
+{
   return `${LINCD_DATA_ROOT}module/${URI.sanitize(packageName)}/shape/${URI.sanitize(
     shapeName,
   )}`;
 }
 
-export function linkedPackage(packageName: string): LinkedPackageObject {
+export function linkedPackage(packageName: string): LinkedPackageObject
+{
   let packageNode = NamedNode.getOrCreate(
     `${LINCD_DATA_ROOT}module/${packageName}`,
     true,
@@ -314,8 +323,9 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
   let packageTreeObject = registerPackageInTree(packageName);
 
   //#Create declarators for this module
-  let registerPackageExport = function (object) {
-    if (object.name in packageTreeObject) {
+  let registerPackageExport = function(object) {
+    if (object.name in packageTreeObject)
+    {
       console.warn(
         `Key ${object.name} was already defined for package ${packageName}. Note that LINCD currently only supports unique names across your entire package. Overwriting ${object.name} with new value`,
       );
@@ -323,35 +333,39 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     packageTreeObject[object.name] = object;
   };
 
-  let registerInPackageTree = function (exportName, exportedObject) {
+  let registerInPackageTree = function(exportName,exportedObject) {
     packageTreeObject[exportName] = exportedObject;
   };
 
-  function registerPackageModule(_module): void {
-    for (var key in _module.exports) {
+  function registerPackageModule(_module): void
+  {
+    for (var key in _module.exports)
+    {
       //if the exported object itself (usually FunctionalComponents) is not named or its name is _wrappedComponent (which ends up happening in the linkedComponent method above)
       //then we give it the same name as it's export name.
       if (
         !_module.exports[key].name ||
         _module.exports[key].name === '_wrappedComponent'
-      ) {
-        Object.defineProperty(_module.exports[key], 'name', {value: key});
+      )
+      {
+        Object.defineProperty(_module.exports[key],'name',{value: key});
         //manual 'hack' to set the name of the original function
         if (
           _module.exports[key]['original'] &&
           !_module.exports[key]['original']['name']
-        ) {
-          Object.defineProperty(_module.exports[key]['original'], 'name', {
+        )
+        {
+          Object.defineProperty(_module.exports[key]['original'],'name',{
             value: key + '_implementation',
           });
         }
       }
-      registerInPackageTree(key, _module.exports[key]);
+      registerInPackageTree(key,_module.exports[key]);
     }
   }
 
   //create a declarator function which Components of this module can use register themselves and add themselves to the global tree
-  let linkedUtil = function (constructor) {
+  let linkedUtil = function(constructor) {
     //add the component class of this module to the global tree
     registerPackageExport(constructor);
 
@@ -374,7 +388,8 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
   function applyLinkedShape<T extends typeof Shape>(
     constructor: T,
     options?: ShapeConfig,
-  ): void {
+  ): void
+  {
     // add the component class of this module to the global tree
     registerPackageExport(constructor);
 
@@ -382,24 +397,27 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     Shape.registerByType(constructor);
 
     // if no shape object has been attached to the constructor
-    if (!Object.getOwnPropertyNames(constructor).includes('shape')) {
+    if (!Object.getOwnPropertyNames(constructor).includes('shape'))
+    {
       // create a new node shape for this shapeClass
       let shape: NodeShape = NodeShape.getFromURI(
-        getNodeShapeUri(packageName, constructor.name),
+        getNodeShapeUri(packageName,constructor.name),
       );
       // connect the typescript class to its NodeShape
       constructor.shape = shape;
       // set the name
       shape.label = constructor.name;
 
-      if(options) {
-        if(options.description) {
+      if (options)
+      {
+        if (options.description)
+        {
           shape.description = options.description;
         }
       }
 
       // also keep track of the reverse: nodeShape to typescript class
-      addNodeShapeToShapeClass(shape, constructor);
+      addNodeShapeToShapeClass(shape,constructor);
 
       // also create a representation in the graph of the shape class itself
       let shapeClass = NamedNode.getOrCreate(
@@ -408,23 +426,27 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
         )}`,
         true,
       );
-      shapeClass.set(lincdOntology.definesShape, shape.node);
-      shapeClass.set(rdf.type, lincdOntology.ShapeClass);
+      shapeClass.set(lincdOntology.definesShape,shape.node);
+      shapeClass.set(rdf.type,lincdOntology.ShapeClass);
       // and connect it back to the module
-      shapeClass.set(lincdOntology.module, packageNode);
+      shapeClass.set(lincdOntology.module,packageNode);
 
       // run deferred callbacks from property decorators
-      if (constructor.shapeCallbacks) {
+      if (constructor.shapeCallbacks)
+      {
         constructor.shapeCallbacks.forEach((callback) => {
           callback(shape);
         });
         delete constructor.shapeCallbacks;
       }
-    } else {
-      console.warn('This ShapeClass already has a shape: ', constructor.shape);
+    }
+    else
+    {
+      console.warn('This ShapeClass already has a shape: ',constructor.shape);
     }
 
-    if (constructor.targetClass) {
+    if (constructor.targetClass)
+    {
       (constructor.shape as NodeShape).targetClass = constructor.targetClass;
     }
 
@@ -437,16 +459,18 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
   function linkedShape<T extends typeof Shape>(
     options?: ShapeConfig,
   ): (constructor: T) => void;
-  function linkedShape(arg?: any): void | ((constructor: any) => void) {
+  function linkedShape(arg?: any): void | ((constructor: any) => void)
+  {
     // usage as @linkedShape
-    if (typeof arg === 'function') {
+    if (typeof arg === 'function')
+    {
       applyLinkedShape(arg);
       return;
     }
     // usage as @linkedShape({...}) or @linkedShape()
     const options: ShapeConfig | undefined = arg;
     return function <T extends typeof Shape>(constructor: T): void {
-      applyLinkedShape(constructor, options);
+      applyLinkedShape(constructor,options);
     };
   }
 
@@ -457,7 +481,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
    * @param nameSpace the base URI of the ontology
    * @param prefixAndFileName the file name MUST match the prefix for this ontology
    */
-  let linkedOntology = function (
+  let linkedOntology = function(
     exports,
     nameSpace: (term: string) => NamedNode,
     prefixAndFileName: string,
@@ -472,22 +496,24 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     exportsCopy['_data'] = dataSource;
 
     //register the prefix here (so just calling linkedOntology with a prefix will automatically register that prefix)
-    if (prefixAndFileName) {
+    if (prefixAndFileName)
+    {
       //run the namespace without any term name, this will give back a named node with just the namespace as URI, then get that URI to provide it as full URI
-      Prefix.add(prefixAndFileName, nameSpace('').uri);
+      Prefix.add(prefixAndFileName,nameSpace('').uri);
     }
 
     ontologies.add(exportsCopy);
     //register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
-    registerInPackageTree(prefixAndFileName, exportsCopy);
+    registerInPackageTree(prefixAndFileName,exportsCopy);
     // });
 
-    if (_autoLoadOntologyData) {
+    if (_autoLoadOntologyData)
+    {
       loadData().catch((err) => {
         console.warn(
           'Could not load ontology data. Do you need to rebuild the module of the ' +
-            prefixAndFileName +
-            ' ontology?',
+          prefixAndFileName +
+          ' ontology?',
           err,
         );
       });
@@ -503,7 +529,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
     //get the named node of the node shape first,
     //then get the shape class that defines this node shape
     return getShapeClass(
-      NamedNode.getOrCreate(getNodeShapeUri(packageName, name)),
+      NamedNode.getOrCreate(getNodeShapeUri(packageName,name)),
     );
   };
 
@@ -522,10 +548,13 @@ export function linkedPackage(packageName: string): LinkedPackageObject {
   } as LinkedPackageObject;
 }
 
-function registerComponent(exportedComponent: Component, shape?: typeof Shape) {
-  if (!shape) {
+function registerComponent(exportedComponent: Component,shape?: typeof Shape)
+{
+  if (!shape)
+  {
     //warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
-    if (!exportedComponent.hasOwnProperty('shape')) {
+    if (!exportedComponent.hasOwnProperty('shape'))
+    {
       console.warn(
         `Component ${
           exportedComponent.displayName || exportedComponent.name
@@ -536,46 +565,56 @@ function registerComponent(exportedComponent: Component, shape?: typeof Shape) {
     shape = exportedComponent.shape;
   }
 
-  if (!shapeToComponents.has(shape)) {
-    shapeToComponents.set(shape, new CoreSet<any>());
+  if (!shapeToComponents.has(shape))
+  {
+    shapeToComponents.set(shape,new CoreSet<any>());
   }
 
   shapeToComponents.get(shape).add(exportedComponent);
 }
 
-function registerPackageInTree(packageName, packageExports?) {
+function registerPackageInTree(packageName,packageExports?)
+{
   //prepare name for global tree reference
   // let packageTreeKey = packageName.replace(/-/g,'_');
   //if something with this name already registered in the global tree
-  if (packageName in lincd._modules) {
+  if (packageName in lincd._modules)
+  {
     //This probably means package.ts is loaded twice, through different paths and could point to a problem
     //So we log about it. But there is one exception. LINCD itself registers itself twice: once in the bottom of this file and once in its package.ts file.
     //But if there are already other packages registered, then probably there is 2 versions of LINCD being loaded, and that IS a problem.
-    if (packageName !== 'lincd' || Object.keys(lincd._modules).length !== 1) {
+    if (packageName !== 'lincd' || Object.keys(lincd._modules).length !== 1)
+    {
       console.warn(
         'A package with the name ' +
-          packageName +
-          ' has already been registered. Adding to existing object',
+        packageName +
+        ' has already been registered. Adding to existing object',
       );
     }
-    Object.assign(lincd._modules[packageName], packageExports);
-  } else {
+    Object.assign(lincd._modules[packageName],packageExports);
+  }
+  else
+  {
     //initiate an empty object for this module in the global tree
     lincd._modules[packageName] = packageExports || {};
   }
   return lincd._modules[packageName];
 }
 
-export function initTree() {
+export function initTree()
+{
   let globalObject =
     typeof window !== 'undefined'
       ? window
       : typeof global !== 'undefined'
         ? global
         : undefined;
-  if ('lincd' in globalObject) {
+  if ('lincd' in globalObject)
+  {
     throw new Error('Multiple versions of LINCD are loaded');
-  } else {
+  }
+  else
+  {
     globalObject['lincd'] = {_modules: {}};
   }
 }
@@ -596,14 +635,14 @@ lincdPackage.linkedShape()(ValidationResult);
 Shape.shape = NodeShape.getFromURI(
   'https://data.lincd.org/module/lincd/shape/shape',
 );
-addNodeShapeToShapeClass(Shape.shape, Shape);
+addNodeShapeToShapeClass(Shape.shape,Shape);
 
 //Here we can register the properties of the Shape class itself
 //We can't do that inside of Shape because it would cause circular dependencies
 registerPropertyShape(Shape.shape,createPropertyShape({
     path: rdfs.label,
     //TODO: multiple labels should be possible
-    maxCount:1,//currently get label is implemented to return a single value
+    maxCount: 1,//currently get label is implemented to return a single value
   },
   'label',
   shacl.Literal,
@@ -611,9 +650,9 @@ registerPropertyShape(Shape.shape,createPropertyShape({
 registerPropertyShape(Shape.shape,createPropertyShape(
   {
     path: rdf.type,
-    shape:Shape,
+    shape: Shape,
   },
-  'type'
+  'type',
 ));
 
 registerPropertyShape(
@@ -629,9 +668,9 @@ registerPropertyShape(
 );
 
 registerPropertyShape(NodeShape.shape,createPropertyShape({
-  path:rdf.type,
-  maxCount:1,
-  shape:Shape,
+  path: rdf.type,
+  maxCount: 1,
+  shape: Shape,
 },'type',shacl.IRI));
 
 registerPropertyShape(
@@ -648,13 +687,13 @@ registerPropertyShape(
 );
 
 registerPropertyShape(NodeShape.shape,createPropertyShape({
-  path:shacl.description,
-  maxCount:1,
+  path: shacl.description,
+  maxCount: 1,
 },'type',shacl.Literal));
 
 registerPropertyShape(NodeShape.shape,createPropertyShape({
-  path:shacl.targetNode,
-  shape:Shape,//actually returns a NamedNode... is this correct then? Should we define or use a rdfs Class that matches the potential values?
+  path: shacl.targetNode,
+  shape: Shape,//actually returns a NamedNode... is this correct then? Should we define or use a rdfs Class that matches the potential values?
 },'targetNode',shacl.IRI));
 
 registerPropertyShape(

@@ -1,47 +1,44 @@
 import {
+  ArgPath,
   ComponentQueryPath,
-  SizeStep,
   CustomQueryObject,
   Evaluation,
   GetQueryResponseType,
   JSPrimitive,
-  SelectQueryFactory,
   NodeResultMap,
   PropertyQueryStep,
   QResult,
+  QueryArg,
   QueryBuilderObject,
   QueryPath,
   QueryPrimitiveSet,
   QueryResponseToEndValues,
   QueryStep,
   SelectQuery,
+  SelectQueryFactory,
+  SizeStep,
+  SortByPath,
   SubQueryPaths,
   WhereAndOr,
   WhereEvaluationPath,
   WhereMethods,
   WherePath,
-  SortByPath,
-  QueryArg,
-  ArgPath,
-  QueryPropertyPath,
 } from '../queries/SelectQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {Shape, ShapeType} from '../shapes/Shape.js';
+import {Shape} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {UpdateQuery} from '../queries/UpdateQuery.js';
 import {
   checkNewCount,
   isSetModificationValue,
   NodeDescriptionValue,
   NodeReferenceValue,
-  SetModificationValue,
   ShapeReferenceValue,
   SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
 } from '../queries/QueryFactory.js';
-import {NamedNode, Literal} from '../models.js';
+import {Literal, NamedNode} from '../models.js';
 import {xsd} from '../ontologies/xsd.js';
 import {PropertyShape, ValidationReport} from '../shapes/SHACL.js';
 import {rdf} from '../ontologies/rdf.js';
@@ -141,6 +138,7 @@ export async function updateLocal<ResultType>(
     throw new Error('Invalid query type: ' + query.type);
   }
 }
+
 async function applyFieldUpdates(
   fields: UpdateNodePropertyValue[],
   subject: NamedNode,
@@ -297,6 +295,7 @@ function addToResultSets(
     subject.mset(path as NamedNode, values);
   }
 }
+
 function overwritePropertyPathMultipleValues(
   subject: NamedNode,
   path: NamedNode | NamedNode[],
@@ -322,6 +321,7 @@ function overwritePropertyPathMultipleValues(
     subject.moverwrite(path as NamedNode, values);
   }
 }
+
 function overwritePropertyPathSingleValue(
   subject: NamedNode,
   path: NamedNode | NamedNode[],
@@ -347,6 +347,7 @@ function overwritePropertyPathSingleValue(
     subject.overwrite(path as NamedNode, value);
   }
 }
+
 function unsetPropertyPathValue(
   subject: NamedNode,
   path: NamedNode | NamedNode[],
@@ -393,6 +394,7 @@ function unsetPropertyPath(subject: NamedNode, path: NamedNode | NamedNode[]) {
     subject.unsetAll(path);
   }
 }
+
 async function convertValue(
   propShape: PropertyShape,
   value: any,
@@ -431,6 +433,7 @@ async function convertValue(
     throw new Error('Unknown value type for property: ' + propShape.label);
   }
 }
+
 function convertNamedNode(
   propShape: PropertyShape,
   value: NodeDescriptionValue | NodeReferenceValue,
@@ -452,6 +455,7 @@ function convertNamedNode(
     );
   }
 }
+
 function isNodeReference(
   value: NodeReferenceValue | NodeDescriptionValue,
 ): value is NodeReferenceValue {
@@ -463,6 +467,7 @@ function isNodeReference(
   // && Object.keys(value).length === 1;
   //and check if there is only 1 key in the object
 }
+
 function convertNodeReferenceOrId(
   propShape: PropertyShape,
   value: NodeReferenceValue,
@@ -476,6 +481,7 @@ function convertNodeReferenceOrId(
   }
   return convertNodeReference(propShape, value, suffixKey);
 }
+
 function convertNodeReference(
   propShape: PropertyShape,
   value: NodeReferenceValue,
@@ -503,6 +509,7 @@ function convertNodeReference(
     plainValue: {id: (value as NodeReferenceValue).id},
   };
 }
+
 async function convertNodeDescription(
   propShape: PropertyShape,
   value: NodeDescriptionValue,
@@ -653,8 +660,11 @@ export function resolveLocal<ResultType>(
   let subject: NamedNode | NodeSet<NamedNode>;
   if (query.subject) {
     if ('id' in (query.subject as QResult<any>)) {
-      if(typeof (query.subject as QResult<any>).id !== 'string') {
-        throw new Error('When providing a subject in a query, the id must be a string. Given: ' + JSON.stringify((query.subject as QResult<any>).id));
+      if (typeof (query.subject as QResult<any>).id !== 'string') {
+        throw new Error(
+          'When providing a subject in a query, the id must be a string. Given: ' +
+            JSON.stringify((query.subject as QResult<any>).id),
+        );
       }
       if (NamedNode.getNamedNode((query.subject as QResult<any>).id)) {
         // subject = query.shape.getFromURI((query.subject as QResult<any>).id) as Shape;
@@ -751,6 +761,7 @@ function resolveCustomObject(
   }
   return resultObject;
 }
+
 function writeResultObject(resultObject, key, result) {
   //convert undefined to null, because JSON.stringify will KEEP keys that have a null value. Which is required for LINCD to work properly with nested queries
   if (typeof result === 'undefined') {
@@ -925,6 +936,7 @@ function sortResults(
   });
   return new NodeSet(sorted);
 }
+
 /**
  * Filters down the given subjects to only those what match the where clause
  * @param subject
@@ -1007,6 +1019,7 @@ function resolveWhereArgs(args: QueryArg[]) {
     return arg;
   });
 }
+
 function evaluate(singleNode: NamedNode, where: WherePath): boolean {
   if ((where as WhereEvaluationPath).path) {
     let shapeEndValue = resolveQueryPathEndResults(
@@ -1236,6 +1249,7 @@ function namedNodeToResultObject(subject: NamedNode) {
     id: subject.uri,
   };
 }
+
 function literalNodeToResultObject(literal: Literal, property: PropertyShape) {
   let datatype = property.datatype;
   let value = literal.value;
@@ -1317,6 +1331,7 @@ function resolveQueryPathsForNodes(
   });
   return results;
 }
+
 function resolveQueryPathsForNodesEndResults(
   queryPaths: SubQueryPaths,
   subjects: NodeSet<NamedNode>,
@@ -1343,6 +1358,7 @@ function resolveQueryPathsForNode(
     );
   }
 }
+
 function resolveQueryPathsForNodeEndResults(
   queryPaths: SubQueryPaths,
   subject: NamedNode,
@@ -1448,6 +1464,7 @@ function stepResultToSubResult(stepResult, property: PropertyShape) {
     return stepResult;
   }
 }
+
 export function resolveQueryPropertyPath(
   node: NamedNode,
   property: PropertyShape,
@@ -1479,12 +1496,14 @@ export function resolveQueryPropertyPath(
   }
   return pathResult;
 }
+
 function convertLiteralToPrimitive(node: Node, property: PropertyShape) {
   if (node instanceof Literal) {
     return literalNodeToResultObject(node, property);
   }
   return node;
 }
+
 function resolvePropertyStep(
   singleNode: NamedNode,
   queryStep: PropertyQueryStep,
@@ -1747,6 +1766,7 @@ function XSDDate_fromNativeDate(nativeDate: Date, datatype) {
   let literal = new Literal(value, datatype);
   return literal;
 }
+
 function Boolean_toLiteral(value: boolean) {
   return new Literal(value.toString(), xsd.boolean);
 }

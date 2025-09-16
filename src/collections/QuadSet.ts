@@ -6,7 +6,7 @@
 //declare var require:Function;
 //require('core-js/fn/set');
 //import * as Set from 'core-js/es6/set';
-import {Graph, NamedNode, Node, Quad} from '../models.js';
+import {Graph,NamedNode,Node,Quad} from '../models.js';
 import {CoreSet} from './CoreSet.js';
 import {NodeSet} from './NodeSet.js';
 

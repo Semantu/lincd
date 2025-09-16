@@ -161,7 +161,7 @@ export function createTraceShape<ShapeType extends Shape>(
 }
 
 export class TestNode extends NamedNode {
-  public targetID:string;//used to store the node that this test node is a placeholder for
+  public targetID: string; //used to store the node that this test node is a placeholder for
   constructor(public property?: NamedNode) {
     let uri = NamedNode.createNewTempUri();
     super(uri, true);

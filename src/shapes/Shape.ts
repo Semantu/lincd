@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import nextTick from 'next-tick';
-import {Literal, NamedNode, Node, Quad} from '../models.js';
+import {Literal,NamedNode,Node,Quad} from '../models.js';
 import {rdf} from '../ontologies/rdf.js';
 import {NodeValuesSet} from '../collections/NodeValuesSet.js';
 import {rdfs} from '../ontologies/rdfs.js';
@@ -17,10 +17,9 @@ import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {SearchMap} from '../collections/SearchMap.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {QuadSet} from '../collections/QuadSet.js';
-import {NodeShape, PropertyShape} from './SHACL.js';
+import {NodeShape,PropertyShape} from './SHACL.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
-  getMostSpecificShapes,
   getMostSpecificShapesByType,
   getPropertyShapeByLabel,
   getShapeOrSubShape,
@@ -28,23 +27,17 @@ import {
 } from '../utils/ShapeClass.js';
 import {
   GetQueryResponseType,
-  SelectQueryFactory,
   PatchedQueryPromise,
-  QueryBuildFn,
-  QueryResponseToEndValues,
-  QueryResponseToResultType,
-  QShape,
-  QShapeSet,
   QResult,
+  QShape,
+  QueryBuildFn,
+  QueryResponseToResultType,
   QueryShape,
+  SelectQueryFactory,
 } from '../queries/SelectQuery.js';
-import {IQueryParser, staticImplements} from '../interfaces/IQueryParser.js';
+import {IQueryParser} from '../interfaces/IQueryParser.js';
 import {TestNode} from '../utils/TraceShape.js';
-import {
-  UpdatePartial,
-  AddId,
-  NodeReferenceValue,
-} from '../queries/QueryFactory.js';
+import {AddId,NodeReferenceValue,UpdatePartial} from '../queries/QueryFactory.js';
 import {ClassOf} from '../utils/Types.js';
 import {CreateResponse} from '../queries/CreateQuery.js';
 import {NodeId} from '../queries/MutationQuery.js';

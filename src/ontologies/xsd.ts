@@ -39,5 +39,5 @@ export const xsd = {
   gYear,
   Bytes,
   long,
-  dateTime
+  dateTime,
 };

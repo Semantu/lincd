@@ -1,5 +1,6 @@
 import {Shape} from '../shapes/Shape.js';
 import {NamedNode} from '../models.js';
+
 const _cache = new Map<string, {timeout: number; value: any}>();
 
 /**

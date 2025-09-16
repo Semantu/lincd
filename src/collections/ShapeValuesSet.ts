@@ -73,8 +73,8 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
    * @param value the node to add
    */
   add(value: S): this {
-    if(value && value.node && !this.subject.has(this.property,value.node)) {
-      this.subject.set(this.property,value.node);
+    if (value && value.node && !this.subject.has(this.property, value.node)) {
+      this.subject.set(this.property, value.node);
     }
     return super.add(value);
   }
@@ -86,7 +86,7 @@ export class ShapeValuesSet<S extends Shape = Shape> extends ShapeSet<S> {
    * @param value the node to remove
    */
   delete(value: S): boolean {
-    if(value && value.node) {
+    if (value && value.node) {
       this.subject.unset(this.property, value.node);
     }
     return super.delete(value);

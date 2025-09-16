@@ -3,28 +3,23 @@ import {defaultGraph, Graph, NamedNode, Node, Quad} from '../models.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {NodeSet} from '../collections/NodeSet.js';
-import { Shape } from '../shapes/Shape.js';
-import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
+import {Shape} from '../shapes/Shape.js';
+import {PropertyShape} from '../shapes/SHACL.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {eventBatcher} from '../events/EventBatcher.js';
 import {QuadArray} from '../collections/QuadArray.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import { getShapeClass,getSuperShapesClasses } from './ShapeClass.js';
-import {
-  GetQueryResponseType,
-  SelectQueryFactory,
-  SelectQuery,
-  QueryResponseToResultType
-} from '../queries/SelectQuery.js';
-import { LinkedDataRequest } from './TraceShape.js';
-import { UpdateQuery,UpdateQueryFactory } from '../queries/UpdateQuery.js';
-import { UpdatePartial,AddId } from '../queries/QueryFactory.js';
-import { rdf } from '../ontologies/rdf.js';
+import {getShapeClass, getSuperShapesClasses} from './ShapeClass.js';
+import {SelectQuery} from '../queries/SelectQuery.js';
+import {LinkedDataRequest} from './TraceShape.js';
+import {UpdateQuery} from '../queries/UpdateQuery.js';
+import {UpdatePartial} from '../queries/QueryFactory.js';
+import {rdf} from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
-import { CreateQuery,CreateQueryFactory } from '../queries/CreateQuery.js';
-import { QueryParser } from '../queries/QueryParser.js';
-import { DeleteQuery,DeleteResponse } from '../queries/DeleteQuery.js';
+import {CreateQuery} from '../queries/CreateQuery.js';
+import {QueryParser} from '../queries/QueryParser.js';
+import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
@@ -32,7 +27,8 @@ export abstract class LinkedStorage {
   private static graphToStore: CoreMap<Graph, IQuadStore> = new CoreMap();
   private static shapesToGraph: CoreMap<typeof Shape, Graph> = new CoreMap();
   private static nodeShapesToGraph: CoreMap<NamedNode, Graph> = new CoreMap();
-  private static graphToTargetClasses: CoreMap<Graph,NodeSet<NamedNode>> = new CoreMap();
+  private static graphToTargetClasses: CoreMap<Graph, NodeSet<NamedNode>> =
+    new CoreMap();
   private static defaultStorageGraph: Graph;
   private static processingPromise: {
     promise: Promise<void>;
@@ -201,16 +197,20 @@ export abstract class LinkedStorage {
     shapeClasses.forEach((shapeClass) => {
       this.shapesToGraph.set(shapeClass, graph);
       if (shapeClass['shape']) {
-        if(!this.graphToTargetClasses.has(graph)) {
-          this.graphToTargetClasses.set(graph,new NodeSet());
+        if (!this.graphToTargetClasses.has(graph)) {
+          this.graphToTargetClasses.set(graph, new NodeSet());
         }
-        this.graphToTargetClasses.get(graph).add(shapeClass['shape'].targetClass);
+        this.graphToTargetClasses
+          .get(graph)
+          .add(shapeClass['shape'].targetClass);
         //we also add any shape class that extends this shape class
         //For example, if storage is configured for Thing, then we want to also list all the shapes that extend Thing
         //because the types of all those super shapes should be pointing towards the same graph
-        getSuperShapesClasses(shapeClass).forEach(subShape => {
-          this.graphToTargetClasses.get(graph).add(subShape['shape'].targetClass);
-        })
+        getSuperShapesClasses(shapeClass).forEach((subShape) => {
+          this.graphToTargetClasses
+            .get(graph)
+            .add(subShape['shape'].targetClass);
+        });
         this.nodeShapesToGraph.set(shapeClass['shape'].namedNode, graph);
       }
     });
@@ -296,12 +296,13 @@ export abstract class LinkedStorage {
     //     }
     //   }
     // }
-    if(!subject.isTemporaryNode)
-    {
-      for (const [graph,targetClasses] of this.graphToTargetClasses)
-      {
-        if (subject.getAll(rdf.type).some(type => targetClasses.has(type as NamedNode)))
-        {
+    if (!subject.isTemporaryNode) {
+      for (const [graph, targetClasses] of this.graphToTargetClasses) {
+        if (
+          subject
+            .getAll(rdf.type)
+            .some((type) => targetClasses.has(type as NamedNode))
+        ) {
           return graph;
         }
       }
@@ -356,7 +357,7 @@ export abstract class LinkedStorage {
   }
 
   static getShapeToStoreMap(): CoreMap<typeof Shape, IQuadStore> {
-    return this.shapesToGraph.map(graph => {
+    return this.shapesToGraph.map((graph) => {
       return this.getStoreForGraph(graph);
     }) as any;
   }
@@ -397,37 +398,34 @@ export abstract class LinkedStorage {
     });
   }
 
-  static selectQuery<S extends Shape,ResultType>(
+  static selectQuery<S extends Shape, ResultType>(
     query: SelectQuery<S>,
   ): Promise<ResultType> {
     let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape);
     return quadStore.selectQuery(query);
   }
 
-
   static updateQuery<
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
-  >(
-    query:UpdateQuery<U>
-  ):Promise<U> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
+  >(query: UpdateQuery<U>): Promise<U> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(
+      getShapeClass(query.shape.namedNode),
+    );
     return quadStore.updateQuery(query);
   }
 
-  static createQuery<
-    R
-  >(
-    query:CreateQuery<R>
-  ):Promise<R> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
+  static createQuery<R>(query: CreateQuery<R>): Promise<R> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(
+      getShapeClass(query.shape.namedNode),
+    );
     return quadStore.createQuery(query);
   }
 
-  static deleteQuery(
-    query:DeleteQuery
-  ):Promise<DeleteResponse> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(getShapeClass(query.shape.namedNode));
+  static deleteQuery(query: DeleteQuery): Promise<DeleteResponse> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(
+      getShapeClass(query.shape.namedNode),
+    );
     return quadStore.deleteQuery(query);
   }
 
@@ -470,7 +468,7 @@ export abstract class LinkedStorage {
     shapeInstance: Shape,
     shapeOrRequest?: LinkedDataRequest,
     byPassCache: boolean = false,
-  ): Promise<QuadArray|boolean> {
+  ): Promise<QuadArray | boolean> {
     //if no shape is requested then we automatically request all properties of the shape
     if (!shapeOrRequest) {
       //TODO: maybe we can optimise requests by not sending all the shapes and letting the backend fill in the property shapes
@@ -515,12 +513,11 @@ export abstract class LinkedStorage {
     }
   }
 
-
   static loadShapes(
     shapeSet: ShapeSet,
     shapeOrRequest: LinkedDataRequest,
     byPassCache: boolean = false,
-  ): Promise<QuadArray|boolean> {
+  ): Promise<QuadArray | boolean> {
     let nodes = shapeSet.getNodes();
     if (!byPassCache) {
       let cachedResult = this.nodesAreLoaded(nodes, shapeOrRequest);
@@ -836,7 +833,7 @@ export abstract class LinkedStorage {
         removeMap = this.getStoreMapForNodes(quadsRemoved.getSubjects());
       } else {
         //default: get the right stores based on the graph of the quads
-        removeMap = this.getTargetStoreMap(quadsRemoved,true);
+        removeMap = this.getTargetStoreMap(quadsRemoved, true);
       }
     }
 
@@ -960,23 +957,33 @@ export abstract class LinkedStorage {
           nodeUriMap.set(node, node.uri);
         });
         //let the store determine the URI's for these nodes
-        return store.setURIs(nodeUriMap).then((uriUpdates) => {
-          //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
-          uriUpdates.forEach(([oldUri, newUri]) => {
-            const currentNode = NamedNode.getNamedNode(oldUri);
-            const alreadyExistingNode = NamedNode.getNamedNode(newUri);
-            if(alreadyExistingNode) {
-              console.warn(`Node with URI ${newUri} already exists in the store. This is an error in the store ${store.toString()}`,currentNode.print(),alreadyExistingNode.print());
-              return;
-            }
-            //currently, when a node is saved and removed in the same event cycle, it will not be in the store anymore
-            if (currentNode) {
-              currentNode.uri = newUri;
-            }
+        return store
+          .setURIs(nodeUriMap)
+          .then((uriUpdates) => {
+            //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
+            uriUpdates.forEach(([oldUri, newUri]) => {
+              const currentNode = NamedNode.getNamedNode(oldUri);
+              const alreadyExistingNode = NamedNode.getNamedNode(newUri);
+              if (alreadyExistingNode) {
+                console.warn(
+                  `Node with URI ${newUri} already exists in the store. This is an error in the store ${store.toString()}`,
+                  currentNode.print(),
+                  alreadyExistingNode.print(),
+                );
+                return;
+              }
+              //currently, when a node is saved and removed in the same event cycle, it will not be in the store anymore
+              if (currentNode) {
+                currentNode.uri = newUri;
+              }
+            });
+          })
+          .catch((err) => {
+            console.warn(
+              `Error during URI update for store ${store.toString()}: `,
+              err,
+            );
           });
-        }).catch(err => {
-          console.warn(`Error during URI update for store ${store.toString()}: `, err);
-        })
       }),
     );
 
@@ -1072,7 +1079,7 @@ export abstract class LinkedStorage {
 
   private static getTargetStoreMap(
     quads: ICoreIterable<Quad>,
-    basedOnSubject:boolean=false
+    basedOnSubject: boolean = false,
   ): CoreMap<IQuadStore, QuadArray> {
     let storeMap: CoreMap<IQuadStore, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
@@ -1082,7 +1089,8 @@ export abstract class LinkedStorage {
       // if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
       //UPDATE2: the above caused issues when saving a new shape/node, because the new quads were MOVED (removed from old graph) and then stored in the target graph,
       // but the removed quads were also sent to the same store with the code above, causing nothing to be saved
-      const store = this.getStoreForGraph(quad.graph);      if (store) {
+      const store = this.getStoreForGraph(quad.graph);
+      if (store) {
         if (!storeMap.has(store)) {
           storeMap.set(store, new QuadArray());
         }
@@ -1100,7 +1108,10 @@ export abstract class LinkedStorage {
       this.propShapeMap = new Map();
       PropertyShape.getLocalInstances().forEach((propertyShape) => {
         let path = propertyShape.path;
-        let pathString = path instanceof NamedNode ? path.uri : path.map((p) => p.uri).join(',');
+        let pathString =
+          path instanceof NamedNode
+            ? path.uri
+            : path.map((p) => p.uri).join(',');
         if (!this.propShapeMap.has(pathString)) {
           this.propShapeMap.set(pathString, []);
         }
