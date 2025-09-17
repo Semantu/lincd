@@ -114,7 +114,7 @@ export abstract class Shape implements IShape {
   static typesToShapes: Map<NamedNode, CoreSet<IClassConstruct>> = new Map();
   //TODO: rename to nodeShape to avoid confusing things like shape.shape
   static shape: NodeShape;
-  static shapeCallbacks: ((shape) => void)[] = [];
+  // static shapeCallbacks: ((shape) => void)[] = [];
   protected static instancesLoaded: Map<
     NamedNode,
     {promise: Promise<NodeSet<NamedNode>>; done: boolean}

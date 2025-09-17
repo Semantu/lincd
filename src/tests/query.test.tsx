@@ -1,10 +1,10 @@
 import {InMemoryStore} from './storage.test.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {LinkedStorage} from '../utils/LinkedStorage.js';
-import {runQueryTests, testPersons} from './utils/query-tests.js';
+import {runQueryTests, testEntities} from './utils/query-tests.js';
 
 const quads = new QuadSet();
-testPersons.forEach((p) => {
+testEntities.forEach((p) => {
   quads.addFrom(p.getAllQuads());
 });
 LinkedStorage.setQuadsLoaded(quads);

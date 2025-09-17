@@ -403,6 +403,10 @@ export function linkedPackage(packageName: string): LinkedPackageObject
       let shape: NodeShape = NodeShape.getFromURI(
         getNodeShapeUri(packageName,constructor.name),
       );
+      //small fix, for some reason sometimes a node with this URI already exists but is not a NodeShape
+      if (!shape.type) {
+        shape.type = shacl.NodeShape;
+      }
       // connect the typescript class to its NodeShape
       constructor.shape = shape;
       // set the name
@@ -432,12 +436,12 @@ export function linkedPackage(packageName: string): LinkedPackageObject
       shapeClass.set(lincdOntology.module,packageNode);
 
       // run deferred callbacks from property decorators
-      if (constructor.shapeCallbacks)
+      if (constructor['shapeCallbacks'])
       {
-        constructor.shapeCallbacks.forEach((callback) => {
+        constructor['shapeCallbacks'].forEach((callback) => {
           callback(shape);
         });
-        delete constructor.shapeCallbacks;
+        delete constructor['shapeCallbacks'];
       }
     }
     else
@@ -624,10 +628,22 @@ initTree();
 
 //now that this file is set up, we can link linked shapes in the LINCD module itself
 let lincdPackage = linkedPackage('lincd');
-lincdPackage.linkedShape()(NodeShape);
-lincdPackage.linkedShape()(PropertyShape);
-lincdPackage.linkedShape()(ValidationReport);
-lincdPackage.linkedShape()(ValidationResult);
+lincdPackage.linkedShape({
+  description:
+    'Represents a SHACL NodeShape; defines constraints for a class of RDF nodes. Links to multiple PropertyShapes. (schema, constraint, class validation)',
+})(NodeShape);
+lincdPackage.linkedShape({
+  description:
+    'Represents a SHACL PropertyShape; specifies rules for one property of a NodeShape (path, datatype, cardinality). (validation rule, property constraint)',
+})(PropertyShape);
+lincdPackage.linkedShape({
+  description:
+    'ValidationReport produced by a SHACL engine; summarizes results of validating data against NodeShapes and PropertyShapes. (report, conformance, summary)',
+})(ValidationReport);
+lincdPackage.linkedShape({
+  description:
+    'Individual result entry in a ValidationReport; details a specific violation or success, pointing to the node, property, and constraint. (error, issue, finding)',
+})(ValidationResult);
 
 //ALL the following is to support Shape having get/set methods with property shapes
 //and Shape itself having a nodeShape

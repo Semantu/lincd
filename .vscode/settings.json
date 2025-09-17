@@ -1,0 +1,40 @@
+{
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "editor.formatOnSave": false,
+  // 🚫 stop organize-imports and other auto "fix" actions on save (global)
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": false,
+    "source.fixAll": false,
+    "source.fixAll.eslint": false
+  },
+
+  // 🔒 also disable per language (TS/JS)
+  "[typescript]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": false,
+      "source.fixAll": false,
+      "source.fixAll.eslint": false
+    }
+  },
+  "[typescriptreact]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": false,
+      "source.fixAll": false,
+      "source.fixAll.eslint": false
+    }
+  },
+  "[javascript]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": false,
+      "source.fixAll": false,
+      "source.fixAll.eslint": false
+    }
+  },
+  "[javascriptreact]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": false,
+      "source.fixAll": false,
+      "source.fixAll.eslint": false
+    }
+  }
+}
