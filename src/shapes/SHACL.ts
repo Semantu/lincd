@@ -419,9 +419,13 @@ export class SHACL_Shape extends Shape
     return this.getValue(rdfs.comment);
   }
 
-  set description(val: string)
-  {
-    this.overwrite(rdfs.comment,new Literal(val));
+  set description(val: string) {
+    if (val.length > 220) {
+      throw Error(
+        `Shape descriptions should stay under 220 characters. ${this.label}.description is ${val.length} chars.`,
+      );
+    }
+    this.overwrite(rdfs.comment, new Literal(val));
   }
 
   protected _validateNode(

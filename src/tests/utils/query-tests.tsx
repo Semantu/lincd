@@ -256,7 +256,7 @@ p2.pets.add(dog2);
 //kind of a duplicate (it replaces previously set pets), but helpful for testing .as() on singular values
 p1.firstPet = dog1;
 
-export const testPersons = [p1,p2,p3,p4];
+export const testEntities = [p1,p2,p3,p4,dog1,dog2];
 export const testProps = {name,nickName,bestFriend,hobby,hasFriend,birthDate};
 export const testTypes = {person: personClass};
 

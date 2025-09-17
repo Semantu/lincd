@@ -9,7 +9,7 @@ import {CoreMap} from '../collections/CoreMap.js';
 import {getPropertyShapeByLabel,getShapeClass} from '../utils/ShapeClass.js';
 import {NodeReferenceValue,Prettify,QueryFactory,ShapeReferenceValue} from './QueryFactory.js';
 import {xsd} from '../ontologies/xsd.js';
-import {NamedNode} from '../models';
+import {NamedNode} from '../models.js';
 
 /**
  * ###################################
