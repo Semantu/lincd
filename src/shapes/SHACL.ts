@@ -400,6 +400,7 @@ export const objectProperty = (config: ObjectPropertyShapeConfig) => {
 export class SHACL_Shape extends Shape
 {
   static targetClass: NamedNode = shacl.Shape;
+  static validating: Set<string> = new Set();
 
   get type()
   {
@@ -559,8 +560,19 @@ export class NodeShape extends SHACL_Shape
     {
       return validated.get(node);
     }
-    //whilst validating, if a connected node wants to validate THIS node, we consider this node to be valid until proven otherwise below
-    validated.set(node,true);
+    
+    // Global circular validation prevention
+    const validationKey = `${node.toString()}-${this.uri}`;
+    if (SHACL_Shape.validating.has(validationKey)) {
+      return true; // Assume valid to break circular reference
+    }
+    
+    // Add this validation to the tracking set
+    SHACL_Shape.validating.add(validationKey);
+    
+    try {
+      //whilst validating, if a connected node wants to validate THIS node, we consider this node to be valid until proven otherwise below
+      validated.set(node,true);
 
     //EDIT: targetClass is just for selecting nodes. It's not an enforcement, for that shacl:class should be used.
     // if (this.targetClass) {
@@ -599,6 +611,10 @@ export class NodeShape extends SHACL_Shape
     }
     // validated.set(node,true);
     return true;
+    } finally {
+      // Always clean up the validation tracking
+      SHACL_Shape.validating.delete(validationKey);
+    }
   }
 }
 
@@ -801,7 +817,17 @@ export class PropertyShape extends SHACL_Shape
     validated: CoreMap<Node,boolean> = new CoreMap<Node,boolean>(),
   ): boolean
   {
-    const path = this.path;
+    // Global circular validation prevention
+    const validationKey = `${node.uri}__${this.uri}`;
+    if (SHACL_Shape.validating.has(validationKey)) {
+      return true; // Assume valid to break circular reference
+    }
+    
+    // Add this validation to the tracking set
+    SHACL_Shape.validating.add(validationKey);
+    
+    try {
+      const path = this.path;
     let values;
     if (path instanceof NamedNode)
     {
@@ -856,6 +882,7 @@ export class PropertyShape extends SHACL_Shape
           {
             return validated.get(value);
           }
+          
           return (
             (value === node && this.parentNodeShape.equals(nodeShape)) ||
             (nodeShape as any)._validateNode(value,validated)
@@ -883,6 +910,10 @@ export class PropertyShape extends SHACL_Shape
       }
     }
     return true;
+    } finally {
+      // Always clean up the validation tracking
+      SHACL_Shape.validating.delete(validationKey);
+    }
   }
 }
 
@@ -1011,10 +1042,17 @@ export class ValidationResult extends Shape
     }
     else
     {
-      values = focusNode;
-      for (let prop of path)
+      if(path.length === 0)
       {
-        values = values.getAll(prop);
+        values = [];
+      }
+      else
+      {
+        values = focusNode;
+        for (let prop of path)
+        {
+          values = values.getAll(prop);
+        }
       }
     }
     for (let value of values)
@@ -1156,6 +1194,7 @@ export class ValidationResult extends Shape
 export class ValidationReport extends Shape
 {
   static targetClass: NamedNode = shacl.ValidationReport;
+  static validating: CoreMap<string,ValidationReport> = new CoreMap<string,ValidationReport>();
 
   @literalProperty({
     path: shacl.conforms,
@@ -1193,70 +1232,80 @@ export class ValidationReport extends Shape
     shape: NodeShape,
   ): ValidationReport
   {
-    let report = new ValidationReport();
-    report.conforms = shape.validateNode(focusNode);
-    if (shape.targetClass)
-    {
-      //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
-      //this would not be needed if a Forwards reasoning engine was in place
-      if (
-        !(
-          focusNode instanceof NamedNode &&
-          ForwardReasoning.hasType(focusNode,shape.targetClass)
+    const validationKey = `${focusNode.value}__${shape.uri}`;
+    if (ValidationReport.validating.has(validationKey)) {
+      return ValidationReport.validating.get(validationKey);
+    }
+    
+    ValidationReport.validating.set(validationKey,new ValidationReport());
+    try {
+      let report = new ValidationReport();
+      report.conforms = shape.validateNode(focusNode);
+      if (shape.targetClass)
+      {
+        //NOTE, we're using Reasoning to check types, so that if this node has a type which is a subClassOf the targetClass, it still matches.
+        //this would not be needed if a Forwards reasoning engine was in place
+        if (
+          !(
+            focusNode instanceof NamedNode &&
+            ForwardReasoning.hasType(focusNode,shape.targetClass)
+          )
         )
-      )
-      {
-        // let validationResult = new ValidationResult();
-        // validationResult.focusNode = focusNode;
-        // validationResult.sourceShape = shape;
-        // validationResult.message = `Value does not have the required class ${propertyShape.class.uri}`;
-        // validationResult.sourceConstraintComponent = shacl.ClassConstraintComponent;
-        // report.validationResults.add(validationResult);
-        console.log(
-          `${focusNode.toString()} does not have target type: ${
-            shape.targetClass.uri
-          }. Although it's not a SHACL validation error, it does mean this node will not be selected when getting instances of the ${
-            shape.label
-          } shape.}`,
-        );
+        {
+          // let validationResult = new ValidationResult();
+          // validationResult.focusNode = focusNode;
+          // validationResult.sourceShape = shape;
+          // validationResult.message = `Value does not have the required class ${propertyShape.class.uri}`;
+          // validationResult.sourceConstraintComponent = shacl.ClassConstraintComponent;
+          // report.validationResults.add(validationResult);
+          console.log(
+            `${focusNode.toString()} does not have target type: ${
+              shape.targetClass.uri
+            }. Although it's not a SHACL validation error, it does mean this node will not be selected when getting instances of the ${
+              shape.label
+            } shape.}`,
+          );
+        }
       }
-    }
-    if (report.conforms)
-    {
-      return report;
-    }
+      if (report.conforms)
+      {
+        return report;
+      }
 
-    let propertyShapes = shape.getPropertyShapes();
-    if (propertyShapes.size > 0)
-    {
-      if (focusNode instanceof Literal)
+      let propertyShapes = shape.getPropertyShapes();
+      if (propertyShapes.size > 0)
       {
-        //literals can not match NodeShapes (?)
-        //TODO: this is not fully standard compliant? for now we do a custom message to match the way LINCD does it
-        let validationResult = new ValidationResult();
-        validationResult.focusNode = focusNode;
-        validationResult.sourceShape = shape;
-        validationResult.message =
-          'A literal currently cannot be a valid instance of a NodeShape.';
-        report.validationResults.add(validationResult);
-        // return false;
+        if (focusNode instanceof Literal)
+        {
+          //literals can not match NodeShapes (?)
+          //TODO: this is not fully standard compliant? for now we do a custom message to match the way LINCD does it
+          let validationResult = new ValidationResult();
+          validationResult.focusNode = focusNode;
+          validationResult.sourceShape = shape;
+          validationResult.message =
+            'A literal currently cannot be a valid instance of a NodeShape.';
+          report.validationResults.add(validationResult);
+          // return false;
+        }
+        else if (focusNode instanceof NamedNode)
+        {
+          propertyShapes.forEach((propertyShape) => {
+            let validationResult =
+              ValidationResult.createForNodeAgainstPropertyShape(
+                focusNode,
+                propertyShape,
+              );
+            if (validationResult)
+            {
+              report.validationResults.add(validationResult);
+            }
+          });
+        }
       }
-      else if (focusNode instanceof NamedNode)
-      {
-        propertyShapes.forEach((propertyShape) => {
-          let validationResult =
-            ValidationResult.createForNodeAgainstPropertyShape(
-              focusNode,
-              propertyShape,
-            );
-          if (validationResult)
-          {
-            report.validationResults.add(validationResult);
-          }
-        });
-      }
+      return report;
+    } finally {
+      ValidationReport.validating.delete(validationKey);
     }
-    return report;
   }
 
   static printForShapeInstances(shape: typeof Shape)

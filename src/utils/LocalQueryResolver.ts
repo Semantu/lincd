@@ -544,7 +544,7 @@ async function convertNodeDescription(
         valueShape,
       ).toString();
       throw new Error(
-        `Property: ${propShape.label} expects all values to be valid instances of shape ${valueShape.label}. Validation failed: ${report}`,
+        `Property: ${propShape?.label} expects all values to be valid instances of shape ${valueShape.label}. Validation failed. Node: ${node.toString()}. Report: ${report}`,
       );
     }
   }
