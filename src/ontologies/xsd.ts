@@ -14,6 +14,7 @@ var string: NamedNode = NamedNode.getOrCreate(base + 'string');
 var boolean: NamedNode = NamedNode.getOrCreate(base + 'boolean');
 var date: NamedNode = NamedNode.getOrCreate(base + 'date');
 var integer: NamedNode = NamedNode.getOrCreate(base + 'integer');
+var float: NamedNode = NamedNode.getOrCreate(base + 'float');
 var double: NamedNode = NamedNode.getOrCreate(base + 'double');
 var time: NamedNode = NamedNode.getOrCreate(base + 'time');
 var duration: NamedNode = NamedNode.getOrCreate(base + 'duration');
@@ -32,6 +33,7 @@ export const xsd = {
   boolean,
   date,
   integer,
+  float,
   double,
   time,
   duration,
