@@ -1188,8 +1188,8 @@ export abstract class Shape implements IShape {
    * @returns {T}
    */
   clone(): this {
-    let prototype = Object.getPrototypeOf(this);
-    return new prototype(this.node.clone()) as this;
+    let constructor = this.constructor as any;
+    return new constructor(this.node.clone()) as this;
   }
 }
 

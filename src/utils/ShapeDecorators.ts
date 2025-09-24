@@ -389,7 +389,19 @@ export function onShapeSetup(
   shapeClass: typeof Shape | [string, string],
   callback: (shape: NodeShape) => void,
   propertyName?: string,
+  waitForSuperShapes?: boolean,
 ) {
+  const cb = waitForSuperShapes ? (shape: NodeShape) => {
+    const superClass = Object.getPrototypeOf(shapeClass) as typeof Shape;
+    if(superClass.name === 'Shape') {
+      callback(shape);
+      return;
+    }
+    onShapeSetup(superClass, (superNodeShape: NodeShape) => {
+      callback(shape);
+    },propertyName,waitForSuperShapes);
+  } : callback;
+
   //if a string was provided, then this is a "lazy loaded" shape, probably to avoid circular dependencies
   if (Array.isArray(shapeClass)) {
     const [packageName, shapeName] = shapeClass;
@@ -406,23 +418,23 @@ export function onShapeSetup(
           );
           return;
         }
-        callback((shapeClass as typeof Shape).shape);
+        cb((shapeClass as typeof Shape).shape);
       });
     } else {
       //for node.js we can wait until the next tick, which is when all modules of THIS package are loaded (as long as they are loaded from index)
       setTimeout(() => {
         shapeClass = getShapeClass(nodeShape);
-        callback((shapeClass as typeof Shape).shape);
+        cb((shapeClass as typeof Shape).shape);
       }, 0);
     }
   }
   if (shapeClass.hasOwnProperty('shape')) {
-    callback((shapeClass as typeof Shape).shape);
+    cb((shapeClass as typeof Shape).shape);
   } else {
     if (!shapeClass['shapeCallbacks']) {
       shapeClass['shapeCallbacks'] = [];
     }
-    shapeClass['shapeCallbacks'].push(callback);
+    shapeClass['shapeCallbacks'].push(cb);
   }
 }
 
@@ -432,4 +444,30 @@ export function registerProperty(
   config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
 ) {
   createAndRegisterPropertyShape(shape, label, config as any);
+}
+
+
+export function disallowProperty(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  //implicitly expects there to be a property with the same name in a super class.
+  // and this newly created extends (for now clones) the super class property shape.
+
+  //once the NodeShape is available, we can add the property shape to it
+  onShapeSetup(target.constructor, (shape: NodeShape) => {
+
+    //get the super class shape
+    const superClass = Object.getPrototypeOf(target.constructor) as typeof Shape;
+    const superNodeShape = superClass.shape;
+    // onShapeSetup(superClass, (superNodeShape: NodeShape) => {
+      //find the property shape in the super class shape
+      const superPropertyShape = superNodeShape.getPropertyShape(propertyKey,true);
+      if(!superPropertyShape) {
+        console.warn(`Property ${propertyKey} not found in super class ${superClass.name} or any of its super classes. Does it have a property decorator? Cannot disallow property ${target.constructor.name}.${propertyKey}`);
+        return;
+      }
+      //clone it and set the maxCount to 0
+      const clonedPropertyShape = superPropertyShape.clone();
+      clonedPropertyShape.maxCount = 0;
+      registerPropertyShape(shape, clonedPropertyShape);
+    // });
+  },'',true);
 }

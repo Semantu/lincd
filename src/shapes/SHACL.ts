@@ -122,6 +122,7 @@ export interface PropertyShapeConfig
    @example
    ```tsx
    import {BlankNode,NamedNode,Literal} from "lincd/models";
+import { lincd } from '../ontologies/lincd';
    @linkedProperty({nodeKind:NamedNode})
    ```
    */
@@ -516,14 +517,21 @@ export class NodeShape extends SHACL_Shape
 
   getPropertyShape(label: string,checkSubShapes: boolean = true): PropertyShape
   {
-
-    //look at this nodeShape, but also the nodeshapes of the parent classes of the class that created this nodeshape
-    let shapeClass = getShapeClass(this.namedNode).prototype;
+    let shapeClass = getShapeClass(this.namedNode)
     let res;
     while (!res && shapeClass)
     {
-      res = shapeClass.nodeShape.getPropertyShapes().find((shape) => shape.label === label);
-      shapeClass = checkSubShapes ? Object.getPrototypeOf(shapeClass) : null;
+      res = shapeClass.shape.getPropertyShapes().find((shape) => shape.label === label);
+      if(checkSubShapes) {
+        //if even Shape didn't have it, then we're done, it's not found.
+        if(shapeClass === Shape) {
+          break;
+        }
+        //next, use the super class
+        shapeClass = Object.getPrototypeOf(shapeClass);
+      } else {
+        break;
+      }
     }
     return res;
   }
@@ -765,7 +773,7 @@ export class PropertyShape extends SHACL_Shape
       ? new NodeShape(this.getOneInverse(shacl.property))
       : null;
   }
-
+  
   /**
    * Returns all the classes and properties that are references by this shape
    */
