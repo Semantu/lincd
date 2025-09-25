@@ -400,28 +400,28 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     if (!Object.getOwnPropertyNames(constructor).includes('shape'))
     {
       // create a new node shape for this shapeClass
-      let shape: NodeShape = NodeShape.getFromURI(
+      let nodeShape: NodeShape = NodeShape.getFromURI(
         getNodeShapeUri(packageName,constructor.name),
       );
       //small fix, for some reason sometimes a node with this URI already exists but is not a NodeShape
-      if (!shape.type) {
-        shape.type = shacl.NodeShape;
+      if (!nodeShape.type) {
+        nodeShape.type = shacl.NodeShape;
       }
       // connect the typescript class to its NodeShape
-      constructor.shape = shape;
+      constructor.shape = nodeShape;
       // set the name
-      shape.label = constructor.name;
+      nodeShape.label = constructor.name;
 
       if (options)
       {
         if (options.description)
         {
-          shape.description = options.description;
+          nodeShape.description = options.description;
         }
       }
 
       // also keep track of the reverse: nodeShape to typescript class
-      addNodeShapeToShapeClass(shape,constructor);
+      addNodeShapeToShapeClass(nodeShape,constructor);
 
       // also create a representation in the graph of the shape class itself
       let shapeClass = NamedNode.getOrCreate(
@@ -430,16 +430,31 @@ export function linkedPackage(packageName: string): LinkedPackageObject
         )}`,
         true,
       );
-      shapeClass.set(lincdOntology.definesShape,shape.node);
+      shapeClass.set(lincdOntology.definesShape,nodeShape.node);
       shapeClass.set(rdf.type,lincdOntology.ShapeClass);
       // and connect it back to the module
       shapeClass.set(lincdOntology.module,packageNode);
+
+      //track what extends what (both on nodeShape level and shapeClass level)
+      const extendingShapeClass = (Object.getPrototypeOf(constructor) as typeof Shape);
+      const extendingShape = extendingShapeClass.shape;
+      //if this shape class is extending something other then Shape
+      if(extendingShape && !(extendingShapeClass === Shape)) {
+        //store which nodeShape this nodeShape extends
+        nodeShape.extends = extendingShape;
+        //store which shapeClass this shapeClass extends
+        const extendingShapeClassNode = extendingShape.getOneInverse(lincdOntology.definesShape);
+        if(extendingShapeClassNode) {
+          shapeClass.set(lincdOntology.isExtending,extendingShapeClassNode);
+        }
+      }
+      
 
       // run deferred callbacks from property decorators
       if (constructor['shapeCallbacks'])
       {
         constructor['shapeCallbacks'].forEach((callback) => {
-          callback(shape);
+          callback(nodeShape);
         });
         delete constructor['shapeCallbacks'];
       }
@@ -711,6 +726,11 @@ registerPropertyShape(NodeShape.shape,createPropertyShape({
   path: shacl.targetNode,
   shape: Shape,//actually returns a NamedNode... is this correct then? Should we define or use a rdfs Class that matches the potential values?
 },'targetNode',shacl.IRI));
+
+registerPropertyShape(NodeShape.shape,createPropertyShape({
+  path: lincdOntology.isExtending,
+  shape: NodeShape,
+},'extends',shacl.IRI));
 
 registerPropertyShape(
   PropertyShape.shape,

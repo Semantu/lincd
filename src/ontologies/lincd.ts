@@ -12,6 +12,7 @@ var definesShape: NamedNode = ns('definesShape');
 var module: NamedNode = ns('module');
 var usesShapeClass: NamedNode = ns('usesShapeClass');
 var editInline: NamedNode = ns('editInline');
+var isExtending: NamedNode = ns('isExtending');
 
 export var lincd = {
   Module,
@@ -20,4 +21,5 @@ export var lincd = {
   module,
   usesShapeClass,
   editInline,
+  isExtending
 };

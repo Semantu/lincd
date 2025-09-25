@@ -16,6 +16,7 @@ import {ForwardReasoning} from '../utils/ForwardReasoning.js';
 import {getShapeClass,getShapeOrSubShape} from '../utils/ShapeClass.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {rdfs} from '../ontologies/rdfs.js';
+import { lincd } from '../ontologies/lincd.js';
 
 export interface NodeShapeConfig
 {
@@ -123,6 +124,7 @@ export interface PropertyShapeConfig
    ```tsx
    import {BlankNode,NamedNode,Literal} from "lincd/models";
 import { lincd } from '../ontologies/lincd';
+import { isDefinedBy } from '../../../lincd.org/modules/rdfs/src/ontologies/rdfs';
    @linkedProperty({nodeKind:NamedNode})
    ```
    */
@@ -483,6 +485,16 @@ export class NodeShape extends SHACL_Shape
     return this.getPropertyShapes(false);
   }
 
+  get extends(): NodeShape
+  {
+    return this.getOneAs(lincd.isExtending,NodeShape);
+  }
+
+  set extends(value: NodeShape)
+  {
+    this.overwrite(lincd.isExtending,value.node);
+  }
+
   static getShapesOf(node: Node)
   {
     return this.getLocalInstances().filter((shape) => {
@@ -773,7 +785,7 @@ export class PropertyShape extends SHACL_Shape
       ? new NodeShape(this.getOneInverse(shacl.property))
       : null;
   }
-  
+
   /**
    * Returns all the classes and properties that are references by this shape
    */
