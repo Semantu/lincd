@@ -138,13 +138,13 @@ export interface LinkedPackageObject
    * @param allFileExports - all the objects that are exported by the ontology file (use `import * as _this from "./path-to-this-file")`)
    * @param nameSpace - the result of [createNameSpace](/docs/lincd.js/modules/utils_NameSpace#createnamespace). This allows consumers to generate NamedNodes that may not be listed in this ontology if needed
    * @param prefixAndFileName - a suggested prefix chosen by you. Make sure the suggestedPrefix matches the file name and the name of the exported object that groups all entities together
-   * @param loadDataFunction - a method that loads _and parses_ the raw ontology data. This means the ontology will be loaded into the local graph. The returned result is mostly a JSONLDParsePromise (from lincd-jsonld/lib/JSONLD, not bundled in LINCD.js)
+   * @param loadDataFunction - a method that loads _and parses_ the raw ontology data. This means the ontology will be loaded into the local graph. The returned result is mostly a JSONLDParsePromise (from lincd-jsonld/JSONLD, not bundled in LINCD.js)
    * @param dataSource - the relative path to the raw data of the ontology
    * @example
    * Example of an Ontology File that used linkedOntology()
    * ```tsx
    * import {NamedNode} from 'lincd/models';
-   * import {JSONLD} from 'lincd-jsonld/lib/JSONLD';
+   * import {JSONLD} from 'lincd-jsonld/JSONLD';
    * import {createNameSpace} from 'lincd/utils/NameSpace';
    * import {linkedOntology} from '../package.js';
    * import * as _this from './my.js-ontology';
