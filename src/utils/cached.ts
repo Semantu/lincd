@@ -11,8 +11,9 @@ const _cache = new Map<string, {timeout: number; value: any}>();
  * @param fn
  * @param args
  * @param cacheTimeMs
+ * @param alsoCacheErrors
  */
-export function cached(fn: () => any, args: any[], cacheTimeMs?: number) {
+export function cached(fn: () => any, args: any[], cacheTimeMs?: number,alsoCacheErrors?: boolean) {
   if (cacheTimeMs !== 0) {
     const now = Date.now();
     args = args.map((a) => {
@@ -31,7 +32,16 @@ export function cached(fn: () => any, args: any[], cacheTimeMs?: number) {
       cache = null;
     }
     if (!cache) {
-      let value = fn();
+      let value;
+      try {
+        value = fn();
+      } catch(e) {
+        if(alsoCacheErrors) {
+          value = e;
+        } else {
+          throw e;
+        }
+      }
       _cache.set(key, {
         timeout: now + cacheTimeMs,
         value,
