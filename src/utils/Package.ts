@@ -698,6 +698,14 @@ registerPropertyShape(
   ),
 );
 
+registerPropertyShape(
+  NodeShape.shape,
+  createPropertyShape({
+      path: rdfs.comment,
+      maxCount: 1,
+    },'description',shacl.Literal),
+);
+
 registerPropertyShape(NodeShape.shape,createPropertyShape({
   path: rdf.type,
   maxCount: 1,

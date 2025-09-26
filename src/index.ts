@@ -57,7 +57,8 @@ import * as shacl from './ontologies/shacl.js';
 import * as DataFactory from './Datafactory.js';
 import React from 'react';
 
-export const nextTick = require('next-tick');
+import nextTick from 'next-tick';
+export {nextTick};
 
 export function initModularApp() {
   //we don't want people to import {NamedNode} from 'lincd' for example

@@ -415,23 +415,6 @@ export class SHACL_Shape extends Shape
     this.overwrite(rdf.type,val);
   }
 
-  /**
-   * A human-readable description for this shape
-   */
-  get description()
-  {
-    return this.getValue(rdfs.comment);
-  }
-
-  set description(val: string) {
-    if (val.length > 220) {
-      throw Error(
-        `Shape descriptions should stay under 220 characters. ${this.label}.description is ${val.length} chars.`,
-      );
-    }
-    this.overwrite(rdfs.comment, new Literal(val));
-  }
-
   protected _validateNode(
     node: NamedNode,
     validated: CoreMap<Node,boolean> = new CoreMap<Node,boolean>(),
@@ -494,6 +477,23 @@ export class NodeShape extends SHACL_Shape
   {
     this.overwrite(lincd.isExtending,value.node);
   }
+
+    /**
+   * A human-readable description for this shape
+   */
+    get description()
+    {
+      return this.getValue(rdfs.comment);
+    }
+  
+    set description(val: string) {
+      if (val.length > 220) {
+        throw Error(
+          `Shape descriptions should stay under 220 characters. ${this.label}.description is ${val.length} chars.`,
+        );
+      }
+      this.overwrite(rdfs.comment, new Literal(val));
+    }
 
   static getShapesOf(node: Node)
   {

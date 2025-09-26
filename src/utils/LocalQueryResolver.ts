@@ -177,7 +177,8 @@ async function applyFieldUpdates(
         throw new Error(
           'Invalid use of undefined for property: ' +
             propShape.label +
-            '. You cannot mix undefined with defined values',
+            '. You cannot mix undefined with defined values. Values given:' +
+            values.map((v) => v?.toString()).join(', '),
         );
       } else {
         // For multi-value properties, return updatedTo structure if this is an UPDATE query (if it's a CREATE query we just return the array)
@@ -503,8 +504,10 @@ function convertNodeReference(
         '. A node reference should only contain the id field.',
     );
   }
+  //NOTE: changed this to getOrCreate. Which means also unknown id's will be converted to a named node
+  //We need this for example when we load shapes in one app of another app, and the shapes are not yet defined in the graph
   return {
-    value: NamedNode.getNamedNode((value as NodeReferenceValue).id),
+    value: NamedNode.getOrCreate((value as NodeReferenceValue).id),
     //return an object only with the ID (a NodeReferenceValue should always only have an id field)
     plainValue: {id: (value as NodeReferenceValue).id},
   };
