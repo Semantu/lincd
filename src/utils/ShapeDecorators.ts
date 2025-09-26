@@ -234,7 +234,23 @@ function createAndRegisterPropertyShape<
   //once the NodeShape is available, we can add the property shape to it
   onShapeSetup(shapeClass, (shape: NodeShape) => {
     registerPropertyShape(shape, propertyShape);
+    connectValueShape(config,propertyKey,propertyShape);
   });
+}
+function connectValueShape<
+  Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig,
+>(config:Config,propertyKey:string, property:PropertyShape) {
+  //we accept a shape configuration, which translates to a sh:nodeShape
+  if ((config as ObjectPropertyShapeConfig).shape) {
+    //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
+    onShapeSetup(
+      (config as ObjectPropertyShapeConfig).shape,
+      (nodeShape: NodeShape) => {
+        property.valueShape = nodeShape;
+      },
+      propertyKey,
+    );
+  }
 }
 
 export function registerPropertyShape(

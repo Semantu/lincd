@@ -756,17 +756,23 @@ export class QueryBuilderObject<
     }
 
     //if an object is expected and no value shape is set, then warn
-    console.warn(
+    throw Error(
       `No shape set for objectProperty ${property.parentNodeShape.label}.${property.label}`,
     );
 
-    //and use a generic shape
-    const shapeValue = new (Shape as any)(new TestNode(path));
-    if (singleValue) {
-      return QueryShape.create(shapeValue, property, subject);
-    } else {
-      return QueryShapeSet.create(new ShapeSet(shapeValue), property, subject);
-    }
+    // //and use a generic shape
+    // const shapeValue = new (Shape as any)(new TestNode(path));
+    // if (singleValue) {
+    //   return QueryShape.create(shapeValue, property, subject);
+    // } else {
+    //   //check if shapeValue is iterable
+    //   if (!(Symbol.iterator in Object(shapeValue))) {
+    //     throw new Error(
+    //       `Property ${property.parentNodeShape.label}.${property.label} is not marked as single value (maxCount:1), but the value is not iterable`,
+    //     );
+    //   }
+    //   return QueryShapeSet.create(new ShapeSet(shapeValue), property, subject);
+    // }
   }
 
   static getOriginalSource(
@@ -1230,8 +1236,12 @@ export class QueryShape<
         }
         if (key !== 'then') {
           //   //otherwise return the value of the property on the original shape
+          //generate stack trace for debugging
+          let stack = new Error().stack;
+          //https://stackoverflow.com/a/49725198/977206
+          let stackLines = stack.split('\n').slice(1); //remove the "Error" line
           console.warn(
-            `${originalShape.constructor.name}.${key.toString()} is accessed in a query, but it does not have a @linkedProperty decorator. Queries can only access decorated get/set methods.`,
+            `${originalShape.constructor.name}.${key.toString()} is accessed in a query, but it does not have a @linkedProperty decorator. Queries can only access decorated get/set methods. ${stackLines.join('\n')}`,
           );
           // } else {
           //   console.error('Proxy is accessed like a promise');
