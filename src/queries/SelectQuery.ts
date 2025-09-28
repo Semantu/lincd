@@ -16,7 +16,6 @@ import {NamedNode} from '../models.js';
  * #### TYPES FOR QUERY BUILDING  ####
  * ###################################
  */
-
 export type JSPrimitive = JSNonNullPrimitive | null | undefined;
 export type JSNonNullPrimitive = string | number | boolean | Date;
 
@@ -868,7 +867,7 @@ export class QueryBuilderObject<
     }
     //when query context is used as the first step, then the first step is just a pointer to the subject it represents
     if (((this.originalValue as Shape).node as TestNode)?.targetID) {
-      path.unshift(convertQueryContext(this.originalValue as Shape));
+      path.unshift(convertQueryContext(this as any as QueryShape));
     }
     return path;
   }
@@ -877,11 +876,11 @@ export class QueryBuilderObject<
 /**
  * Converts query context to a ShapeReferenceValue
  */
-const convertQueryContext = (shape: Shape): ShapeReferenceValue => {
+const convertQueryContext = (shape: QueryShape): ShapeReferenceValue => {
   return {
-    id: (shape.node as TestNode)?.targetID,
+    id: (shape.originalValue.node as TestNode).targetID,
     shape: {
-      id: shape.nodeShape.uri,
+      id: shape.originalValue.nodeShape.uri,
     },
   } as ShapeReferenceValue;
 };
@@ -980,7 +979,7 @@ export class QueryShapeSet<
           ) {
             //then return that method and bind the original value as 'this'
             return originalShapeSet[key].bind(originalShapeSet);
-          } else if (key !== 'then') {
+          } else if (key !== 'then' && key !== '$$typeof') {
             //TODO: there is a strange bug with "then" being called, only for queries that access ShapeSets (multi value props), but I'm not sure where it comes from
             //hiding the warning for now in that case as it doesn't seem to affect the results
             console.warn(
@@ -1234,12 +1233,12 @@ export class QueryShape<
             // );
           }
         }
-        if (key !== 'then') {
+        if (key !== 'then' && key !== '$$typeof') {
           //   //otherwise return the value of the property on the original shape
           //generate stack trace for debugging
           let stack = new Error().stack;
           //https://stackoverflow.com/a/49725198/977206
-          let stackLines = stack.split('\n').slice(1); //remove the "Error" line
+          const stackLines = stack.split('\n').slice(1); //remove the "Error" line
           console.warn(
             `${originalShape.constructor.name}.${key.toString()} is accessed in a query, but it does not have a @linkedProperty decorator. Queries can only access decorated get/set methods. ${stackLines.join('\n')}`,
           );
@@ -1625,6 +1624,7 @@ export class SelectQueryFactory<
     reject;
     complete?: boolean;
   };
+  debugStack: string;
 
   constructor(
     public shape: ShapeType<S>,
@@ -1720,9 +1720,11 @@ export class SelectQueryFactory<
     //if the subject is a QueryShape which comes from query context
     //then it will point to a target node with "targetID"
     //and we convert it to a node reference
-    if (((this.subject as Shape)?.node as TestNode)?.targetID) {
-      return convertQueryContext(this.subject as Shape);
+    //NOTE: its important to access originalValue instead of .node directly because QueryShape.node will give errors 
+    if (((this.subject as QueryShape)?.originalValue?.node as TestNode)?.targetID) {
+      return convertQueryContext(this.subject as QueryShape);
     }
+    // }
     return this.subject;
   }
 

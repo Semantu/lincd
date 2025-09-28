@@ -103,7 +103,7 @@ export interface PropertyShapeConfig {
    *
    * Provide a NamedNode that has is a `rdf:Property`
    */
-  path: NamedNode;
+  path: NamedNode | NamedNode[];
 
   /**
    * Indicates that this property must exist.
@@ -229,13 +229,8 @@ function createAndRegisterPropertyShape<
     config,
     propertyKey,
     defaultNodeKind,
+    shapeClass,
   );
-
-  //once the NodeShape is available, we can add the property shape to it
-  onShapeSetup(shapeClass, (shape: NodeShape) => {
-    registerPropertyShape(shape, propertyShape);
-    connectValueShape(config,propertyKey,propertyShape);
-  });
 }
 function connectValueShape<
   Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig,
@@ -246,6 +241,7 @@ function connectValueShape<
     onShapeSetup(
       (config as ObjectPropertyShapeConfig).shape,
       (nodeShape: NodeShape) => {
+        // console.log(`Setting ${property.uri} (${property.label}) value shape to ${nodeShape.namedNode.uri}`);
         property.valueShape = nodeShape;
       },
       propertyKey,
@@ -278,7 +274,7 @@ export function registerPropertyShape(
 
 export function createPropertyShape<
   Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig,
->(config: Config, propertyKey: string, defaultNodeKind: NamedNode = null) {
+>(config: Config, propertyKey: string, defaultNodeKind: NamedNode = null, shapeClass: typeof Shape | [string, string] = null) {
   let propertyShape = new PropertyShape();
   propertyShape.path = config.path;
   propertyShape.label = propertyKey;
@@ -335,16 +331,16 @@ export function createPropertyShape<
     }
   }
   //we accept a shape configuration, which translates to a sh:nodeShape
-  if ((config as ObjectPropertyShapeConfig).shape) {
-    //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
-    onShapeSetup(
-      (config as ObjectPropertyShapeConfig).shape,
-      (nodeShape: NodeShape) => {
-        propertyShape.valueShape = nodeShape;
-      },
-      propertyKey,
-    );
-  }
+  // if ((config as ObjectPropertyShapeConfig).shape) {
+  //   //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
+  //   onShapeSetup(
+  //     (config as ObjectPropertyShapeConfig).shape,
+  //     (nodeShape: NodeShape) => {
+  //       propertyShape.valueShape = nodeShape;
+  //     },
+  //     propertyKey,
+  //   );
+  // }
 
   if (config.in) {
     //assuming config.in is a NodeSet already:
@@ -365,6 +361,16 @@ export function createPropertyShape<
   //   //then add it directly
   //   shape.addPropertyShape(propertyShape);
   // }
+
+
+  //once the NodeShape is available, we can add the property shape to it
+  if(shapeClass) {
+    onShapeSetup(shapeClass, (shape: NodeShape) => {
+      registerPropertyShape(shape, propertyShape);
+      connectValueShape(config,propertyKey,propertyShape);
+    });
+  }
+
   return propertyShape;
 
   //
@@ -443,15 +449,17 @@ export function onShapeSetup(
         cb((shapeClass as typeof Shape).shape);
       }, 0);
     }
-  }
-  if (shapeClass.hasOwnProperty('shape')) {
-    cb((shapeClass as typeof Shape).shape);
   } else {
-    if (!shapeClass['shapeCallbacks']) {
-      shapeClass['shapeCallbacks'] = [];
+    if (shapeClass.hasOwnProperty('shape')) {
+      cb((shapeClass as typeof Shape).shape);
+    } else {
+      if (!shapeClass['shapeCallbacks']) {
+        shapeClass['shapeCallbacks'] = [];
+      }
+      shapeClass['shapeCallbacks'].push(cb);
     }
-    shapeClass['shapeCallbacks'].push(cb);
   }
+
 }
 
 export function registerProperty(

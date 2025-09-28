@@ -4,7 +4,7 @@ import {
   linkedShape,
 } from '../../package.js';
 import {Shape} from '../../shapes/Shape.js';
-import {literalProperty, objectProperty} from '../../shapes/SHACL.js';
+import {literalProperty, objectProperty} from '../../utils/ShapeDecorators.js';
 import {Literal, NamedNode} from '../../models.js';
 import {xsd} from '../../ontologies/xsd.js';
 import {TestNode} from '../../utils/TraceShape.js';
@@ -38,7 +38,7 @@ export class Pet extends Shape
 {
   static targetClass = petClass;
 
-  @literalProperty({
+  @objectProperty({
     path: bestFriend,
     maxCount: 1,
     shape: Pet,
