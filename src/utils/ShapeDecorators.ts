@@ -160,6 +160,11 @@ export interface PropertyShapeConfig {
    * Each value of the property must occur in this set
    */
   in?: NodeSet | Node[];
+
+  /**
+   * Values of the configured property path are sorted by the values of this property path.
+   */
+  sortBy?: NamedNode | NamedNode[];
 }
 
 export interface ParameterConfig {
