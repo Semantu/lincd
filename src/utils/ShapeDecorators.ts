@@ -10,7 +10,7 @@ import {NodeShape,PropertyShape} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
 import {List} from '../shapes/List.js';
 import {getShapeClass} from './ShapeClass.js';
-import {getNodeShapeUri} from './Package.js';
+import {addNodeShapeCallback, getNodeShapeUri} from './Package.js';
 
 export interface NodeShapeConfig {
   /**
@@ -212,31 +212,15 @@ const _linkedProperty = <
     propertyKey: string,
     descriptor: PropertyDescriptor,
   ) {
-    createAndRegisterPropertyShape(
-      target.constructor,
-      propertyKey,
+    createPropertyShape(
       config,
+      propertyKey,
       defaultNodeKind,
-    );
+      target.constructor,
+    )
   };
 };
 
-function createAndRegisterPropertyShape<
-  Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig,
->(
-  shapeClass: typeof Shape | [string, string],
-  propertyKey: string,
-  config: Config,
-  defaultNodeKind: NamedNode = null,
-) {
-  //then we pass the shape, and it will be used to register the property shape
-  let propertyShape = createPropertyShape<Config>(
-    config,
-    propertyKey,
-    defaultNodeKind,
-    shapeClass,
-  );
-}
 function connectValueShape<
   Config extends LiteralPropertyShapeConfig | ObjectPropertyShapeConfig,
 >(config:Config,propertyKey:string, property:PropertyShape) {
@@ -424,37 +408,17 @@ export function onShapeSetup(
       callback(shape);
       return;
     }
+    //make sure every linked shape extends Shape
+    if(superClass.name === '') {
+      console.error(`Shape ${shape.label} does not extend base class lincd/shapes/Shape. Make sure it extends Shape.`);
+      return;
+    }
     onShapeSetup(superClass, (superNodeShape: NodeShape) => {
       callback(shape);
     },propertyName,waitForSuperShapes);
   } : callback;
 
-  //if a string was provided, then this is a "lazy loaded" shape, probably to avoid circular dependencies
-  if (Array.isArray(shapeClass)) {
-    const [packageName, shapeName] = shapeClass;
-    const nodeShape = NamedNode.getOrCreate(
-      getNodeShapeUri(packageName, shapeName),
-    );
-    if (typeof document !== 'undefined') {
-      //wait until the DOM is ready, which is when all modules are loaded
-      window.addEventListener('load', () => {
-        shapeClass = getShapeClass(nodeShape);
-        if (!shapeClass) {
-          console.warn(
-            `Could not find value shape (${packageName}/${shapeName}) for accessor get ${propertyName}(). Likely because it is not bundled.`,
-          );
-          return;
-        }
-        cb((shapeClass as typeof Shape).shape);
-      });
-    } else {
-      //for node.js we can wait until the next tick, which is when all modules of THIS package are loaded (as long as they are loaded from index)
-      setTimeout(() => {
-        shapeClass = getShapeClass(nodeShape);
-        cb((shapeClass as typeof Shape).shape);
-      }, 0);
-    }
-  } else {
+  const safeCallback = (shapeClass: typeof Shape, cb: (shape: NodeShape) => void) => {
     if (shapeClass.hasOwnProperty('shape')) {
       cb((shapeClass as typeof Shape).shape);
     } else {
@@ -465,16 +429,38 @@ export function onShapeSetup(
     }
   }
 
-}
+  //if a string was provided, then this is a "lazy loaded" shape, probably to avoid circular dependencies
+  if (Array.isArray(shapeClass)) {
+    const [packageName, shapeName] = shapeClass;
+    const nodeShape = NamedNode.getOrCreate(
+      getNodeShapeUri(packageName, shapeName),
+    );
+    //in the browser/DOM
+    if (typeof document !== 'undefined') {
+      //wait until the DOM is ready, which is when all modules are loaded
+      window.addEventListener('load', () => {
+        shapeClass = getShapeClass(nodeShape);
+        if (!shapeClass) {
+          console.warn(
+            `Could not find value shape (${packageName}/${shapeName}) for accessor get ${propertyName}(). Likely because it is not bundled.`,
+          );
+          return;
+        }
+        safeCallback(shapeClass, cb);
+        // cb((shapeClass as typeof Shape).shape);
+      });
+    } else {
+      //for node.js we can wait until the next tick, which is when all modules of THIS package are loaded (as long as they are loaded from index)
+      // setTimeout(() => {
+      addNodeShapeCallback(nodeShape,cb);
+        // cb((shapeClass as typeof Shape).shape);
+      // }, 0);
+    }
+  } else {
+    safeCallback(shapeClass, cb);
+  }
 
-export function registerProperty(
-  shape: typeof Shape,
-  label: string,
-  config: ObjectPropertyShapeConfig | LiteralPropertyShapeConfig,
-) {
-  createAndRegisterPropertyShape(shape, label, config as any);
 }
-
 
 export function disallowProperty(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
   //implicitly expects there to be a property with the same name in a super class.

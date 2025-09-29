@@ -455,6 +455,12 @@ export function linkedPackage(packageName: string): LinkedPackageObject
         constructor['shapeCallbacks'].forEach((callback) => {
           callback(nodeShape);
         });
+        const nodeCallbacks = getAndClearCallbacks(nodeShape.namedNode);
+        if(nodeCallbacks) {
+          nodeCallbacks.forEach((callback) => {
+            callback(nodeShape);
+          });
+        }
         delete constructor['shapeCallbacks'];
       }
     }
@@ -617,6 +623,19 @@ function registerPackageInTree(packageName,packageExports?)
     lincd._modules[packageName] = packageExports || {};
   }
   return lincd._modules[packageName];
+}
+
+const nodeShapeCallbacks = new Map<NamedNode, ((shape: NodeShape) => void)[]>();
+function getAndClearCallbacks(nodeShape: NamedNode): ((shape: NodeShape) => void)[] {
+  const callbacks = nodeShapeCallbacks.get(nodeShape);
+  nodeShapeCallbacks.delete(nodeShape);
+  return callbacks;
+}
+export const addNodeShapeCallback = (nodeShape: NamedNode, callback: (shape: NodeShape) => void) => {
+  if (!nodeShapeCallbacks.has(nodeShape)) {
+    nodeShapeCallbacks.set(nodeShape, []);
+  }
+  nodeShapeCallbacks.get(nodeShape).push(callback);
 }
 
 export function initTree()
