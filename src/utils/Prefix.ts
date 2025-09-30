@@ -47,6 +47,7 @@ export class Prefix {
     return this.prefixToUri.get(prefix);
   }
 
+
   static findMatch(fullURI: string): [string, string, string] | [] {
     for (let [ontologyURI, prefix] of this.uriToPrefix.entries()) {
       if (fullURI.substring(0, ontologyURI.length) == ontologyURI) {
@@ -70,17 +71,25 @@ export class Prefix {
     return this.toPrefixed(fullURI) || fullURI;
   }
 
+  static toFullIfPossible(fullURI: string): string {
+    let res = this._toFull(fullURI);
+    if(res) {
+      return res;
+    }
+    return fullURI;
+  }
+
   /**
    * Converts a prefixed URI back to its full URI
    * Will return the prefixed URI if no prefix was found
    * @param uri
    */
   static toFull(uri) {
-    let [prefix, rest] = uri.split(':');
-    let ontologyURI = this.getFullURI(prefix);
-    if (ontologyURI) {
-      return ontologyURI + rest;
+    let res = this._toFull(uri);
+    if(res) {
+      return res;
     }
+    let [prefix, rest] = uri.split(':');
     throw new Error(
       'Unknown prefix ' +
         prefix +
@@ -88,5 +97,12 @@ export class Prefix {
         uri +
         ' to a full URI',
     );
+  }
+  private static _toFull(uri) {
+    let [prefix, rest] = uri.split(':');
+    let ontologyURI = this.getFullURI(prefix);
+    if (ontologyURI) {
+      return ontologyURI + rest;
+    }
   }
 }

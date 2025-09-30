@@ -710,13 +710,12 @@ export class QueryBuilderObject<
         ]);
       }
     }
-    let path = property.path;
-    if (Array.isArray(path)) {
+    let path = property.path[0];
+    if (property.path.length > 1) {
       console.error(
         'Unimplemented: property shape has multiple paths, using the first one for query generation. This is WRONG',
         property,
       );
-      path = path[0];
     }
 
     if (valueShape) {

@@ -122,7 +122,10 @@ export function useWatchProperty(
             });
           if (matchingPropertyShape) {
             //TODO: if path can be multiple props, we need to watch the whole path
-            property = matchingPropertyShape.path as NamedNode;
+            property = matchingPropertyShape.path[0];
+            if (matchingPropertyShape.path.length > 1) {
+              console.warn(`Property ${property} has multiple paths, using the first one for query generation. This is WRONG`, matchingPropertyShape);
+            }
             break;
           }
         }

@@ -389,6 +389,10 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     options?: ShapeConfig,
   ): void
   {
+    if(!constructor) {
+      throw new Error('Constructor is undefined, skipping registration: '+constructor?.toString().substring(0,100)+' '+JSON.stringify(options));
+      return;
+    }
     // add the component class of this module to the global tree
     registerPackageExport(constructor);
 
@@ -735,6 +739,8 @@ createPropertyShape({
   shape: NodeShape,
 },'extends',shacl.IRI, NodeShape);
 
+//currently path accepts multiple values, so its a multi-value property
+//these values will be consequent properties that follow each other. Other property paths are not supported yet.
 createPropertyShape(
   {
     path: shacl.path,
