@@ -356,17 +356,17 @@ export class PropertyShape extends SHACL_Shape
     this.overwrite(shacl.description,new Literal(value));
   }
 
-  get path(): NamedNode[]
+  get path(): NamedNode | NamedNode[]
   {
     let propertyPath = this.getAll(shacl.path);
-    // if (propertyPath.size === 1)
-    // {
-    //   return propertyPath.first() as NamedNode;
-    // }
-    // else
-    // {
+    if (propertyPath.size === 1)
+    {
+      return propertyPath.first() as NamedNode;
+    }
+    else
+    {
       return [...propertyPath] as NamedNode[];
-    // }
+    }
   }
 
   set path(value: NamedNode | NamedNode[])
