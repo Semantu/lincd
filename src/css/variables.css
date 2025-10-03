@@ -1,21 +1,21 @@
 :root {
   /* === SPACING SCALE === */
   --ld-ref-spacing-0: 0rem;
-  --ld-ref-spacing-0_5: 0.125rem; // 2px
-  --ld-ref-spacing-1: 0.25rem;    // 4px
-  --ld-ref-spacing-1_5: 0.375rem; // 6px
-  --ld-ref-spacing-2: 0.5rem;     // 8px
-  --ld-ref-spacing-2_5: 0.625rem; // 10px
-  --ld-ref-spacing-3: 0.75rem;    // 12px
-  --ld-ref-spacing-4: 1rem;       // 16px
-  --ld-ref-spacing-5: 1.25rem;    // 20px
-  --ld-ref-spacing-6: 1.5rem;     // 24px
-  --ld-ref-spacing-8: 2rem;       // 32px
-  --ld-ref-spacing-10: 2.5rem;    // 40px
-  --ld-ref-spacing-12: 3rem;      // 48px
-  --ld-ref-spacing-16: 4rem;      // 64px
-  --ld-ref-spacing-20: 5rem;      // 80px
-  --ld-ref-spacing-24: 6rem;      // 96px
+  --ld-ref-spacing-0_5: 0.125rem; /* 2px */
+  --ld-ref-spacing-1: 0.25rem;    /* 4px */
+  --ld-ref-spacing-1_5: 0.375rem; /* 6px */
+  --ld-ref-spacing-2: 0.5rem;     /* 8px */
+  --ld-ref-spacing-2_5: 0.625rem; /* 10px */
+  --ld-ref-spacing-3: 0.75rem;    /* 12px */
+  --ld-ref-spacing-4: 1rem;       /* 16px */
+  --ld-ref-spacing-5: 1.25rem;    /* 20px */
+  --ld-ref-spacing-6: 1.5rem;     /* 24px */
+  --ld-ref-spacing-8: 2rem;       /* 32px */
+  --ld-ref-spacing-10: 2.5rem;    /* 40px */
+  --ld-ref-spacing-12: 3rem;      /* 48px */
+  --ld-ref-spacing-16: 4rem;      /* 64px */
+  --ld-ref-spacing-20: 5rem;      /* 80px */
+  --ld-ref-spacing-24: 6rem;      /* 96px */
 
   /* === TYPOGRAPHY === */
   --ld-ref-font-size-xs: 0.75rem;
@@ -41,12 +41,12 @@
   --ld-ref-letter-spacing-wider: 0.1em;
 
   /* === COLORS === */
-  --ld-ref-color-primary: #3b82f6;   // blue-500
-  --ld-ref-color-secondary: #9333ea; // purple-600
-  --ld-ref-color-success: #10b981;   // green-500
-  --ld-ref-color-danger: #ef4444;    // red-500
-  --ld-ref-color-warning: #f59e0b;   // amber-500
-  --ld-ref-color-info: #0ea5e9;      // sky-500
+  --ld-ref-color-primary: #3b82f6;   /* blue-500 */
+  --ld-ref-color-secondary: #9333ea; /* purple-600 */
+  --ld-ref-color-success: #10b981;   /* green-500 */
+  --ld-ref-color-danger: #ef4444;    /* red-500 */
+  --ld-ref-color-warning: #f59e0b;   /* amber-500 */
+  --ld-ref-color-info: #0ea5e9;      /* sky-500 */
 
   --ld-ref-color-white: #ffffff;
   --ld-ref-color-black: #000000;
