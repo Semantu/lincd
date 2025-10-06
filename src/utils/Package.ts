@@ -5,6 +5,9 @@
  */
 import {defaultGraph,Literal,NamedNode,Quad} from '../models.js';
 import {
+  getAndClearCallbacks,
+  getNodeShapeUri,
+  LINCD_DATA_ROOT,
   NodeShape,
   PropertyShape,
   ValidationReport,
@@ -35,7 +38,6 @@ declare var lincd: any;
 declare var window;
 declare var global;
 
-export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 
 // var packageParsePromises: Map<string,Promise<any>> = new Map();
 // var loadedPackages: Set<NamedNode> = new Set();
@@ -284,12 +286,6 @@ export function autoLoadOntologyData(value: boolean)
   }
 }
 
-export function getNodeShapeUri(packageName,shapeName: string): string
-{
-  return `${LINCD_DATA_ROOT}module/${URI.sanitize(packageName)}/shape/${URI.sanitize(
-    shapeName,
-  )}`;
-}
 
 export function linkedPackage(packageName: string): LinkedPackageObject
 {
@@ -427,10 +423,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
       addNodeShapeToShapeClass(nodeShape,constructor);
 
       // also create a representation in the graph of the shape class itself
-      let shapeClass = NamedNode.getOrCreate(
-        `${LINCD_DATA_ROOT}module/${packageNameURI}/shapeclass/${URI.sanitize(
-          constructor.name,
-        )}`,
+      let shapeClass = NamedNode.getOrCreate(getNodeShapeUri(packageName,constructor.name),
         true,
       );
       shapeClass.set(lincdOntology.definesShape,nodeShape.node);
@@ -629,18 +622,6 @@ function registerPackageInTree(packageName,packageExports?)
   return lincd._modules[packageName];
 }
 
-const nodeShapeCallbacks = new Map<NamedNode, ((shape: NodeShape) => void)[]>();
-function getAndClearCallbacks(nodeShape: NamedNode): ((shape: NodeShape) => void)[] {
-  const callbacks = nodeShapeCallbacks.get(nodeShape);
-  nodeShapeCallbacks.delete(nodeShape);
-  return callbacks;
-}
-export const addNodeShapeCallback = (nodeShape: NamedNode, callback: (shape: NodeShape) => void) => {
-  if (!nodeShapeCallbacks.has(nodeShape)) {
-    nodeShapeCallbacks.set(nodeShape, []);
-  }
-  nodeShapeCallbacks.get(nodeShape).push(callback);
-}
 
 export function initTree()
 {

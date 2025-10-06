@@ -18,6 +18,9 @@ import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {rdfs} from '../ontologies/rdfs.js';
 import { lincd } from '../ontologies/lincd.js';
 import { literalProperty, objectProperty } from '../utils/ShapeDecorators.js';
+import { URI } from '../utils/URI.js';
+
+export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 
 export class SHACL_Shape extends Shape
 {
@@ -992,6 +995,28 @@ export class ValidationReport extends Shape
     return str;
   }
 }
+
+export function getNodeShapeUri(packageName: string,shapeName: string): string
+{
+  return `${LINCD_DATA_ROOT}module/${URI.sanitize(packageName)}/shape/${URI.sanitize(
+    shapeName,
+  )}`;
+}
+
+
+const nodeShapeCallbacks = new Map<NamedNode, ((shape: NodeShape) => void)[]>();
+export function getAndClearCallbacks(nodeShape: NamedNode): ((shape: NodeShape) => void)[] {
+  const callbacks = nodeShapeCallbacks.get(nodeShape);
+  nodeShapeCallbacks.delete(nodeShape);
+  return callbacks;
+}
+export const addNodeShapeCallback = (nodeShape: NamedNode, callback: (shape: NodeShape) => void) => {
+  if (!nodeShapeCallbacks.has(nodeShape)) {
+    nodeShapeCallbacks.set(nodeShape, []);
+  }
+  nodeShapeCallbacks.get(nodeShape).push(callback);
+}
+
 
 //
 // let lincdPackage = linkedPackage('lincd');
