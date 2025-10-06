@@ -225,15 +225,45 @@ function connectValueShape<
 >(config:Config,propertyKey:string, property:PropertyShape) {
   //we accept a shape configuration, which translates to a sh:nodeShape
   if ((config as ObjectPropertyShapeConfig).shape) {
-    //once it's ready, we will use the NodeShape of this Shape class as the valueShape of this property shape
-    onShapeSetup(
-      (config as ObjectPropertyShapeConfig).shape,
-      (nodeShape: NodeShape) => {
-        // console.log(`Setting ${property.uri} (${property.label}) value shape to ${nodeShape.namedNode.uri}`);
-        property.valueShape = nodeShape;
-      },
-      propertyKey,
-    );
+    const shapeConfig = (config as ObjectPropertyShapeConfig).shape;
+    
+    // If shape is a tuple like ['lincd-schema', 'ImageObject'], use the URI directly
+    // without waiting for the Shape class to be ready
+    if (Array.isArray(shapeConfig)) {
+      const [packageName, shapeName] = shapeConfig;
+      // Get the NodeShape URI directly using getNodeShapeUri
+      const nodeShapeUri = getNodeShapeUri(packageName, shapeName);
+      // Create or get the NamedNode with this URI
+      const nodeShapeNode = NamedNode.getOrCreate(nodeShapeUri);
+      // Set the valueShape to the NamedNode (URI) directly
+      // No need to wait for the Shape class to be ready
+      property.valueShape = nodeShapeNode;
+    } else {
+      // If shape is a Shape class (typeof Shape), check if it already has a NodeShape
+      // If yes, we can use the NodeShape URI directly without waiting
+      const shapeClass = shapeConfig as typeof Shape;
+      if (shapeClass.shape) {
+        // The Shape class already has its NodeShape set up
+        // Use the NodeShape NamedNode (URI) directly
+        // This avoids circular dependencies (e.g., Person.knows: Person)
+        property.valueShape = shapeClass.shape.namedNode;
+      } else {
+        // The Shape class doesn't have its NodeShape yet
+        // Wait for it to be set up using the old behavior
+        onShapeSetup(
+          shapeConfig,
+          (nodeShape: NodeShape) => {
+            //Thing.image -> ImageObject
+            //we wait for Thing to be ready so we can connect the image PropertyShape
+            //THEN, we connect imagePropertyShape to the nodeShape of ImageObject
+            //so here we get nodeShape = schema/shapes/ImageObject
+            // console.log(`Setting ${property.uri} (${property.label}) value shape to ${nodeShape.namedNode.uri}`);
+            property.valueShape = nodeShape;
+          },
+          propertyKey,
+        );
+      }
+    }
   }
 }
 
@@ -354,8 +384,10 @@ export function createPropertyShape<
   //once the NodeShape is available, we can add the property shape to it
   if(shapeClass) {
     onShapeSetup(shapeClass, (shape: NodeShape) => {
-      registerPropertyShape(shape, propertyShape);
+      // Connect the value shape BEFORE registering the property shape
+      // This ensures the valueShape is set on the propertyShape before it gets registered
       connectValueShape(config,propertyKey,propertyShape);
+      registerPropertyShape(shape, propertyShape);
     });
   }
 

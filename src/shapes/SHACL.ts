@@ -292,9 +292,13 @@ export class PropertyShape extends SHACL_Shape
     return this.hasProperty(shacl.node) ? new NodeShape(this.getOne(shacl.node)) : null;
   }
 
-  set valueShape(value: NodeShape)
+  set valueShape(value: NodeShape | NamedNode)
   {
-    this.overwrite(shacl.node,value.node);
+    // Accept either a NodeShape instance or a NamedNode (URI) directly
+    // This allows setting the valueShape without needing to resolve to a Shape class
+    // TODO: review types maybe only accept NodeShape
+    const nodeToSet = value instanceof NodeShape ? value.node : value;
+    this.overwrite(shacl.node, nodeToSet);
   }
 
   get nodeKind(): NamedNode
