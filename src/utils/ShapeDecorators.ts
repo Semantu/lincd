@@ -6,11 +6,10 @@
 import {BlankNode,Literal,NamedNode,Node} from '../models.js';
 import {Shape} from '../shapes/Shape.js';
 import {NodeSet} from '../collections/NodeSet.js';
-import {NodeShape,PropertyShape} from '../shapes/SHACL.js';
+import {NodeShape,PropertyShape,addNodeShapeCallback,getNodeShapeUri} from '../shapes/SHACL.js';
 import {shacl} from '../ontologies/shacl.js';
 import {List} from '../shapes/List.js';
 import {getShapeClass} from './ShapeClass.js';
-import {addNodeShapeCallback, getNodeShapeUri} from './Package.js';
 
 export interface NodeShapeConfig {
   /**
