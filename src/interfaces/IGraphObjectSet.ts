@@ -2,16 +2,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode, Node} from '../models';
-import {NodeSet} from '../collections/NodeSet';
-import {QuadSet} from '../collections/QuadSet';
-import {IGraphObject} from './IGraphObject';
-import {ICoreIterable} from './ICoreIterable';
+import {NamedNode,Node} from '../models.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {IGraphObject} from './IGraphObject.js';
+import {ICoreIterable} from './ICoreIterable.js';
 
 /**
  * a set of objects that all have IGraphObject methods, and this set itself also has those methods so you can call them directly on the set instead of for each item
  */
-export interface IGraphObjectSet<R extends IGraphObject> extends IGraphObject, ICoreIterable<R> {
+export interface IGraphObjectSet<R extends IGraphObject>
+  extends IGraphObject,
+    ICoreIterable<R> {
   getQuads(property: NamedNode): QuadSet; //other then a single node, a set always returns a QuadSet, optionally empty
   getInverseQuads(property: NamedNode): QuadSet; //other then a single node, a set always returns a QuadSet, optionally empty
   getAll(property: NamedNode): NodeSet; //always returns a set

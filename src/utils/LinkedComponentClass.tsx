@@ -1,7 +1,7 @@
 import React from 'react';
-import {Shape} from '../shapes/Shape';
-import {LinkedComponentProps} from '../interfaces/Component';
-import {NamedNode} from '../models';
+import {Shape} from '../shapes/Shape.js';
+import {LinkedComponentProps} from './LinkedComponent.js';
+import {NamedNode} from '../models.js';
 
 /**
  * Extend this class when you want to create a linked component using a classes (instead of a Functional Component).
@@ -18,7 +18,7 @@ import {NamedNode} from '../models';
  * ```tsx
  * import {React} from "react";
  * import {linkedComponentClass} from "../package";
- * impoprt {LinkedComponentClass} from "lincd/lib/utils/ComponentClass";
+ * impoprt {LinkedComponentClass} from "lincd/utils/ComponentClass";
  * @linkedComponentClass(Person)
  * export class PersonView extends LinkedComponentClass<Person> {
  *   render() {
@@ -31,24 +31,12 @@ import {NamedNode} from '../models';
  * }
  * ```
  */
-export class LinkedComponentClass<ShapeClass extends Shape, P = {}, S = any> extends React.Component<
-  P & LinkedComponentProps<ShapeClass>,
-  S
-> {
+export class LinkedComponentClass<
+  ShapeClass extends Shape,
+  P = {},
+  S = any,
+> extends React.Component<P & LinkedComponentProps<ShapeClass>, S> {
   private _shape: ShapeClass;
-
-  componentDidUpdate(
-    prevProps: Readonly<P & LinkedComponentProps<ShapeClass>>,
-    prevState: Readonly<S>,
-    snapshot?: any,
-  ) {
-    if (prevProps.source !== this.props.source && this.props.source instanceof NamedNode) {
-      (this.props.source as NamedNode).onChangeAny((changes, property) => {
-        console.log('Properties of source ' + this._shape.toString() + ' changed. Updating.');
-        this.forceUpdate();
-      });
-    }
-  }
 
   get sourceShape(): ShapeClass {
     if (typeof this._shape === 'undefined') {
@@ -64,5 +52,25 @@ export class LinkedComponentClass<ShapeClass extends Shape, P = {}, S = any> ext
       }
     }
     return this._shape;
+  }
+
+  componentDidUpdate(
+    prevProps: Readonly<P & LinkedComponentProps<ShapeClass>>,
+    prevState: Readonly<S>,
+    snapshot?: any,
+  ) {
+    if (
+      prevProps.source !== this.props.source &&
+      this.props.source instanceof NamedNode
+    ) {
+      (this.props.source as NamedNode).onChangeAny((changes, property) => {
+        console.log(
+          'Properties of source ' +
+            this._shape.toString() +
+            ' changed. Updating.',
+        );
+        this.forceUpdate();
+      });
+    }
   }
 }

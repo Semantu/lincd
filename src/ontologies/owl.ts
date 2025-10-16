@@ -3,8 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models';
-import {Prefix} from '../utils/Prefix';
+import {NamedNode} from '../models.js';
+import {Prefix} from '../utils/Prefix.js';
 
 //Important note: the actual ontology node is WITHOUT HASH, because in the ontology itself, that is how the node is defined
 //(other than RDF and RDFS who DO define their URL INCLUDING HASH as ontologies)
@@ -16,11 +16,13 @@ Prefix.add('owl', base);
 
 var ObjectProperty: NamedNode = NamedNode.getOrCreate(base + 'ObjectProperty');
 var DataProperty: NamedNode = NamedNode.getOrCreate(base + 'DataProperty');
-var equivalentClass: NamedNode = NamedNode.getOrCreate(base + 'equivalentClass');
+var equivalentClass: NamedNode = NamedNode.getOrCreate(
+  base + 'equivalentClass',
+);
 
 export const owl = {
   _ontologyResource,
   ObjectProperty,
   DataProperty,
-  equivalentClass
+  equivalentClass,
 };

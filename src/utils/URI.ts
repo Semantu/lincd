@@ -12,7 +12,7 @@ export class URI {
    *     $string - The string to sanitize.
    *     $force_lowercase - Force the string to lowercase?
    */
-  static sanitize(string, force_lowercase = true) {
+  static sanitize(string) {
     if (!string) return string;
     //\u200B is the ZERO WIDTH SPACE, often introduced by WYSIWYG editors. This causes a hyphen (-) at the end of a string sometimes, so we filter it out first
     return string
@@ -21,9 +21,20 @@ export class URI {
       .toLowerCase();
   }
 
-  static isURI(uri: string)
-  {
+  static isURI(uri: string) {
     //must have a scheme followed by ://
     return /([A-Za-z][A-Za-z0-9+\-.]*)\:\/\//.test(uri);
+  }
+
+  /**
+   * Generate a new URI based on the given URI components (labels / identifiers).
+   * This URI will start with the DATA_ROOT environment variable
+   * @param uriComponents
+   */
+  static generate(...uriComponents: string[]) {
+    return (
+      process.env.DATA_ROOT +
+      uriComponents.filter(Boolean).map(encodeURIComponent).join('/')
+    );
   }
 }

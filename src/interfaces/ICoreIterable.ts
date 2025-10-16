@@ -10,18 +10,26 @@
 //extending Iterable<ANY> because Maps and Sets use different iterator setups that would not match with type definitions
 //this allows us to still use iterators for ICoreIterable but without typing information, although for all methods below it works
 export interface ICoreIterable<V> extends Iterable<any> {
-  forEach: (callbackFn: (item: V, index?: any, iterable?: any) => void, context?: any) => void;
+  forEach: (
+    callbackFn: (item: V, index?: any, iterable?: any) => void,
+    context?: any,
+  ) => void;
+  size?: number;
+  length?: number;
 
-  filter(callbackfn: (value: V, index: any, thisInstance: any) => any, thisArg?: any): Iterable<any>;
+  filter(
+    callbackfn: (value: V, index: any, thisInstance: any) => any,
+    thisArg?: any,
+  ): Iterable<any>;
 
-  find(predicate: (value: V, index: any, obj: ICoreIterable<V>) => boolean, thisArg?: any): V | undefined;
+  find(
+    predicate: (value: V, index: any, obj: ICoreIterable<V>) => boolean,
+    thisArg?: any,
+  ): V | undefined;
 
   every(callbackfn: (item: V) => boolean, thisArg?: any): boolean;
 
   some(callbackfn: (item: V) => boolean, thisArg?: any): boolean;
 
   map<U>(callbackfn: (item: V) => U, thisArg?: any): any;
-
-  size?: number;
-  length?: number;
 }

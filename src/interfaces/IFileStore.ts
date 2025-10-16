@@ -19,5 +19,10 @@ export interface IFileStore {
 
   listFiles(prefix?: string): Promise<string[]>;
 
-  saveFile(filePath: string, fileContent: string | Uint8Array | Buffer | Readable,mimeType?:string,preventDuplicates?:boolean): Promise<string | null>;
+  saveFile(
+    filePath: string,
+    fileContent: string | Uint8Array | Buffer | Readable,
+    mimeType?: string,
+    preventDuplicates?: boolean,
+  ): Promise<string | null>;
 }

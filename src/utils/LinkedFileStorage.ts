@@ -1,4 +1,4 @@
-import {IFileStore} from '../interfaces/IFileStore';
+import {IFileStore} from '../interfaces/IFileStore.js';
 import type {Readable} from 'stream';
 
 export abstract class LinkedFileStorage {
@@ -52,13 +52,18 @@ export abstract class LinkedFileStorage {
     mimeType?: string,
     preventDuplicates: boolean = false,
   ): Promise<string> {
-    return this.defaultStore.saveFile(filePath, fileContent, mimeType, preventDuplicates);
+    return this.defaultStore.saveFile(
+      filePath,
+      fileContent,
+      mimeType,
+      preventDuplicates,
+    );
   }
 }
 
 /**
- *  Get the full path of an asset based on the way LinkedFileStorage is configured
- *
+ * Get the full path of an asset based on the way LinkedFileStorage is configured
+ * Returns accessURL + directory (/public by default) + path
  * @param path asset path
  * @param directory asset directory (optional, default is /public)
  * @returns asset url. e.g. https://cdn.example.com/public/image.png

@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {ICoreIterable} from '../interfaces/ICoreIterable';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 
 export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
   createNew(...args): this {
@@ -20,7 +20,15 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
     return res;
   }
 
-  reduce<U>(fn: (previousValue: U, currentValue: R, currentIndex: number, thisInstance: any) => U, initialValue: U): U {
+  reduce<U>(
+    fn: (
+      previousValue: U,
+      currentValue: R,
+      currentIndex: number,
+      thisInstance: any,
+    ) => U,
+    initialValue: U,
+  ): U {
     let i = 0;
     let res = initialValue;
     for (let item of this) {
@@ -33,7 +41,10 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
    * Returns the value of the first element in the Set where predicate is true, and undefined
    * otherwise.
    */
-  find(predicate: (value: R, index: R, obj: CoreSet<R>) => boolean, thisArg?: any): R | undefined {
+  find(
+    predicate: (value: R, index: R, obj: CoreSet<R>) => boolean,
+    thisArg?: any,
+  ): R | undefined {
     for (let item of this) {
       if (predicate.apply(thisArg, [item, item, this])) {
         return item;
@@ -66,7 +77,9 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
 
   sort(compareFn?: (a: R, b: R) => number, thisArg?): this {
     //convert this set to an array, sort it with provided parameters, create a new set of the same type and provide the sorted array as content
-    var sortedArray = thisArg ? [...this].sort.apply(thisArg, [compareFn]) : [...this].sort(compareFn);
+    var sortedArray = thisArg
+      ? [...this].sort.apply(thisArg, [compareFn])
+      : [...this].sort(compareFn);
     return this.createNew(sortedArray);
   }
 
@@ -75,7 +88,10 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
    * @param callbackfn A function that accepts up to three arguments. The every method calls the callbackfn function for each element in array1 until the callbackfn returns false, or until the end of the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  every(callbackfn: (item: R, set: CoreSet<R>) => boolean, thisArg?: any): boolean {
+  every(
+    callbackfn: (item: R, set: CoreSet<R>) => boolean,
+    thisArg?: any,
+  ): boolean {
     for (let item of this) {
       if (!callbackfn.apply(thisArg, [item, this])) {
         return false;
@@ -89,7 +105,10 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
    * @param callbackfn A function that accepts up to three arguments. The some method calls the callbackfn function for each element in array1 until the callbackfn returns true, or until the end of the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  some(callbackfn: (item: R, set: CoreSet<R>) => boolean, thisArg?: any): boolean {
+  some(
+    callbackfn: (item: R, set: CoreSet<R>) => boolean,
+    thisArg?: any,
+  ): boolean {
     for (let item of this) {
       if (callbackfn.apply(thisArg, [item, this])) {
         return true;
@@ -141,10 +160,9 @@ export class CoreSet<R> extends Set<R> implements ICoreIterable<R> {
    * Similar to concat, but adds all items to THIS set instead of creating a new one
    * @param sets
    */
-  addFrom(...sets:ICoreIterable<R>[]): this {
+  addFrom(...sets: ICoreIterable<R>[]): this {
     for (var set of sets) {
-      if(set)
-      {
+      if (set) {
         set.forEach(this.add.bind(this));
       }
     }

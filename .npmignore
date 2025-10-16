@@ -3,6 +3,9 @@ src
 .idea
 Gruntfile.js
 tsconfig.json
+tsconfig-esm.json
+tsconfig-cjs.json
+lib-fixed
 node_modules
 .prettierignore
 .prettierrc.json

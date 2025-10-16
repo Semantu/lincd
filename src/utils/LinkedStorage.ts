@@ -1,19 +1,25 @@
-import {IQuadStore} from '../interfaces/IQuadStore';
-import {defaultGraph, Graph, NamedNode, Quad, Node} from '../models';
-import {QuadSet} from '../collections/QuadSet';
-import {CoreMap} from '../collections/CoreMap';
-import {NodeSet} from '../collections/NodeSet';
-import {Shape} from '../shapes/Shape';
-import {NodeShape, PropertyShape} from '../shapes/SHACL';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
-import {eventBatcher} from '../events/EventBatcher';
+import {IQuadStore} from '../interfaces/IQuadStore.js';
+import {defaultGraph, Graph, NamedNode, Node, Quad} from '../models.js';
+import {QuadSet} from '../collections/QuadSet.js';
+import {CoreMap} from '../collections/CoreMap.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {Shape} from '../shapes/Shape.js';
+import {PropertyShape} from '../shapes/SHACL.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {eventBatcher} from '../events/EventBatcher.js';
+import {QuadArray} from '../collections/QuadArray.js';
+import {CoreSet} from '../collections/CoreSet.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {getShapeClass, getSuperShapesClasses} from './ShapeClass.js';
+import {SelectQuery} from '../queries/SelectQuery.js';
+import {LinkedDataRequest} from './TraceShape.js';
+import {UpdateQuery} from '../queries/UpdateQuery.js';
+import {UpdatePartial} from '../queries/QueryFactory.js';
+import {rdf} from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
-import {QuadArray} from '../collections/QuadArray';
-import {CoreSet} from '../collections/CoreSet';
-import {ShapeSet} from '../collections/ShapeSet';
-import {LinkedDataRequest, TransformedLinkedDataResponse} from '../interfaces/Component';
-import {getMostSpecificShapesByType,getShapeClass,getSubShapesClasses,getSuperShapesClasses} from './ShapeClass';
-import {rdf} from '../ontologies/rdf';
+import {CreateQuery} from '../queries/CreateQuery.js';
+import {QueryParser} from '../queries/QueryParser.js';
+import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
@@ -21,7 +27,8 @@ export abstract class LinkedStorage {
   private static graphToStore: CoreMap<Graph, IQuadStore> = new CoreMap();
   private static shapesToGraph: CoreMap<typeof Shape, Graph> = new CoreMap();
   private static nodeShapesToGraph: CoreMap<NamedNode, Graph> = new CoreMap();
-  private static graphToTargetClasses: CoreMap<Graph,NodeSet<NamedNode>> = new CoreMap();
+  private static graphToTargetClasses: CoreMap<Graph, NodeSet<NamedNode>> =
+    new CoreMap();
   private static defaultStorageGraph: Graph;
   private static processingPromise: {
     promise: Promise<void>;
@@ -29,19 +36,37 @@ export abstract class LinkedStorage {
     reject?: any;
   };
   private static storedEvents: any;
-  private static nodeToPropertyRequests: CoreMap<Node, CoreMap<NamedNode, true | Promise<any>>> = new CoreMap();
-  private static fullyLoadedNodes: CoreSet<Node> = new CoreSet();
-  private static propShapeMap: Map<NamedNode, PropertyShape[]>;
+  private static nodeToPropertyRequests: CoreMap<
+    Node,
+    CoreMap<NamedNode, true | Promise<any>>
+  > = new CoreMap();
+  private static propShapeMap: Map<string, PropertyShape[]>;
 
   static init() {
     if (!this._initialized) {
-      Quad.emitter.on(Quad.QUADS_ALTERED, this.onEvent.bind(this, Quad.QUADS_ALTERED));
-      NamedNode.emitter.on(NamedNode.STORE_NODES, this.onEvent.bind(this, NamedNode.STORE_NODES));
+      Quad.emitter.on(
+        Quad.QUADS_ALTERED,
+        this.onEvent.bind(this, Quad.QUADS_ALTERED),
+      );
+      NamedNode.emitter.on(
+        NamedNode.STORE_NODES,
+        this.onEvent.bind(this, NamedNode.STORE_NODES),
+      );
 
-      NamedNode.emitter.on(NamedNode.REMOVE_NODES, this.onEvent.bind(this, NamedNode.REMOVE_NODES));
-      NamedNode.emitter.on(NamedNode.CLEARED_PROPERTIES, this.onEvent.bind(this, NamedNode.CLEARED_PROPERTIES));
+      NamedNode.emitter.on(
+        NamedNode.REMOVE_NODES,
+        this.onEvent.bind(this, NamedNode.REMOVE_NODES),
+      );
+      NamedNode.emitter.on(
+        NamedNode.CLEARED_PROPERTIES,
+        this.onEvent.bind(this, NamedNode.CLEARED_PROPERTIES),
+      );
 
       this._initialized = true;
+
+      //we connect Shape to the default QueryParser here, because LinkedStorage is always initialized
+      //Shape cannot automatically refer to QueryParser as it would create a circular dependency
+      Shape.queryParser = QueryParser;
     }
   }
 
@@ -75,29 +100,14 @@ export abstract class LinkedStorage {
     this.storedEvents[eventType].push(args);
   }
 
-  private static startProcessingOnNextTick() {
-    //create the processing promise, so that any request for promiseUpdate() will already get the promise that resolves after these events are handled
-    let resolve, reject;
-    const promise = new Promise<any>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    this.processingPromise = {promise, resolve, reject};
-
-    //start processing the stored events on the next tick
-    nextTick(() => {
-      this.processStoredEvents();
-    });
-  }
-
   static async processStoredEvents() {
-    const storedEvents = this.storedEvents;
+    let storedEvents = this.storedEvents;
     this.storedEvents = null;
 
     //we store and then process events, so we can determine in which order we process them.
     //the order of this array determines the order.
     //each entry in the array that is looped is an event type + handler
-    const processOrder: [string, Function][] = [
+    let processOrder: [string, Function][] = [
       [NamedNode.REMOVE_NODES, this.onRemoveNodes],
       [NamedNode.CLEARED_PROPERTIES, this.onClearedProperties],
       [NamedNode.STORE_NODES, this.onStoreNodes],
@@ -105,13 +115,18 @@ export abstract class LinkedStorage {
     ];
 
     //combine multiple events that want to add/remove quads into 1
-    if (storedEvents[Quad.QUADS_ALTERED] && storedEvents[Quad.QUADS_ALTERED].length > 1) {
-      const created = new QuadSet();
-      const removed = new QuadSet();
-      storedEvents[Quad.QUADS_ALTERED].forEach(([quadsCreated, quadsRemoved]: [QuadSet, QuadSet]) => {
-        quadsCreated.forEach((q) => created.add(q));
-        quadsRemoved.forEach((q) => removed.add(q));
-      });
+    if (
+      storedEvents[Quad.QUADS_ALTERED] &&
+      storedEvents[Quad.QUADS_ALTERED].length > 1
+    ) {
+      let created = new QuadSet();
+      let removed = new QuadSet();
+      storedEvents[Quad.QUADS_ALTERED].forEach(
+        ([quadsCreated, quadsRemoved]: [QuadSet, QuadSet]) => {
+          quadsCreated.forEach((q) => created.add(q));
+          quadsRemoved.forEach((q) => removed.add(q));
+        },
+      );
       //remove things that have been created & removed during the previous execution cycle
       removed.forEach((q) => {
         if (created.has(q)) {
@@ -126,7 +141,7 @@ export abstract class LinkedStorage {
     // note that since they have slightly different values, this will convert NodeSets of STORE_NODES  to a CoreSet (note a NodeSet)
     [NamedNode.STORE_NODES, NamedNode.REMOVE_NODES].forEach((eventType) => {
       if (storedEvents[eventType] && storedEvents[eventType].length > 1) {
-        const mergedNodes = new CoreSet();
+        let mergedNodes = new CoreSet();
         storedEvents[eventType].forEach(([nodesCreated]: [CoreSet<any>]) => {
           nodesCreated.forEach((n) => mergedNodes.add(n));
         });
@@ -156,6 +171,563 @@ export abstract class LinkedStorage {
     this.finalizeProcess(success);
   }
 
+  static getDefaultStore() {
+    return this.defaultStore;
+  }
+
+  static setDefaultStore(store: IQuadStore) {
+    this.defaultStore = store;
+    this.defaultStore.init();
+    let defaultGraph = store.getDefaultGraph();
+    if (defaultGraph) {
+      this.setDefaultStorageGraph(defaultGraph);
+      this.setStoreForGraph(store, defaultGraph);
+    } else {
+      // console.warn('Default store did not return a default graph.');
+    }
+
+    this.init();
+  }
+
+  static setDefaultStorageGraph(graph: Graph) {
+    this.defaultStorageGraph = graph;
+  }
+
+  static setGraphForShapes(graph: Graph, ...shapeClasses: (typeof Shape)[]) {
+    shapeClasses.forEach((shapeClass) => {
+      this.shapesToGraph.set(shapeClass, graph);
+      if (shapeClass['shape']) {
+        if (!this.graphToTargetClasses.has(graph)) {
+          this.graphToTargetClasses.set(graph, new NodeSet());
+        }
+        this.graphToTargetClasses
+          .get(graph)
+          .add(shapeClass['shape'].targetClass);
+        //we also add any shape class that extends this shape class
+        //For example, if storage is configured for Thing, then we want to also list all the shapes that extend Thing
+        //because the types of all those super shapes should be pointing towards the same graph
+        getSuperShapesClasses(shapeClass).forEach((subShape) => {
+          this.graphToTargetClasses
+            .get(graph)
+            .add(subShape['shape'].targetClass);
+        });
+        this.nodeShapesToGraph.set(shapeClass['shape'].namedNode, graph);
+      }
+    });
+    this.init();
+  }
+
+  static setStoreForGraph(store: IQuadStore, graph) {
+    this.graphToStore.set(graph, store);
+  }
+
+  static getGraphForStore(store: IQuadStore): Graph {
+    for (let [graph, targetStore] of this.graphToStore) {
+      //shapes don't have to be the same instance, but they share the same node
+      if (store['node'] === targetStore['node']) {
+        return graph;
+      }
+    }
+  }
+
+  static getStores(): CoreSet<IQuadStore> {
+    return new CoreSet([...this.graphToStore.values()]);
+  }
+
+  /**
+   * Set the target store for instances of these shapes
+   * @param store
+   * @param shapes
+   */
+  static setStoreForShapes(store: IQuadStore, ...shapes: (typeof Shape)[]) {
+    let graph = store.getDefaultGraph();
+    this.setStoreForGraph(store, graph);
+    this.setGraphForShapes(graph, ...shapes);
+  }
+
+  /**
+   *
+   * @returns a promise that resolves when all storage events have been processed. For example shapes that are saved() have been stored and received a permanent URI.
+   */
+  static async promiseUpdated(): Promise<void> {
+    if (this.defaultStore) {
+      await this.defaultStore.init();
+    }
+    //we wait till all events are dispatched
+    return eventBatcher.promiseDone().then(() => {
+      //if that triggered a storage update
+      if (this.processingPromise) {
+        //we will wait for that
+        return this.processingPromise.promise;
+      }
+    });
+  }
+
+  static getStoreForShapeClass(shapeClass: typeof Shape) {
+    let graph = this.getGraphForShapeClass(shapeClass);
+    return this.getStoreForGraph(graph) || this.defaultStore;
+  }
+
+  static getGraphForShapeClass(shapeClass: typeof Shape) {
+    //currently, the target graph of the very first shape that has a target graph is returned
+    if (this.nodeShapesToGraph.has(shapeClass.shape.namedNode)) {
+      return this.nodeShapesToGraph.get(shapeClass.shape.namedNode);
+    }
+    for (let superShapeClass of getSuperShapesClasses(shapeClass)) {
+      if (this.nodeShapesToGraph.has(superShapeClass.shape.namedNode)) {
+        return this.nodeShapesToGraph.get(superShapeClass.shape.namedNode);
+      }
+    }
+    return defaultGraph;
+  }
+
+  static getGraphForNode(
+    subject: NamedNode,
+    checkShapes: boolean = true,
+  ): Graph {
+    // if (checkShapes && (!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.nodeShapesToGraph.size > 0) {
+    //   const subjectShapes = NodeShape.getShapesOf(subject,true);
+    //
+    //   //see if any of these shapes has a specific target graph
+    //   for (const shape of subjectShapes) {
+    //     if (this.nodeShapesToGraph.has(shape.namedNode)) {
+    //       //currently, the target graph of the very first shape that has a target graph is returned
+    //       return this.nodeShapesToGraph.get(shape.namedNode);
+    //     }
+    //   }
+    // }
+    if (!subject.isTemporaryNode) {
+      for (const [graph, targetClasses] of this.graphToTargetClasses) {
+        if (
+          subject
+            .getAll(rdf.type)
+            .some((type) => targetClasses.has(type as NamedNode))
+        ) {
+          return graph;
+        }
+      }
+    }
+
+    //if it's not a temporary node, and we have a default graph for permanent storage, then use that
+    if (
+      (!subject.isTemporaryNode ||
+        (subject.isTemporaryNode && subject.isStoring)) &&
+      this.defaultStorageGraph
+    ) {
+      return this.defaultStorageGraph;
+    }
+
+    //if no shape defined a target graph OR if the node is a temporary node
+    //then use the default graph (which is usually not connected to any store, and just lives in local memory)
+    //this prevents temporary local nodes from being automatically stored
+    return defaultGraph;
+  }
+
+  static getDefaultStorageGraph() {
+    return this.defaultStorageGraph || defaultGraph;
+  }
+
+  static getStoreForNode(node: NamedNode) {
+    let graph = this.getGraphForNode(node);
+    return this.getStoreForGraph(graph);
+  }
+
+  static getStoreForGraph(graph: Graph) {
+    return this.graphToStore.get(graph);
+    // if(this.graphToStore.has(graph))
+    // {
+    // }
+    // return this.defaultStore;
+  }
+
+  static getStoreMapForNodes(
+    nodes: ICoreIterable<NamedNode>,
+  ): CoreMap<IQuadStore, NamedNode[]> {
+    return this.getStoreMapForIGraphObjects(nodes) as CoreMap<
+      IQuadStore,
+      NamedNode[]
+    >;
+  }
+
+  static getStoreMapForShapes(shapes: ShapeSet): CoreMap<IQuadStore, Shape[]> {
+    return this.getStoreMapForIGraphObjects(shapes) as CoreMap<
+      IQuadStore,
+      Shape[]
+    >;
+  }
+
+  static getShapeToStoreMap(): CoreMap<typeof Shape, IQuadStore> {
+    return this.shapesToGraph.map((graph) => {
+      return this.getStoreForGraph(graph);
+    }) as any;
+  }
+
+  static async setURIs(
+    nodeUriMap: CoreMap<NamedNode, string>,
+  ): Promise<[string, string][]> {
+    //organise the nodes by their appropriate store
+    //and because these are nodes that are about to receive a URI so they can be stored
+    //we temporarily make them non-temporary :)
+    //this way the store map will contain the right target store for STORED nodes
+    //so that THAT store can determine the URI
+    let nodes: NodeSet<NamedNode> = new NodeSet();
+    nodeUriMap.forEach((currentEnvironmentURI, node) => {
+      node['tmp'] = node.isTemporaryNode;
+      node.isTemporaryNode = false;
+      nodes.add(node);
+    });
+
+    let storeMap = this.getStoreMapForNodes(nodes);
+    nodes.forEach((node) => {
+      node.isTemporaryNode = node['tmp'];
+    });
+
+    let promises = [];
+    //let each store update the URI's
+    storeMap.forEach((nodes, store) => {
+      let storeNodeUriMap: CoreMap<NamedNode, string> = new CoreMap();
+      nodes.forEach((node) => {
+        storeNodeUriMap.set(node, nodeUriMap.get(node));
+      });
+      promises.push(store.setURIs(storeNodeUriMap));
+    });
+    //combine the results to return an array of old to new URI's
+    return Promise.all(promises).then((results) => {
+      let combinedResults: [string, string][] = [].concat(...results);
+      return combinedResults;
+    });
+  }
+
+  static selectQuery<S extends Shape, ResultType>(
+    query: SelectQuery<S>,
+  ): Promise<ResultType> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape);
+    return quadStore.selectQuery(query);
+  }
+
+  static updateQuery<
+    ShapeType extends Shape,
+    U extends UpdatePartial<ShapeType>,
+  >(query: UpdateQuery<U>): Promise<U> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(
+      getShapeClass(query.shape.namedNode),
+    );
+    return quadStore.updateQuery(query);
+  }
+
+  static createQuery<R>(query: CreateQuery<R>): Promise<R> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(
+      getShapeClass(query.shape.namedNode),
+    );
+    return quadStore.createQuery(query);
+  }
+
+  static deleteQuery(query: DeleteQuery): Promise<DeleteResponse> {
+    let quadStore: IQuadStore = this.getStoreForShapeClass(
+      getShapeClass(query.shape.namedNode),
+    );
+    return quadStore.deleteQuery(query);
+  }
+
+  static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void | any> {
+    // let storeMap = this.getStoreMapForNodes(toRemove.getSubjects());
+    // storeMap.forEach((nodes, store) => {
+    //   let quads = toRemove.filter(q => nodes.includes(q.subject));
+    //   store.deleteMultiple(quads);
+    //
+    // });
+    return this.onQuadsAltered(toAdd, toRemove, true, true);
+  }
+
+  static clearProperties(
+    subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>,
+  ): Promise<boolean> {
+    let subjects = [...subjectToPredicates.keys()];
+    let storeMap = this.getStoreMapForNodes(subjects);
+    let promises = [];
+    storeMap.forEach((nodes, store) => {
+      let map = new CoreMap(
+        nodes.map((node) => {
+          return [node, subjectToPredicates.get(node)];
+        }),
+      );
+      promises.push(store.clearProperties(map));
+    });
+    return Promise.all(promises).then((results) => {
+      return results.every((result: boolean) => result === true);
+    });
+  }
+
+  /**
+   * @deprecated
+   * @param shapeInstance
+   * @param shapeOrRequest
+   * @param byPassCache
+   */
+  static loadShape(
+    shapeInstance: Shape,
+    shapeOrRequest?: LinkedDataRequest,
+    byPassCache: boolean = false,
+  ): Promise<QuadArray | boolean> {
+    //if no shape is requested then we automatically request all properties of the shape
+    if (!shapeOrRequest) {
+      //TODO: maybe we can optimise requests by not sending all the shapes and letting the backend fill in the property shapes
+      shapeOrRequest = [...shapeInstance.nodeShape.getPropertyShapes()];
+      //also add the property shapes of all classes that extend this shape
+      let shapeClass = getShapeClass(shapeInstance.nodeShape.namedNode);
+      let superShapes: (typeof Shape)[] = getSuperShapesClasses(shapeClass);
+      superShapes.forEach((superShapeClass) => {
+        shapeOrRequest.push(...superShapeClass.shape.getPropertyShapes());
+      });
+    }
+    //@TODO: optimise the shapeOrRequest. Currently if the same property is requested twice, but once with more sub properties, then both will be requested.
+    // This can be merged into 1 shape request because the longer one automatically loads the shorter one
+
+    let node = shapeInstance.node;
+    if (!byPassCache) {
+      let cachedResult = this.isLoaded(node, shapeOrRequest);
+      if (cachedResult) {
+        //return the load promise that's already in progress,
+        // or a promise that resolves to true straight away if it's already been loaded
+        return cachedResult === true ? Promise.resolve(true) : cachedResult;
+      }
+    }
+    let store = this.getStoreForNode(shapeInstance.namedNode);
+    if (store) {
+      let promise = store
+        .loadShape(shapeInstance, shapeOrRequest)
+        .then((res) => {
+          //indicate that these property shapes have finished loading for this node
+          this.setNodeLoaded(node, shapeOrRequest);
+          return res;
+        });
+      //indicate that these property shapes are being loaded for this node
+      this.setNodeLoaded(node, shapeOrRequest, promise);
+      return promise;
+    } else {
+      //NOTE: if we ever need to know that we could not find a store to load this node from
+      //then we could setNodeLoaded to false, and we need to account for the possibility of a false value in other places
+      //any place using cached results would need to differentiate between null and false
+      this.setNodeLoaded(node, shapeOrRequest);
+      return Promise.resolve(null);
+    }
+  }
+
+  static loadShapes(
+    shapeSet: ShapeSet,
+    shapeOrRequest: LinkedDataRequest,
+    byPassCache: boolean = false,
+  ): Promise<QuadArray | boolean> {
+    let nodes = shapeSet.getNodes();
+    if (!byPassCache) {
+      let cachedResult = this.nodesAreLoaded(nodes, shapeOrRequest);
+      if (cachedResult) {
+        //return the load promise that's already in progress,
+        // or a promise that resolves to true straight away if it's already been loaded
+        return cachedResult === true ? Promise.resolve(true) : cachedResult;
+      }
+    }
+
+    let storeMap = this.getStoreMapForShapes(shapeSet);
+    let storePromises = [];
+    storeMap.map((shapes, store) => {
+      storePromises.push(
+        store.loadShapes(new ShapeSet(shapes), shapeOrRequest),
+      );
+    });
+    let loadPromise = Promise.all(storePromises).then((results) => {
+      // return new QuadArray();
+      let quads = new QuadArray();
+      results.forEach((result) => {
+        if (result instanceof QuadArray) {
+          quads.push(...(result as any));
+        }
+      });
+      //update the cache to indicate these property shapes have finished loading for these nodes
+      this.setNodesLoaded(nodes, shapeOrRequest, true);
+      return quads;
+    });
+    //update the cache to indicate these property shapes are being loaded for these nodes
+    LinkedStorage.setNodesLoaded(nodes, shapeOrRequest, loadPromise);
+    return loadPromise;
+  }
+
+  static nodesAreLoaded(nodes: NodeSet, dataRequest): boolean | Promise<any> {
+    //@TODO: reimplement tracking of loaded paths for queries
+    return false;
+
+    let stillLoading = [];
+    if (
+      !nodes.every((node) => {
+        let cached = this.isLoaded(node, dataRequest);
+        if (!cached) {
+          return false;
+        }
+        if (cached !== true) {
+          //then it's a promise, this node is still loading
+          stillLoading.push(node);
+        }
+        return true;
+      })
+    ) {
+      return false;
+    }
+    return stillLoading ? Promise.all(stillLoading) : true;
+  }
+
+  static isLoaded(node: Node, dataRequest: any): boolean | Promise<any> {
+    //TODO fix loading for queries instead of the old property requests
+    return false;
+
+    if (!this.nodeToPropertyRequests.has(node)) {
+      return false;
+    }
+    let propertiesRequested = this.nodeToPropertyRequests.get(node);
+    //return true if every top level property request has been loaded for this source
+    let stillLoading = [];
+    if (
+      !dataRequest.every((propertyRequest) => {
+        let propertyReqResult;
+        //for sub requests
+        if (Array.isArray(propertyRequest)) {
+          //first check that property shape (that is the first entry) is loaded (same as for non-sub requests)
+          propertyReqResult = propertiesRequested.get(
+            propertyRequest[0].namedNode,
+          );
+          //then let check if the subRequest is also loaded for each currently available value
+          if (propertyReqResult) {
+            //if not every currently loaded value for this property-shape is loaded, then the subRequest is not loaded
+            if (
+              !propertyRequest[0]
+                .resolveFor(node as NamedNode)
+                .every((valueNode) => {
+                  let subRequestLoaded = this.isLoaded(
+                    valueNode,
+                    propertyRequest[1],
+                  );
+                  if (!subRequestLoaded) {
+                    return false;
+                  }
+                  //if the sub request is still loading that's fine, we add it to the array of promises to wait for
+                  if (subRequestLoaded !== true) {
+                    stillLoading.push(subRequestLoaded);
+                  }
+                  return true;
+                })
+            ) {
+              propertyReqResult = false;
+            }
+          }
+        } else {
+          propertyReqResult = propertiesRequested.get(
+            propertyRequest.namedNode,
+          );
+        }
+        if (!propertyReqResult) {
+          //not every propertyRequest is loaded, return false, which stops the every() loop and resolves it to false
+          return false;
+        }
+        if (propertyReqResult !== true) {
+          stillLoading.push(propertyReqResult);
+        }
+        //if not false, continue to evaluate the next propertyRequest
+        return true;
+      })
+    ) {
+      return false;
+    }
+    //all propertyRequests had an entry, if some are still loading, return the promise that resolves when they're all loaded
+    //else return true (everything is loaded)
+    return stillLoading.length > 0 ? Promise.all(stillLoading) : true;
+  }
+
+  /**
+   * Sets all the property paths of the subject nodes to be loaded
+   * Handy for example when the server returned data already and you don't want the automatic loading to kick in.
+   * WARNING: this assumes that ALL the values of each subject-predicate pair are loaded.
+   * If the server returned just one and there are more, using this method means the other values will not automatically be loaded.
+   */
+  static setQuadsLoaded(quads: QuadSet) {
+    let propShapeMap = this.getPredicateToPropertyShapesMap();
+    //build a map of subject to property shapes
+    let subjectToPropShapes = new Map<NamedNode, PropertyShape[]>();
+    quads.forEach((quad) => {
+      if (!subjectToPropShapes.has(quad.subject)) {
+        subjectToPropShapes.set(quad.subject, []);
+      }
+      let currentPropShapes = subjectToPropShapes.get(quad.subject);
+      //get all the property shapes that match this predicate and add them to the property shapes of this subject
+      if (propShapeMap.has(quad.predicate.uri)) {
+        propShapeMap
+          .get(quad.predicate.uri)
+          .forEach((propShape) => currentPropShapes.push(propShape));
+      }
+    });
+
+    subjectToPropShapes.forEach((propertyShapes, subject) => {
+      this.setNodeLoaded(subject, propertyShapes);
+    });
+  }
+
+  static setNodesLoaded(
+    nodes: NodeSet,
+    dataRequest: any,
+    requestState: true | Promise<any> = true,
+  ) {
+    nodes.forEach((source) => {
+      this.setNodeLoaded(source, dataRequest, requestState);
+    });
+  }
+
+  static setNodeLoaded(
+    node: Node,
+    request: any,
+    requestState: true | Promise<any> = true,
+  ) {
+    if (!this.nodeToPropertyRequests.get(node)) {
+      this.nodeToPropertyRequests.set(node, new CoreMap());
+    }
+    let requestedProperties = this.nodeToPropertyRequests.get(node);
+
+    request.map((propertyRequest) => {
+      if (Array.isArray(propertyRequest)) {
+        //propertyRequest is of the shape [propertyShape,subRequest]
+        //update the cache for the property-shapes that regard this source
+        requestedProperties.set(propertyRequest[0].namedNode, requestState);
+
+        //if loading has finished
+        if (requestState === true) {
+          //then resolve the property shape for this node (so follow the property shape from this node)
+          //then update the cache to indicate that the subRequest has been loaded
+          // for each of the nodes you get to from that property shape
+          this.setNodesLoaded(
+            propertyRequest[0].resolveFor(node as NamedNode),
+            propertyRequest[1],
+            requestState,
+          );
+        }
+      } else {
+        //propertyRequest is a PropertyShape
+        requestedProperties.set(propertyRequest.namedNode, requestState);
+      }
+    });
+  }
+
+  private static startProcessingOnNextTick() {
+    //create the processing promise, so that any request for promiseUpdate() will already get the promise that resolves after these events are handled
+    var resolve, reject;
+    var promise = new Promise<any>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    this.processingPromise = {promise, resolve, reject};
+
+    //start processing the stored events on the next tick
+    nextTick(() => {
+      this.processStoredEvents();
+    });
+  }
+
   private static finalizeProcess(success: boolean) {
     if (success) {
       //if we changed graphs in the process, there may be more events waiting
@@ -178,79 +750,13 @@ export abstract class LinkedStorage {
     }
   }
 
-  static getDefaultStore() {
-    return this.defaultStore;
-  }
-  static setDefaultStore(store: IQuadStore) {
-    this.defaultStore = store;
-    this.defaultStore.init();
-    const defaultGraph = store.getDefaultGraph();
-    if (defaultGraph) {
-      this.setDefaultStorageGraph(defaultGraph);
-      this.setStoreForGraph(store, defaultGraph);
-    } else {
-      // console.warn('Default store did not return a default graph.');
-    }
-
-    this.init();
-  }
-
-  static setDefaultStorageGraph(graph: Graph) {
-    this.defaultStorageGraph = graph;
-  }
-
-  static setGraphForShapes(graph: Graph, ...shapeClasses: (typeof Shape)[]) {
-    shapeClasses.forEach((shapeClass) => {
-      this.shapesToGraph.set(shapeClass, graph);
-      if (shapeClass['shape']) {
-        if(!this.graphToTargetClasses.has(graph)) {
-          this.graphToTargetClasses.set(graph,new NodeSet());
-        }
-        this.graphToTargetClasses.get(graph).add(shapeClass['shape'].targetClass);
-        //we also add any shape class that extends this shape class
-        //For example, if storage is configured for Thing, then we want to also list all the shapes that extend Thing
-        //because the types of all those super shapes should be pointing towards the same graph
-        getSuperShapesClasses(shapeClass).forEach(subShape => {
-          this.graphToTargetClasses.get(graph).add(subShape['shape'].targetClass);
-        })
-
-        this.nodeShapesToGraph.set(shapeClass['shape'].namedNode, graph);
-      }
-    });
-    this.init();
-  }
-
-  static setStoreForGraph(store: IQuadStore, graph) {
-    this.graphToStore.set(graph, store);
-  }
-
-  static getGraphForStore(store: IQuadStore): Graph {
-    for (const [graph, targetStore] of this.graphToStore) {
-      //shapes don't have to be the same instance, but they share the same node
-      if (store['node'] === targetStore['node']) {
-        return graph;
-      }
-    }
-  }
-
-  static getStores(): CoreSet<IQuadStore> {
-    return new CoreSet([...this.graphToStore.values()]);
-  }
-  /**
-   * Set the target store for instances of these shapes
-   * @param store
-   * @param shapes
-   */
-  static setStoreForShapes(store: IQuadStore, ...shapes: (typeof Shape)[]) {
-    const graph = store.getDefaultGraph();
-    this.setStoreForGraph(store, graph);
-    this.setGraphForShapes(graph, ...shapes);
-  }
-
-  private static assignQuadsToGraph(quads: QuadSet | QuadArray, removeFromSet: boolean = false) {
-    const map = this.getTargetGraphMap(quads);
-    const alteredNodes = new CoreMap<NamedNode, Graph>();
-    const movedQuads = new QuadSet();
+  private static assignQuadsToGraph(
+    quads: QuadSet | QuadArray,
+    removeFromSet: boolean = false,
+  ) {
+    let map = this.getTargetGraphMap(quads);
+    let alteredNodes = new CoreMap<NamedNode, Graph>();
+    let movedQuads = new QuadSet();
     map.forEach((graphQuads, graph) => {
       graphQuads.forEach((quad) => {
         if (quad.graph !== graph) {
@@ -261,7 +767,9 @@ export abstract class LinkedStorage {
           //we also remove the quad from the set it was in, if requested
           //this prevents moved quads from still being added to the store of the old graph
           if (removeFromSet) {
-            quads instanceof QuadSet ? quads.delete(quad) : quads.splice(quads.indexOf(quad), 1);
+            quads instanceof QuadSet
+              ? quads.delete(quad)
+              : quads.splice(quads.indexOf(quad), 1);
           }
           movedQuads.add(quad);
           //also keep track of which nodes had a quad that moved to a different graph
@@ -278,8 +786,10 @@ export abstract class LinkedStorage {
     return movedQuads.concat(this.moveAllQuadsOfNodeIfRequired(alteredNodes));
   }
 
-  private static moveAllQuadsOfNodeIfRequired(alteredNodes: CoreMap<NamedNode, Graph>): QuadSet {
-    const movedQuads = new QuadSet();
+  private static moveAllQuadsOfNodeIfRequired(
+    alteredNodes: CoreMap<NamedNode, Graph>,
+  ): QuadSet {
+    let movedQuads = new QuadSet();
     //for all subjects who have a quad that moved to a different graph
     alteredNodes.forEach((graph, subjectNode) => {
       //go over each quad of that node
@@ -293,26 +803,6 @@ export abstract class LinkedStorage {
       });
     });
     return movedQuads;
-  }
-
-  /**
-   *
-   * @returns a promise that resolves when all storage events have been processed. For example shapes that are saved() have been stored and received a permanent URI.
-   */
-  static async promiseUpdated(): Promise<void> {
-    if (this.defaultStore) {
-      await this.defaultStore.init();
-    }
-    //we wait till all events are dispatched
-    // console.log('awaiting events');
-    return eventBatcher.promiseDone().then(() => {
-      //if that triggered a storage update
-      if (this.processingPromise) {
-        // console.log('awaiting storage process');
-        //we will wait for that
-        return this.processingPromise.promise;
-      }
-    });
   }
 
   private static onQuadsAltered(
@@ -343,12 +833,15 @@ export abstract class LinkedStorage {
         removeMap = this.getStoreMapForNodes(quadsRemoved.getSubjects());
       } else {
         //default: get the right stores based on the graph of the quads
-        removeMap = this.getTargetStoreMap(quadsRemoved,true);
+        removeMap = this.getTargetStoreMap(quadsRemoved, true);
       }
     }
 
     //combine the keys of both maps (which are stores)
-    const stores = [...(addMap ? addMap.keys() : []), ...(removeMap ? removeMap.keys() : [])];
+    let stores = [
+      ...(addMap ? addMap.keys() : []),
+      ...(removeMap ? removeMap.keys() : []),
+    ];
 
     //go over each store that has added/removed quads
     return Promise.all(
@@ -357,17 +850,20 @@ export abstract class LinkedStorage {
         if (baseStoreOnSubject) {
           //in case we looked up target stores based on the subject of the quads,
           // we need to still filter the quads to get only those that are relevant for this store
-          const storeAddSubjects = addMap?.get(store);
-          const storeRemoveSubjects = removeMap?.get(store);
-          storeAddQuads = storeAddSubjects ? quadsCreated.filter((q) => storeAddSubjects.includes(q.subject)) : null;
+          let storeAddSubjects = addMap?.get(store);
+          let storeRemoveSubjects = removeMap?.get(store);
+          storeAddQuads = storeAddSubjects
+            ? quadsCreated.filter((q) => storeAddSubjects.includes(q.subject))
+            : null;
           storeRemoveQuads = storeRemoveSubjects
-            ? quadsRemoved.filter((q) => storeRemoveSubjects.includes(q.subject))
+            ? quadsRemoved.filter((q) =>
+                storeRemoveSubjects.includes(q.subject),
+              )
             : null;
         } else {
           storeAddQuads = addMap?.get(store) || null;
           storeRemoveQuads = removeMap?.get(store) || null;
         }
-        // console.log(`updating store ${store?.toString()}. Adding ${storeAddQuads?.size || storeAddQuads?.length}. Removing ${storeRemoveQuads?.size || storeRemoveQuads?.length}`);
         return store.update(storeAddQuads, storeRemoveQuads);
       }),
     )
@@ -379,57 +875,23 @@ export abstract class LinkedStorage {
       });
   }
 
-  static getGraphForNode(subject: NamedNode, checkShapes: boolean = true): Graph {
-    // if (checkShapes && (!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.nodeShapesToGraph.size > 0) {
-    //   const subjectShapes = NodeShape.getShapesOf(subject,true);
-    //
-    //   //see if any of these shapes has a specific target graph
-    //   for (const shape of subjectShapes) {
-    //     if (this.nodeShapesToGraph.has(shape.namedNode)) {
-    //       //currently, the target graph of the very first shape that has a target graph is returned
-    //       return this.nodeShapesToGraph.get(shape.namedNode);
-    //     }
-    //   }
-    // }
-    if(!subject.isTemporaryNode)
-    {
-      for (const [graph,targetClasses] of this.graphToTargetClasses)
-      {
-        if (subject.getAll(rdf.type).some(type => targetClasses.has(type as NamedNode)))
-        {
-          return graph;
-        }
-      }
-    }
-    //if it's not a temporary node, and we have a default graph for permanent storage, then use that
-    if ((!subject.isTemporaryNode || (subject.isTemporaryNode && subject.isStoring)) && this.defaultStorageGraph) {
-      return this.defaultStorageGraph;
-    }
-
-    //if no shape defined a target graph OR if the node is a temporary node
-    //then use the default graph (which is usually not connected to any store, and just lives in local memory)
-    //this prevents temporary local nodes from being automatically stored
-    return defaultGraph;
-  }
-
-  static getDefaultStorageGraph() {
-    return this.defaultStorageGraph || defaultGraph;
-  }
-
   private static async onClearedProperties(
     clearProperties: CoreMap<NamedNode, [NamedNode, QuadArray][]>,
   ): Promise<any> {
-    const subjects = new NodeSet<NamedNode>(clearProperties.keys());
+    let subjects = new NodeSet<NamedNode>(clearProperties.keys());
 
     //get a map of where each of these nodes are stored
-    const storeMap = this.getStoreMapForNodes(subjects);
+    let storeMap = this.getStoreMapForNodes(subjects);
 
     //call on each store to remove the appropriate nodes
     await Promise.all(
       [...storeMap.entries()].map(([store, subjects]) => {
-        const storeClearMap: CoreMap<NamedNode, NodeSet<NamedNode>> = new CoreMap();
+        let storeClearMap: CoreMap<
+          NamedNode,
+          NodeSet<NamedNode>
+        > = new CoreMap();
         subjects.forEach((subject) => {
-          const subjectClearMap = new NodeSet<NamedNode>();
+          let subjectClearMap = new NodeSet<NamedNode>();
           clearProperties.get(subject).forEach(([clearedProperty, quads]) => {
             //TODO: if we ever need access to the LOCALLY cleared quads in the remote stores, grab & send them from here
             // However, if we don't, we can reshape the NamedNode model so that quads don't get sent in these events anymore
@@ -448,19 +910,19 @@ export abstract class LinkedStorage {
       });
   }
 
-  private static async onRemoveNodes(nodesAndQuads: CoreSet<[NamedNode, QuadArray]>): Promise<any> {
+  private static async onRemoveNodes(
+    nodesAndQuads: CoreSet<[NamedNode, QuadArray]>,
+  ): Promise<any> {
     //turn all the removed quads back on (as if they were still in the graph)
     //this allows us to read the properties of the node as they were just before the node was removed.
-    const nodes = new NodeSet<NamedNode>();
-    const nodeToQuadsMap = new CoreMap<NamedNode, QuadArray>();
+    let nodes = new NodeSet<NamedNode>();
     nodesAndQuads.forEach(([node, quads]) => {
       quads.turnOn();
       nodes.add(node);
-      nodeToQuadsMap.set(node, quads);
     });
 
     //get a map of where each of these nodes are stored
-    const storeMap = this.getStoreMapForNodes(nodes);
+    let storeMap = this.getStoreMapForNodes(nodes);
 
     //turn the quads back off (they should be removed after all)
     nodesAndQuads.forEach(([node, quads]) => {
@@ -470,12 +932,7 @@ export abstract class LinkedStorage {
     //call on each store to remove the appropriate nodes
     await Promise.all(
       [...storeMap.entries()].map(([store, nodesToRemove]) => {
-        // console.log('removing '+nodesToRemove.length+' nodes from store', store.toString());
-        let quadsToRemove = new QuadSet();
-        nodesToRemove.forEach((node) => {
-          quadsToRemove = quadsToRemove.concat(nodeToQuadsMap.get(node));
-        });
-        return store.removeNodes(nodesToRemove,quadsToRemove);
+        return store.removeNodes(nodesToRemove);
       }),
     )
       .then((res) => {
@@ -488,33 +945,45 @@ export abstract class LinkedStorage {
 
   private static async onStoreNodes(nodes: CoreSet<NamedNode>): Promise<any> {
     //TODO: no need to convert to QuadSet once we phase out QuadArray
-    const nodesWithTempURIs = nodes.filter((node) => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0);
+    let nodesWithTempURIs = nodes.filter(
+      (node) => node.uri.indexOf(NamedNode.TEMP_URI_BASE) === 0,
+    );
 
-    const storeMap = this.getStoreMapForNodes(nodesWithTempURIs);
+    let storeMap = this.getStoreMapForNodes(nodesWithTempURIs);
     await Promise.all(
       [...storeMap.entries()].map(([store, temporaryNodes]) => {
-        const nodeUriMap: CoreMap<NamedNode, string> = new CoreMap();
+        let nodeUriMap: CoreMap<NamedNode, string> = new CoreMap();
         temporaryNodes.forEach((node) => {
           nodeUriMap.set(node, node.uri);
         });
         //let the store determine the URI's for these nodes
-        return store.setURIs(nodeUriMap).then((uriUpdates) => {
-          //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
-          uriUpdates.forEach(([oldUri, newUri]) => {
-            const currentNode = NamedNode.getNamedNode(oldUri);
-            const alreadyExistingNode = NamedNode.getNamedNode(newUri);
-            if(alreadyExistingNode) {
-              console.warn(`Node with URI ${newUri} already exists in the store. This is an error in the store ${store.toString()}`,currentNode.print(),alreadyExistingNode.print());
-              return;
-            }
-            //currently, when a node is saved and removed in the same event cycle, it will not be in the store anymore
-            if (currentNode) {
-              currentNode.uri = newUri;
-            }
+        return store
+          .setURIs(nodeUriMap)
+          .then((uriUpdates) => {
+            //and THEN update them (yes this currently needs to be separate because the frontend requests new uri's before sending data,so this URI request should not change any URI's on the backend)
+            uriUpdates.forEach(([oldUri, newUri]) => {
+              const currentNode = NamedNode.getNamedNode(oldUri);
+              const alreadyExistingNode = NamedNode.getNamedNode(newUri);
+              if (alreadyExistingNode) {
+                console.warn(
+                  `Node with URI ${newUri} already exists in the store. This is an error in the store ${store.toString()}`,
+                  currentNode.print(),
+                  alreadyExistingNode.print(),
+                );
+                return;
+              }
+              //currently, when a node is saved and removed in the same event cycle, it will not be in the store anymore
+              if (currentNode) {
+                currentNode.uri = newUri;
+              }
+            });
+          })
+          .catch((err) => {
+            console.warn(
+              `Error during URI update for store ${store.toString()}: `,
+              err,
+            );
           });
-        }).catch(err => {
-          console.warn(`Error during URI update for store ${store.toString()}: `, err);
-        })
       }),
     );
 
@@ -531,7 +1000,7 @@ export abstract class LinkedStorage {
 
     //move all the quads to the right graph.
     //note that IF this is a new graph, this will trigger onQuadsAltered, which will notify the right stores to store these quads
-    const quads = new QuadSet();
+    let quads = new QuadSet();
     nodes.forEach((node) => {
       node.getAllQuads().forEach((quad) => {
         quads.add(quad);
@@ -540,29 +1009,15 @@ export abstract class LinkedStorage {
     this.assignQuadsToGraph(quads);
 
     nodes.forEach((node) => {
-      //mark node as no longer temporary
       node.isTemporaryNode = false;
-      //but do mark it as fully loaded, because locally we must have set all the properties known so far
-      this.fullyLoadedNodes.add(node);
       node.isStoring = false;
     });
   }
 
-  static getStoreForNode(node: NamedNode) {
-    const graph = this.getGraphForNode(node);
-    return this.getStoreForGraph(graph);
-  }
-
-  static getStoreForGraph(graph: Graph) {
-    return this.graphToStore.get(graph);
-    // if(this.graphToStore.has(graph))
-    // {
-    // }
-    // return this.defaultStore;
-  }
-
-  private static groupQuadsBySubject(quads: ICoreIterable<Quad>): CoreMap<NamedNode, QuadArray> {
-    const subjectsToQuads: CoreMap<NamedNode, QuadArray> = new CoreMap();
+  private static groupQuadsBySubject(
+    quads: ICoreIterable<Quad>,
+  ): CoreMap<NamedNode, QuadArray> {
+    let subjectsToQuads: CoreMap<NamedNode, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
       if (!subjectsToQuads.has(quad.subject)) {
         subjectsToQuads.set(quad.subject, new QuadArray());
@@ -572,50 +1027,45 @@ export abstract class LinkedStorage {
     return subjectsToQuads;
   }
 
-  private static getTargetGraphMap(quads: ICoreIterable<Quad>): CoreMap<Graph, QuadArray> {
-    const graphMap: CoreMap<Graph, QuadArray> = new CoreMap();
-    const quadsBySubject = this.groupQuadsBySubject(quads);
+  private static getTargetGraphMap(
+    quads: ICoreIterable<Quad>,
+  ): CoreMap<Graph, QuadArray> {
+    let graphMap: CoreMap<Graph, QuadArray> = new CoreMap();
+    let quadsBySubject = this.groupQuadsBySubject(quads);
     quadsBySubject.forEach((quads, subjectNode) => {
-      const targetGraph = this.getGraphForNode(subjectNode);
+      let targetGraph = this.getGraphForNode(subjectNode);
       if (!graphMap.has(targetGraph)) {
-        graphMap.set(targetGraph, new QuadArray());
-      }
-      // try
-      // {
-      //   graphMap.set(targetGraph,new QuadArray(...graphMap.get(targetGraph).concat(quads)));
-      // } catch (e) {
-      //   console.log(e);
+        // try
+        // {
+        //   graphMap.set(targetGraph,new QuadArray(...graphMap.get(targetGraph).concat(quads)));
+        // } catch (e) {
+        //   console.log(e);
 
-        const t = graphMap.get(targetGraph);
-        quads.forEach(q => {
-          t.push(q);
-        });
+        graphMap.set(targetGraph, new QuadArray());
+        // const t = graphMap.get(targetGraph);
+        // quads.forEach(q => {
+        //   t.push(q);
+        // });
         // const t2 = t.concat(quads);
         // const t3 = new QuadArray();
         // t2.forEach((q) => t3.push(q));
         // graphMap.set(targetGraph,t3);
-      // }
+        // }
+      }
+      graphMap.set(
+        targetGraph,
+        new QuadArray(...graphMap.get(targetGraph).concat(quads)),
+      );
     });
     return graphMap;
   }
 
-  static getStoreMapForNodes(nodes: ICoreIterable<NamedNode>): CoreMap<IQuadStore, NamedNode[]> {
-    return this.getStoreMapForIGraphObjects(nodes) as CoreMap<IQuadStore, NamedNode[]>;
-  }
-  static getStoreMapForShapes(shapes: ShapeSet): CoreMap<IQuadStore, Shape[]> {
-    return this.getStoreMapForIGraphObjects(shapes) as CoreMap<IQuadStore, Shape[]>;
-  }
-
-  static getShapeToStoreMap(): CoreMap<typeof Shape, IQuadStore> {
-    return this.shapesToGraph.map(graph => {
-      return this.getStoreForGraph(graph);
-    }) as any;
-  }
-
-  private static getStoreMapForIGraphObjects(objects: ShapeSet | ICoreIterable<NamedNode>) {
-    const storeMap: CoreMap<IQuadStore, (NamedNode | Shape)[]> = new CoreMap();
+  private static getStoreMapForIGraphObjects(
+    objects: ShapeSet | ICoreIterable<NamedNode>,
+  ) {
+    let storeMap: CoreMap<IQuadStore, (NamedNode | Shape)[]> = new CoreMap();
     objects.forEach((object) => {
-      const store = this.getStoreForNode(object.node || object);
+      let store = this.getStoreForNode(object.node || object);
       //if store is null, this means no store is observing this node. This will usually happen for the default graph which contains temporary nodes
       if (store) {
         if (!storeMap.has(store)) {
@@ -627,13 +1077,16 @@ export abstract class LinkedStorage {
     return storeMap;
   }
 
-  private static getTargetStoreMap(quads: ICoreIterable<Quad>,basedOnSubject:boolean=false): CoreMap<IQuadStore, QuadArray> {
-    const storeMap: CoreMap<IQuadStore, QuadArray> = new CoreMap();
+  private static getTargetStoreMap(
+    quads: ICoreIterable<Quad>,
+    basedOnSubject: boolean = false,
+  ): CoreMap<IQuadStore, QuadArray> {
+    let storeMap: CoreMap<IQuadStore, QuadArray> = new CoreMap();
     quads.forEach((quad) => {
       //if basedOnSubject and the quad is not in the default graph, then we find the store for the subject of the quad
       //this is used for removing properties of a node, who's quads are in the default graph but should be stored in the graph of the default store
       // const store = basedOnSubject && quad.graph === defaultGraph ? this.getStoreForNode(quad.subject) : this.getStoreForGraph(quad.graph);
-      //if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
+      // if store is null, this means no store is observing this quad. This will usually happen for the default graph which contains temporary nodes
       //UPDATE2: the above caused issues when saving a new shape/node, because the new quads were MOVED (removed from old graph) and then stored in the target graph,
       // but the removed quads were also sent to the same store with the code above, causing nothing to be saved
       const store = this.getStoreForGraph(quad.graph);
@@ -647,310 +1100,24 @@ export abstract class LinkedStorage {
     return storeMap;
   }
 
-  static async setURIs(nodeUriMap: CoreMap<NamedNode, string>): Promise<[string, string][]> {
-    //organise the nodes by their appropriate store
-    //and because these are nodes that are about to receive a URI so they can be stored
-    //we temporarily make them non-temporary :)
-    //this way the store map will contain the right target store for STORED nodes
-    //so that THAT store can determine the URI
-    const nodes: NodeSet<NamedNode> = new NodeSet();
-    nodeUriMap.forEach((currentEnvironmentURI, node) => {
-      node['tmp'] = node.isTemporaryNode;
-      node.isTemporaryNode = false;
-      nodes.add(node);
-    });
-
-    const storeMap = this.getStoreMapForNodes(nodes);
-    nodes.forEach((node) => {
-      node.isTemporaryNode = node['tmp'];
-    });
-
-    const promises = [];
-    //let each store update the URI's
-    storeMap.forEach((nodes, store) => {
-      const storeNodeUriMap: CoreMap<NamedNode, string> = new CoreMap();
-      nodes.forEach((node) => {
-        storeNodeUriMap.set(node, nodeUriMap.get(node));
-      });
-      promises.push(store.setURIs(storeNodeUriMap));
-    });
-    //combine the results to return an array of old to new URI's
-    return Promise.all(promises).then((results) => {
-      const combinedResults: [string, string][] = [].concat(...results);
-      return combinedResults;
-    });
-  }
-
-  static update(toAdd: QuadSet, toRemove: QuadSet): Promise<void | any> {
-    // let storeMap = this.getStoreMapForNodes(toRemove.getSubjects());
-    // storeMap.forEach((nodes, store) => {
-    //   let quads = toRemove.filter(q => nodes.includes(q.subject));
-    //   store.deleteMultiple(quads);
-    //
-    // });
-    return this.onQuadsAltered(toAdd, toRemove, true, true);
-  }
-
-  static clearProperties(subjectToPredicates: CoreMap<NamedNode, NodeSet<NamedNode>>): Promise<boolean> {
-    const subjects = [...subjectToPredicates.keys()];
-    const storeMap = this.getStoreMapForNodes(subjects);
-    const promises = [];
-    storeMap.forEach((nodes, store) => {
-      const map = new CoreMap(
-        nodes.map((node) => {
-          return [node, subjectToPredicates.get(node)];
-        }),
-      );
-      promises.push(store.clearProperties(map));
-    });
-    return Promise.all(promises).then((results) => {
-      return results.every((result: boolean) => result === true);
-    });
-  }
-
-  static loadShapes(
-    shapeSet: ShapeSet,
-    shapeOrRequest: LinkedDataRequest,
-    byPassCache: boolean = false,
-  ): Promise<QuadArray> {
-    const nodes = shapeSet.getNodes();
-    if (!byPassCache) {
-      const cachedResult = this.nodesAreLoaded(nodes, shapeOrRequest);
-      if (cachedResult) {
-        //return the load promise that's already in progress,
-        // or a promise that resolves to true straight away if it's already been loaded
-        return cachedResult === true ? Promise.resolve(true) : cachedResult;
-      }
-    }
-
-    const storeMap = this.getStoreMapForShapes(shapeSet);
-    const storePromises = [];
-    storeMap.map((shapes, store) => {
-      storePromises.push(store.loadShapes(new ShapeSet(shapes), shapeOrRequest));
-    });
-    const loadPromise = Promise.all(storePromises).then((results) => {
-      // return new QuadArray();
-      const quads = new QuadArray();
-      results.forEach((result) => {
-        if (result instanceof QuadArray) {
-          quads.push(...(result as any));
-        }
-      });
-      //update the cache to indicate these property shapes have finished loading for these nodes
-      this.setNodesLoaded(nodes, shapeOrRequest, true);
-      return quads;
-    });
-    //update the cache to indicate these property shapes are being loaded for these nodes
-    LinkedStorage.setNodesLoaded(nodes, shapeOrRequest, loadPromise);
-    return loadPromise;
-  }
-
-  /**
-   * Loads the requested Shape(s) from storage for a specific node.
-   * To form a request see the LinkedDataRequest interface
-   * Returns a promise that resolves when the loading has completed.
-   * Requests are cached so the second time you request the same data you will get the same answer. Use byPassCache if you want to ensure the data is loaded again.
-   * The returned promise resolves to null if no target store was found for this node (the app may not have a defaultStore set up then)
-   * @param shapeInstance
-   * @param shapeOrRequest
-   * @param byPassCache
-   */
-  static loadShape(
-    shapeInstance: Shape,
-    shapeOrRequest?: LinkedDataRequest,
-    byPassCache: boolean = false,
-  ): Promise<QuadArray> {
-    //if no shape is requested then we automatically request all properties of the shape
-    if (!shapeOrRequest) {
-      //TODO: maybe we can optimise requests by not sending all the shapes and letting the backend fill in the property shapes
-      shapeOrRequest = [...shapeInstance.nodeShape.getPropertyShapes()];
-      //also add the property shapes of all classes that extend this shape
-      const shapeClass = getShapeClass(shapeInstance.nodeShape.namedNode);
-      const superShapes: (typeof Shape)[] = getSuperShapesClasses(shapeClass);
-      superShapes.forEach((superShapeClass) => {
-        shapeOrRequest.push(...superShapeClass.shape.getPropertyShapes());
-      });
-    }
-    //@TODO: optimise the shapeOrRequest. Currently if the same property is requested twice, but once with more sub properties, then both will be requested.
-    // This can be merged into 1 shape request because the longer one automatically loads the shorter one
-
-    const node = shapeInstance.node;
-    if (!byPassCache) {
-      const cachedResult = this.isLoaded(node, shapeOrRequest);
-      if (cachedResult) {
-        //return the load promise that's already in progress,
-        // or a promise that resolves to true straight away if it's already been loaded
-        return cachedResult === true ? Promise.resolve(true) : cachedResult;
-      }
-    }
-    const store = this.getStoreForNode(shapeInstance.namedNode);
-    if (store) {
-      const promise = store.loadShape(shapeInstance, shapeOrRequest).then((res) => {
-        //indicate that these property shapes have finished loading for this node
-        this.setNodeLoaded(node, shapeOrRequest);
-        return res;
-      });
-      //indicate that these property shapes are being loaded for this node
-      this.setNodeLoaded(node, shapeOrRequest, promise);
-      return promise;
-    } else {
-      //NOTE: if we ever need to know that we could not find a store to load this node from
-      //then we could setNodeLoaded to false, and we need to account for the possibility of a false value in other places
-      //any place using cached results would need to differentiate between null and false
-      this.setNodeLoaded(node, shapeOrRequest);
-      return Promise.resolve(null);
-    }
-  }
-
-  static nodesAreLoaded(nodes: NodeSet, dataRequest): boolean | Promise<any> {
-    const stillLoading = [];
-    if (
-      !nodes.every((node) => {
-        const cached = this.isLoaded(node, dataRequest);
-        if (!cached) {
-          return false;
-        }
-        if (cached !== true) {
-          //then it's a promise, this node is still loading
-          stillLoading.push(node);
-        }
-        return true;
-      })
-    ) {
-      return false;
-    }
-    return stillLoading ? Promise.all(stillLoading) : true;
-  }
-  static setFullyLoaded(node: Node) {
-    this.fullyLoadedNodes.add(node);
-  }
-  static isLoaded(node: Node, dataRequest: LinkedDataRequest): boolean | Promise<any> {
-    //temporary nodes are always local and fully known
-    if(node instanceof NamedNode && node.isTemporaryNode) {
-      return true;
-    }
-    if(this.fullyLoadedNodes.has(node)) {
-      return true;
-    }
-    if (!this.nodeToPropertyRequests.has(node)) {
-      return false;
-    }
-    const propertiesRequested = this.nodeToPropertyRequests.get(node);
-    //return true if every top level property request has been loaded for this source
-    const stillLoading = [];
-    if (
-      !dataRequest.every((propertyRequest) => {
-        let propertyReqResult;
-        //for sub requests
-        if (Array.isArray(propertyRequest)) {
-          //first check that property shape (that is the first entry) is loaded (same as for non-sub requests)
-          propertyReqResult = propertiesRequested.get(propertyRequest[0].namedNode);
-          //then let check if the subRequest is also loaded for each currently available value
-          if (propertyReqResult) {
-            //if not every currently loaded value for this property-shape is loaded, then the subRequest is not loaded
-            if (
-              !propertyRequest[0].resolveFor(node as NamedNode).every((valueNode) => {
-                const subRequestLoaded = this.isLoaded(valueNode, propertyRequest[1]);
-                if (!subRequestLoaded) {
-                  return false;
-                }
-                //if the sub request is still loading that's fine, we add it to the array of promises to wait for
-                if (subRequestLoaded !== true) {
-                  stillLoading.push(subRequestLoaded);
-                }
-                return true;
-              })
-            ) {
-              propertyReqResult = false;
-            }
-          }
-        } else {
-          propertyReqResult = propertiesRequested.get(propertyRequest.namedNode);
-        }
-        if (!propertyReqResult) {
-          //not every propertyRequest is loaded, return false, which stops the every() loop and resolves it to false
-          return false;
-        }
-        if (propertyReqResult !== true) {
-          stillLoading.push(propertyReqResult);
-        }
-        //if not false, continue to evaluate the next propertyRequest
-        return true;
-      })
-    ) {
-      return false;
-    }
-    //all propertyRequests had an entry, if some are still loading, return the promise that resolves when they're all loaded
-    //else return true (everything is loaded)
-    return stillLoading.length > 0 ? Promise.all(stillLoading) : true;
-  }
-
-  private static getPredicateToPropertyShapesMap(): Map<NamedNode, PropertyShape[]> {
+  private static getPredicateToPropertyShapesMap(): Map<
+    string,
+    PropertyShape[]
+  > {
     if (!this.propShapeMap) {
       this.propShapeMap = new Map();
       PropertyShape.getLocalInstances().forEach((propertyShape) => {
-        if (!this.propShapeMap.has(propertyShape.path)) {
-          this.propShapeMap.set(propertyShape.path, []);
+        let path = propertyShape.path;
+        let pathString =
+          path instanceof NamedNode
+            ? path.uri
+            : path.map((p) => p.uri).join(',');
+        if (!this.propShapeMap.has(pathString)) {
+          this.propShapeMap.set(pathString, []);
         }
-        this.propShapeMap.get(propertyShape.path).push(propertyShape);
+        this.propShapeMap.get(pathString).push(propertyShape);
       });
     }
     return this.propShapeMap;
-  }
-  /**
-   * Sets all the property paths of the subject nodes to be loaded
-   * Handy for example when the server returned data already and you don't want the automatic loading to kick in.
-   * WARNING: this assumes that ALL the values of each subject-predicate pair are loaded.
-   * If the server returned just one and there are more, using this method means the other values will not automatically be loaded.
-   */
-  static setQuadsLoaded(quads: QuadSet) {
-    const propShapeMap = this.getPredicateToPropertyShapesMap();
-    //build a map of subject to property shapes
-    const subjectToPropShapes = new Map<NamedNode, PropertyShape[]>();
-    quads.forEach((quad) => {
-      if (!subjectToPropShapes.has(quad.subject)) {
-        subjectToPropShapes.set(quad.subject, []);
-      }
-      const currentPropShapes = subjectToPropShapes.get(quad.subject);
-      //get all the property shapes that match this predicate and add them to the property shapes of this subject
-      if (propShapeMap.has(quad.predicate)) {
-        propShapeMap.get(quad.predicate).forEach((propShape) => currentPropShapes.push(propShape));
-      }
-    });
-
-    subjectToPropShapes.forEach((propertyShapes, subject) => {
-      this.setNodeLoaded(subject, propertyShapes);
-    });
-  }
-  static setNodesLoaded(nodes: NodeSet, dataRequest: LinkedDataRequest, requestState: true | Promise<any> = true) {
-    nodes.forEach((source) => {
-      this.setNodeLoaded(source, dataRequest, requestState);
-    });
-  }
-
-  static setNodeLoaded(node: Node, request: LinkedDataRequest, requestState: true | Promise<any> = true) {
-    if (!this.nodeToPropertyRequests.get(node)) {
-      this.nodeToPropertyRequests.set(node, new CoreMap());
-    }
-    const requestedProperties = this.nodeToPropertyRequests.get(node);
-
-    request.map((propertyRequest) => {
-      if (Array.isArray(propertyRequest)) {
-        //propertyRequest is of the shape [propertyShape,subRequest]
-        //update the cache for the property-shapes that regard this source
-        requestedProperties.set(propertyRequest[0].namedNode, requestState);
-
-        //if loading has finished
-        if (requestState === true) {
-          //then resolve the property shape for this node (so follow the property shape from this node)
-          //then update the cache to indicate that the subRequest has been loaded
-          // for each of the nodes you get to from that property shape
-          this.setNodesLoaded(propertyRequest[0].resolveFor(node as NamedNode), propertyRequest[1], requestState);
-        }
-      } else {
-        //propertyRequest is a PropertyShape
-        requestedProperties.set(propertyRequest.namedNode, requestState);
-      }
-    });
   }
 }

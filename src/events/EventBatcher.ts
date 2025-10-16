@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import nextTick = require('next-tick');
+import nextTick from 'next-tick';
 import {EventEmitter} from 'eventemitter3';
-import {CoreSet} from '../collections/CoreSet';
+import {CoreSet} from '../collections/CoreSet.js';
 
 //import {CoreMap} from "../collections/CoreMap";
 
@@ -14,19 +14,27 @@ export interface BatchedEventEmitter {
 }
 
 export class EventBatcher extends EventEmitter {
-  private batching: boolean = false;
-  emitters: CoreSet<BatchedEventEmitter> = new CoreSet<BatchedEventEmitter>();
   static ALL_EVENTS_DISPATCHED: string = 'ALL_EVENTS_DISPATCHED';
+  emitters: CoreSet<BatchedEventEmitter> = new CoreSet<BatchedEventEmitter>();
+  private batching: boolean = false;
   private emitting: boolean;
 
-  hasBatchedEvents(filterFn?: (emitter: BatchedEventEmitter) => boolean): boolean {
+  get isBatching() {
+    return this.batching;
+  }
+
+  hasBatchedEvents(
+    filterFn?: (emitter: BatchedEventEmitter) => boolean,
+  ): boolean {
     if (filterFn && this.batching) {
       return this.emitters.filter(filterFn).size > 0;
     }
     return this.batching;
   }
 
-  getPendingEmitters(filterFn?: (emitter: BatchedEventEmitter) => boolean): CoreSet<BatchedEventEmitter> {
+  getPendingEmitters(
+    filterFn?: (emitter: BatchedEventEmitter) => boolean,
+  ): CoreSet<BatchedEventEmitter> {
     if (filterFn && this.batching) {
       return this.emitters.filter(filterFn);
     }
@@ -73,7 +81,9 @@ export class EventBatcher extends EventEmitter {
     this.emit(EventBatcher.ALL_EVENTS_DISPATCHED);
   }
 
-  dispatchSomeEvents(filterEmitters: (emitter: BatchedEventEmitter) => boolean) {
+  dispatchSomeEvents(
+    filterEmitters: (emitter: BatchedEventEmitter) => boolean,
+  ) {
     //tell all emitters to dispatch
     this.emitters.forEach((emitter) => {
       if (filterEmitters(emitter)) {
@@ -82,10 +92,6 @@ export class EventBatcher extends EventEmitter {
       }
     });
     this.batching = this.emitters.size > 0;
-    return this.batching;
-  }
-
-  get isBatching() {
     return this.batching;
   }
 

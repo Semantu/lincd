@@ -3,11 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {IGraphObject} from './IGraphObject';
-import {NamedNode, Node} from '../models';
-import {ICoreIterable} from './ICoreIterable';
+import {IGraphObject} from './IGraphObject.js';
+import {NamedNode,Node} from '../models.js';
+import {ICoreIterable} from './ICoreIterable.js';
 
 export interface IShape extends IGraphObject {
+  namedNode: NamedNode;
+  node: Node;
+
   set(property: NamedNode, value: Node): boolean;
 
   mset(property: NamedNode, values: ICoreIterable<Node>): boolean;
@@ -34,10 +37,10 @@ export interface IShape extends IGraphObject {
 
   hasPathTo(properties: NamedNode[], value?: Node): boolean;
 
-  hasPathToSomeInSet(properties: NamedNode[], endPoints?: ICoreIterable<Node>): boolean;
+  hasPathToSomeInSet(
+    properties: NamedNode[],
+    endPoints?: ICoreIterable<Node>,
+  ): boolean;
 
   hasExplicit(property: NamedNode, value: Node): boolean;
-
-  namedNode: NamedNode;
-  node: Node;
 }

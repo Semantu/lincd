@@ -3,15 +3,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {CoreMap} from './CoreMap';
-import {IGraphObjectSet} from '../interfaces/IGraphObjectSet';
-import {NamedNode, Node} from '../models';
-import {QuadSet} from './QuadSet';
-import {QuadArray} from './QuadArray';
-import {NodeSet} from './NodeSet';
-import {ICoreIterable} from '../interfaces/ICoreIterable';
+import {CoreMap} from './CoreMap.js';
+import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
+import {NamedNode,Node} from '../models.js';
+import {QuadSet} from './QuadSet.js';
+import {QuadArray} from './QuadArray.js';
+import {NodeSet} from './NodeSet.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 
-export class NodeMap<R extends Node> extends CoreMap<string, R> implements IGraphObjectSet<R> {
+export class NodeMap<R extends Node>
+  extends CoreMap<string, R>
+  implements IGraphObjectSet<R>
+{
   constructor(iterable?: Iterable<[string, R]>) {
     super(iterable);
   }
@@ -159,7 +162,10 @@ export class NodeMap<R extends Node> extends CoreMap<string, R> implements IGrap
     }
   }
 
-  getAllQuads(includeAsObject: boolean = false, includeImplicit: boolean = false): QuadArray {
+  getAllQuads(
+    includeAsObject: boolean = false,
+    includeImplicit: boolean = false,
+  ): QuadArray {
     var res = new QuadArray();
     for (var [key, node] of this) {
       for (var item of node.getAllQuads(includeAsObject, includeImplicit)) {
@@ -254,7 +260,11 @@ export class NodeMap<R extends Node> extends CoreMap<string, R> implements IGrap
   }
 
   promiseLoaded(loadInverseProperties: boolean = false): Promise<boolean> {
-    return Promise.all([...this.values()].map((node) => node.promiseLoaded(loadInverseProperties)))
+    return Promise.all(
+      [...this.values()].map((node) =>
+        node.promiseLoaded(loadInverseProperties),
+      ),
+    )
       .then((res) => {
         return res.every((result) => result === true);
       })
@@ -264,6 +274,8 @@ export class NodeMap<R extends Node> extends CoreMap<string, R> implements IGrap
   }
 
   isLoaded(includingInverseProperties: boolean = false): boolean {
-    return [...this.values()].every((value) => value.isLoaded(includingInverseProperties));
+    return [...this.values()].every((value) =>
+      value.isLoaded(includingInverseProperties),
+    );
   }
 }

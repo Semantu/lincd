@@ -6,9 +6,9 @@
 //declare var require:Function;
 //require('core-js/fn/set');
 //import * as Set from 'core-js/es6/set';
-import {Graph, NamedNode, Node, Quad} from '../models';
-import {CoreSet} from './CoreSet';
-import {NodeSet} from './NodeSet';
+import {Graph,NamedNode,Node,Quad} from '../models.js';
+import {CoreSet} from './CoreSet.js';
+import {NodeSet} from './NodeSet.js';
 
 export class QuadSet extends CoreSet<Quad> {
   removeAll(alteration: boolean = false) {
@@ -93,12 +93,17 @@ export class QuadSet extends CoreSet<Quad> {
   }
 
   getNodes(): NodeSet {
-    return new NodeSet().concat(this.getSubjects()).concat(this.getPredicates()).concat(this.getObjects());
+    return new NodeSet()
+      .concat(this.getSubjects())
+      .concat(this.getPredicates())
+      .concat(this.getObjects());
   }
 
   hasNode(node: Node) {
     return this.some((quad) => {
-      return quad.subject === node || quad.predicate === node || quad.object === node;
+      return (
+        quad.subject === node || quad.predicate === node || quad.object === node
+      );
     });
   }
 

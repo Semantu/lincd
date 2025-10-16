@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {CoreMap} from '../collections/CoreMap';
+import {CoreMap} from '../collections/CoreMap.js';
 
 export class Prefix {
   static uriToPrefix: CoreMap<string, string> = new CoreMap();
@@ -47,6 +47,7 @@ export class Prefix {
     return this.prefixToUri.get(prefix);
   }
 
+
   static findMatch(fullURI: string): [string, string, string] | [] {
     for (let [ontologyURI, prefix] of this.uriToPrefix.entries()) {
       if (fullURI.substring(0, ontologyURI.length) == ontologyURI) {
@@ -59,12 +60,23 @@ export class Prefix {
   static toPrefixed(fullURI: string) {
     let match = this.findMatch(fullURI);
     if (match.length > 0) {
-      return match[1] + ':' + fullURI.substr(match[0].length);
+      const postFix = fullURI.substring(match[0].length);
+      if (!postFix.includes('/')) {
+        return match[1] + ':' + postFix;
+      }
     }
   }
 
   static toPrefixedIfPossible(fullURI: string) {
     return this.toPrefixed(fullURI) || fullURI;
+  }
+
+  static toFullIfPossible(fullURI: string): string {
+    let res = this._toFull(fullURI);
+    if(res) {
+      return res;
+    }
+    return fullURI;
   }
 
   /**
@@ -73,11 +85,24 @@ export class Prefix {
    * @param uri
    */
   static toFull(uri) {
+    let res = this._toFull(uri);
+    if(res) {
+      return res;
+    }
+    let [prefix, rest] = uri.split(':');
+    throw new Error(
+      'Unknown prefix ' +
+        prefix +
+        '. Could not convert ' +
+        uri +
+        ' to a full URI',
+    );
+  }
+  private static _toFull(uri) {
     let [prefix, rest] = uri.split(':');
     let ontologyURI = this.getFullURI(prefix);
     if (ontologyURI) {
       return ontologyURI + rest;
     }
-    throw new Error('Unknown prefix ' + prefix + '. Could not convert ' + uri + ' to a full URI');
   }
 }

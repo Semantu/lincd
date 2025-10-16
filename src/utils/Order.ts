@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NodeSet} from '../collections/NodeSet';
-import {NamedNode, Node} from '../models';
-import {rdfs} from '../ontologies/rdfs';
+import {NodeSet} from '../collections/NodeSet.js';
+import {NamedNode,Node} from '../models.js';
+import {rdfs} from '../ontologies/rdfs.js';
 
 export class Order {
   static propertiesByDepth(properties: NodeSet<NamedNode>): NodeSet<NamedNode> {
@@ -22,7 +22,11 @@ export class Order {
    * @param shortestPathFirst
    * @returns {NodeSet<NamedNode>}
    */
-  static byCrossPaths(nodes: NodeSet, property: NamedNode, shortestPathFirst: boolean = false): NodeSet {
+  static byCrossPaths(
+    nodes: NodeSet,
+    property: NamedNode,
+    shortestPathFirst: boolean = false,
+  ): NodeSet {
     var counts = this.getCrossPaths(nodes, property);
     if (shortestPathFirst) {
       return nodes.sort((r1, r2) => {
@@ -44,7 +48,10 @@ export class Order {
     }
   }
 
-  private static getCrossPaths(nodes: NodeSet, property: NamedNode): Map<Node, number> {
+  private static getCrossPaths(
+    nodes: NodeSet,
+    property: NamedNode,
+  ): Map<Node, number> {
     var counts: Map<Node, number> = new Map();
     nodes.forEach((node) => {
       var crossRelations = 0;

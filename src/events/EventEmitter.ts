@@ -40,7 +40,8 @@ export class EventEmitter extends EventEmitter3 {
 
     let listenerPromises = [];
     for (i = 0; i < length; i++) {
-      if (listeners[i].once) this.removeListener(evt, listeners[i].fn, undefined, true);
+      if (listeners[i].once)
+        this.removeListener(evt, listeners[i].fn, undefined, true);
 
       switch (len) {
         case 1:
@@ -50,10 +51,14 @@ export class EventEmitter extends EventEmitter3 {
           listenerPromises.push(listeners[i].fn.call(listeners[i].context, a1));
           break;
         case 3:
-          listenerPromises.push(listeners[i].fn.call(listeners[i].context, a1, a2));
+          listenerPromises.push(
+            listeners[i].fn.call(listeners[i].context, a1, a2),
+          );
           break;
         case 4:
-          listenerPromises.push(listeners[i].fn.call(listeners[i].context, a1, a2, a3));
+          listenerPromises.push(
+            listeners[i].fn.call(listeners[i].context, a1, a2, a3),
+          );
           break;
         default:
           if (!args)
@@ -61,18 +66,27 @@ export class EventEmitter extends EventEmitter3 {
               args[j - 1] = arguments[j];
             }
 
-          listenerPromises.push(listeners[i].fn.apply(listeners[i].context, args));
+          listenerPromises.push(
+            listeners[i].fn.apply(listeners[i].context, args),
+          );
       }
     }
-    return Promise.all(listenerPromises).catch((err) => {
+    return Promise.all(listenerPromises).catch(function (err) {
       console.log(
-        'Error during emitPromise of event ' + evt.toString() + ' with args ' + JSON.stringify(arguments),
+        'Error during emitPromise of event ' +
+          evt.toString() +
+          ' with args ' +
+          JSON.stringify(arguments),
         err.toString(),
       );
     });
   }
 
-  removeListenerByContext(event: string | symbol, context?: any, once?: boolean): this {
+  removeListenerByContext(
+    event: string | symbol,
+    context?: any,
+    once?: boolean,
+  ): this {
     //copied from source and adjusted
     var evt = prefix && typeof event === 'string' ? prefix + event : event;
 
@@ -85,7 +99,10 @@ export class EventEmitter extends EventEmitter3 {
 
     if (listeners.fn) {
       //check if 'once' and 'context' match
-      if ((once && !listeners.fn.once) || (context && listeners.fn.context !== context)) {
+      if (
+        (once && !listeners.fn.once) ||
+        (context && listeners.fn.context !== context)
+      ) {
         //if not we keep it 'as is'
         eventsToKeep = listeners;
       }
@@ -94,7 +111,10 @@ export class EventEmitter extends EventEmitter3 {
       //if there's an array of listeners, go over each
       for (var i = 0, length = listeners.length; i < length; i++) {
         //check if 'once' and 'context' match
-        if ((once && !listeners[i].once) || (context && listeners[i].context !== context)) {
+        if (
+          (once && !listeners[i].once) ||
+          (context && listeners[i].context !== context)
+        ) {
           //if not, keep this single listener
           eventsToKeep.push(listeners[i]);
         }
@@ -104,7 +124,11 @@ export class EventEmitter extends EventEmitter3 {
     // update events and events count
     if (eventsToKeep) {
       //take the one event, or, if its an array, take the array, unless theres only one element left, then just use that directly
-      this._events[evt] = eventsToKeep.fn ? eventsToKeep : eventsToKeep.length === 1 ? eventsToKeep[0] : eventsToKeep;
+      this._events[evt] = eventsToKeep.fn
+        ? eventsToKeep
+        : eventsToKeep.length === 1
+          ? eventsToKeep[0]
+          : eventsToKeep;
     } else {
       --this._eventsCount;
       delete this._events[evt];

@@ -4,53 +4,61 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 //import everything from each file that we want to be bundled in the stand-alone dist/lincd.js file
-import * as Module from './utils/Module';
-import * as models from './models';
-import * as LinkedErrorLogging from './utils/LinkedErrorLogging';
-import * as LinkedFileStorage from './utils/LinkedFileStorage';
-import * as LinkedStorage from './utils/LinkedStorage';
-import * as EventEmitter from './events/EventEmitter';
-import * as NodeURIMappings from './collections/NodeURIMappings';
-import * as CoreSet from './collections/CoreSet';
-import * as CoreMap from './collections/CoreMap';
-import * as SearchMap from './collections/SearchMap';
-import * as PropertySet from './collections/NodeValuesSet';
-import * as NodeMap from './collections/NodeMap';
-import * as NodeSet from './collections/NodeSet';
-import * as QuadArray from './collections/QuadArray';
-import * as QuadMap from './collections/QuadMap';
-import * as QuadSet from './collections/QuadSet';
-import * as Shape from './shapes/Shape';
-import * as SHACLShapes from './shapes/SHACL';
-import * as ShapeSet from './collections/ShapeSet';
-import * as Prefix from './utils/Prefix';
-import * as Debug from './utils/Debug';
-import * as URI from './utils/URI';
-import * as Find from './utils/Find';
-import * as Order from './utils/Order';
-import * as NQuads from './utils/NQuads';
-import * as LinkedComponentClass from './utils/LinkedComponentClass';
-import * as ForwardReasoning from './utils/ForwardReasoning';
-import * as NameSpace from './utils/NameSpace';
-import * as Hooks from './utils/Hooks';
-import * as ShapeClass from './utils/ShapeClass';
-import * as ShapeDecorators from './utils/ShapeDecorators';
-import * as ClassNames from './utils/ClassNames';
-import * as List from './shapes/List';
-import * as IGraphObject from './interfaces/IGraphObject';
-import * as IGraphObjectSet from './interfaces/IGraphObjectSet';
-import * as ICoreIterable from './interfaces/ICoreIterable';
-import * as IFileStore from './interfaces/IFileStore';
-import * as IQuadStore from './interfaces/IQuadStore';
-import * as Component from './interfaces/Component';
-import * as rdf from './ontologies/rdf';
-import * as rdfs from './ontologies/rdfs';
-import * as xsd from './ontologies/xsd';
-import * as shacl from './ontologies/shacl';
-import * as DataFactory from './Datafactory';
+import * as Package from './utils/Package.js';
+import * as models from './models.js';
+import * as LinkedErrorLogging from './utils/LinkedErrorLogging.js';
+import * as LinkedFileStorage from './utils/LinkedFileStorage.js';
+import * as LinkedStorage from './utils/LinkedStorage.js';
+import * as EventEmitter from './events/EventEmitter.js';
+import * as NodeURIMappings from './collections/NodeURIMappings.js';
+import * as CoreSet from './collections/CoreSet.js';
+import * as CoreMap from './collections/CoreMap.js';
+import * as SearchMap from './collections/SearchMap.js';
+import * as PropertySet from './collections/NodeValuesSet.js';
+import * as NodeMap from './collections/NodeMap.js';
+import * as NodeSet from './collections/NodeSet.js';
+import * as QuadArray from './collections/QuadArray.js';
+import * as QuadMap from './collections/QuadMap.js';
+import * as QuadSet from './collections/QuadSet.js';
+import * as Shape from './shapes/Shape.js';
+import * as SHACLShapes from './shapes/SHACL.js';
+import * as ShapeSet from './collections/ShapeSet.js';
+import * as Prefix from './utils/Prefix.js';
+import * as Debug from './utils/Debug.js';
+import * as URI from './utils/URI.js';
+import * as Find from './utils/Find.js';
+import * as Order from './utils/Order.js';
+import * as NQuads from './utils/NQuads.js';
+import * as SelectQuery from './queries/SelectQuery.js';
+import * as UpdateQuery from './queries/UpdateQuery.js';
+import * as MutationQuery from './queries/MutationQuery.js';
+import * as DeleteQuery from './queries/DeleteQuery.js';
+import * as CreateQuery from './queries/CreateQuery.js';
+import * as QueryParser from './queries/QueryParser.js';
+import * as QueryFactory from './queries/QueryFactory.js';
+import * as LinkedComponent from './utils/LinkedComponent.js';
+import * as LinkedComponentClass from './utils/LinkedComponentClass.js';
+import * as ForwardReasoning from './utils/ForwardReasoning.js';
+import * as NameSpace from './utils/NameSpace.js';
+import * as Hooks from './utils/Hooks.js';
+import * as ShapeClass from './utils/ShapeClass.js';
+import * as ClassNames from './utils/ClassNames.js';
+import * as cached from './utils/cached.js';
+import * as List from './shapes/List.js';
+import * as IGraphObject from './interfaces/IGraphObject.js';
+import * as IGraphObjectSet from './interfaces/IGraphObjectSet.js';
+import * as ICoreIterable from './interfaces/ICoreIterable.js';
+import * as IFileStore from './interfaces/IFileStore.js';
+import * as IQuadStore from './interfaces/IQuadStore.js';
+import * as rdf from './ontologies/rdf.js';
+import * as rdfs from './ontologies/rdfs.js';
+import * as xsd from './ontologies/xsd.js';
+import * as shacl from './ontologies/shacl.js';
+import * as DataFactory from './Datafactory.js';
 import React from 'react';
 
-export const nextTick = require('next-tick');
+import nextTick from 'next-tick';
+export {nextTick};
 
 export function initModularApp() {
   //we don't want people to import {NamedNode} from 'lincd' for example
@@ -81,6 +89,7 @@ export function initModularApp() {
     NameSpace,
     List,
     ClassNames,
+    cached,
     URI,
     Hooks,
     ShapeClass,
@@ -90,15 +99,21 @@ export function initModularApp() {
     Prefix,
     NQuads,
     Boolean,
-    ShapeDecorators,
-    Module,
+    Package,
     IGraphObject,
     IGraphObjectSet,
     ICoreIterable,
     IFileStore,
     IQuadStore,
-    Component,
     LinkedComponentClass,
+    LinkedComponent,
+    SelectQuery,
+    UpdateQuery,
+    MutationQuery,
+    DeleteQuery,
+    CreateQuery,
+    QueryParser,
+    QueryFactory,
     SHACLShapes,
     rdf,
     rdfs,

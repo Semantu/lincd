@@ -1,15 +1,19 @@
-import {NamedNode, Node} from '../models';
-import {Shape} from '../shapes/Shape';
-import {NodeShape} from '../shapes/SHACL';
-import {CoreSet} from '../collections/CoreSet';
-import {rdf} from '../ontologies/rdf';
+import {NamedNode} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
+import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
+import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {rdf} from '../ontologies/rdf.js';
 
 let subShapesSpecificityCache: Map<string, (typeof Shape)[][]> = new Map();
 let subShapesCache: Map<string, (typeof Shape)[]> = new Map();
 let mostSpecificSubShapesCache: Map<string, (typeof Shape)[]> = new Map();
 let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
 let shouldResetCache = false;
-export function addNodeShapeToShapeClass(nodeShape: NodeShape, shapeClass: typeof Shape) {
+
+export function addNodeShapeToShapeClass(
+  nodeShape: NodeShape,
+  shapeClass: typeof Shape,
+) {
   nodeShapeToShapeClass.set(nodeShape.namedNode, shapeClass);
   //make sure that the cache is reset after the next event loop
   if (!shouldResetCache) {
@@ -22,13 +26,22 @@ export function addNodeShapeToShapeClass(nodeShape: NodeShape, shapeClass: typeo
     }, 0);
   }
 }
+
 export function getShapeClass(nodeShape: NamedNode): typeof Shape {
   return nodeShapeToShapeClass.get(nodeShape);
 }
 
-export function getSubShapesClasses(shape: typeof Shape | (typeof Shape)[], _internalKey?: string): (typeof Shape)[] {
-  let key = _internalKey || getKey(shape);
+/**
+ * Returns all the sub shapes of the given shape
+ * That is all the shapes that extend this shape
+ * @param shape
+ */
 
+export function getSubShapesClasses(
+  shape: typeof Shape | (typeof Shape)[],
+  _internalKey?: string,
+): (typeof Shape)[] {
+  let key = _internalKey || getKey(shape);
   if (!subShapesCache.has(key)) {
     //make sure we have a real class
     shape = ensureShapeConstructor(shape);
@@ -60,7 +73,15 @@ export function getSubShapesClasses(shape: typeof Shape | (typeof Shape)[], _int
   // return result;
 }
 
-export function getSuperShapesClasses(shape: typeof Shape | (typeof Shape)[]): (typeof Shape)[] {
+/**
+ * Returns all the superclasses of the given shape
+ * That is all the shapes that it extends.
+ * Results are sorted from most specific to least specific
+ * @param shape
+ */
+export function getSuperShapesClasses(
+  shape: typeof Shape | (typeof Shape)[],
+): (typeof Shape)[] {
   //make sure we have a real class
   shape = ensureShapeConstructor(shape);
   //apply the hasSuperclass function to the shape
@@ -71,8 +92,31 @@ export function getSuperShapesClasses(shape: typeof Shape | (typeof Shape)[]): (
   });
 }
 
+export function getPropertyShapeByLabel(
+  shapeClass: typeof Shape,
+  label: string,
+): PropertyShape {
+  //get all the shapes that this shape extends
+  let shapeChain: (typeof Shape)[] = getSuperShapesClasses(
+    shapeClass as typeof Shape,
+  );
+  //include the shape itself as the first shape in the array
+  shapeChain.unshift(shapeClass as typeof Shape);
+
+  let propertyShape: PropertyShape;
+  for (let sClass of shapeChain) {
+    propertyShape = sClass.shape
+      .getPropertyShapes()
+      .find((propertyShape) => propertyShape.label === label);
+    if (propertyShape) {
+      break;
+    }
+  }
+  return propertyShape;
+}
+
 //https://stackoverflow.com/a/30760236
-function isClass(v) {
+export function isClass(v) {
   return typeof v === 'function' && /^\s*class\s+/.test(v.toString());
 }
 
@@ -101,9 +145,11 @@ function ensureShapeConstructor(shape: typeof Shape | (typeof Shape)[]) {
   //   return shape;
   // }
 }
+
 export function hasSuperClass(a: Function, b: Function) {
   return (a as Function).prototype instanceof b;
 }
+
 export function hasSubClass(a: Function, b: Function) {
   return (b as Function).prototype instanceof a;
 }
@@ -131,10 +177,20 @@ function filterShapeClasses(filterFn) {
   return result;
 }
 
-export function getMostSpecificSubShapes(shape: typeof Shape | (typeof Shape)[]): (typeof Shape)[] {
+export function getLeastSpecificShapeClasses(shapes: ICoreIterable<Shape>) {
+  let shapeClasses = shapes.map((shape) =>
+    getShapeClass(shape.nodeShape.namedNode),
+  );
+  return filterShapesToLeastSpecific(shapeClasses);
+}
+
+export function getMostSpecificSubShapes(
+  shape: typeof Shape | (typeof Shape)[],
+): (typeof Shape)[] {
   if (!Array.isArray(shape)) {
     shape = [shape];
   }
+  //get the subshapes of the given shapes
   let key = shape.map((s) => s.name).join(',');
   if (!mostSpecificSubShapesCache.has(key)) {
     //get the subshapes of the given shapes
@@ -145,10 +201,29 @@ export function getMostSpecificSubShapes(shape: typeof Shape | (typeof Shape)[])
   return mostSpecificSubShapesCache.get(key);
 }
 
+/**
+ * Filters out all shapes that are extended by any other shape in the given set/array
+ * @param subShapes
+ */
 function filterShapesToMostSpecific(subShapes) {
   return subShapes.filter((subShape) => {
     return !subShapes.some((otherSubShape) => {
       return otherSubShape.prototype instanceof subShape;
+    });
+  });
+}
+
+/**
+ * Filters out all shapes that extend any other shape in the given set/array
+ * @param shapeClasses
+ */
+function filterShapesToLeastSpecific(shapeClasses) {
+  return shapeClasses.filter((shapeClass) => {
+    return !shapeClasses.some((otherShapeClass) => {
+      return (
+        otherShapeClass !== shapeClass &&
+        shapeClass.prototype instanceof otherShapeClass
+      );
     });
   });
 }
@@ -160,12 +235,15 @@ function filterShapesToMostSpecific(subShapes) {
  * @param property
  * @param shape
  */
-export function getShapeOrSubShape<S extends Shape = Shape>(node, shape: typeof Shape | (typeof Shape)[]): S {
+export function getShapeOrSubShape<S extends Shape = Shape>(
+  node,
+  shape: typeof Shape | (typeof Shape)[],
+): S {
   if (!node) return null;
 
   //new:
   //find all shapes that extend the given shape(s)
-  let mostSpecificShapes = getMostSpecificShapes(node, shape);
+  let mostSpecificShapes = getMostSpecificShapesByType(node, shape);
 
   //take the first one and return a new instance of that shape
   if (mostSpecificShapes.length > 0) {
@@ -212,22 +290,37 @@ export function getMostSpecificShapes(
   node: NamedNode,
   baseShape: typeof Shape | (typeof Shape)[] = Shape,
 ): (typeof Shape)[] {
-  return _getMostSpecificShapes(baseShape, (subShape) => subShape.shape.validateNode(node));
+  return _getMostSpecificShapes(baseShape, (subShape) =>
+    subShape.shape.validateNode(node),
+  );
 }
+
 export function getMostSpecificShapesByType(
   node: NamedNode,
   baseShape: typeof Shape | (typeof Shape)[] = Shape,
 ): (typeof Shape)[] {
-  return _getMostSpecificShapes(baseShape, (subShape) => node.has(rdf.type, subShape.targetClass));
+  return _getMostSpecificShapes(baseShape, (subShape) =>
+    node.has(rdf.type, subShape.targetClass),
+  );
 }
+
 function getKey(shape: typeof Shape | (typeof Shape)[]) {
-  return Array.isArray(shape) ? shape.map((s) => getShapeKey(s)).join(',') : getShapeKey(shape);
+  return Array.isArray(shape)
+    ? shape.map((s) => getShapeKey(s)).join(',')
+    : getShapeKey(shape);
 }
+
 function getShapeKey(shape: typeof Shape) {
   //return a unique string for each shape
-  return shape.targetClass?.uri || shape.name + shape.prototype.constructor.toString().substring(0, 80);
+  return (
+    shape.targetClass?.uri ||
+    shape.name + shape.prototype.constructor.toString().substring(0, 80)
+  );
 }
-function getSubShapesClassesSortedBySpecificity(baseShape: typeof Shape | (typeof Shape)[] = Shape) {
+
+function getSubShapesClassesSortedBySpecificity(
+  baseShape: typeof Shape | (typeof Shape)[] = Shape,
+) {
   let key = getKey(baseShape);
   if (!subShapesSpecificityCache.has(key)) {
     let subShapes: (typeof Shape)[] = getSubShapesClasses(baseShape, key);
@@ -243,7 +336,11 @@ function getSubShapesClassesSortedBySpecificity(baseShape: typeof Shape | (typeo
   }
   return subShapesSpecificityCache.get(key);
 }
-function _getMostSpecificShapes(baseShape: typeof Shape | (typeof Shape)[] = Shape, shapeValidationFn) {
+
+function _getMostSpecificShapes(
+  baseShape: typeof Shape | (typeof Shape)[] = Shape,
+  shapeValidationFn,
+) {
   //get the subshapes of the given base shape(s)
   let subShapes = getSubShapesClassesSortedBySpecificity(baseShape);
 
@@ -251,7 +348,8 @@ function _getMostSpecificShapes(baseShape: typeof Shape | (typeof Shape)[] = Sha
   //for each group of most specific subshapes (before going to the next group of less specific subshapes)
   for (let subShapeGroup of subShapes) {
     //filter them down to the ones that this node is a valid instance of
-    let shapesThatMatchNode = subShapeGroup.filter(shapeValidationFn);
+    let shapesThatMatchNode = subShapeGroup.filter(shapeValidationFn); //if any of them can create a valid instance for this node, then return that
+
     //if any of them can create a valid instance for this node, then return that
     if (shapesThatMatchNode.length > 0) {
       res = shapesThatMatchNode;
