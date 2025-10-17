@@ -1,0 +1,139 @@
+/* ============================================================================
+   LINCD Default Theme Values
+   Import this to use LINCD's default theme. You can still override these values.
+   Alternatively, you can define all your own theme variables in your own theme.css file.
+   ============================================================================ */
+/* Safelist primary colors for theme showcase (Tailwind v4 approach) */
+@source inline("bg-primary-{50,{100..900..100},950}");
+@source inline("text-primary-{50,{100..900..100},950}");
+@source inline("border-primary-{50,{100..900..100},950}");
+
+@theme {
+    /* Primary Palette - app-specific brand color */
+    --color-primary-50: var(--color-sky-50);
+    --color-primary-100: var(--color-sky-100);
+    --color-primary-200: var(--color-sky-200);
+    --color-primary-300: var(--color-sky-300);
+    --color-primary-400: var(--color-sky-400);
+    --color-primary-500: var(--color-sky-500);
+    --color-primary-600: var(--color-sky-600);
+    --color-primary-700: var(--color-sky-700);
+    --color-primary-800: var(--color-sky-800);
+    --color-primary-900: var(--color-sky-900);
+    
+    /* === Shadows (auto-generates shadow-* utilities) === */
+  --shadow-surface: var(--shadow-sm);
+  --shadow-card: var(--shadow-md);
+  --shadow-popover: var(--shadow-lg);
+  --shadow-modal: var(--shadow-2xl);
+  --shadow-floating-action: var(--shadow-lg);
+  --shadow-content: none;
+
+  /* === Border Radius (auto-generates rounded-* utilities) === */
+  --radius-surface: var(--radius-sm);
+  --radius-card: var(--radius-lg);
+  --radius-element: var(--radius-md);
+  --radius-popover: var(--radius-md);
+  --radius-modal: var(--radius-2xl);
+  --radius-floating-action: var(--radius-full);
+  --radius-none: 0px;
+}
+/* ============================================================================
+   CSS VARIABLES (accessible everywhere)
+   These need to be at root level to be usable in custom CSS
+   It is not possible to define these in the theme directive, so we define them here.
+   And then we can use these variables in the utilities below to define extra tailwind utilities.
+   ============================================================================ */
+:root {
+  /* === Semantic Background Colors === */
+  --bg-page: var(--color-gray-50);
+  --bg-section: var(--color-gray-100);
+  --bg-card: var(--color-white);
+  --bg-popover: var(--color-white);
+  --bg-modal: var(--color-white);
+  --bg-sidebar: var(--color-gray-200);
+  --bg-footer: var(--color-gray-300);
+  --bg-overlay: var(--color-gray-900);
+
+  /* === Z-Index Layers === */
+  --z-base: 0;
+  --z-surface: 10;
+  --z-popover: 30;
+  --z-modal: 50;
+  --z-overlay: 40; /* Overlay backdrops (below modals) */
+  --z-tooltip: 100;
+
+  /* === Semantic Padding === */
+  --spacing-surface: calc(var(--spacing) * 6);
+  --spacing-modal: calc(var(--spacing) * 6);
+  --spacing-card: calc(var(--spacing) * 4);
+  --spacing-section: calc(var(--spacing) * 4);
+  --spacing-popover: calc(var(--spacing) * 4);
+  --spacing-element-x: calc(var(--spacing) * 4);
+  --spacing-element-y: calc(var(--spacing) * 2);
+}
+/* === Semantic Background Utilities === */
+@utility bg-page {
+    background-color: var(--bg-page);
+}
+
+@utility bg-section {
+    background-color: var(--bg-section);
+}
+
+@utility bg-card {
+    background-color: var(--bg-card);
+}
+
+@utility bg-popover {
+    background-color: var(--bg-popover);
+}
+
+@utility bg-modal {
+    background-color: var(--bg-modal);
+}
+
+@utility bg-sidebar {
+    background-color: var(--bg-sidebar);
+}
+
+@utility bg-footer {
+    background-color: var(--bg-footer);
+}
+
+@utility bg-overlay {
+    background-color: var(--bg-overlay);
+}
+
+/* === Semantic Padding Utilities === */
+@utility p-surface {
+    padding: var(--spacing-surface);
+}
+
+@utility p-modal {
+    padding: var(--spacing-modal);
+}
+
+@utility p-card {
+    padding: var(--spacing-card);
+}
+
+@utility p-section {
+    padding: var(--spacing-section);
+}
+
+@utility p-popover {
+    padding: var(--spacing-popover);
+}
+
+@utility p-element {
+    padding: var(--spacing-element-y) var(--spacing-element-x);
+}
+
+/* === Semantic Z-Index Utilities === */
+@utility z-base { z-index: var(--z-base); }
+@utility z-surface { z-index: var(--z-surface); }
+@utility z-popover { z-index: var(--z-popover); }
+@utility z-modal { z-index: var(--z-modal); }
+@utility z-overlay { z-index: var(--z-overlay); }
+@utility z-tooltip { z-index: var(--z-tooltip); }

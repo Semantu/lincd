@@ -16,6 +16,10 @@
       "import": "./lib/esm/*.js",
       "require": "./lib/cjs/*.js"
     },
+    "./utilities.css": "./lib/esm/css/utilities.css",
+    "./theme-defaults.css": "./lib/esm/css/theme-defaults.css",
+  "./variables.css": "./lib/esm/css/variables.css",
+    "./*.css": "./lib/esm/*.css",
     "./*": {
       "types": "./lib/esm/*.d.ts",
       "import": "./lib/esm/*.js",
