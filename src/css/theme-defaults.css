@@ -3,10 +3,16 @@
    Import this to use LINCD's default theme. You can still override these values.
    Alternatively, you can define all your own theme variables in your own theme.css file.
    ============================================================================ */
-/* Safelist primary colors for theme showcase (Tailwind v4 approach) */
+/* Safelist primary, secondary, and tertiary colors for theme showcase (Tailwind v4 approach) */
 @source inline("bg-primary-{50,{100..900..100},950}");
 @source inline("text-primary-{50,{100..900..100},950}");
 @source inline("border-primary-{50,{100..900..100},950}");
+@source inline("bg-secondary-{50,{100..900..100},950}");
+@source inline("text-secondary-{50,{100..900..100},950}");
+@source inline("border-secondary-{50,{100..900..100},950}");
+@source inline("bg-tertiary-{50,{100..900..100},950}");
+@source inline("text-tertiary-{50,{100..900..100},950}");
+@source inline("border-tertiary-{50,{100..900..100},950}");
 
 @theme {
     /* Primary Palette - app-specific brand color */
@@ -20,6 +26,30 @@
     --color-primary-700: var(--color-sky-700);
     --color-primary-800: var(--color-sky-800);
     --color-primary-900: var(--color-sky-900);
+
+    /* Secondary Palette - green (default fallback) */
+    --color-secondary-50: var(--color-emerald-50);
+    --color-secondary-100: var(--color-emerald-100);
+    --color-secondary-200: var(--color-emerald-200);
+    --color-secondary-300: var(--color-emerald-300);
+    --color-secondary-400: var(--color-emerald-400);
+    --color-secondary-500: var(--color-emerald-500);
+    --color-secondary-600: var(--color-emerald-600);
+    --color-secondary-700: var(--color-emerald-700);
+    --color-secondary-800: var(--color-emerald-800);
+    --color-secondary-900: var(--color-emerald-900);
+
+    /* Tertiary Palette - cyan (default fallback) */
+    --color-tertiary-50: var(--color-cyan-50);
+    --color-tertiary-100: var(--color-cyan-100);
+    --color-tertiary-200: var(--color-cyan-200);
+    --color-tertiary-300: var(--color-cyan-300);
+    --color-tertiary-400: var(--color-cyan-400);
+    --color-tertiary-500: var(--color-cyan-500);
+    --color-tertiary-600: var(--color-cyan-600);
+    --color-tertiary-700: var(--color-cyan-700);
+    --color-tertiary-800: var(--color-cyan-800);
+    --color-tertiary-900: var(--color-cyan-900);
     
     /* === Shadows (auto-generates shadow-* utilities) === */
   --shadow-surface: var(--shadow-sm);
