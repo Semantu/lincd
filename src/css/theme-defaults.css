@@ -26,7 +26,7 @@
     --color-primary-700: var(--color-sky-700);
     --color-primary-800: var(--color-sky-800);
     --color-primary-900: var(--color-sky-900);
-
+    
     /* Secondary Palette - green (default fallback) */
     --color-secondary-50: var(--color-emerald-50);
     --color-secondary-100: var(--color-emerald-100);
@@ -50,23 +50,75 @@
     --color-tertiary-700: var(--color-cyan-700);
     --color-tertiary-800: var(--color-cyan-800);
     --color-tertiary-900: var(--color-cyan-900);
-    
-    /* === Shadows (auto-generates shadow-* utilities) === */
+
+    /* === Shadow Tokens (auto-generates shadow-* utilities) === */
+    --shadow-section: none;
   --shadow-surface: var(--shadow-sm);
-  --shadow-card: var(--shadow-md);
+    --shadow-box: var(--shadow-md);
   --shadow-popover: var(--shadow-lg);
+    --shadow-tooltip: var(--shadow-popover);
   --shadow-modal: var(--shadow-2xl);
+    --shadow-navigation: none;
+    --shadow-tabs: var(--shadow-navigation);
+    --shadow-menubar: var(--shadow-navigation);
+    --shadow-breadcrumb-nav: none;
+    --shadow-list-item: none;
+    --shadow-control: none;
+    --shadow-field: none;
+    --shadow-selector: var(--shadow-popover);
+    --shadow-choice: none;
+    --shadow-track-control: none;
+    --shadow-notification: var(--shadow-lg);
+    --shadow-meter: none;
+    --shadow-media: none;
+    --shadow-typography: none;
+    --shadow-icon: none;
+    --shadow-separator: none;
+
+    /* Legacy aliases (to be removed once components migrate) */
+    --shadow-card: var(--shadow-box);
+    --shadow-input: var(--shadow-field);
   --shadow-floating-action: var(--shadow-lg);
   --shadow-content: none;
+    --shadow-tabs-nav: var(--shadow-tabs);
+    --shadow-menubar-nav: var(--shadow-menubar);
+    --shadow-tooltip-popover: var(--shadow-tooltip);
 
-  /* === Border Radius (auto-generates rounded-* utilities) === */
+    /* === Radius Tokens (auto-generates rounded-* utilities) === */
+    --radius-none: 0px;
+    --radius-section: var(--radius-none);
   --radius-surface: var(--radius-sm);
-  --radius-card: var(--radius-lg);
-  --radius-element: var(--radius-md);
+    --radius-box: var(--radius-lg);
   --radius-popover: var(--radius-md);
+    --radius-tooltip: var(--radius-sm);
   --radius-modal: var(--radius-2xl);
+    --radius-navigation: var(--radius-sm);
+    --radius-tabs: var(--radius-navigation);
+    --radius-menubar: var(--radius-navigation);
+    --radius-breadcrumb-nav: var(--radius-none);
+    --radius-list-item: var(--radius-sm);
+    --radius-control: var(--radius-md);
+    --radius-field: var(--radius-md);
+    --radius-selector: var(--radius-md);
+    --radius-choice: var(--radius-md);
+    --radius-track-control: var(--radius-full);
+    --radius-notification: var(--radius-md);
+    --radius-meter: var(--radius-full);
+    --radius-media: var(--radius-full);
+    --radius-typography: var(--radius-none);
+    --radius-icon: var(--radius-full);
+    --radius-separator: var(--radius-none);
+
+    /* Legacy aliases (to be removed once components migrate) */
+    /* --radius-card: var(--radius-box);
+    --radius-element: var(--radius-control);
+    --radius-button: var(--radius-control);
+    --radius-input: var(--radius-field);
+    --radius-toggle: var(--radius-control);
   --radius-floating-action: var(--radius-full);
-  --radius-none: 0px;
+    --radius-tabs-nav: var(--radius-tabs);
+    --radius-menubar-nav: var(--radius-menubar);
+    --radius-tooltip-popover: var(--radius-tooltip); */
 }
 /* ============================================================================
    CSS VARIABLES (accessible everywhere)
@@ -74,96 +126,725 @@
    It is not possible to define these in the theme directive, so we define them here.
    And then we can use these variables in the utilities below to define extra tailwind utilities.
    ============================================================================ */
+
 :root {
-  /* === Semantic Background Colors === */
-  --bg-page: var(--color-gray-50);
-  --bg-section: var(--color-gray-100);
-  --bg-card: var(--color-white);
-  --bg-popover: var(--color-white);
-  --bg-modal: var(--color-white);
-  --bg-sidebar: var(--color-gray-200);
-  --bg-footer: var(--color-gray-300);
-  --bg-overlay: var(--color-gray-900);
+  /* === Global Layer Tokens === */
+  --layer-base: 0;
+  --layer-surface: 10;
+  --layer-popover: 30;
+  --layer-modal: 50;
+  --layer-overlay: 40;
+  --layer-tooltip: 100;
 
-  /* === Z-Index Layers === */
-  --z-base: 0;
-  --z-surface: 10;
-  --z-popover: 30;
-  --z-modal: 50;
-  --z-overlay: 40; /* Overlay backdrops (below modals) */
-  --z-tooltip: 100;
+  /* === Global State Tokens === */
+  --bg-state-subtle: var(--color-gray-100);
+  --bg-state-subtle-hover: var(--color-gray-200);
+  --bg-state-active: var(--color-primary-100);
+  --bg-state-focus: var(--color-primary-50);
+  --bg-state-disabled: var(--color-gray-200);
+  --border-state-focus: var(--color-primary-500);
+  --text-state-auxiliary: var(--color-gray-600);
+  --text-state-placeholder: var(--color-gray-500);
+  --text-state-disabled: var(--color-gray-400);
+  --text-state-primary: var(--color-gray-900);
+  --bg-overlay-scrim: color-mix(in srgb, var(--color-gray-900) 60%, transparent);
 
-  /* === Semantic Padding === */
-  --spacing-surface: calc(var(--spacing) * 6);
-  --spacing-modal: calc(var(--spacing) * 6);
-  --spacing-card: calc(var(--spacing) * 4);
-  --spacing-section: calc(var(--spacing) * 4);
-  --spacing-popover: calc(var(--spacing) * 4);
-  --spacing-element-x: calc(var(--spacing) * 4);
-  --spacing-element-y: calc(var(--spacing) * 2);
+  /* === Global Transition Control === */
+  --transition-duration-fast: var(--duration-150);
+  --transition-duration-normal: var(--duration-300);
+  --transition-duration-slow: var(--duration-500);
+  --transition-easing: var(--ease-in-out);
+  
+  /* Complete transition shorthands */
+  --transition-fast: all var(--transition-duration-fast) var(--transition-easing);
+  --transition-normal: all var(--transition-duration-normal) var(--transition-easing);
+  --transition-slow: all var(--transition-duration-slow) var(--transition-easing);
+  
+  /* Default transition (backwards compatibility) */
+  --transition: var(--transition-normal);
+
+  /* === Layout Types === */
+  
+  /* Section (page sections, hero areas) */
+  --section-bg: var(--color-gray-50);
+  --section-border: transparent;
+  --section-text: var(--text-state-primary);
+  --section-padding: var(--spacing-16);
+  --section-gap: var(--spacing-8);
+  --section-radius: var(--radius-section);
+  --section-shadow: var(--shadow-section);
+
+  /* Surface (neutral panels, simple containers) */
+  --surface-bg: var(--color-gray-100);
+  --surface-border: var(--color-gray-200);
+  --surface-text: var(--text-state-primary);
+  --surface-padding: var(--spacing-6);
+  --surface-gap: var(--spacing-4);
+  --surface-radius: var(--radius-surface);
+  --surface-shadow: var(--shadow-surface);
+
+  /* Box (Card, Accordion, Command panel, Drawer panel) */
+  --box-bg: var(--color-white);
+  --box-border: var(--color-gray-200);
+  --box-text: var(--text-state-primary);
+  --box-padding: var(--spacing-6);
+  --box-gap: var(--spacing-4);
+  --box-radius: var(--radius-box);
+  --box-shadow: var(--shadow-box);
+
+  /* === Overlay Types === */
+  
+  /* Popover (Popover, HoverCard, Tooltip subtype) */
+  --popover-bg: var(--color-white);
+  --popover-border: var(--color-gray-200);
+  --popover-text: var(--text-state-primary);
+  --popover-padding: var(--spacing-4);
+  --popover-gap: var(--spacing-2);
+  --popover-radius: var(--radius-popover);
+  --popover-shadow: var(--shadow-popover);
+
+  /* Tooltip (Popover subtype) */
+  --tooltip-bg: var(--color-gray-900);
+  --tooltip-text: var(--color-white);
+  --tooltip-padding: var(--spacing-2);
+  --tooltip-radius: var(--radius-tooltip);
+  --tooltip-shadow: var(--shadow-tooltip);
+
+  /* Modal/Sheet (Dialog, AlertDialog, Drawer sheet variant) */
+  --modal-bg: var(--color-white);
+  --modal-border: var(--color-gray-200);
+  --modal-text: var(--text-state-primary);
+  --modal-padding: var(--spacing-6);
+  --modal-gap: var(--spacing-4);
+  --modal-overlay-bg: var(--bg-overlay-scrim);
+  --modal-radius: var(--radius-modal);
+  --modal-shadow: var(--shadow-modal);
+
+  /* === Navigation Types === */
+  
+  /* Navigation (Tabs, Menubar, NavigationMenu, Breadcrumb) */
+  --navigation-bg: transparent;
+  --navigation-border: var(--color-gray-200);
+  --navigation-text: var(--color-gray-700);
+  --navigation-text-active: var(--text-state-primary);
+  --navigation-indicator: var(--color-primary-600);
+  --navigation-padding: var(--spacing-2);
+  --navigation-gap: var(--spacing-2);
+  --navigation-radius: var(--radius-navigation);
+  --navigation-shadow: var(--shadow-navigation);
+
+  /* Tabs (Navigation subtype) */
+  --tabs-bg: var(--navigation-bg);
+  --tabs-border: var(--navigation-border);
+  --tabs-text: var(--navigation-text);
+  --tabs-text-active: var(--navigation-text-active);
+  --tabs-indicator: var(--navigation-indicator);
+  --tabs-padding: var(--spacing-2);
+  --tabs-gap: var(--spacing-2);
+  --tabs-radius: var(--radius-tabs);
+  --tabs-shadow: var(--shadow-tabs);
+
+  /* Menubar (Navigation subtype) */
+  --menubar-bg: var(--navigation-bg);
+  --menubar-border: var(--navigation-border);
+  --menubar-text: var(--navigation-text);
+  --menubar-text-active: var(--navigation-text-active);
+  --menubar-indicator: var(--navigation-indicator);
+  --menubar-padding: var(--spacing-2);
+  --menubar-gap: var(--spacing-2);
+  --menubar-radius: var(--radius-menubar);
+  --menubar-shadow: var(--shadow-menubar);
+
+  /* BreadcrumbNav (Navigation subtype) */
+  --breadcrumb-bg: transparent;
+  --breadcrumb-text: var(--navigation-text);
+  --breadcrumb-text-active: var(--navigation-text-active);
+  --breadcrumb-text-hover: var(--link-color-hover);
+  --breadcrumb-separator: var(--color-gray-400);
+  --breadcrumb-gap: var(--spacing-3);
+  --breadcrumb-item-gap: var(--spacing-4);
+  --breadcrumb-font-size: var(--typography-small-size);
+  --breadcrumb-ellipsis-size: var(--control-height-sm);
+  --breadcrumb-icon-size: var(--icon-size-md);
+  --breadcrumb-transition: var(--transition);
+  --breadcrumb-radius: var(--radius-breadcrumb-nav);
+  --breadcrumb-shadow: var(--shadow-breadcrumb-nav);
+
+  /* === Interactive Types === */
+  
+  /* ListItem (Command items, Select options, Menu items, vertical nav lists) */
+  --list-item-bg: transparent;
+  --list-item-bg-hover: var(--bg-state-muted-hover);
+  --list-item-bg-active: var(--bg-state-active);
+  --list-item-text: var(--text-state-primary);
+  --list-item-text-disabled: var(--text-state-disabled);
+  --list-item-text-auxiliary: var(--text-state-auxiliary);
+  --list-item-padding-x: var(--spacing-3);
+  --list-item-padding-y: var(--spacing-2);
+  --list-item-gap: var(--spacing-2);
+  --list-item-radius: var(--radius-list-item);
+  --list-item-shadow: var(--shadow-list-item);
+
+  /* Control (Button, IconButton, Toggle, ToggleGroup) */
+  --control-bg: var(--color-gray-100);
+  --control-bg-hover: var(--color-gray-200);
+  --control-bg-active: var(--color-gray-300);
+  --control-border: var(--color-gray-300);
+  --control-border-hover: var(--color-gray-400);
+  --control-text: var(--text-state-primary);
+  --control-text-contrast: var(--color-white);
+  --control-accent: var(--color-primary-600);
+  --control-accent-hover: var(--color-primary-700);
+  --control-padding-x: var(--spacing-4);
+  --control-padding-y: var(--spacing-2);
+  --control-padding-sm-x: calc(var(--spacing) * 3);
+  --control-padding-sm-y: calc(var(--spacing) * 1.5);
+  --control-padding-lg-x: calc(var(--spacing) * 6);
+  --control-padding-lg-y: calc(var(--spacing) * 3);
+  --control-gap: var(--spacing-2);
+  --control-height-sm: var(--field-height-sm);
+  --control-height-md: var(--field-height-md);
+  --control-height-lg: var(--field-height-lg);
+  --control-outline-width: 2px;
+  --control-outline-color: color-mix(in srgb, var(--control-accent) 60%, transparent);
+  --control-outline-offset: 2px;
+  --control-radius: var(--radius-control);
+  --control-shadow: var(--shadow-control);
+  --control-toggle-size: 2.5rem;
+
+  /* Field (Input, Textarea) */
+  --field-bg: var(--color-white);
+  --field-bg-hover: var(--color-gray-50);
+  --field-bg-focus: var(--color-white);
+  --field-border: var(--color-gray-300);
+  --field-border-hover: var(--color-gray-400);
+  --field-border-focus: var(--border-state-focus);
+  --field-text: var(--text-state-primary);
+  --field-text-placeholder: var(--text-state-placeholder);
+  --field-padding-x: calc(var(--spacing) * 3);
+  --field-padding-y: calc(var(--spacing) * 2);
+  --field-height-sm: 2rem;
+  --field-height-md: 2.5rem;
+  --field-height-lg: 3rem;
+  --field-radius: var(--radius-field);
+  --field-shadow: var(--shadow-field);
+    --field-font-family: var(--typography-body-font-family);
+    --field-font-size: var(--typography-body-size);
+    --field-font-size-sm: var(--font-size-sm);
+    --field-font-size-lg: var(--font-size-lg);
+    --field-font-weight: var(--typography-body-font-weight);
+    --field-line-height: var(--typography-body-line-height);
+
+  /* Selector (Select, MultiSelect) */
+  --selector-trigger-bg: var(--field-bg);
+  --selector-trigger-border: var(--field-border);
+  --selector-trigger-text: var(--field-text);
+  --selector-trigger-padding-x: var(--field-padding-x);
+  --selector-trigger-padding-y: var(--spacing-2);
+  --selector-trigger-gap: var(--spacing-2);
+  --selector-trigger-height-sm: var(--field-height-sm);
+  --selector-trigger-height-md: var(--field-height-md);
+  --selector-trigger-height-lg: var(--field-height-lg);
+  --selector-trigger-icon-size: var(--icon-size-md);
+  --selector-trigger-shadow: var(--shadow-selector);
+  --selector-panel-bg: var(--popover-bg);
+  --selector-panel-border: var(--popover-border);
+  --selector-panel-shadow: var(--shadow-popover);
+  --selector-option-bg: var(--list-item-bg);
+  --selector-option-bg-hover: var(--list-item-bg-hover);
+  --selector-option-bg-active: var(--list-item-bg-active);
+  --selector-option-text: var(--list-item-text);
+  --selector-radius: var(--radius-selector);
+  --selector-shadow: var(--shadow-selector);
+
+  /* Choice (Checkbox, RadioGroup, Switch) */
+  --choice-bg: var(--field-bg);
+  --choice-bg-hover: var(--field-bg-hover);
+  --choice-bg-checked: var(--control-accent);
+  --choice-border: var(--field-border);
+  --choice-border-hover: var(--field-border-hover);
+  --choice-border-checked: var(--control-accent);
+  --choice-indicator: var(--color-white);
+  --choice-text: var(--text-state-primary);
+  --choice-size: var(--spacing-5);
+  --choice-indicator-size: var(--spacing-6);
+  --choice-radius: var(--radius-choice);
+  --choice-shadow: var(--shadow-choice);
+
+  /* TrackControl (Slider) */
+  --track-control-track-bg: var(--color-gray-200);
+  --track-control-track-bg-active: var(--control-accent);
+  --track-control-track-radius: var(--radius-track-control);
+  --track-control-thumb-bg: var(--color-white);
+  --track-control-thumb-border: var(--control-accent);
+  --track-control-thumb-shadow: var(--shadow-track-control);
+  --track-control-radius: var(--radius-track-control);
+  --track-control-shadow: var(--shadow-track-control);
+
+  /* === Feedback Types === */
+  
+  /* Notification (Toast) */
+  --notification-bg: var(--color-white);
+  --notification-border: var(--color-gray-200);
+  --notification-text: var(--text-state-primary);
+  --notification-accent: var(--control-accent);
+  --notification-padding: var(--spacing-4);
+  --notification-gap: var(--spacing-3);
+  --notification-radius: var(--radius-notification);
+  --notification-shadow: var(--shadow-notification);
+
+  /* Meter (Progress) */
+  --meter-track-bg: var(--color-gray-200);
+  --meter-indicator-bg: var(--control-accent);
+  --meter-text: var(--text-state-primary);
+  --meter-radius: var(--radius-meter);
+  --meter-shadow: var(--shadow-meter);
+  --progress-track-bg: var(--meter-track-bg);
+  --progress-indicator-bg: var(--meter-indicator-bg);
+  --progress-width: 100%;
+  --progress-height: var(--spacing-2);
+  --progress-radius: var(--meter-radius);
+  --progress-animation-duration: var(--transition-duration-normal);
+
+  /* === Content Types === */
+  
+  /* Media (Image, Avatar) */
+  --media-bg: var(--color-gray-200);
+  --media-border: transparent;
+  --media-radius: var(--radius-media);
+  --media-shadow: var(--shadow-media);
+
+  /* Avatar (Media subtype) */
+  --avatar-size-sm: var(--spacing-8);
+  --avatar-size-md: var(--spacing-10);
+  --avatar-size-lg: var(--spacing-12);
+  --avatar-radius: var(--radius-full);
+  --avatar-bg: var(--media-bg);
+  --avatar-color: var(--typography-muted-color);
+  --avatar-shadow: var(--media-shadow);
+  --avatar-font-weight: var(--font-weight-medium);
+
+  /* Typography (body text styles) */
+  --typography-font-family: var(--font-family-sans);
+  --typography-font-size: var(--font-size-base);
+  --typography-font-weight: var(--font-weight-normal);
+  --typography-line-height: var(--line-height-normal);
+  --typography-line-height-none: 1;
+  --typography-color: var(--color-gray-800);
+  --typography-auxiliary-color: var(--text-state-auxiliary);
+  --typography-small-size: calc(var(--typography-font-size) * 0.875);
+  --typography-large-size: calc(var(--typography-font-size) * 1.125);
+  --typography-radius: var(--radius-typography);
+  --typography-shadow: var(--shadow-typography);
+
+  /* Link */
+  --link-color: var(--control-accent);
+  --link-color-hover: var(--color-primary-600);
+  --link-font-family: var(--font-family-sans);
+  --link-font-weight: var(--font-weight-medium);
+  --link-text-decoration: underline;
+  --link-text-decoration-hover: underline;
+  --link-transition: color 0.15s ease-in-out;
+
+  /* Heading (base defaults for all headings) */
+  --heading-font-family: var(--font-family-sans);
+  --heading-font-weight: var(--font-weight-semibold);
+  --heading-line-height: var(--line-height-tight);
+  --heading-letter-spacing: var(--letter-spacing-tight);
+  --heading-color: var(--text-state-primary);
+  --heading-font-style: normal;
+
+  /* Heading 1 */
+  --heading-1-font-family: var(--heading-font-family);
+  --heading-1-font-size: var(--font-size-4xl);
+  --heading-1-font-weight: var(--heading-font-weight);
+  --heading-1-line-height: var(--heading-line-height);
+  --heading-1-letter-spacing: var(--heading-letter-spacing);
+  --heading-1-color: var(--heading-color);
+  --heading-1-font-style: var(--heading-font-style);
+  --heading-1-margin-top: var(--spacing-0);
+  --heading-1-margin-bottom: var(--spacing-4);
+
+  /* Heading 2 */
+  --heading-2-font-family: var(--heading-font-family);
+  --heading-2-font-size: var(--font-size-3xl);
+  --heading-2-font-weight: var(--heading-font-weight);
+  --heading-2-line-height: var(--heading-line-height);
+  --heading-2-letter-spacing: var(--heading-letter-spacing);
+  --heading-2-color: var(--heading-color);
+  --heading-2-font-style: var(--heading-font-style);
+  --heading-2-margin-top: var(--spacing-0);
+  --heading-2-margin-bottom: var(--spacing-3);
+
+  /* Heading 3 */
+  --heading-3-font-family: var(--heading-font-family);
+  --heading-3-font-size: var(--font-size-2xl);
+  --heading-3-font-weight: var(--heading-font-weight);
+  --heading-3-line-height: var(--heading-line-height);
+  --heading-3-letter-spacing: var(--heading-letter-spacing);
+  --heading-3-color: var(--heading-color);
+  --heading-3-font-style: var(--heading-font-style);
+  --heading-3-margin-top: var(--spacing-0);
+  --heading-3-margin-bottom: var(--spacing-3);
+
+  /* Heading 4 */
+  --heading-4-font-family: var(--heading-font-family);
+  --heading-4-font-size: var(--font-size-xl);
+  --heading-4-font-weight: var(--heading-font-weight);
+  --heading-4-line-height: var(--heading-line-height);
+  --heading-4-letter-spacing: var(--heading-letter-spacing);
+  --heading-4-color: var(--heading-color);
+  --heading-4-font-style: var(--heading-font-style);
+  --heading-4-margin-top: var(--spacing-0);
+  --heading-4-margin-bottom: var(--spacing-2);
+
+  /* Heading 5 */
+  --heading-5-font-family: var(--heading-font-family);
+  --heading-5-font-size: var(--font-size-lg);
+  --heading-5-font-weight: var(--heading-font-weight);
+  --heading-5-line-height: var(--heading-line-height);
+  --heading-5-letter-spacing: var(--heading-letter-spacing);
+  --heading-5-color: var(--heading-color);
+  --heading-5-font-style: var(--heading-font-style);
+  --heading-5-margin-top: var(--spacing-0);
+  --heading-5-margin-bottom: var(--spacing-2);
+
+  /* Heading 6 */
+  --heading-6-font-family: var(--heading-font-family);
+  --heading-6-font-size: var(--font-size-base);
+  --heading-6-font-weight: var(--heading-font-weight);
+  --heading-6-line-height: var(--heading-line-height);
+  --heading-6-letter-spacing: var(--heading-letter-spacing);
+  --heading-6-color: var(--heading-color);
+  --heading-6-font-style: var(--heading-font-style);
+  --heading-6-margin-top: var(--spacing-0);
+  --heading-6-margin-bottom: var(--spacing-1);
+
+  /* Icon */
+  --icon-color: var(--color-gray-500);
+  --icon-color-active: var(--control-accent);
+  --icon-size-sm: 1rem;
+  --icon-size-md: 1.25rem;
+  --icon-size-lg: 1.5rem;
+  --icon-radius: var(--radius-icon);
+  --icon-shadow: var(--shadow-icon);
+
+  /* Separator */
+  --separator-color: var(--color-gray-200);
+  --separator-thickness: 1px;
+  --separator-radius: var(--radius-separator);
+  --separator-shadow: var(--shadow-separator);
+
+  /* === Variant & Component-Specific Tokens === */
+  --button-primary-bg: var(--control-accent);
+  --button-primary-bg-hover: var(--control-accent-hover);
+  --button-secondary-bg: var(--color-secondary-600);
+  --button-secondary-bg-hover: var(--color-secondary-700);
+  --button-tertiary-bg: var(--color-tertiary-600);
+  --button-tertiary-bg-hover: var(--color-tertiary-700);
+  --button-primary-color: var(--control-text-contrast);
+  --button-primary-color-hover: var(--control-text-contrast);
+  --button-secondary-color: var(--control-text-contrast);
+  --button-secondary-color-hover: var(--control-text-contrast);
+  --button-tertiary-color: var(--control-text-contrast);
+  --button-tertiary-color-hover: var(--control-text-contrast);
+  --button-font-family: var(--typography-body-font-family);
+  --button-font-size: var(--typography-body-size);
+  --button-font-weight: var(--typography-body-font-weight);
+  --button-line-height: var(--typography-body-line-height);
+  --toggle-size: var(--control-toggle-size);
+
 }
+
 /* === Semantic Background Utilities === */
-@utility bg-page {
-    background-color: var(--bg-page);
-}
+@utility bg-section { background-color: var(--section-bg); }
+@utility bg-surface { background-color: var(--surface-bg); }
+@utility bg-box { background-color: var(--box-bg); }
+@utility bg-popover { background-color: var(--popover-bg); }
+@utility bg-tooltip { background-color: var(--tooltip-bg); }
+@utility bg-modal { background-color: var(--modal-bg); }
+@utility bg-modal-overlay { background-color: var(--modal-overlay-bg); }
 
-@utility bg-section {
-    background-color: var(--bg-section);
-}
+/* === Semantic Navigation Utilities === */
+@utility bg-navigation { background-color: var(--navigation-bg); }
+@utility bg-tabs { background-color: var(--tabs-bg); }
+@utility bg-menubar { background-color: var(--menubar-bg); }
+@utility bg-breadcrumb { background-color: var(--breadcrumb-bg); }
 
-@utility bg-card {
-    background-color: var(--bg-card);
-}
+/* === Semantic Interactive Utilities === */
+@utility bg-list-item { background-color: var(--list-item-bg); }
+@utility bg-list-item-hover { background-color: var(--list-item-bg-hover); }
+@utility bg-list-item-active { background-color: var(--list-item-bg-active); }
+@utility bg-control { background-color: var(--control-bg); }
+@utility bg-control-hover { background-color: var(--control-bg-hover); }
+@utility bg-control-active { background-color: var(--control-bg-active); }
+@utility bg-field { background-color: var(--field-bg); }
+@utility bg-field-hover { background-color: var(--field-bg-hover); }
+@utility bg-field-focus { background-color: var(--field-bg-focus); }
+@utility bg-selector-trigger { background-color: var(--selector-trigger-bg); }
+@utility bg-selector-panel { background-color: var(--selector-panel-bg); }
+@utility bg-selector-option { background-color: var(--selector-option-bg); }
+@utility bg-selector-option-hover { background-color: var(--selector-option-bg-hover); }
+@utility bg-selector-option-active { background-color: var(--selector-option-bg-active); }
+@utility bg-choice { background-color: var(--choice-bg); }
+@utility bg-choice-hover { background-color: var(--choice-bg-hover); }
+@utility bg-choice-checked { background-color: var(--choice-bg-checked); }
+@utility bg-track-control-track { background-color: var(--track-control-track-bg); }
+@utility bg-track-control-track-active { background-color: var(--track-control-track-bg-active); }
+@utility bg-track-control-thumb { background-color: var(--track-control-thumb-bg); }
 
-@utility bg-popover {
-    background-color: var(--bg-popover);
-}
+/* === Semantic Feedback Utilities === */
+@utility bg-notification { background-color: var(--notification-bg); }
+@utility bg-meter-track { background-color: var(--meter-track-bg); }
+@utility bg-meter-indicator { background-color: var(--meter-indicator-bg); }
 
-@utility bg-modal {
-    background-color: var(--bg-modal);
-}
+/* === Semantic Content Utilities === */
+@utility bg-media { background-color: var(--media-bg); }
 
-@utility bg-sidebar {
-    background-color: var(--bg-sidebar);
-}
+/* === Semantic Text Utilities === */
+@utility text-section { color: var(--section-text); }
+@utility text-surface { color: var(--surface-text); }
+@utility text-box { color: var(--box-text); }
+@utility text-popover { color: var(--popover-text); }
+@utility text-tooltip { color: var(--tooltip-text); }
+@utility text-modal { color: var(--modal-text); }
+@utility text-navigation { color: var(--navigation-text); }
+@utility text-navigation-active { color: var(--navigation-text-active); }
+@utility text-tabs { color: var(--tabs-text); }
+@utility text-tabs-active { color: var(--tabs-text-active); }
+@utility text-menubar { color: var(--menubar-text); }
+@utility text-menubar-active { color: var(--menubar-text-active); }
+@utility text-breadcrumb { color: var(--breadcrumb-text); }
+@utility text-breadcrumb-active { color: var(--breadcrumb-text-active); }
+@utility text-list-item { color: var(--list-item-text); }
+@utility text-list-item-auxiliary { color: var(--list-item-text-auxiliary); }
+@utility text-list-item-disabled { color: var(--list-item-text-disabled); }
+@utility text-control { color: var(--control-text); }
+@utility text-control-contrast { color: var(--control-text-contrast); }
+@utility text-field { color: var(--field-text); }
+@utility text-field-placeholder { color: var(--field-text-placeholder); }
+@utility font-field { font-family: var(--field-font-family); }
+@utility text-field-sm { font-size: var(--field-font-size-sm); }
+@utility text-field-md { font-size: var(--field-font-size); }
+@utility text-field-lg { font-size: var(--field-font-size-lg); }
+@utility font-weight-field { font-weight: var(--field-font-weight); }
+@utility leading-field { line-height: var(--field-line-height); }
+@utility text-selector-trigger { color: var(--selector-trigger-text); }
+@utility text-selector-option { color: var(--selector-option-text); }
+@utility text-choice { color: var(--choice-text); }
+@utility text-notification { color: var(--notification-text); }
+@utility text-meter { color: var(--meter-text); }
+@utility text-typography-heading { color: var(--typography-heading-color); }
+@utility text-typography-body { color: var(--typography-body-color); }
+@utility text-typography-auxiliary { color: var(--typography-auxiliary-color); }
+@utility text-link { color: var(--link-color); }
+@utility text-link-hover { color: var(--link-color-hover); }
+@utility font-link { font-family: var(--link-font-family); }
+@utility font-weight-link { font-weight: var(--link-font-weight); }
+@utility underline-link { text-decoration: var(--link-text-decoration); }
+@utility underline-link-hover { text-decoration: var(--link-text-decoration-hover); }
+@utility transition-link { transition: var(--link-transition); }
+@utility transition { transition: var(--transition); }
+@utility transition-fast { transition: var(--transition-fast); }
+@utility transition-normal { transition: var(--transition-normal); }
+@utility transition-slow { transition: var(--transition-slow); }
+@utility transition-duration-fast { transition-duration: var(--transition-duration-fast); }
+@utility transition-duration-normal { transition-duration: var(--transition-duration-normal); }
+@utility transition-duration-slow { transition-duration: var(--transition-duration-slow); }
+@utility transition-easing { transition-timing-function: var(--transition-easing); }
 
-@utility bg-footer {
-    background-color: var(--bg-footer);
-}
-
-@utility bg-overlay {
-    background-color: var(--bg-overlay);
-}
+/* === Semantic Border Utilities === */
+@utility border-section { border-color: var(--section-border); }
+@utility border-surface { border-color: var(--surface-border); }
+@utility border-box { border-color: var(--box-border); }
+@utility border-popover { border-color: var(--popover-border); }
+@utility border-modal { border-color: var(--modal-border); }
+@utility border-navigation { border-color: var(--navigation-border); }
+@utility border-menubar { border-color: var(--menubar-border); }
+@utility border-control { border-color: var(--control-border); }
+@utility border-control-hover { border-color: var(--control-border-hover); }
+@utility border-field { border-color: var(--field-border); }
+@utility border-field-hover { border-color: var(--field-border-hover); }
+@utility border-field-focus { border-color: var(--field-border-focus); }
+@utility border-selector-trigger { border-color: var(--selector-trigger-border); }
+@utility border-selector-panel { border-color: var(--selector-panel-border); }
+@utility border-choice { border-color: var(--choice-border); }
+@utility border-choice-hover { border-color: var(--choice-border-hover); }
+@utility border-choice-checked { border-color: var(--choice-border-checked); }
+@utility border-track-control-thumb { border-color: var(--track-control-thumb-border); }
+@utility border-notification { border-color: var(--notification-border); }
+@utility border-media { border-color: var(--media-border); }
 
 /* === Semantic Padding Utilities === */
-@utility p-surface {
-    padding: var(--spacing-surface);
-}
+@utility p-section { padding: var(--section-padding); }
+@utility p-surface { padding: var(--surface-padding); }
+@utility p-box { padding: var(--box-padding); }
+@utility p-popover { padding: var(--popover-padding); }
+@utility p-modal { padding: var(--modal-padding); }
+@utility p-navigation { padding: var(--navigation-padding); }
+@utility p-menubar { padding: var(--menubar-padding); }
+@utility p-breadcrumb { padding: var(--breadcrumb-gap); }
+@utility px-list-item { padding-left: var(--list-item-padding-x); padding-right: var(--list-item-padding-x); }
+@utility py-list-item { padding-top: var(--list-item-padding-y); padding-bottom: var(--list-item-padding-y); }
+@utility px-control { padding-left: var(--control-padding-x); padding-right: var(--control-padding-x); }
+@utility py-control { padding-top: var(--control-padding-y); padding-bottom: var(--control-padding-y); }
+@utility px-control-sm { padding-left: var(--control-padding-sm-x); padding-right: var(--control-padding-sm-x); }
+@utility py-control-sm { padding-top: var(--control-padding-sm-y); padding-bottom: var(--control-padding-sm-y); }
+@utility px-control-lg { padding-left: var(--control-padding-lg-x); padding-right: var(--control-padding-lg-x); }
+@utility py-control-lg { padding-top: var(--control-padding-lg-y); padding-bottom: var(--control-padding-lg-y); }
+@utility px-field { padding-left: var(--field-padding-x); padding-right: var(--field-padding-x); }
+@utility py-field { padding-top: var(--field-padding-y); padding-bottom: var(--field-padding-y); }
+@utility p-notification { padding: var(--notification-padding); }
 
-@utility p-modal {
-    padding: var(--spacing-modal);
-}
+/* === Semantic Gap Utilities === */
+@utility gap-section { gap: var(--section-gap); }
+@utility gap-surface { gap: var(--surface-gap); }
+@utility gap-box { gap: var(--box-gap); }
+@utility gap-popover { gap: var(--popover-gap); }
+@utility gap-modal { gap: var(--modal-gap); }
+@utility gap-navigation { gap: var(--navigation-gap); }
+@utility gap-menubar { gap: var(--menubar-gap); }
+@utility gap-breadcrumb { gap: var(--breadcrumb-gap); }
+@utility gap-list-item { gap: var(--list-item-gap); }
+@utility gap-control { gap: var(--control-gap); }
+@utility gap-notification { gap: var(--notification-gap); }
 
-@utility p-card {
-    padding: var(--spacing-card);
-}
+/* === Semantic Height Utilities === */
+@utility h-field-sm { height: var(--field-height-sm); }
+@utility h-field-md { height: var(--field-height-md); }
+@utility h-field-lg { height: var(--field-height-lg); }
 
-@utility p-section {
-    padding: var(--spacing-section);
-}
-
-@utility p-popover {
-    padding: var(--spacing-popover);
-}
-
-@utility p-element {
-    padding: var(--spacing-element-y) var(--spacing-element-x);
-}
+/* === Semantic Size Utilities === */
+@utility size-toggle { width: var(--toggle-size); height: var(--toggle-size); }
+@utility size-icon-sm { width: var(--icon-size-sm); height: var(--icon-size-sm); }
+@utility size-icon-md { width: var(--icon-size-md); height: var(--icon-size-md); }
+@utility size-icon-lg { width: var(--icon-size-lg); height: var(--icon-size-lg); }
 
 /* === Semantic Z-Index Utilities === */
-@utility z-base { z-index: var(--z-base); }
-@utility z-surface { z-index: var(--z-surface); }
-@utility z-popover { z-index: var(--z-popover); }
-@utility z-modal { z-index: var(--z-modal); }
-@utility z-overlay { z-index: var(--z-overlay); }
-@utility z-tooltip { z-index: var(--z-tooltip); }
+@utility z-base { z-index: var(--layer-base); }
+@utility z-surface { z-index: var(--layer-surface); }
+@utility z-popover { z-index: var(--layer-popover); }
+@utility z-modal { z-index: var(--layer-modal); }
+@utility z-overlay { z-index: var(--layer-overlay); }
+@utility z-tooltip { z-index: var(--layer-tooltip); }
+
+/* === Semantic State Utilities === */
+@utility bg-state-subtle { background-color: var(--bg-state-subtle); }
+@utility bg-state-subtle-hover { background-color: var(--bg-state-subtle-hover); }
+@utility bg-state-active { background-color: var(--bg-state-active); }
+@utility bg-state-focus { background-color: var(--bg-state-focus); }
+@utility bg-state-disabled { background-color: var(--bg-state-disabled); }
+@utility text-state-auxiliary { color: var(--text-state-auxiliary); }
+@utility text-state-placeholder { color: var(--text-state-placeholder); }
+@utility text-state-disabled { color: var(--text-state-disabled); }
+@utility text-state-primary { color: var(--text-state-primary); }
+
+/* === Semantic Accent/Indicator Utilities === */
+@utility accent-control { color: var(--control-accent); }
+@utility accent-control-hover { color: var(--control-accent-hover); }
+@utility indicator-navigation { color: var(--navigation-indicator); }
+@utility indicator-tabs { color: var(--tabs-indicator); }
+@utility indicator-menubar { color: var(--menubar-indicator); }
+@utility indicator-choice { color: var(--choice-indicator); }
+@utility accent-notification { color: var(--notification-accent); }
+@utility separator-breadcrumb { color: var(--breadcrumb-separator); }
+
+/* === Button Component Utilities === */
+@utility bg-button-primary { background-color: var(--button-primary-bg); }
+@utility bg-button-primary-hover { background-color: var(--button-primary-bg-hover); }
+@utility bg-button-secondary { background-color: var(--button-secondary-bg); }
+@utility bg-button-secondary-hover { background-color: var(--button-secondary-bg-hover); }
+@utility bg-button-tertiary { background-color: var(--button-tertiary-bg); }
+@utility bg-button-tertiary-hover { background-color: var(--button-tertiary-bg-hover); }
+@utility text-button-primary { color: var(--button-primary-color); }
+@utility text-button-primary-hover { color: var(--button-primary-color-hover); }
+@utility text-button-secondary { color: var(--button-secondary-color); }
+@utility text-button-secondary-hover { color: var(--button-secondary-color-hover); }
+@utility text-button-tertiary { color: var(--button-tertiary-color); }
+@utility text-button-tertiary-hover { color: var(--button-tertiary-color-hover); }
+
+/* === Typography Utilities === */
+@utility font-typography { font-family: var(--typography-font-family); }
+@utility text-typography { font-size: var(--typography-font-size); }
+@utility font-weight-typography { font-weight: var(--typography-font-weight); }
+@utility leading-typography { line-height: var(--typography-line-height); }
+@utility text-typography-small { font-size: var(--typography-small-size); }
+@utility text-typography-large { font-size: var(--typography-large-size); }
+
+/* === Heading Utilities === */
+@utility font-heading { font-family: var(--heading-font-family); }
+@utility font-weight-heading { font-weight: var(--heading-font-weight); }
+@utility leading-heading { line-height: var(--heading-line-height); }
+@utility tracking-heading { letter-spacing: var(--heading-letter-spacing); }
+@utility text-heading { color: var(--heading-color); }
+@utility font-style-heading { font-style: var(--heading-font-style); }
+
+/* === Individual Heading Utilities === */
+@utility font-h1 { font-family: var(--heading-1-font-family); }
+@utility text-h1 { font-size: var(--heading-1-font-size); }
+@utility font-weight-h1 { font-weight: var(--heading-1-font-weight); }
+@utility leading-h1 { line-height: var(--heading-1-line-height); }
+@utility tracking-h1 { letter-spacing: var(--heading-1-letter-spacing); }
+@utility text-h1-color { color: var(--heading-1-color); }
+@utility font-style-h1 { font-style: var(--heading-1-font-style); }
+@utility mt-h1 { margin-top: var(--heading-1-margin-top); }
+@utility mb-h1 { margin-bottom: var(--heading-1-margin-bottom); }
+
+@utility font-h2 { font-family: var(--heading-2-font-family); }
+@utility text-h2 { font-size: var(--heading-2-font-size); }
+@utility font-weight-h2 { font-weight: var(--heading-2-font-weight); }
+@utility leading-h2 { line-height: var(--heading-2-line-height); }
+@utility tracking-h2 { letter-spacing: var(--heading-2-letter-spacing); }
+@utility text-h2-color { color: var(--heading-2-color); }
+@utility font-style-h2 { font-style: var(--heading-2-font-style); }
+@utility mt-h2 { margin-top: var(--heading-2-margin-top); }
+@utility mb-h2 { margin-bottom: var(--heading-2-margin-bottom); }
+
+@utility font-h3 { font-family: var(--heading-3-font-family); }
+@utility text-h3 { font-size: var(--heading-3-font-size); }
+@utility font-weight-h3 { font-weight: var(--heading-3-font-weight); }
+@utility leading-h3 { line-height: var(--heading-3-line-height); }
+@utility tracking-h3 { letter-spacing: var(--heading-3-letter-spacing); }
+@utility text-h3-color { color: var(--heading-3-color); }
+@utility font-style-h3 { font-style: var(--heading-3-font-style); }
+@utility mt-h3 { margin-top: var(--heading-3-margin-top); }
+@utility mb-h3 { margin-bottom: var(--heading-3-margin-bottom); }
+
+@utility font-h4 { font-family: var(--heading-4-font-family); }
+@utility text-h4 { font-size: var(--heading-4-font-size); }
+@utility font-weight-h4 { font-weight: var(--heading-4-font-weight); }
+@utility leading-h4 { line-height: var(--heading-4-line-height); }
+@utility tracking-h4 { letter-spacing: var(--heading-4-letter-spacing); }
+@utility text-h4-color { color: var(--heading-4-color); }
+@utility font-style-h4 { font-style: var(--heading-4-font-style); }
+@utility mt-h4 { margin-top: var(--heading-4-margin-top); }
+@utility mb-h4 { margin-bottom: var(--heading-4-margin-bottom); }
+
+@utility font-h5 { font-family: var(--heading-5-font-family); }
+@utility text-h5 { font-size: var(--heading-5-font-size); }
+@utility font-weight-h5 { font-weight: var(--heading-5-font-weight); }
+@utility leading-h5 { line-height: var(--heading-5-line-height); }
+@utility tracking-h5 { letter-spacing: var(--heading-5-letter-spacing); }
+@utility text-h5-color { color: var(--heading-5-color); }
+@utility font-style-h5 { font-style: var(--heading-5-font-style); }
+@utility mt-h5 { margin-top: var(--heading-5-margin-top); }
+@utility mb-h5 { margin-bottom: var(--heading-5-margin-bottom); }
+
+@utility font-h6 { font-family: var(--heading-6-font-family); }
+@utility text-h6 { font-size: var(--heading-6-font-size); }
+@utility font-weight-h6 { font-weight: var(--heading-6-font-weight); }
+@utility leading-h6 { line-height: var(--heading-6-line-height); }
+@utility tracking-h6 { letter-spacing: var(--heading-6-letter-spacing); }
+@utility text-h6-color { color: var(--heading-6-color); }
+@utility font-style-h6 { font-style: var(--heading-6-font-style); }
+@utility mt-h6 { margin-top: var(--heading-6-margin-top); }
+@utility mb-h6 { margin-bottom: var(--heading-6-margin-bottom); }
+
+/* === Icon Utilities === */
+@utility text-icon { color: var(--icon-color); }
+@utility text-icon-active { color: var(--icon-color-active); }
+
+/* === Separator Utilities === */
+@utility text-separator { color: var(--separator-color); }
+@utility border-separator { border-color: var(--separator-color); }
+@utility border-separator-thickness { border-width: var(--separator-thickness); }
