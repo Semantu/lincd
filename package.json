@@ -18,6 +18,7 @@
     },
     "./utilities.css": "./lib/esm/css/utilities.css",
     "./theme-defaults.css": "./lib/esm/css/theme-defaults.css",
+    "./package.css": "./lib/esm/css/package.css",
     "./variables.css": "./lib/esm/css/variables.css",
     "./*.css": "./lib/esm/*.css",
     "./*": {
