@@ -3,6 +3,7 @@
    Import this to use LINCD's default theme. You can still override these values.
    Alternatively, you can define all your own theme variables in your own theme.css file.
    ============================================================================ */
+
 /* Safelist primary, secondary, and tertiary colors for theme showcase (Tailwind v4 approach) */
 @source inline("bg-primary-{50,{100..900..100},950}");
 @source inline("text-primary-{50,{100..900..100},950}");
@@ -14,7 +15,27 @@
 @source inline("text-tertiary-{50,{100..900..100},950}");
 @source inline("border-tertiary-{50,{100..900..100},950}");
 
-@theme {
+/* Safelist ALL Tailwind color families across common color-based utilities */
+/* Families: slate, gray, zinc, neutral, stone, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose */
+@source inline("bg-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("text-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("border-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("ring-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("outline-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("divide-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("stroke-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("fill-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("caret-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("accent-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("decoration-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("shadow-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}");
+@source inline("from-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("via-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("to-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+
+/* static ensures that all css variables are generated in the final bundle. */
+/* this ensures the app can access all of them without having to use any tailwind class in the html */
+@theme static {
     /* Primary Palette - app-specific brand color */
     --color-primary-50: var(--color-sky-50);
     --color-primary-100: var(--color-sky-100);
@@ -53,11 +74,11 @@
 
     /* === Shadow Tokens (auto-generates shadow-* utilities) === */
     --shadow-section: none;
-  --shadow-surface: var(--shadow-sm);
+    --shadow-surface: var(--shadow-sm);
     --shadow-box: var(--shadow-md);
-  --shadow-popover: var(--shadow-lg);
+    --shadow-popover: var(--shadow-lg);
     --shadow-tooltip: var(--shadow-popover);
-  --shadow-modal: var(--shadow-2xl);
+    --shadow-modal: var(--shadow-2xl);
     --shadow-navigation: none;
     --shadow-tabs: var(--shadow-navigation);
     --shadow-menubar: var(--shadow-navigation);
@@ -67,7 +88,7 @@
     --shadow-field: none;
     --shadow-selector: var(--shadow-popover);
     --shadow-choice: none;
-    --shadow-track-control: none;
+    --shadow-track-control: var(--shadow-sm);
     --shadow-notification: var(--shadow-lg);
     --shadow-meter: none;
     --shadow-media: none;
@@ -75,23 +96,14 @@
     --shadow-icon: none;
     --shadow-separator: none;
 
-    /* Legacy aliases (to be removed once components migrate) */
-    --shadow-card: var(--shadow-box);
-    --shadow-input: var(--shadow-field);
-  --shadow-floating-action: var(--shadow-lg);
-  --shadow-content: none;
-    --shadow-tabs-nav: var(--shadow-tabs);
-    --shadow-menubar-nav: var(--shadow-menubar);
-    --shadow-tooltip-popover: var(--shadow-tooltip);
-
     /* === Radius Tokens (auto-generates rounded-* utilities) === */
     --radius-none: 0px;
     --radius-section: var(--radius-none);
-  --radius-surface: var(--radius-sm);
+    --radius-surface: var(--radius-sm);
     --radius-box: var(--radius-lg);
-  --radius-popover: var(--radius-md);
+    --radius-popover: var(--radius-md);
     --radius-tooltip: var(--radius-sm);
-  --radius-modal: var(--radius-2xl);
+    --radius-modal: var(--radius-2xl);
     --radius-navigation: var(--radius-sm);
     --radius-tabs: var(--radius-navigation);
     --radius-menubar: var(--radius-navigation);
@@ -108,18 +120,8 @@
     --radius-typography: var(--radius-none);
     --radius-icon: var(--radius-full);
     --radius-separator: var(--radius-none);
-
-    /* Legacy aliases (to be removed once components migrate) */
-    /* --radius-card: var(--radius-box);
-    --radius-element: var(--radius-control);
-    --radius-button: var(--radius-control);
-    --radius-input: var(--radius-field);
-    --radius-toggle: var(--radius-control);
-  --radius-floating-action: var(--radius-full);
-    --radius-tabs-nav: var(--radius-tabs);
-    --radius-menubar-nav: var(--radius-menubar);
-    --radius-tooltip-popover: var(--radius-tooltip); */
 }
+
 /* ============================================================================
    CSS VARIABLES (accessible everywhere)
    These need to be at root level to be usable in custom CSS
@@ -136,162 +138,139 @@
   --layer-overlay: 40;
   --layer-tooltip: 100;
 
-  /* === Global State Tokens === */
-  --bg-state-subtle: var(--color-gray-100);
-  --bg-state-subtle-hover: var(--color-gray-200);
-  --bg-state-active: var(--color-primary-100);
-  --bg-state-focus: var(--color-primary-50);
-  --bg-state-disabled: var(--color-gray-200);
-  --border-state-focus: var(--color-primary-500);
-  --text-state-auxiliary: var(--color-gray-600);
-  --text-state-placeholder: var(--color-gray-500);
-  --text-state-disabled: var(--color-gray-400);
-  --text-state-primary: var(--color-gray-900);
-  --bg-overlay-scrim: color-mix(in srgb, var(--color-gray-900) 60%, transparent);
+  /* === Global State Tokens (explicit names) === */
+  /* Backgrounds */
+  --bg-panel: var(--color-white);               /* Default background for panels */
+  --bg-hover: var(--color-gray-100);            /* Light hover background */
+  --bg-active: var(--color-primary-100);        /* Selected/pressed backgrounds */
+  --bg-focus: var(--color-primary-50);          /* Optional focus background tint */
+  --bg-disabled: var(--color-gray-200);         /* Disabled backgrounds */
+  --bg-overlay: color-mix(in srgb, var(--color-gray-900) 60%, transparent); /* Backdrop scrim */
+  
+  /* Borders */
+  --border-focus: var(--color-primary-500);     /* Focus ring/border */
+  --border-default: var(--color-gray-200);
+  --border-strong: var(--color-gray-300);
+  --border-hover: var(--color-gray-400);
+  --border-active: var(--color-gray-500);
+  --border-disabled: var(--color-gray-200);
+
+  /* Text */
+  --text-primary: var(--color-gray-900);        /* Main foreground, active text, body copy */
+  --text-auxiliary: var(--color-gray-600);      /* Secondary/muted text */
+  --text-placeholder: var(--color-gray-500);    /* Placeholder text */
+  --text-disabled: var(--color-gray-400);       /* Disabled text */
 
   /* === Global Transition Control === */
-  --transition-duration-fast: var(--duration-150);
-  --transition-duration-normal: var(--duration-300);
-  --transition-duration-slow: var(--duration-500);
-  --transition-easing: var(--ease-in-out);
+  --transition-duration-fast: 150ms;
+  --transition-duration-normal: 300ms;
+  --transition-duration-slow: 500ms;
+  /* Our semantic variable for transition easing points directly to that of tailwind by default */
+  --transition-easing: var(--default-transition-timing-function);
   
   /* Complete transition shorthands */
   --transition-fast: all var(--transition-duration-fast) var(--transition-easing);
-  --transition-normal: all var(--transition-duration-normal) var(--transition-easing);
+  --transition-normal: all var(--default-transition-duration) var(--default-transition-timing-function); /* The normal transition uses tailwind's default transition duration and easing */
   --transition-slow: all var(--transition-duration-slow) var(--transition-easing);
-  
-  /* Default transition (backwards compatibility) */
-  --transition: var(--transition-normal);
+  --transition: var(--transition-normal); /* Default transition shorthand */
 
-  /* === Layout Types === */
-  
-  /* Section (page sections, hero areas) */
+  /* ============================================================================
+     LAYOUT CONTAINER TYPES
+     Structural and content containers with increasing elevation
+     ============================================================================ */
+
+  /* Section - Page sections, hero areas, structural layout */
   --section-bg: var(--color-gray-50);
   --section-border: transparent;
-  --section-text: var(--text-state-primary);
+  --section-text: var(--text-primary);
   --section-padding: --spacing(16);
   --section-gap: --spacing(8);
   --section-radius: var(--radius-section);
   --section-shadow: var(--shadow-section);
 
-  /* Surface (neutral panels, simple containers) */
+  /* Surface - Neutral panels, simple containers */
   --surface-bg: var(--color-gray-100);
-  --surface-border: var(--color-gray-200);
-  --surface-text: var(--text-state-primary);
+  --surface-border: var(--border-default);
+  --surface-text: var(--text-primary);
   --surface-padding: --spacing(6);
   --surface-gap: --spacing(4);
   --surface-radius: var(--radius-surface);
   --surface-shadow: var(--shadow-surface);
 
   /* Box (Card, Accordion, Command panel, Drawer panel) */
-  --box-bg: var(--color-white);
-  --box-border: var(--color-gray-200);
-  --box-text: var(--text-state-primary);
+  --box-bg: var(--bg-panel);
+  --box-border: var(--border-default);
+  --box-text: var(--text-primary);
   --box-padding: --spacing(6);
   --box-gap: --spacing(4);
   --box-radius: var(--radius-box);
   --box-shadow: var(--shadow-box);
 
-  /* === Overlay Types === */
-  
-  /* Popover (Popover, HoverCard, Tooltip subtype) */
-  --popover-bg: var(--color-white);
-  --popover-border: var(--color-gray-200);
-  --popover-text: var(--text-state-primary);
+  /* ============================================================================
+     OVERLAY TYPES
+     Floating content that appears above the page
+     ============================================================================ */
+
+  /* Popover - Base for floating content (HoverCard, Tooltip inherit from this) */
+  --popover-bg: var(--bg-panel);
+  --popover-border: var(--border-default);
+  --popover-text: var(--text-primary);
   --popover-padding: --spacing(4);
   --popover-gap: --spacing(2);
   --popover-radius: var(--radius-popover);
   --popover-shadow: var(--shadow-popover);
 
-  /* Tooltip (Popover subtype) */
-  --tooltip-bg: var(--color-gray-900);
-  --tooltip-text: var(--color-white);
-  --tooltip-padding: --spacing(2);
-  --tooltip-radius: var(--radius-tooltip);
-  --tooltip-shadow: var(--shadow-tooltip);
-
-  /* Modal/Sheet (Dialog, AlertDialog, Drawer sheet variant) */
-  --modal-bg: var(--color-white);
-  --modal-border: var(--color-gray-200);
-  --modal-text: var(--text-state-primary);
+  /* Modal - Dialogs, Drawer, sheets, full-attention overlays */
+  --modal-bg: var(--bg-panel);
+  --modal-border: var(--border-default);
+  --modal-text: var(--text-primary);
   --modal-padding: --spacing(6);
   --modal-gap: --spacing(4);
-  --modal-overlay-bg: var(--bg-overlay-scrim);
+  --modal-overlay-bg: var(--bg-overlay);
   --modal-radius: var(--radius-modal);
   --modal-shadow: var(--shadow-modal);
 
-  /* === Navigation Types === */
-  
-  /* Navigation (Tabs, Menubar, NavigationMenu, Breadcrumb) */
+  /* ============================================================================
+     NAVIGATION TYPES
+     Directional controls and wayfinding
+     ============================================================================ */
+
+  /* Navigation - Base for all navigation (Tabs, Menubar, NavigationMenu, Breadcrumb inherit) */
   --navigation-bg: transparent;
-  --navigation-border: var(--color-gray-200);
+  --navigation-border: var(--border-default);
   --navigation-text: var(--color-gray-700);
-  --navigation-text-active: var(--text-state-primary);
+  --navigation-text-active: var(--text-primary);
   --navigation-indicator: var(--color-primary-600);
   --navigation-padding: --spacing(2);
   --navigation-gap: --spacing(2);
   --navigation-radius: var(--radius-navigation);
   --navigation-shadow: var(--shadow-navigation);
 
-  /* Tabs (Navigation subtype) */
-  --tabs-bg: var(--navigation-bg);
-  --tabs-border: var(--navigation-border);
-  --tabs-text: var(--navigation-text);
-  --tabs-text-active: var(--navigation-text-active);
-  --tabs-indicator: var(--navigation-indicator);
-  --tabs-padding: --spacing(2);
-  --tabs-gap: --spacing(2);
-  --tabs-radius: var(--radius-tabs);
-  --tabs-shadow: var(--shadow-tabs);
+  /* ============================================================================
+     INTERACTIVE TYPES
+     User input and interactive controls
+     ============================================================================ */
 
-  /* Menubar (Navigation subtype) */
-  --menubar-bg: var(--navigation-bg);
-  --menubar-border: var(--navigation-border);
-  --menubar-text: var(--navigation-text);
-  --menubar-text-active: var(--navigation-text-active);
-  --menubar-indicator: var(--navigation-indicator);
-  --menubar-padding: --spacing(2);
-  --menubar-gap: --spacing(2);
-  --menubar-radius: var(--radius-menubar);
-  --menubar-shadow: var(--shadow-menubar);
-
-  /* BreadcrumbNav (Navigation subtype) */
-  --breadcrumb-bg: transparent;
-  --breadcrumb-text: var(--navigation-text);
-  --breadcrumb-text-active: var(--navigation-text-active);
-  --breadcrumb-text-hover: var(--link-color-hover);
-  --breadcrumb-separator: var(--color-gray-400);
-  --breadcrumb-gap: --spacing(3);
-  --breadcrumb-item-gap: --spacing(4);
-  --breadcrumb-font-size: var(--typography-small-size);
-  --breadcrumb-ellipsis-size: var(--control-height-sm);
-  --breadcrumb-icon-size: var(--icon-size-md);
-  --breadcrumb-transition: var(--transition);
-  --breadcrumb-radius: var(--radius-breadcrumb-nav);
-  --breadcrumb-shadow: var(--shadow-breadcrumb-nav);
-
-  /* === Interactive Types === */
-  
-  /* ListItem (Command items, Select options, Menu items, vertical nav lists) */
+  /* ListItem - Selectable list items */
   --list-item-bg: transparent;
-  --list-item-bg-hover: var(--bg-state-muted-hover);
-  --list-item-bg-active: var(--bg-state-active);
-  --list-item-text: var(--text-state-primary);
-  --list-item-text-disabled: var(--text-state-disabled);
-  --list-item-text-auxiliary: var(--text-state-auxiliary);
+  --list-item-bg-hover: var(--bg-hover);
+  --list-item-bg-active: var(--bg-active);
+  --list-item-text: var(--text-primary);
+  --list-item-text-disabled: var(--text-disabled);
+  --list-item-text-auxiliary: var(--text-auxiliary);
   --list-item-padding-x: --spacing(3);
   --list-item-padding-y: --spacing(2);
   --list-item-gap: --spacing(2);
   --list-item-radius: var(--radius-list-item);
   --list-item-shadow: var(--shadow-list-item);
 
-  /* Control (Button, IconButton, Toggle, ToggleGroup) */
+  /* Control - Buttons, IconButtons, Toggles, ToggleGroups */
   --control-bg: var(--color-gray-100);
   --control-bg-hover: var(--color-gray-200);
   --control-bg-active: var(--color-gray-300);
-  --control-border: var(--color-gray-300);
-  --control-border-hover: var(--color-gray-400);
-  --control-text: var(--text-state-primary);
+  --control-border: var(--border-strong);
+  --control-border-hover: var(--border-hover);
+  --control-text: var(--text-primary);
   --control-text-contrast: var(--color-white);
   --control-accent: var(--color-primary-600);
   --control-accent-hover: var(--color-primary-700);
@@ -312,15 +291,15 @@
   --control-shadow: var(--shadow-control);
   --control-toggle-size: 2.5rem;
 
-  /* Field (Input, Textarea) */
+  /* Field - Text inputs, Textareas */
   --field-bg: var(--color-white);
   --field-bg-hover: var(--color-gray-50);
   --field-bg-focus: var(--color-white);
   --field-border: var(--color-gray-300);
   --field-border-hover: var(--color-gray-400);
-  --field-border-focus: var(--border-state-focus);
-  --field-text: var(--text-state-primary);
-  --field-text-placeholder: var(--text-state-placeholder);
+  --field-border-focus: var(--border-focus);
+  --field-text: var(--text-primary);
+  --field-text-placeholder: var(--text-placeholder);
   --field-padding-x: calc(var(--spacing) * 3);
   --field-padding-y: calc(var(--spacing) * 2);
   --field-height-sm: 2rem;
@@ -328,14 +307,14 @@
   --field-height-lg: 3rem;
   --field-radius: var(--radius-field);
   --field-shadow: var(--shadow-field);
-    --field-font-family: var(--typography-body-font-family);
-    --field-font-size: var(--typography-body-size);
-    --field-font-size-sm: var(--font-size-sm);
-    --field-font-size-lg: var(--font-size-lg);
-    --field-font-weight: var(--typography-body-font-weight);
-    --field-line-height: var(--typography-body-line-height);
+  --field-font-family: var(--typography-font-family);
+  --field-font-size: var(--typography-font-size);
+  --field-font-size-sm: var(--text-sm);
+  --field-font-size-lg: var(--text-lg);
+  --field-font-weight: var(--typography-font-weight);
+  --field-line-height: var(--typography-line-height);
 
-  /* Selector (Select, MultiSelect) */
+  /* Selector - Select, MultiSelect */
   --selector-trigger-bg: var(--field-bg);
   --selector-trigger-border: var(--field-border);
   --selector-trigger-text: var(--field-text);
@@ -357,7 +336,7 @@
   --selector-radius: var(--radius-selector);
   --selector-shadow: var(--shadow-selector);
 
-  /* Choice (Checkbox, RadioGroup, Switch) */
+  /* Choice - Checkbox, RadioGroup, Switch */
   --choice-bg: var(--field-bg);
   --choice-bg-hover: var(--field-bg-hover);
   --choice-bg-checked: var(--control-accent);
@@ -365,13 +344,17 @@
   --choice-border-hover: var(--field-border-hover);
   --choice-border-checked: var(--control-accent);
   --choice-indicator: var(--color-white);
-  --choice-text: var(--text-state-primary);
+  --choice-text: var(--text-primary);
   --choice-size: --spacing(5);
   --choice-indicator-size: --spacing(6);
   --choice-radius: var(--radius-choice);
   --choice-shadow: var(--shadow-choice);
 
-  /* TrackControl (Slider) */
+  /* TrackControl - Sliders */
+  --track-control-width: 100%;
+  --track-control-height: --spacing(5);
+  --track-control-track-height: --spacing(1);
+  --track-control-thumb-size: --spacing(5);
   --track-control-track-bg: var(--color-gray-200);
   --track-control-track-bg-active: var(--control-accent);
   --track-control-track-radius: var(--radius-track-control);
@@ -381,82 +364,82 @@
   --track-control-radius: var(--radius-track-control);
   --track-control-shadow: var(--shadow-track-control);
 
-  /* === Feedback Types === */
-  
-  /* Notification (Toast) */
+  /* ============================================================================
+     FEEDBACK TYPES
+     Status and progress indicators
+     ============================================================================ */
+
+  /* Notification - Toast notifications */
   --notification-bg: var(--color-white);
   --notification-border: var(--color-gray-200);
-  --notification-text: var(--text-state-primary);
+  --notification-text: var(--text-primary);
   --notification-accent: var(--control-accent);
   --notification-padding: --spacing(4);
   --notification-gap: --spacing(3);
   --notification-radius: var(--radius-notification);
   --notification-shadow: var(--shadow-notification);
 
-  /* Meter (Progress) */
+  /* Meter - Progress bars */
   --meter-track-bg: var(--color-gray-200);
   --meter-indicator-bg: var(--control-accent);
-  --meter-text: var(--text-state-primary);
+  --meter-text: var(--text-primary);
   --meter-radius: var(--radius-meter);
   --meter-shadow: var(--shadow-meter);
-  --progress-track-bg: var(--meter-track-bg);
-  --progress-indicator-bg: var(--meter-indicator-bg);
-  --progress-width: 100%;
-  --progress-height: --spacing(2);
-  --progress-radius: var(--meter-radius);
-  --progress-animation-duration: var(--transition-duration-normal);
 
-  /* === Content Types === */
-  
-  /* Media (Image, Avatar) */
+  /* ============================================================================
+     CONTENT TYPES
+     Typography, media, and visual elements
+     ============================================================================ */
+
+  /* Media - Images, Avatars */
   --media-bg: var(--color-gray-200);
   --media-border: transparent;
   --media-radius: var(--radius-media);
   --media-shadow: var(--shadow-media);
 
-  /* Avatar (Media subtype) */
+  /* Avatar - Media subtype with specific sizing */
   --avatar-size-sm: --spacing(8);
   --avatar-size-md: --spacing(10);
   --avatar-size-lg: --spacing(12);
   --avatar-radius: var(--radius-full);
   --avatar-bg: var(--media-bg);
-  --avatar-color: var(--typography-muted-color);
+  --avatar-color: var(--text-auxiliary);
   --avatar-shadow: var(--media-shadow);
-  --avatar-font-weight: var(--font-weight-medium);
+  --avatar-font-weight: var(--font-medium);
 
-  /* Typography (body text styles) */
+  /* Typography - Body text styles */
   --typography-font-family: var(--font-family-sans);
-  --typography-font-size: var(--font-size-base);
-  --typography-font-weight: var(--font-weight-normal);
+  --typography-font-size: var(--text-base);/* tailwind base size */
+  --typography-font-weight: var(--font-normal);
   --typography-line-height: var(--line-height-normal);
   --typography-line-height-none: 1;
-  --typography-color: var(--color-gray-800);
-  --typography-auxiliary-color: var(--text-state-auxiliary);
+  --typography-color: var(--text-primary);
+  --typography-auxiliary-color: var(--text-auxiliary);
   --typography-small-size: calc(var(--typography-font-size) * 0.875);
   --typography-large-size: calc(var(--typography-font-size) * 1.125);
   --typography-radius: var(--radius-typography);
   --typography-shadow: var(--shadow-typography);
 
-  /* Link */
+  /* Link - Hyperlink styles */
   --link-color: var(--control-accent);
   --link-color-hover: var(--color-primary-600);
   --link-font-family: var(--font-family-sans);
-  --link-font-weight: var(--font-weight-medium);
+  --link-font-weight: var(--font-medium);
   --link-text-decoration: underline;
   --link-text-decoration-hover: underline;
   --link-transition: color 0.15s ease-in-out;
 
   /* Heading (base defaults for all headings) */
   --heading-font-family: var(--font-family-sans);
-  --heading-font-weight: var(--font-weight-semibold);
+  --heading-font-weight: var(--font-semibold);
   --heading-line-height: var(--line-height-tight);
   --heading-letter-spacing: var(--letter-spacing-tight);
-  --heading-color: var(--text-state-primary);
+  --heading-color: var(--text-primary);
   --heading-font-style: normal;
 
   /* Heading 1 */
   --heading-1-font-family: var(--heading-font-family);
-  --heading-1-font-size: var(--font-size-4xl);
+  --heading-1-font-size: 2.25rem; /* 36px */
   --heading-1-font-weight: var(--heading-font-weight);
   --heading-1-line-height: var(--heading-line-height);
   --heading-1-letter-spacing: var(--heading-letter-spacing);
@@ -467,7 +450,7 @@
 
   /* Heading 2 */
   --heading-2-font-family: var(--heading-font-family);
-  --heading-2-font-size: var(--font-size-3xl);
+  --heading-2-font-size: 1.875rem; /* 30px */
   --heading-2-font-weight: var(--heading-font-weight);
   --heading-2-line-height: var(--heading-line-height);
   --heading-2-letter-spacing: var(--heading-letter-spacing);
@@ -478,7 +461,7 @@
 
   /* Heading 3 */
   --heading-3-font-family: var(--heading-font-family);
-  --heading-3-font-size: var(--font-size-2xl);
+  --heading-3-font-size: 1.5rem; /* 24px */
   --heading-3-font-weight: var(--heading-font-weight);
   --heading-3-line-height: var(--heading-line-height);
   --heading-3-letter-spacing: var(--heading-letter-spacing);
@@ -489,7 +472,7 @@
 
   /* Heading 4 */
   --heading-4-font-family: var(--heading-font-family);
-  --heading-4-font-size: var(--font-size-xl);
+  --heading-4-font-size: 1.25rem; /* 20px */
   --heading-4-font-weight: var(--heading-font-weight);
   --heading-4-line-height: var(--heading-line-height);
   --heading-4-letter-spacing: var(--heading-letter-spacing);
@@ -500,7 +483,7 @@
 
   /* Heading 5 */
   --heading-5-font-family: var(--heading-font-family);
-  --heading-5-font-size: var(--font-size-lg);
+  --heading-5-font-size: 1.125rem; /* 18px */
   --heading-5-font-weight: var(--heading-font-weight);
   --heading-5-line-height: var(--heading-line-height);
   --heading-5-letter-spacing: var(--heading-letter-spacing);
@@ -511,7 +494,7 @@
 
   /* Heading 6 */
   --heading-6-font-family: var(--heading-font-family);
-  --heading-6-font-size: var(--font-size-base);
+  --heading-6-font-size: 1rem; /* 16px */
   --heading-6-font-weight: var(--heading-font-weight);
   --heading-6-line-height: var(--heading-line-height);
   --heading-6-letter-spacing: var(--heading-letter-spacing);
@@ -529,7 +512,7 @@
   --icon-radius: var(--radius-icon);
   --icon-shadow: var(--shadow-icon);
 
-  /* Separator */
+  /* Separator - Dividers */
   --separator-color: var(--color-gray-200);
   --separator-thickness: 1px;
   --separator-radius: var(--radius-separator);
@@ -548,11 +531,11 @@
   --button-secondary-color-hover: var(--control-text-contrast);
   --button-tertiary-color: var(--control-text-contrast);
   --button-tertiary-color-hover: var(--control-text-contrast);
-  --button-font-family: var(--typography-body-font-family);
-  --button-font-size: calc(var(--typography-body-size) - 0.0625rem); /* 15px */
-  --button-font-size-sm: calc(var(--typography-body-size) - 0.125rem); /* 14px */
-  --button-font-weight: var(--typography-body-font-weight);
-  --button-line-height: var(--typography-body-line-height);
+  --button-font-family: var(--typography-font-family);
+  --button-font-size: calc(var(--typography-font-size) - 0.0625rem); /* 15px */
+  --button-font-size-sm: calc(var(--typography-font-size) - 0.125rem); /* 14px */
+  --button-font-weight: var(--typography-font-weight);
+  --button-line-height: var(--typography-line-height);
   --button-gap: --spacing(2); /* 8px */
   --button-padding-x: --spacing(4); /* 16px */
   --button-padding-y: --spacing(2); /* 8px */
@@ -564,217 +547,199 @@
   --button-height-md: --spacing(10); /* 40px */
   --button-height-lg: --spacing(11); /* 44px */
   --toggle-size: var(--control-toggle-size);
-
 }
 
-/* === Semantic Background Utilities === */
+@layer theme {
+  :root, :host {
+    /* Tailwind runtime defaults so components work without utilities */
+    /* Transition */
+    --tw-duration: var(--default-transition-duration);
+    --tw-ease: var(--default-transition-timing-function);
+
+    /* Transform pipeline */
+    --tw-rotate-x: ;
+    --tw-rotate-y: ;
+    --tw-rotate-z: ;
+    --tw-skew-x: ;
+    --tw-skew-y: ;
+    --tw-scale-x: 100%;
+    --tw-scale-y: 100%;
+    --tw-scale-z: ;
+    --tw-translate-x: 0;
+    --tw-translate-y: 0;
+
+    /* Filters */
+    --tw-blur: ;
+    --tw-brightness: ;
+    --tw-contrast: ;
+    --tw-grayscale: ;
+    --tw-hue-rotate: ;
+    --tw-invert: ;
+    --tw-saturate: ;
+    --tw-sepia: ;
+    --tw-drop-shadow: ;
+
+    /* Gradients */
+    --tw-gradient-position: to bottom in oklab;
+    --tw-gradient-from: transparent;
+    --tw-gradient-to: transparent;
+    --tw-gradient-via-stops: ;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position, 0%), var(--tw-gradient-to) var(--tw-gradient-to-position, 100%));
+
+    /* Outline & ring */
+    --tw-outline-style: solid;
+    --tw-ring-inset: ;
+    --tw-ring-offset-width: 0px;
+    --tw-ring-color: currentcolor;
+    --tw-ring-offset-shadow: ;
+    --tw-ring-shadow: ;
+
+    /* Shadows */
+    --tw-inset-shadow: ;
+    --tw-inset-ring-shadow: ;
+    --tw-ring-offset-shadow: ;
+    --tw-shadow-color: rgb(0 0 0 / 0.1);
+    --tw-shadow: 0 0 #0000;
+
+    /* Spacing helpers */
+    --tw-space-x-reverse: 0;
+    --tw-space-y-reverse: 0;
+  }
+}
+
+/* ============================================================================
+   SEMANTIC UTILITIES
+   ============================================================================ */
+
+/* === Layout Container Utilities === */
 @utility bg-section { background-color: var(--section-bg); }
 @utility bg-surface { background-color: var(--surface-bg); }
 @utility bg-box { background-color: var(--box-bg); }
-@utility bg-popover { background-color: var(--popover-bg); }
-@utility bg-tooltip { background-color: var(--tooltip-bg); }
-@utility bg-modal { background-color: var(--modal-bg); }
-@utility bg-modal-overlay { background-color: var(--modal-overlay-bg); }
-
-/* === Semantic Navigation Utilities === */
-@utility bg-navigation { background-color: var(--navigation-bg); }
-@utility bg-tabs { background-color: var(--tabs-bg); }
-@utility bg-menubar { background-color: var(--menubar-bg); }
-@utility bg-breadcrumb { background-color: var(--breadcrumb-bg); }
-
-/* === Semantic Interactive Utilities === */
-@utility bg-list-item { background-color: var(--list-item-bg); }
-@utility bg-list-item-hover { background-color: var(--list-item-bg-hover); }
-@utility bg-list-item-active { background-color: var(--list-item-bg-active); }
-@utility bg-control { background-color: var(--control-bg); }
-@utility bg-control-hover { background-color: var(--control-bg-hover); }
-@utility bg-control-active { background-color: var(--control-bg-active); }
-@utility bg-field { background-color: var(--field-bg); }
-@utility bg-field-hover { background-color: var(--field-bg-hover); }
-@utility bg-field-focus { background-color: var(--field-bg-focus); }
-@utility bg-selector-trigger { background-color: var(--selector-trigger-bg); }
-@utility bg-selector-panel { background-color: var(--selector-panel-bg); }
-@utility bg-selector-option { background-color: var(--selector-option-bg); }
-@utility bg-selector-option-hover { background-color: var(--selector-option-bg-hover); }
-@utility bg-selector-option-active { background-color: var(--selector-option-bg-active); }
-@utility bg-choice { background-color: var(--choice-bg); }
-@utility bg-choice-hover { background-color: var(--choice-bg-hover); }
-@utility bg-choice-checked { background-color: var(--choice-bg-checked); }
-@utility bg-track-control-track { background-color: var(--track-control-track-bg); }
-@utility bg-track-control-track-active { background-color: var(--track-control-track-bg-active); }
-@utility bg-track-control-thumb { background-color: var(--track-control-thumb-bg); }
-
-/* === Semantic Feedback Utilities === */
-@utility bg-notification { background-color: var(--notification-bg); }
-@utility bg-meter-track { background-color: var(--meter-track-bg); }
-@utility bg-meter-indicator { background-color: var(--meter-indicator-bg); }
-
-/* === Semantic Content Utilities === */
-@utility bg-media { background-color: var(--media-bg); }
-
-/* === Semantic Text Utilities === */
 @utility text-section { color: var(--section-text); }
 @utility text-surface { color: var(--surface-text); }
 @utility text-box { color: var(--box-text); }
-@utility text-popover { color: var(--popover-text); }
-@utility text-tooltip { color: var(--tooltip-text); }
-@utility text-modal { color: var(--modal-text); }
-@utility text-navigation { color: var(--navigation-text); }
-@utility text-navigation-active { color: var(--navigation-text-active); }
-@utility text-tabs { color: var(--tabs-text); }
-@utility text-tabs-active { color: var(--tabs-text-active); }
-@utility text-menubar { color: var(--menubar-text); }
-@utility text-menubar-active { color: var(--menubar-text-active); }
-@utility text-breadcrumb { color: var(--breadcrumb-text); }
-@utility text-breadcrumb-active { color: var(--breadcrumb-text-active); }
-@utility text-list-item { color: var(--list-item-text); }
-@utility text-list-item-auxiliary { color: var(--list-item-text-auxiliary); }
-@utility text-list-item-disabled { color: var(--list-item-text-disabled); }
-@utility text-control { color: var(--control-text); }
-@utility text-control-contrast { color: var(--control-text-contrast); }
-@utility text-field { color: var(--field-text); }
-@utility text-field-placeholder { color: var(--field-text-placeholder); }
-@utility font-field { font-family: var(--field-font-family); }
-@utility text-field-sm { font-size: var(--field-font-size-sm); }
-@utility text-field-md { font-size: var(--field-font-size); }
-@utility text-field-lg { font-size: var(--field-font-size-lg); }
-@utility font-weight-field { font-weight: var(--field-font-weight); }
-@utility leading-field { line-height: var(--field-line-height); }
-@utility text-selector-trigger { color: var(--selector-trigger-text); }
-@utility text-selector-option { color: var(--selector-option-text); }
-@utility text-choice { color: var(--choice-text); }
-@utility text-notification { color: var(--notification-text); }
-@utility text-meter { color: var(--meter-text); }
-@utility text-typography-heading { color: var(--typography-heading-color); }
-@utility text-typography-body { color: var(--typography-body-color); }
-@utility text-typography-auxiliary { color: var(--typography-auxiliary-color); }
-@utility text-link { color: var(--link-color); }
-@utility text-link-hover { color: var(--link-color-hover); }
-@utility font-link { font-family: var(--link-font-family); }
-@utility font-weight-link { font-weight: var(--link-font-weight); }
-@utility underline-link { text-decoration: var(--link-text-decoration); }
-@utility underline-link-hover { text-decoration: var(--link-text-decoration-hover); }
-@utility transition-link { transition: var(--link-transition); }
-@utility transition { transition: var(--transition); }
-@utility transition-fast { transition: var(--transition-fast); }
-@utility transition-normal { transition: var(--transition-normal); }
-@utility transition-slow { transition: var(--transition-slow); }
-@utility transition-duration-fast { transition-duration: var(--transition-duration-fast); }
-@utility transition-duration-normal { transition-duration: var(--transition-duration-normal); }
-@utility transition-duration-slow { transition-duration: var(--transition-duration-slow); }
-@utility transition-easing { transition-timing-function: var(--transition-easing); }
-
-/* === Semantic Border Utilities === */
 @utility border-section { border-color: var(--section-border); }
 @utility border-surface { border-color: var(--surface-border); }
 @utility border-box { border-color: var(--box-border); }
-@utility border-popover { border-color: var(--popover-border); }
-@utility border-modal { border-color: var(--modal-border); }
-@utility border-navigation { border-color: var(--navigation-border); }
-@utility border-menubar { border-color: var(--menubar-border); }
-@utility border-control { border-color: var(--control-border); }
-@utility border-control-hover { border-color: var(--control-border-hover); }
-@utility border-field { border-color: var(--field-border); }
-@utility border-field-hover { border-color: var(--field-border-hover); }
-@utility border-field-focus { border-color: var(--field-border-focus); }
-@utility border-selector-trigger { border-color: var(--selector-trigger-border); }
-@utility border-selector-panel { border-color: var(--selector-panel-border); }
-@utility border-choice { border-color: var(--choice-border); }
-@utility border-choice-hover { border-color: var(--choice-border-hover); }
-@utility border-choice-checked { border-color: var(--choice-border-checked); }
-@utility border-track-control-thumb { border-color: var(--track-control-thumb-border); }
-@utility border-notification { border-color: var(--notification-border); }
-@utility border-media { border-color: var(--media-border); }
-
-/* === Semantic Padding Utilities === */
 @utility p-section { padding: var(--section-padding); }
 @utility p-surface { padding: var(--surface-padding); }
 @utility p-box { padding: var(--box-padding); }
+@utility gap-section { gap: var(--section-gap); }
+@utility gap-surface { gap: var(--surface-gap); }
+@utility gap-box { gap: var(--box-gap); }
+
+/* === Overlay Utilities === */
+@utility bg-popover { background-color: var(--popover-bg); }
+@utility bg-modal { background-color: var(--modal-bg); }
+@utility bg-modal-overlay { background-color: var(--modal-overlay-bg); }
+@utility text-popover { color: var(--popover-text); }
+@utility text-modal { color: var(--modal-text); }
+@utility border-popover { border-color: var(--popover-border); }
+@utility border-modal { border-color: var(--modal-border); }
 @utility p-popover { padding: var(--popover-padding); }
 @utility p-modal { padding: var(--modal-padding); }
+@utility gap-popover { gap: var(--popover-gap); }
+@utility gap-modal { gap: var(--modal-gap); }
+
+/* === Navigation Utilities === */
+@utility bg-navigation { background-color: var(--navigation-bg); }
+@utility text-navigation { color: var(--navigation-text); }
+@utility text-navigation-active { color: var(--navigation-text-active); }
+@utility border-navigation { border-color: var(--navigation-border); }
 @utility p-navigation { padding: var(--navigation-padding); }
-@utility p-menubar { padding: var(--menubar-padding); }
-@utility p-breadcrumb { padding: var(--breadcrumb-gap); }
+@utility gap-navigation { gap: var(--navigation-gap); }
+@utility indicator-navigation { color: var(--navigation-indicator); }
+
+/* === Interactive Utilities === */
+@utility bg-list-item { background-color: var(--list-item-bg); }
+@utility bg-list-item-hover { background-color: var(--list-item-bg-hover); }
+@utility bg-list-item-active { background-color: var(--list-item-bg-active); }
+@utility text-list-item { color: var(--list-item-text); }
+@utility text-list-item-auxiliary { color: var(--list-item-text-auxiliary); }
+@utility text-list-item-disabled { color: var(--list-item-text-disabled); }
 @utility px-list-item { padding-left: var(--list-item-padding-x); padding-right: var(--list-item-padding-x); }
 @utility py-list-item { padding-top: var(--list-item-padding-y); padding-bottom: var(--list-item-padding-y); }
+@utility gap-list-item { gap: var(--list-item-gap); }
+
+@utility bg-control { background-color: var(--control-bg); }
+@utility bg-control-hover { background-color: var(--control-bg-hover); }
+@utility bg-control-active { background-color: var(--control-bg-active); }
+@utility text-control { color: var(--control-text); }
+@utility text-control-contrast { color: var(--control-text-contrast); }
+@utility border-control { border-color: var(--control-border); }
+@utility border-control-hover { border-color: var(--control-border-hover); }
 @utility px-control { padding-left: var(--control-padding-x); padding-right: var(--control-padding-x); }
 @utility py-control { padding-top: var(--control-padding-y); padding-bottom: var(--control-padding-y); }
 @utility px-control-sm { padding-left: var(--control-padding-sm-x); padding-right: var(--control-padding-sm-x); }
 @utility py-control-sm { padding-top: var(--control-padding-sm-y); padding-bottom: var(--control-padding-sm-y); }
 @utility px-control-lg { padding-left: var(--control-padding-lg-x); padding-right: var(--control-padding-lg-x); }
 @utility py-control-lg { padding-top: var(--control-padding-lg-y); padding-bottom: var(--control-padding-lg-y); }
+@utility gap-control { gap: var(--control-gap); }
+@utility accent-control { color: var(--control-accent); }
+@utility accent-control-hover { color: var(--control-accent-hover); }
+
+@utility bg-field { background-color: var(--field-bg); }
+@utility bg-field-hover { background-color: var(--field-bg-hover); }
+@utility bg-field-focus { background-color: var(--field-bg-focus); }
+@utility text-field { color: var(--field-text); }
+@utility text-field-placeholder { color: var(--field-text-placeholder); }
+@utility border-field { border-color: var(--field-border); }
+@utility border-field-hover { border-color: var(--field-border-hover); }
+@utility border-field-focus { border-color: var(--field-border-focus); }
 @utility px-field { padding-left: var(--field-padding-x); padding-right: var(--field-padding-x); }
 @utility py-field { padding-top: var(--field-padding-y); padding-bottom: var(--field-padding-y); }
-@utility p-notification { padding: var(--notification-padding); }
-
-/* === Semantic Gap Utilities === */
-@utility gap-section { gap: var(--section-gap); }
-@utility gap-surface { gap: var(--surface-gap); }
-@utility gap-box { gap: var(--box-gap); }
-@utility gap-popover { gap: var(--popover-gap); }
-@utility gap-modal { gap: var(--modal-gap); }
-@utility gap-navigation { gap: var(--navigation-gap); }
-@utility gap-menubar { gap: var(--menubar-gap); }
-@utility gap-breadcrumb { gap: var(--breadcrumb-gap); }
-@utility gap-list-item { gap: var(--list-item-gap); }
-@utility gap-control { gap: var(--control-gap); }
-@utility gap-notification { gap: var(--notification-gap); }
-
-/* === Semantic Height Utilities === */
 @utility h-field-sm { height: var(--field-height-sm); }
 @utility h-field-md { height: var(--field-height-md); }
 @utility h-field-lg { height: var(--field-height-lg); }
+@utility font-field { font-family: var(--field-font-family); }
+@utility text-field-sm { font-size: var(--field-font-size-sm); }
+@utility text-field-md { font-size: var(--field-font-size); }
+@utility text-field-lg { font-size: var(--field-font-size-lg); }
+@utility font-weight-field { font-weight: var(--field-font-weight); }
+@utility leading-field { line-height: var(--field-line-height); }
 
-/* === Semantic Size Utilities === */
-@utility size-toggle { width: var(--toggle-size); height: var(--toggle-size); }
-@utility size-icon-sm { width: var(--icon-size-sm); height: var(--icon-size-sm); }
-@utility size-icon-md { width: var(--icon-size-md); height: var(--icon-size-md); }
-@utility size-icon-lg { width: var(--icon-size-lg); height: var(--icon-size-lg); }
+@utility bg-selector-trigger { background-color: var(--selector-trigger-bg); }
+@utility bg-selector-panel { background-color: var(--selector-panel-bg); }
+@utility bg-selector-option { background-color: var(--selector-option-bg); }
+@utility bg-selector-option-hover { background-color: var(--selector-option-bg-hover); }
+@utility bg-selector-option-active { background-color: var(--selector-option-bg-active); }
+@utility text-selector-trigger { color: var(--selector-trigger-text); }
+@utility text-selector-option { color: var(--selector-option-text); }
+@utility border-selector-trigger { border-color: var(--selector-trigger-border); }
+@utility border-selector-panel { border-color: var(--selector-panel-border); }
 
-/* === Semantic Z-Index Utilities === */
-@utility z-base { z-index: var(--layer-base); }
-@utility z-surface { z-index: var(--layer-surface); }
-@utility z-popover { z-index: var(--layer-popover); }
-@utility z-modal { z-index: var(--layer-modal); }
-@utility z-overlay { z-index: var(--layer-overlay); }
-@utility z-tooltip { z-index: var(--layer-tooltip); }
-
-/* === Semantic State Utilities === */
-@utility bg-state-subtle { background-color: var(--bg-state-subtle); }
-@utility bg-state-subtle-hover { background-color: var(--bg-state-subtle-hover); }
-@utility bg-state-active { background-color: var(--bg-state-active); }
-@utility bg-state-focus { background-color: var(--bg-state-focus); }
-@utility bg-state-disabled { background-color: var(--bg-state-disabled); }
-@utility text-state-auxiliary { color: var(--text-state-auxiliary); }
-@utility text-state-placeholder { color: var(--text-state-placeholder); }
-@utility text-state-disabled { color: var(--text-state-disabled); }
-@utility text-state-primary { color: var(--text-state-primary); }
-
-/* === Semantic Accent/Indicator Utilities === */
-@utility accent-control { color: var(--control-accent); }
-@utility accent-control-hover { color: var(--control-accent-hover); }
-@utility indicator-navigation { color: var(--navigation-indicator); }
-@utility indicator-tabs { color: var(--tabs-indicator); }
-@utility indicator-menubar { color: var(--menubar-indicator); }
+@utility bg-choice { background-color: var(--choice-bg); }
+@utility bg-choice-hover { background-color: var(--choice-bg-hover); }
+@utility bg-choice-checked { background-color: var(--choice-bg-checked); }
+@utility text-choice { color: var(--choice-text); }
+@utility border-choice { border-color: var(--choice-border); }
+@utility border-choice-hover { border-color: var(--choice-border-hover); }
+@utility border-choice-checked { border-color: var(--choice-border-checked); }
 @utility indicator-choice { color: var(--choice-indicator); }
+
+@utility bg-track-control-track { background-color: var(--track-control-track-bg); }
+@utility bg-track-control-track-active { background-color: var(--track-control-track-bg-active); }
+@utility bg-track-control-thumb { background-color: var(--track-control-thumb-bg); }
+@utility border-track-control-thumb { border-color: var(--track-control-thumb-border); }
+
+/* === Feedback Utilities === */
+@utility bg-notification { background-color: var(--notification-bg); }
+@utility bg-meter-track { background-color: var(--meter-track-bg); }
+@utility bg-meter-indicator { background-color: var(--meter-indicator-bg); }
+@utility text-notification { color: var(--notification-text); }
+@utility text-meter { color: var(--meter-text); }
+@utility border-notification { border-color: var(--notification-border); }
+@utility p-notification { padding: var(--notification-padding); }
+@utility gap-notification { gap: var(--notification-gap); }
 @utility accent-notification { color: var(--notification-accent); }
-@utility separator-breadcrumb { color: var(--breadcrumb-separator); }
 
-/* === Button Component Utilities === */
-@utility bg-button-primary { background-color: var(--button-primary-bg); }
-@utility bg-button-primary-hover { background-color: var(--button-primary-bg-hover); }
-@utility bg-button-secondary { background-color: var(--button-secondary-bg); }
-@utility bg-button-secondary-hover { background-color: var(--button-secondary-bg-hover); }
-@utility bg-button-tertiary { background-color: var(--button-tertiary-bg); }
-@utility bg-button-tertiary-hover { background-color: var(--button-tertiary-bg-hover); }
-@utility text-button-primary { color: var(--button-primary-color); }
-@utility text-button-primary-hover { color: var(--button-primary-color-hover); }
-@utility text-button-secondary { color: var(--button-secondary-color); }
-@utility text-button-secondary-hover { color: var(--button-secondary-color-hover); }
-@utility text-button-tertiary { color: var(--button-tertiary-color); }
-@utility text-button-tertiary-hover { color: var(--button-tertiary-color-hover); }
+/* === Content Utilities === */
+@utility bg-media { background-color: var(--media-bg); }
+@utility border-media { border-color: var(--media-border); }
 
-/* === Typography Utilities === */
+@utility text-typography-heading { color: var(--typography-heading-color); }
+@utility text-typography-body { color: var(--typography-color); }
+@utility text-typography-auxiliary { color: var(--typography-auxiliary-color); }
 @utility font-typography { font-family: var(--typography-font-family); }
 @utility text-typography { font-size: var(--typography-font-size); }
 @utility font-weight-typography { font-weight: var(--typography-font-weight); }
@@ -782,7 +747,14 @@
 @utility text-typography-small { font-size: var(--typography-small-size); }
 @utility text-typography-large { font-size: var(--typography-large-size); }
 
-/* === Heading Utilities === */
+@utility text-link { color: var(--link-color); }
+@utility text-link-hover { color: var(--link-color-hover); }
+@utility font-link { font-family: var(--link-font-family); }
+@utility font-weight-link { font-weight: var(--link-font-weight); }
+@utility underline-link { text-decoration: var(--link-text-decoration); }
+@utility underline-link-hover { text-decoration: var(--link-text-decoration-hover); }
+@utility transition-link { transition: var(--link-transition); }
+
 @utility font-heading { font-family: var(--heading-font-family); }
 @utility font-weight-heading { font-weight: var(--heading-font-weight); }
 @utility leading-heading { line-height: var(--heading-line-height); }
@@ -790,7 +762,7 @@
 @utility text-heading { color: var(--heading-color); }
 @utility font-style-heading { font-style: var(--heading-font-style); }
 
-/* === Individual Heading Utilities === */
+/* Individual Heading Utilities */
 @utility font-h1 { font-family: var(--heading-1-font-family); }
 @utility text-h1 { font-size: var(--heading-1-font-size); }
 @utility font-weight-h1 { font-weight: var(--heading-1-font-weight); }
@@ -851,11 +823,58 @@
 @utility mt-h6 { margin-top: var(--heading-6-margin-top); }
 @utility mb-h6 { margin-bottom: var(--heading-6-margin-bottom); }
 
-/* === Icon Utilities === */
 @utility text-icon { color: var(--icon-color); }
 @utility text-icon-active { color: var(--icon-color-active); }
+@utility size-icon-sm { width: var(--icon-size-sm); height: var(--icon-size-sm); }
+@utility size-icon-md { width: var(--icon-size-md); height: var(--icon-size-md); }
+@utility size-icon-lg { width: var(--icon-size-lg); height: var(--icon-size-lg); }
 
-/* === Separator Utilities === */
 @utility text-separator { color: var(--separator-color); }
 @utility border-separator { border-color: var(--separator-color); }
 @utility border-separator-thickness { border-width: var(--separator-thickness); }
+
+/* === State Utilities === */
+@utility bg-hover { background-color: var(--bg-hover); }
+@utility bg-active { background-color: var(--bg-active); }
+@utility bg-focus { background-color: var(--bg-focus); }
+@utility bg-disabled { background-color: var(--bg-disabled); }
+@utility text-primary { color: var(--text-primary); }
+@utility text-auxiliary { color: var(--text-auxiliary); }
+@utility text-placeholder { color: var(--text-placeholder); }
+@utility text-disabled { color: var(--text-disabled); }
+@utility border-focus { border-color: var(--border-focus); }
+
+/* === Transition Utilities === */
+@utility transition { transition: var(--transition); }
+@utility transition-fast { transition: var(--transition-fast); }
+@utility transition-normal { transition: var(--transition-normal); }
+@utility transition-slow { transition: var(--transition-slow); }
+@utility transition-duration-fast { transition-duration: var(--transition-duration-fast); }
+@utility transition-duration-normal { transition-duration: var(--transition-duration-normal); }
+@utility transition-duration-slow { transition-duration: var(--transition-duration-slow); }
+@utility transition-easing { transition-timing-function: var(--transition-easing); }
+
+/* === Z-Index Utilities === */
+@utility z-base { z-index: var(--layer-base); }
+@utility z-surface { z-index: var(--layer-surface); }
+@utility z-popover { z-index: var(--layer-popover); }
+@utility z-modal { z-index: var(--layer-modal); }
+@utility z-overlay { z-index: var(--layer-overlay); }
+@utility z-tooltip { z-index: var(--layer-tooltip); }
+
+/* === Size Utilities === */
+@utility size-toggle { width: var(--toggle-size); height: var(--toggle-size); }
+
+/* === Button Component Utilities === */
+@utility bg-button-primary { background-color: var(--button-primary-bg); }
+@utility bg-button-primary-hover { background-color: var(--button-primary-bg-hover); }
+@utility bg-button-secondary { background-color: var(--button-secondary-bg); }
+@utility bg-button-secondary-hover { background-color: var(--button-secondary-bg-hover); }
+@utility bg-button-tertiary { background-color: var(--button-tertiary-bg); }
+@utility bg-button-tertiary-hover { background-color: var(--button-tertiary-bg-hover); }
+@utility text-button-primary { color: var(--button-primary-color); }
+@utility text-button-primary-hover { color: var(--button-primary-color-hover); }
+@utility text-button-secondary { color: var(--button-secondary-color); }
+@utility text-button-secondary-hover { color: var(--button-secondary-color-hover); }
+@utility text-button-tertiary { color: var(--button-tertiary-color); }
+@utility text-button-tertiary-hover { color: var(--button-tertiary-color-hover); }
