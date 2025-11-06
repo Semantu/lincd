@@ -240,7 +240,6 @@
   --navigation-border: var(--border-default);
   --navigation-text: var(--color-gray-700);
   --navigation-text-active: var(--text-primary);
-  --navigation-indicator: var(--color-primary-600);
   --navigation-padding: --spacing(2);
   --navigation-gap: --spacing(2);
   --navigation-radius: var(--radius-navigation);
@@ -345,10 +344,11 @@
   --choice-border-checked: var(--control-accent);
   --choice-indicator: var(--color-white);
   --choice-text: var(--text-primary);
-  --choice-size: --spacing(5);
+  --choice-size: --spacing(6);
   --choice-indicator-size: --spacing(6);
   --choice-radius: var(--radius-choice);
   --choice-shadow: var(--shadow-choice);
+  --choice-gap: --spacing(3);
 
   /* TrackControl - Sliders */
   --track-control-width: 100%;
@@ -415,8 +415,8 @@
   --typography-line-height-none: 1;
   --typography-color: var(--text-primary);
   --typography-auxiliary-color: var(--text-auxiliary);
-  --typography-small-size: calc(var(--typography-font-size) * 0.875);
-  --typography-large-size: calc(var(--typography-font-size) * 1.125);
+  --typography-small-size: var(--text-sm);
+  --typography-large-size: var(--text-lg);
   --typography-radius: var(--radius-typography);
   --typography-shadow: var(--shadow-typography);
 
@@ -648,7 +648,6 @@
 @utility border-navigation { border-color: var(--navigation-border); }
 @utility p-navigation { padding: var(--navigation-padding); }
 @utility gap-navigation { gap: var(--navigation-gap); }
-@utility indicator-navigation { color: var(--navigation-indicator); }
 
 /* === Interactive Utilities === */
 @utility bg-list-item { background-color: var(--list-item-bg); }
