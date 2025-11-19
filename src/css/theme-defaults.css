@@ -72,6 +72,9 @@
     --color-tertiary-800: var(--color-cyan-800);
     --color-tertiary-900: var(--color-cyan-900);
 
+    /* === Base Spacing Unit (required for --spacing() function) === */
+    --spacing: 0.25rem; /* 4px - base unit for --spacing() function */
+
     /* === Shadow Tokens (auto-generates shadow-* utilities) === */
     --shadow-section: none;
     --shadow-surface: var(--shadow-sm);
@@ -98,6 +101,7 @@
 
     /* === Radius Tokens (auto-generates rounded-* utilities) === */
     --radius-none: 0px;
+    --radius-full: calc(infinity * 1px);
     --radius-section: var(--radius-none);
     --radius-surface: var(--radius-sm);
     --radius-box: var(--radius-lg);
@@ -271,7 +275,7 @@
   --control-border-hover: var(--border-hover);
   --control-text: var(--text-primary);
   --control-text-contrast: var(--color-white);
-  --control-accent: var(--color-primary-600);
+  --control-accent: var(--color-primary-500);
   --control-accent-hover: var(--color-primary-700);
   --control-padding-x: --spacing(4);
   --control-padding-y: --spacing(2);
@@ -521,9 +525,9 @@
   /* === Variant & Component-Specific Tokens === */
   --button-primary-bg: var(--control-accent);
   --button-primary-bg-hover: var(--control-accent-hover);
-  --button-secondary-bg: var(--color-secondary-600);
+  --button-secondary-bg: var(--color-secondary-500);
   --button-secondary-bg-hover: var(--color-secondary-700);
-  --button-tertiary-bg: var(--color-tertiary-600);
+  --button-tertiary-bg: var(--color-tertiary-500);
   --button-tertiary-bg-hover: var(--color-tertiary-700);
   --button-primary-color: var(--control-text-contrast);
   --button-primary-color-hover: var(--control-text-contrast);
