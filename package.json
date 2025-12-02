@@ -1,7 +1,7 @@
 {
   "name": "lincd",
   "license": "MPL-2.0",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "LINCD is a JavaScript library for building user interfaces with linked data (also known as 'structured data', or RDF)",
   "main": "lib/cjs/index.js",
   "module": "lib/esm/index.js",
