@@ -401,8 +401,8 @@ export function createLinkedComponentFn(
             // //render the original components with the original + generated properties
             return React.createElement(functionalComponent, linkedProps);
           } else {
-            //render loading
-            return createElement('div', null, '...');
+            //render loading with a proper loading indicator instead of '...'
+            return createLoadingSpinner();
           }
         },
       ) as any;
@@ -619,8 +619,8 @@ export function createLinkedSetComponentFn(
           //render the original components with the original + generated properties
           return React.createElement(functionalComponent, linkedProps);
         } else {
-          //render loading
-          return createElement('div', null, '...');
+          //render loading with a proper loading indicator instead of '...'
+          return createLoadingSpinner();
         }
       });
 
@@ -849,3 +849,16 @@ function isValidQResult(of, query) {
 //   };
 //   return decoratorFunction;
 // }
+
+// helper function to create a loading indicator
+// uses a simple div with class 'ld-loader' that can be styled by the app
+function createLoadingSpinner() {
+  return React.createElement(
+    'div',
+    {
+      className: 'ld-loader',
+      'aria-label': 'Loading',
+      role: 'status',
+    }
+  );
+}
