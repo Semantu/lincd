@@ -1,5 +1,5 @@
 import {Shape} from '../shapes/Shape.js';
-import {objectProperty} from '../utils/ShapeDecorators.js';
+import {objectProperty} from '../shapes/SHACL.js';
 import {NamedNode} from '../models.js';
 import {describe, expect, test} from '@jest/globals';
 import {linkedShape} from '../package.js';

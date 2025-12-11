@@ -31,7 +31,7 @@ import {
 import {shacl} from '../ontologies/shacl.js';
 import {rdfs} from '../ontologies/rdfs.js';
 import {xsd} from '../ontologies/xsd.js';
-import { createPropertyShape } from './ShapeDecorators.js';
+import { createPropertyShape } from '../shapes/SHACL.js';
 
 //global tree
 declare var lincd: any;

@@ -17,7 +17,7 @@ import {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {SearchMap} from '../collections/SearchMap.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {QuadSet} from '../collections/QuadSet.js';
-import {NodeShape,PropertyShape} from './SHACL.js';
+import type {NodeShape,PropertyShape} from './SHACL.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
 import {
   getMostSpecificShapesByType,
