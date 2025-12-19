@@ -1,10 +1,10 @@
 import React from 'react';
-import {Node} from '../models';
-import {Shape} from '../shapes/Shape';
-import {PropertyShape} from '../shapes/SHACL';
-import {ShapeSet} from '../collections/ShapeSet';
-import {NodeSet} from '../collections/NodeSet';
-import {ICoreIterable} from './ICoreIterable';
+import {Node} from '../models.js';
+import {Shape} from '../shapes/Shape.js';
+import {PropertyShape} from '../shapes/SHACL.js';
+import {ShapeSet} from '../collections/ShapeSet.js';
+import {NodeSet} from '../collections/NodeSet.js';
+import {ICoreIterable} from './ICoreIterable.js';
 
 export type Component<P = any, ShapeType extends Shape = Shape> =
   | ClassComponent<P, ShapeType>
