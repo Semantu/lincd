@@ -1,5 +1,5 @@
 import {expect, it} from '@jest/globals';
-// import {literalProperty} from '../utils/ShapeDecorators.js';
+// import {literalProperty} from '../shapes/SHACL.js';
 
 // let foaf = createNameSpace('http://xmlns.com/foaf/0.1/');
 //
