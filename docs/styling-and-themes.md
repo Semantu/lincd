@@ -192,7 +192,7 @@ Apps can then override these in their theme:
 
 ---
 
-## For Developers
+## For Developers Building Apps
 
 ### Using Tailwind Utilities Directly
 
