@@ -388,6 +388,14 @@ export const runQueryTests = (startPromise = Promise.resolve()) => {
         let qRes = await Person.select({id: 'https://does.not/exist'},p => p.name);
         expect(qRes).toBeNull();
       });
+
+      test('selecting only undefined properties returns an empty object',async () => {
+        let qRes = await Person.select(p3,p => [p.hobby,p.bestFriend]);
+        expect(qRes.hobby).toBeNull();
+        expect(qRes.bestFriend).toBeNull();
+        expect(qRes.id).toBe(p3.uri);
+
+      });
     });
 
     describe('2. Nested & Path Selection',() => {
