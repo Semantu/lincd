@@ -384,9 +384,9 @@ export const runQueryTests = (startPromise = Promise.resolve()) => {
         expect(qRes.id).toBe(p1.uri);
       });
       
-      test('select with a non existing returns null',async () => {
+      test('select with a non existing returns undefined',async () => {
         let qRes = await Person.select({id: 'https://does.not/exist'},p => p.name);
-        expect(qRes).toBeNull();
+        expect(qRes).toBeUndefined();
       });
 
       test('selecting only undefined properties returns an empty object',async () => {

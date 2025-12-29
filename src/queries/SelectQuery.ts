@@ -1698,10 +1698,10 @@ export class SelectQueryFactory<
         offset: this.offset,
         shape: this.shape,
         sortBy: this.getSortByPath(),
+        //the query is selecting a single result if it explicitly requested it, or if the subject is a specific subject (with a URI or ID)
+        singleResult: this.singleResult || !!((this.subject as S)?.uri || (this.subject as QResult<S>)?.id),
       } as SelectQuery<S>;
-      if (this.singleResult) {
-        selectQuery.singleResult = this.singleResult;
-      }
+
       if (this.wherePath) {
         selectQuery.where = this.wherePath;
       }
