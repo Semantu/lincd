@@ -741,7 +741,7 @@ export function resolveLocal<ResultType>(
   ) as ResultType;
 
   if (query.singleResult) {
-    return results[0];
+    return Array.isArray(results) ? results[0] : results as ResultType;
   }
   return results;
 }
