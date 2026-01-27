@@ -665,9 +665,11 @@ export class QueryBuilderObject<
       //As long as the decorator indicates the shape the values should have, we can still use it.
       //In the future queries will only use the decorators, not the actually returned value. Then this can go
       if (property.valueShape) {
-        const shape = new (getShapeClass(property.valueShape.namedNode) as any)(
-          originalValue,
-        );
+        const shapeClass = getShapeClass(property.valueShape.namedNode) as any;
+        if(!shapeClass) {
+          throw new Error(`Shape class not found for ${property.valueShape.namedNode}`);
+        }
+        const shape = new shapeClass(originalValue);
         return QueryShape.create(shape, property, subject);
       }
       throw new Error(
@@ -720,15 +722,20 @@ export class QueryBuilderObject<
     }
 
     if (valueShape) {
+      const shapeClass = getShapeClass(valueShape.namedNode) as any;
+      if(!shapeClass) {
+        //TODO: getShapeClassAsync -> which will lazy load the shape class
+        // but Im not sure if that's even possible with dynamic import paths, that are only known at runtime
+        //UPDATE: we should not need to load shapeclasses. We just need to be able to access shapes.
+        // but the problem remains that the ImageObject shape needs to be available, but thats easier, as its data
+        throw new Error(`Shape class not found for ${valueShape.namedNode}`);
+      }
+      const shapeValue = new shapeClass(
+        new TestNode(path),
+      );
       if (singleValue) {
-        const shapeValue = new (getShapeClass(valueShape.namedNode) as any)(
-          new TestNode(path),
-        );
         return QueryShape.create(shapeValue, property, subject);
       } else {
-        const shapeValue = new (getShapeClass(valueShape.namedNode) as any)(
-          new TestNode(path),
-        );
         return QueryShapeSet.create(
           new ShapeSet([shapeValue]),
           property,

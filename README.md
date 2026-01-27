@@ -1,30 +1,30 @@
 # LINCD.js
 <span style="color:gray; font-size:1.3rem">**L**inked **IN**teropeable **C**ode & **D**ata</span>
-### **All the tools you need to build [Linked Data](https://www.w3.org/standards/semanticweb/data) applications with ease in one package**
+### **All the tools you need to build [Linked Data](https://www.w3.org/standards/semanticweb/data) applications with React**
 
-With [Linked Components](#ui-components-built-for-linked-data) you can rapidly prototype an interface powered by Linked Data.
-
-To our knowledge, LINCD.js is the _only_ linked data library that supports you all the way to the UI layer.
+LINCD.js is a modern TypeScript library for building React applications powered by RDF and SHACL Shapes. Create clean, type-safe code that queries, creates, updates, and deletes linked data through object-oriented APIs, with automatic data loading and reactive components.
 
 > New to Linked Data? It is a [W3C standard](https://www.w3.org/standards/semanticweb/data) based on [RDF](https://www.w3.org/RDF/) used to build interconnected knowledge graphs. It is also known
 > as [Structured Data](https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data) which can
 > help search engines to present rich snippets in search results.
-
-## LINCD offers:
-
-- [UI Components for Linked Data](#ui-components-built-for-linked-data)
-- [Automatic data validation](#automatic-data-validation)
-- [Automatic data loading](#automatic-data-loading)
-- [OO classes for SHACL Shapes](#shapes)
-- [An in-memory RDF Graph database with intuitive API](#in-memory-rdf-graph-database)
-- [A registry of plug & play UI components, shapes & ontologies](https://www.lincd.org)
 
 LINCD.js is compatible with the [RDFJS data model](https://github.com/rdfjs/data-model-spec)
 
 See also
 - [documentation](https://docs.lincd.org)
 - [examples](https://lincd.org/examples)
-- [registry](https://lincd.org)
+- [registry](https://www.lincd.org)
+
+## LINCD offers:
+
+- **[Schema-Parameterized Query DSL](#schema-parameterized-query-dsl)**: TypeScript-embedded declarative query language that compiles to backends like SPARQL
+- **[Shape Classes](#shapes)**: TypeScript classes that generate SHACL shapes for validation and OO data access
+- **[Object-Oriented Data Operations](#queries-create-update-delete)**: Query, create, update, and delete RDF data using clean OO code
+- **[Automatic Data Loading](#automatic-data-loading)**: Flexible storage layer supporting multiple backends with automatic data fetching
+- **[React Linked Components](#react-linked-components)**: Components tied to queries that automatically load data and convert results to props
+- **[Reactive Queries](#reactive-queries)**: Query-level reactivity with automatic component updates when shared data changes
+- **[Automatic Data Validation](#automatic-data-validation)**: Data validated against SHACL shapes automatically
+- **[A registry of plug & play UI components, shapes & ontologies](https://www.lincd.org)**
 
 ## Why?
 
@@ -44,8 +44,8 @@ LINCD significantly reduces the amount of learning required and makes it _much_ 
 There are tons of ontologies (reusable linked data structures) available. But without a good searchable registry, it's hard to find the right one. And starting to use a specific ontology can be time-consuming still.
 Reusable UI components built specifically for Linked Data are virtually non-existent. 
 
-[LINCD.org](www.lincd.org) offers an open registry of quality ontologies and UI components built for those ontologies. Each of these ontology and components can be imported and used with just a few lines of code. 
-This library make it easy to develop and share such ontologies and components in the registry.
+[LINCD.org](https://www.lincd.org) offers an open registry of quality ontologies and UI components built for those ontologies. Each of these ontology and components can be imported and used with just a few lines of code. 
+This library makes it easy to develop and share such ontologies and components in the registry.
 
 ### Solving data validation & more
 
@@ -60,97 +60,50 @@ simpler and cleaner code, frees developers up from thinking about which classes 
 offer advanced features like automatic data loading and data validation that to our knowledge no other Linked Data library or framework offers.
 
 ## Installation
+
 **npm + node.js**
-```
+```bash
 npm install lincd
 ```
-```
-const lincd = require("lincd");
-```
 
+```typescript
+import { Shape, linkedComponent } from 'lincd';
+```
 
 See [this tutorial](https://docs.lincd.org/docs/category/tutorial---linked-data) on how to build linked data applications with LINCD.js
 
-## UI Components built for Linked Data
-UI components run on data. In a typical development environment, the component simply takes low level data like `strings`,`numbers` and `booleans` as variables or 'props' (in React).
-The developer is usually responsible for obtaining this data from a database, and then manually providing the right data to each prop/variable of the component.
+## LINCD Package Setup
 
-But with Linked Data we can _reuse_ data structures. So what if we had components that _consume_ these reusable data structures?
-All the developer has to do then, is to obtain data with the right structure, and hand it to the component.
+LINCD packages expose shapes, components, utilities, and ontologies through a small `package.ts` file. This makes module exports discoverable across LINCD modules and enables linked decorators.
 
-That is exactly what we've made possible with LINCD!
+**Minimal `package.ts`**
+```typescript
+import { linkedPackage } from 'lincd/utils/Package';
 
-![](./assets/linked-components.png)
-
-### Components consuming Shapes
-LINCD introduces the concept of Linked Components.
-These are UI components that get linked to a specific Shape.
-The shape informs the structure of the data that the component expects to receive.
-
-Here is a simple example of a functional component:
-
-> Note: Currently LINCD exclusively supports React components, though other libraries may be added in the future.
-
-```tsx
-import {Person} from 'lincd-foaf/lib/shapes/Person';
-export const PersonView = linkedComponent<Person>(Person, ({source}) => {
-  //sourceShape is an instance of Person
-  let person = source;
-  //get the name of the person from the graph through the Person shape
-  return <h1>Hello {person.name}!</h1>;
-});
+export const {
+  linkedComponent,
+  linkedSetComponent,
+  linkedShape,
+  linkedUtil,
+  linkedOntology,
+  registerPackageExport,
+  registerPackageModule,
+  packageExports,
+  getPackageShape,
+} = linkedPackage('my-package-name');
 ```
 
-This component can then be used by providing an instance of the Person shape as it's source (using the 'of' property): 
-
-```tsx
-let person = new Person();
-person.name = 'René';
-return <PersonView of={person} />;
-```
-
-
-Linking a component (like `PersonView` defined above) [to a specific data structure](https://docs.lincd.org/docs/guides/linked-code/components#linking-a-component-to-structured-data) (in this case the shape `Person`) gives it several great benefits:
-
-### Automatic data loading
-LINCD.js can connect to any number of triple stores and/or graph databases.
-All the data you request in your component will be automatically loaded from the right place and will be available when your component runs.
-
-In the example above, all the data is already available locally, since the person was created right there.
-
-But consider this example:
-```tsx
-let person = new Person('http://www.example.com/#me');
-return <PersonView of={person} />;
-```
-
-Here we create a `Person` instance for the `NamedNode` with URI `http://www.example.com/#me`.
-The data for this node (like the name of the person) may not be loaded yet.
-So LINCD will automatically query the right store for this data and only continue to render `PersonView` when the data is loaded
-
-### Automatic data validation
-Once you have linked your component to specific shapes (data structures), LINCD.js ensures that _only those nodes_ in the graph that match with this shape will be allowed to be used with this component.
-Because of this, you can rest assured that all the data will be there and in the right format.
-
-That is, in the example above, `PersonView` will only render once LINCD has confirmed that the provided `person` instance is a valid instance of the `Person` shape. With the `Person` example [later on this page](#definition), this would mean it has exactly one name defined under `person.name` and `person.knows` returns a set of valid `Person` instances. 
-
-
-### Automatic re-rendering whenever the graph changes
-Linked Components automatically rerender whenever their data source updates a relevant property in the graph.
-
-Consider this example:
-```tsx
-let person = new Person();
-person.name = 'René';
-setTimeOut(() => {
-  person.name = 'Joe';
-},1000);
-return <PersonView of={person} />;
-```
-
-In this example, when the persons name gets updated after 1 second, `PersonView` will automatically rerender to update the displayed name.
+**Decorators and helpers**
+- `@linkedShape`: registers a Shape class and generates a SHACL shape
+- `linkedComponent`, `linkedSetComponent`: bind React components to Shapes
+- `@linkedUtil`: exposes utilities to other LINCD modules
+- `linkedOntology(...)`: registers an ontology and (optionally) its data loader
+- `registerPackageExport(...)`: manually export something into the LINCD package tree
+- `registerPackageModule(...)`: lower-level module registration
+- `getPackageShape(...)`: resolve a Shape class by name to avoid circular imports
 
 ## Shapes
+
 LINCD introduces Shape classes that generate SHACL Shapes.
 
 These classes enable automatic data validation and abstract away RDF implementation details.
@@ -194,6 +147,14 @@ export class Person extends Shape {
 }
 ```
 
+#### Property decorators
+
+- `@literalProperty(...)`: link a getter/setter to a literal value (e.g. string, number, boolean, date)
+- `@objectProperty(...)`: link a getter/setter to a node value (and optionally a Shape via `shape:`)
+- `@linkedProperty(...)`: low-level variant used by the above decorators
+
+Common config fields: `path`, `required`, `minCount`, `maxCount`, `datatype`, `shape`, `nodeKind`
+
 #### Usage
 
 Now when we use the shape above, we can simply use plain and simple object-oriented code. 
@@ -201,7 +162,7 @@ The code below creates RDF triples in the graph, but it ***does not need to know
 
 Instead, it simply uses the accessors from the Shape.
 
-Furthermore, the shape class allows us to validate our graph. This happens automatically when visualising specific shapes from the graph with [Linked Components](#ui-components-built-for-linked-data)
+Furthermore, the shape class allows us to validate our graph. This happens automatically when visualizing specific shapes from the graph with [Linked Components](#react-linked-components)
 
 ```typescript
 let person = new Person();
@@ -217,320 +178,451 @@ console.log(Person.validate(person)); //true
 console.log(Person.validate(person2));//true
 ```
 
+## Queries: Create, Select, Update, Delete
 
-## In-memory RDF Graph Database
-**With an intuitive resource-centric API:**
+LINCD provides object-oriented methods for creating, querying, updating, and deleting RDF data:
 
-In *other RDF libraries* you will have to work with raw triples / quads.
-Creating triples or quads or searching your graph requires you to think in terms of `subject,predicate,object,graph`.
-
-However, [a triple](https://en.wikipedia.org/wiki/Semantic_triple) is simply a subject node that has points to (the predicate or 'edge') another node.
-LINCD instead lets you think of your graph as nodes (subjects) that have _values_ (the objects) for certain _properties_ (the predicates).
-
-In other words, you can simply **update & search your graph from any node**, by setting/getting properties.
-
-Here's some examples:
-### Setting properties
-```typescript
-let person = NamedNode.getOrCreate("http://ex.org/person");
-let person2 = NamedNode.getOrCreate("http://ex.org/person2");
-person.set(foaf.name,new Literal("John Doe"));
-person2.set(foaf.name,new Literal("Jane"));
-person.set(foaf.knows,person2);
-```
-This results in the following triples
-```turtle
-<http://ex.org/person> foaf:name "John Doe"
-<http://ex.org/person> foaf:knows <http://ex.org/person2>
-```
-
-### Searching the graph
-Methods like `getAll(property)` and `getOne(property)` and `getValues(property)` all return sets of values.
-These sets in turn have the same methods, to get properties of all the nodes in the set.
-
-For example, to obtain the names of the persons that a person knows:
+### Create
 
 ```typescript
-//a Set of Literals
-person.getAll(foaf.knows).getAll(foaf.name);
+let newPerson = await Person.create({
+  name: 'Alice',
+  knows: [{id: existingPerson.id}]
+});
+
+let withFriends = await Person.create({
+  name: 'Test With Friends',
+  friends: [
+    {name: 'Brand New Friend'},
+    {id: existingPerson.id},
+  ],
+});
+
+let fixedId = await Person.create({
+  __id: 'http://example.com/#person-1',
+  name: 'Fixed ID',
+});
 ```
 
-Alternatively you can also go straight to the literal value:
+### Select
+
+## Schema-Parameterized Query DSL
+
+LINCD Queries is a TypeScript-embedded declarative query language that compiles its query AST to backends like SPARQL. You define your own SHACL shape schemas, making the DSL **schema-parameterized** and domain-agnostic — you apply the generic DSL to your specific domain.
+
+The query language provides a type-safe, object-oriented interface that works with any domain through custom Shape classes. Below is the **current** set of query features (based on `query-tests.tsx`):
+
+### Query DSL Reference (current)
+
+- [Basic selection](#query-basic-selection)
+- [Targeting a specific subject](#query-target-specific-subject)
+- [Multiple paths and mixed results](#query-multiple-paths)
+- [Nested paths (deep selection)](#query-nested-paths)
+- [Sub-queries](#query-sub-queries)
+- [Filtering with where + equals](#query-where-equals)
+- [AND/OR combinations](#query-and-or)
+- [Filtering sets with where/some/every](#query-set-filtering)
+- [Outer where chaining](#query-outer-where)
+- [Aggregations with size()](#query-size)
+- [Custom result objects](#query-custom-results)
+- [Type casting with as(Shape)](#query-as)
+- [Sorting, limiting, one()](#query-sort-limit-one)
+- [Query context variables](#query-context)
+- [Preloading for linked components](#query-preload)
+
+#### Query Basic Selection
+
+Select literal, object, date, and boolean properties. Undefined properties return `null` in results.
 
 ```typescript
-//["name1","name2"]..
-console.log(person.getAll(foaf.knows).getValues(foaf.name));
+let names = await Person.select(p => p.name);
+let friends = await Person.select(p => p.friends);
+let dates = await Person.select(p => [p.birthDate, p.name]);
+let flags = await Person.select(p => p.isRealPerson);
 ```
 
-### Removing properties
-To remove triples from the graph, simply unset the properties
+#### Query Target Specific Subject
+
+Select against a single subject by instance or `{id}`, and handle missing nodes.
 
 ```typescript
-//overwrite all previous values of a property, the person will now ONLY know person3
-person.overwrite(foaf.knows,person3);
-
-//remove 1 specific connection in the graph
-person.unset(foaf.knows,person3);
-
-//remove all connections of a certain property
-property.unsetAll(foaf.knows);
+let a = await Person.select(p1, p => p.name);
+let b = await Person.select({id: p1.uri}, p => p.name);
+let missing = await Person.select({id: 'https://does.not/exist'}, p => p.name); // undefined
 ```
 
-[//]: # (```tsx)
-[//]: # (//pseudo example of how to search the graph in OTHER LIBRARIES )
-[//]: # (let person = namedNode&#40;'http://ex.org/person'&#41;;)
-[//]: # (let knows = namedNode&#40;'http://xmlns.com/foaf/0.1/knows'&#41;;)
-[//]: # (let label = namedNode&#40;'http://www.w3.org/1999/02/22-rdf-syntax-ns#'&#41;;)
-[//]: # (let labels = [];)
-[//]: # (for &#40;quad of store.match&#40;person,knows&#41;&#41; {)
-[//]: # (  for &#40;quad2 of store.match&#40;quad.subject,label&#41;&#41; {)
-[//]: # (    labels.push&#40;quad2.object&#41;;)
-[//]: # (  })
-[//]: # (})
-[//]: # (```)
+#### Query Multiple Paths
+
+Mix multiple property paths in a single selection.
+
+```typescript
+let res = await Person.select(p => [p.name, p.friends, p.bestFriend.name]);
+```
+
+#### Query Nested Paths
+
+Select nested sets and deep property paths.
+
+```typescript
+let friendsNames = await Person.select(p => p.friends.name);
+let friendsOfFriends = await Person.select(p => p.friends.friends);
+let deep = await Person.select(p => p.friends.friends.friends);
+```
+
+#### Query Sub-Queries
+
+Use `.select(...)` on a set or single object property to shape nested results.
+
+```typescript
+let detailedFriends = await Person.select(p =>
+  p.friends.select(f => ({ name: f.name, hobby: f.hobby }))
+);
+
+let bestFriendProps = await Person.select(p =>
+  p.bestFriend.select(f => ({ name: f.name }))
+);
+```
+
+#### Query Where Equals
+
+Filter by property values and compare to literals or other query values.
+
+```typescript
+let filtered = await Person.select().where(p => p.name.equals('Semmy'));
+let hobbies = await Person.select(p => p.hobby.where(h => h.equals(p2.hobby)));
+let hasBestFriend = await Person.select().where(p => p.bestFriend.equals({id: p3.uri}));
+let nameFilter = await Person.select(p =>
+  p.name.where(n => n.equals('Semmy'))
+);
+```
+
+#### Query And Or
+
+Combine where clauses with `and` / `or`.
+
+```typescript
+let friends = await Person.select(p =>
+  p.friends.where(f => f.name.equals('Moa').and(f.hobby.equals('Jogging')))
+);
+
+let orFriends = await Person.select(p =>
+  p.friends.where(f => f.name.equals('Jinx').or(f.hobby.equals('Jogging')))
+);
+```
+
+#### Query Set Filtering
+
+Filter sets with `.where(...)`, or use quantifiers with `.some(...)` and `.every(...)`.
+Implicit `some()` is supported on set paths.
+
+```typescript
+let friendsCalledMoa = await Person.select(p =>
+  p.friends.where(f => f.name.equals('Moa'))
+);
+
+let implicitSome = await Person.select().where(p => p.friends.name.equals('Moa'));
+let explicitSome = await Person.select().where(p =>
+  p.friends.some(f => f.name.equals('Moa'))
+);
+let allFriends = await Person.select().where(p =>
+  p.friends.every(f => f.name.equals('Moa').or(f.name.equals('Jinx')))
+);
+```
+
+#### Query Outer Where
+
+Chain `.where(...)` after `.select(...)` to filter the outer result set.
+
+```typescript
+let friendsOfP1 = await Person.select(p => p.friends.name).where(p =>
+  p.name.equals(p1.name)
+);
+```
+
+#### Query Size
+
+Use `.size()` to count items in a set (including nested sets).
+
+```typescript
+let numFriends = await Person.select(p => p.friends.size());
+let numFriends2 = await Person.select(p => p.friends.friends.size());
+```
+
+#### Query Custom Results
+
+Return custom objects with computed booleans, counts, and mixed fields.
+
+```typescript
+let custom = await Person.select(p => ({
+  nameIsMoa: p.name.equals('Moa'),
+  moaAsFriend: p.friends.some(f => f.name.equals('Moa')),
+  numFriends: p.friends.size(),
+}));
+```
+
+#### Query As
+
+Cast object/sets to a specific Shape to access subclass properties.
+
+```typescript
+let guards1 = await Person.select(p => p.pets.as(Dog).guardDogLevel);
+let guards2 = await Person.select(p => p.firstPet.as(Dog).guardDogLevel);
+```
+
+#### Query Sort Limit One
+
+Sort and limit results, or fetch a single result with `.one()`.
+
+```typescript
+let sorted = await Person.select(p => p.name).sortBy(p => p.name, 'ASC');
+let limited = await Person.select(p => p.name).limit(1);
+let single = await Person.select(p => p.name).where(p => p.name.equals('Semmy')).one();
+```
+
+#### Query Context
+
+Use query context variables inside `where` clauses.
+
+```typescript
+setQueryContext('user', p3, Person);
+let res = await Person.select(p => p.name).where(p =>
+  p.bestFriend.equals(getQueryContext('user'))
+);
+```
+
+#### Query Preload
+
+Preload data for linked components directly from queries.
+
+```typescript
+let withChild = await Person.select(p => [
+  p.hobby,
+  p.bestFriend.preloadFor(ChildComponent),
+]);
+
+let withList = await Person.select(p => [
+  p.name,
+  p.friends.preloadFor(NameList),
+]);
+```
+
+The query DSL automatically converts to backend query languages (like SPARQL) and executes against your configured storage layer.
+
+### Update
+
+```typescript
+await Person.update({id: personId}, {
+  name: 'Alice Updated',
+  hobby: 'Reading'
+});
+
+// Replace a multi-valued property
+await Person.update({id: personId}, {
+  friends: [{id: friendId}, {name: 'New Friend'}],
+});
+
+// Add/remove for multi-valued properties
+await Person.update({id: personId}, {
+  friends: {
+    add: {id: friendId},
+    remove: {id: exId},
+  },
+});
+
+// Unset a multi-valued property
+await Person.update({id: personId}, {
+  friends: undefined,
+});
+
+// Create nested object with predefined ID
+await Person.update({id: personId}, {
+  bestFriend: {__id: 'http://example.com/#bf-1', name: 'Bestie'},
+});
+```
+
+### Delete
+
+```typescript
+await Person.delete({id: personId});
+// or delete multiple
+await Person.delete([{id: id1}, {id: id2}]);
+```
+
+## Automatic Data Loading
+
+LINCD provides a flexible storage layer that can connect to multiple backend types. Components automatically load the data they need based on their queries — you just specify what data to load, and LINCD handles fetching it from your configured storage.
+When you use a Linked Component with a query, LINCD analyzes the query, loads the required data from your configured storage, and converts results into props. The subject of the query depends on the `of` prop you pass to the component. For example, `<PersonCard of={{id: me.id}} />` will automatically load data for the node with that URI.
+
+## React Linked Components
+
+React Linked Components are UI components tied to LINCD queries. They automatically load data from your configured storage, convert query results to props, and handle smart caching.
+
+> Currently LINCD exclusively supports React components, though other libraries may be added in the future.
+
+### Creating a Linked Component
+
+```typescript
+import { linkedComponent } from 'lincd';
+import { Person } from './shapes/Person';
+
+const PersonCard = linkedComponent(
+  Person.query(p => ({ 
+    name: p.name, 
+    friends: p.friends.name,
+    isLoading
+  })),
+  ({ name, friends }) => {
+    return (
+      <div>
+        <h1>{name}</h1>
+        <ul>
+          {friends?.map(friend => (
+            <li key={friend.id}>{friend.name}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+);
+```
+
+### Linked Queries (more examples)
+
+```typescript
+// Simple linked query
+const PersonName = linkedComponent(
+  Person.query(p => p.name),
+  ({ name }) => <h1>{name}</h1>
+);
+
+// Nested data
+const FriendNames = linkedComponent(
+  Person.query(p => p.friends.name),
+  ({ friends }) => (
+    <ul>{friends?.map(f => <li key={f.id}>{f.name}</li>)}</ul>
+  )
+);
+
+// Filtered friends
+const JoggingFriends = linkedComponent(
+  Person.query(p =>
+    p.friends.where(f => f.hobby.equals('Jogging')).name
+  ),
+  ({ friends }) => (
+    <ul>{friends?.map(f => <li key={f.id}>{f.name}</li>)}</ul>
+  )
+);
+
+// Counts
+const FriendCount = linkedComponent(
+  Person.query(p => ({ numFriends: p.friends.size() })),
+  ({ numFriends }) => <span>{numFriends}</span>
+);
+
+// Custom result object
+const PersonSummary = linkedComponent(
+  Person.query(p => ({
+    nameIsMoa: p.name.equals('Moa'),
+    moaAsFriend: p.friends.some(f => f.name.equals('Moa')),
+    numFriends: p.friends.size(),
+  })),
+  ({ nameIsMoa, moaAsFriend, numFriends }) => (
+    <div>{nameIsMoa && 'Moa'} {moaAsFriend ? 'has Moa' : 'no Moa'} ({numFriends})</div>
+  )
+);
+```
+
+### Preloading for Linked Components
+
+Use `preloadFor(...)` inside a query to tell LINCD to preload the data required by another linked component.
+
+```typescript
+const ChildComponent = linkedComponent(
+  Person.query(p => ({ name: p.name, hobby: p.hobby })),
+  ({ name, hobby }) => <div>{name} – {hobby}</div>
+);
+
+const Parent = linkedComponent(
+  Person.query(p => [
+    p.hobby,
+    p.bestFriend.preloadFor(ChildComponent),
+  ]),
+  ({ hobby, bestFriend }) => (
+    <div>
+      <div>Hobby: {hobby}</div>
+      {bestFriend && <ChildComponent of={bestFriend} />}
+    </div>
+  )
+);
+
+const NameList = linkedSetComponent(
+  Person.query(p => p.name),
+  ({ sources }) => <ul>{sources.map(s => <li key={s.id}>{s.name}</li>)}</ul>
+);
+
+const WithList = linkedComponent(
+  Person.query(p => [
+    p.name,
+    p.friends.preloadFor(NameList),
+  ]),
+  ({ friends }) => <NameList of={friends} />
+);
+```
+
+### Using a Linked Component
+
+```typescript
+// Automatically loads data for the specified node
+<PersonCard of={{id: 'http://example.com/#me'}} />
+
+// Or with a Shape instance
+let person = new Person('http://example.com/#me');
+<PersonCard of={person} />
+```
+
+### How It Works
+
+1. **Automatic Data Loading**: When the component mounts, LINCD analyzes the query and automatically fetches the required data from your storage backend.
+
+2. **Data Conversion**: Query results are automatically converted to plain JavaScript objects and passed as `linkedData` props.
+
+3. **Smart Caching**: LINCD uses a shape-aware query cache. Components sharing the same shape data will share cached results.
+
+4. **Subject from Props**: The `of` prop determines which node to load data for. You can pass:
+   - A `QResult` object: `{id: 'http://example.com/#me'}`
+   - A Shape instance: `new Person('http://example.com/#me')`
+   - A Node: `NamedNode.getOrCreate('http://example.com/#me')`
+
+## Automatic Data Validation
+
+Once you have linked your component to specific shapes (data structures), LINCD.js ensures that _only those nodes_ in the graph that match with this shape will be allowed to be used with this component.
+Because of this, you can rest assured that all the data will be there and in the right format.
+
+That is, `PersonView` will only render once LINCD has confirmed that the provided `person` instance is a valid instance of the `Person` shape. With the `Person` example above, this would mean it has exactly one name defined under `person.name` and `person.knows` returns a set of valid `Person` instances.
+
+Validation happens automatically when:
+- Creating new Shape instances
+- Loading data from storage
+- Using Linked Components
+- Executing queries
+
+All operations use your Shape classes and are validated against SHACL constraints.
+
+## Backends and Storage
+
+Backend connectors and storage configuration are under active development and will live in the `lincd-server` package. When you bootstrap an app with `https://www.npmjs.com/package/create-lincd-app`, you’ll see `storage-config` and `config-frontend.ts` files that configure storage, and all LINCD queries resolve against that configured RDF storage.
 
 ## A registry of reusable UI components, Shapes & ontologies
 
-[lincd.org](https://www.lincd.org/) is a registry of components, shapes and ontologies built with lincd.js. Each of these can be imported and used with a few lines. This is the best place to get started to build an application powered by linked data.  
-
+[LINCD.org](https://www.lincd.org/) is a registry of components, shapes and ontologies built with LINCD.js. Each of these can be imported and used with a few lines. This is the best place to get started to build an application powered by linked data.
 
 ## Documentation
-See [docs.lincd.org](https://docs.lincd.org) for the full documentation plus helpful tutorials for lincd.js 
+
+See [docs.lincd.org](https://docs.lincd.org) for the full documentation plus helpful tutorials for LINCD.js 
 
 ## Examples
+
 See [lincd.org/examples](https://lincd.org/examples) for a list of examples with source code on github.
-
-[//]: # (## About LINCD)
-
-[//]: # ()
-[//]: # (Even today, most projects use their own data structures, thus creating data silos.)
-
-[//]: # (Projects that want to share data need understand each others APIs to extract the right data, and then convert that data)
-
-[//]: # (using custom code.)
-
-[//]: # ()
-[//]: # (![]&#40;assets/lincd-slide.png&#41;)
-
-[//]: # ()
-[//]: # (LINCD aims to remove these barriers to collaboration and interoperability by creating a place where projects can)
-
-[//]: # (collectively define shared data structures and shared code.)
-
-[//]: # ()
-[//]: # (## About LINCD.js)
-
-[//]: # ()
-[//]: # (`LINCD.js` is a lightweight Javascript library that implements the [LINCD protocol]&#40;https://www.lincd.org&#41;.)
-
-[//]: # ()
-[//]: # (With the help of modules built with `lincd.js` you can integrate data from different sources and build visualizations)
-
-[//]: # (with ease.)
-
-[//]: # ()
-[//]: # (### Main Library Features)
-
-[//]: # ()
-[//]: # (- Convert your data to Linked Data and validated [SHACL Shapes]&#40;https://www.w3.org/TR/shacl/#shapes&#41; with ease)
-
-[//]: # (- Access the in-memory graph database with an accessible resource-centric API.)
-
-[//]: # (- Observe changes in the graph with the built-in event system)
-
-[//]: # (- Abstract away ontologies & RDF specifics in Shape Classes)
-
-[//]: # (- Create interface components based on Shape Classes, which abstracts away ontology details from the UI layer)
-
-[//]: # (- Compatible with [RDFJS task force spec]&#40;https://github.com/rdfjs/data-model-spec&#41;)
-
-[//]: # ()
-[//]: # (### Examples & documentation)
-
-[//]: # ()
-[//]: # (Are currently actively developed.)
-
-[//]: # ([Signup here]&#40;http://eepurl.com/hVBG0n&#41; to be notified as LINCD is launching)
-
-[//]: #
-
-[//]: # '## Examples'
-
-[//]: #
-
-[//]: #
-
-[//]: # '## Documentation'
-
-[//]: #
-
-[//]: # '- Consuming a LINCD components'
-
-[//]: #
-
-[//]: #
-
-[//]: # '### Building your own LINCD Modules'
-
-[//]: #
-
-[//]: #
-
-[//]: # 'With LINCD.js, you can link code to [SHACL Shapes](https://www.w3.org/TR/shacl/#shapes). '
-
-[//]: #
-
-[//]: #
-
-[//]: # 'By doing so, you make your code easily applicable to anyone who structures their data with these Shapes.'
-
-[//]: #
-
-[//]: #
-
-[//]: # "Modules built with LINCD.js can be published to the LINCD repository (with `npm run publish`) which makes your module and it's required data Shapes easy to find and use.  "
-
-[//]: #
-
-[//]: #
-
-[//]: # 'See the documentation '
-
-[//]: #
-
-[//]: #
-
-[//]: # '---'
-
-[//]: #
-
-[//]: # 'Create and share code modules across different environments using W3C’s Linked Data standards.'
-
-[//]: #
-
-[//]: #
-
-[//]: #
-
-[//]: #
-
-[//]: #
-
-[//]: # '- Link your code to SHACL Shapes'
-
-[//]: #
-
-[//]: # '- '
-
-[//]: #
-
-[//]: # '- '
-
-[//]: #
-
-[//]: #
-
-[//]: # '    Reads and writes RDF/XML, Turtle and N3; Reads RDFa and JSON-LD'
-
-[//]: #
-
-[//]: # '    Read/Write Linked Data client, using WebDav or SPARQL/Update'
-
-[//]: #
-
-[//]: # '    Real-Time Collaborative editing with web sockets and PATCHes'
-
-[//]: #
-
-[//]: # '    Local API for querying a store'
-
-[//]: #
-
-[//]: # '    Compatible with RDFJS task force spec'
-
-[//]: #
-
-[//]: # '    SPARQL queries (not full SPARQL - just graph match and optional)'
-
-[//]: #
-
-[//]: # '    Smushing of nodes from owl:sameAs, and owl:{f,inverseF}unctionProperty'
-
-[//]: #
-
-[//]: # '    Tracks provenance of triples keeps metadata (in RDF) from HTTP accesses'
-
-[//]: #
-
-[//]: #
-
-[//]: #
-
-[//]: # '## LINCD - Linked Interoperable Code & Data'
-
-[//]: #
-
-[//]: # 'The LINCD Protocol specifies how '
-
-[//]: #
-
-[//]: #
-
-[//]: #
-
-[//]: # '## Installation'
-
-[//]: #
-
-[//]: # '```'
-
-[//]: #
-
-[//]: # 'npm install lincd'
-
-[//]: #
-
-[//]: # '```'
-
-[//]: #
-
-[//]: #
-
-[//]: # '## Usage'
-
-[//]: #
-
-[//]: # 'Javascript'
-
-[//]: #
-
-[//]: # '```'
-
-[//]: #
-
-[//]: # 'let lincd = require("lincd")'
-
-[//]: #
-
-[//]: # '```'
-
-[//]: #
-
-[//]: #
-
-[//]: # 'Typescript'
-
-[//]: #
-
-[//]: # '```'
-
-[//]: #
-
-[//]: # 'import lincd from "lincd"'
-
-[//]: #
-
-[//]: # '```'
 
 ## Contributing
 
