@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "declaration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "downlevelIteration": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "pretty": true,
+    "types": ["node", "jest"],
+    "baseUrl": "./",
+    "paths": {
+      "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
+    }
+  },
+  "include": [
+    "./src/**/*.ts",
+    "../node_modules/ts-jest/globals.d.ts"
+  ]
+}
