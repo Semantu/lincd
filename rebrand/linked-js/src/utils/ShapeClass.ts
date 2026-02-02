@@ -8,8 +8,7 @@ export const getPropertyShapeByLabel = (
   let current: typeof Shape = shapeClass;
 
   while (current) {
-    const shapeDef = current.shape;
-    const propertyShape = shapeDef
+    const propertyShape = current.shape
       ?.getPropertyShapes()
       .find((shape) => shape.label === label);
     if (propertyShape) {
@@ -31,4 +30,8 @@ export const getPropertyShapeByLabel = (
     current = next;
   }
   return undefined;
+};
+
+export const getShapeId = (shapeClass: typeof Shape) => {
+  return shapeClass.shape?.id;
 };
