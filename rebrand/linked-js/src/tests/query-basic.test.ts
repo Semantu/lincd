@@ -1,55 +1,24 @@
 import {describe, expect, test} from '@jest/globals';
-import {linkedShape, literalProperty, objectProperty, Shape} from '../package.js';
+import {literalProperty, objectProperty, Shape} from '../package.js';
 import {CreateQueryFactory} from '../queries/CreateQuery.js';
 import {DeleteQueryFactory} from '../queries/DeleteQuery.js';
 import {SelectQueryFactory} from '../queries/SelectQuery.js';
 import {UpdateQueryFactory} from '../queries/UpdateQuery.js';
+import {queryTestFixtures} from '../test-helpers/query-fixtures.js';
 
-const name = 'name';
-const bestFriend = 'bestFriend';
-const friends = 'friends';
-const pets = 'pets';
-const firstPet = 'firstPet';
-const hobby = 'hobby';
-const birthDate = 'birthDate';
-const isRealPerson = 'isRealPerson';
-const guardDogLevel = 'guardDogLevel';
-
-@linkedShape
-class Pet extends Shape {}
-
-@linkedShape
-class Dog extends Pet {
-  @literalProperty({path: guardDogLevel, maxCount: 1})
-  declare guardDogLevel: number;
-}
-
-@linkedShape
-class Person extends Shape {
-  @literalProperty({path: name, maxCount: 1})
-  declare name: string;
-
-  @objectProperty({path: bestFriend, maxCount: 1, shape: Person})
-  declare bestFriend: Person;
-
-  @objectProperty({path: friends, shape: Person})
-  declare friends: Person;
-
-  @objectProperty({path: pets, shape: Pet})
-  declare pets: Pet;
-
-  @objectProperty({path: firstPet, shape: Pet, maxCount: 1})
-  declare firstPet: Pet;
-
-  @literalProperty({path: hobby, maxCount: 1})
-  declare hobby: string;
-
-  @literalProperty({path: birthDate, maxCount: 1})
-  declare birthDate: Date;
-
-  @literalProperty({path: isRealPerson, maxCount: 1})
-  declare isRealPerson: boolean;
-}
+const {
+  Person,
+  Dog,
+  name,
+  bestFriend,
+  friends,
+  pets,
+  firstPet,
+  hobby,
+  birthDate,
+  isRealPerson,
+  guardDogLevel,
+} = queryTestFixtures;
 
 class QueryCaptureStore {
   lastQueryFactory?: SelectQueryFactory<Shape>;

@@ -1,16 +1,12 @@
 import {describe, expect, test} from '@jest/globals';
-import {linkedShape, literalProperty, Shape} from 'linked-js';
+import {queryTestFixtures} from 'linked-js';
 import {CreateQueryFactory} from 'linked-js/queries/CreateQuery.js';
 import {DeleteQueryFactory} from 'linked-js/queries/DeleteQuery.js';
 import {SelectQueryFactory} from 'linked-js/queries/SelectQuery.js';
 import {UpdateQueryFactory} from 'linked-js/queries/UpdateQuery.js';
 import {InMemoryStore} from '../stores/InMemoryStore.js';
 
-@linkedShape
-class Person extends Shape {
-  @literalProperty({path: 'name', maxCount: 1})
-  declare name: string;
-}
+const {Person} = queryTestFixtures;
 
 describe('InMemoryStore CRUD', () => {
   test('create, select, update, delete roundtrip', async () => {

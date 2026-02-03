@@ -6,3 +6,4 @@ export {
   QueryShape,
   QueryValue,
 } from './queries/SelectQuery.js';
+export {queryTestFixtures} from './test-helpers/query-fixtures.js';
