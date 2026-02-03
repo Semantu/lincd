@@ -387,6 +387,7 @@ export const runQueryTests = (startPromise = Promise.resolve()) => {
       test('select with a non existing returns undefined',async () => {
         let qRes = await Person.select({id: 'https://does.not/exist'},p => p.name);
         expect(qRes).toBeUndefined();
+        expect(NamedNode.getNamedNode('https://does.not/exist')).toBeUndefined();
       });
 
       test('selecting only undefined properties returns an empty object',async () => {
@@ -2921,4 +2922,3 @@ export const runQueryTests = (startPromise = Promise.resolve()) => {
 //We can keep it more simple for now by flattening horizontal paths
 //its less like graph-QL, but easier to implement with auto complete
 //and we already have shape results for graphQL like experience
-

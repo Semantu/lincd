@@ -671,9 +671,9 @@ export function resolveLocal<ResultType>(
       }
       if (NamedNode.getNamedNode((query.subject as QResult<any>).id)) {
         // subject = query.shape.getFromURI((query.subject as QResult<any>).id) as Shape;
-        subject = NamedNode.getOrCreate((query.subject as QResult<any>).id);
+        subject = NamedNode.getNamedNode((query.subject as QResult<any>).id);
       } else {
-        return null;
+        return undefined;
       }
     } else if (query.subject instanceof ShapeSet) {
       subject = (query.subject as ShapeSet).getNodes() as NodeSet<NamedNode>;
@@ -849,6 +849,9 @@ function resolveQueryPath(
   queryPath: QueryPath | ComponentQueryPath,
   resultObjects?: NodeResultMap | QResult<any, any>,
 ) {
+  if (!subject) {
+    return subject;
+  }
   //start with the local instance as the subject
   if (Array.isArray(queryPath)) {
     //if the queryPath is an array of query steps, then resolve the query steps and let that convert the result
@@ -867,6 +870,9 @@ function resolveQueryPathEndResults(
   subject: NodeSet<NamedNode> | NamedNode,
   queryPath: QueryPath | ComponentQueryPath,
 ) {
+  if (!subject) {
+    return subject as any;
+  }
   //start with the local instance as the subject
   let result: NodeSet<NamedNode> | NamedNode[] | NamedNode | boolean[] =
     subject;
@@ -947,10 +953,10 @@ function sortResults(
  * @private
  */
 function filterResults(
-  subject: NodeSet<NamedNode> | NamedNode,
+  subject: NodeSet<NamedNode> | NamedNode | Literal | JSPrimitive | any[],
   where: WherePath,
   resultObjects?: NodeResultMap,
-): NodeSet<NamedNode> | NamedNode {
+): NodeSet<NamedNode> | NamedNode | Literal | JSPrimitive | any[] {
   // if ((where as WhereEvaluationPath).path) {
   //for nested where clauses the subject will already be a QueryValue
   //TODO: check if subject is ever not a shape, shapeset or string
@@ -965,11 +971,22 @@ function filterResults(
       }
     });
     return subject;
+  } else if (Array.isArray(subject)) {
+    return subject.filter((node) => evaluate(node as any, where)) as any;
   } else if (subject instanceof NamedNode) {
     return evaluate(subject, where as WhereEvaluationPath)
       ? subject
       : undefined;
-  } else if (typeof subject === 'string') {
+  } else if (subject instanceof Literal) {
+    return evaluate(subject, where as WhereEvaluationPath)
+      ? subject
+      : undefined;
+  } else if (
+    typeof subject === 'string' ||
+    typeof subject === 'number' ||
+    typeof subject === 'boolean' ||
+    subject instanceof Date
+  ) {
     return evaluate(subject, where as WhereEvaluationPath)
       ? subject
       : undefined;
@@ -1023,12 +1040,18 @@ function resolveWhereArgs(args: QueryArg[]) {
   });
 }
 
-function evaluate(singleNode: NamedNode, where: WherePath): boolean {
+function evaluate(
+  singleNode: NamedNode | JSPrimitive | Literal,
+  where: WherePath,
+): boolean {
   if ((where as WhereEvaluationPath).path) {
-    let shapeEndValue = resolveQueryPathEndResults(
-      singleNode,
-      (where as WhereEvaluationPath).path,
-    );
+    let shapeEndValue =
+      singleNode instanceof NamedNode
+        ? resolveQueryPathEndResults(
+            singleNode,
+            (where as WhereEvaluationPath).path,
+          )
+        : normalizeWhereValue(singleNode);
 
     let args: any[] =
       (where as ProcessedWhereEvaluationPath).processedArgs ||
@@ -1144,32 +1167,46 @@ function evaluate(singleNode: NamedNode, where: WherePath): boolean {
 }
 
 function resolveWhereEquals(queryEndValue, otherValue: any) {
-  if (
-    queryEndValue instanceof NamedNode &&
-    (otherValue as NodeReferenceValue).id
-  ) {
-    return queryEndValue.uri === otherValue.id;
+  const normalizedQueryValue = normalizeWhereValue(queryEndValue);
+  const normalizedOtherValue = normalizeWhereValue(otherValue);
+  if (normalizedQueryValue instanceof NamedNode) {
+    if ((normalizedOtherValue as NodeReferenceValue)?.id) {
+      return normalizedQueryValue.uri === normalizedOtherValue.id;
+    }
+    if (normalizedOtherValue instanceof NamedNode) {
+      return normalizedQueryValue.uri === normalizedOtherValue.uri;
+    }
   }
-  return queryEndValue === otherValue;
+  return normalizedQueryValue === normalizedOtherValue;
 }
 
 function resolveWhereSome(
-  nodes: NodeSet<NamedNode>,
+  nodes: NodeSet<NamedNode> | any[],
   evaluation: WhereEvaluationPath,
 ) {
-  return nodes.some((node) => {
-    return evaluate(node, evaluation);
-  });
+  if (!nodes) {
+    return false;
+  }
+  if (nodes instanceof NodeSet || Array.isArray(nodes)) {
+    return nodes.some((node) => {
+      return evaluate(node as any, evaluation);
+    });
+  }
+  return false;
 }
 
 function resolveWhereEvery(nodes, evaluation: WhereEvaluationPath) {
+  if (!nodes) {
+    return false;
+  }
+  const values = nodes instanceof NodeSet ? [...nodes] : nodes;
   //there is an added check to see if there are any shapes
   // because for example for this query where(p => p.friends.every(f => f.name.equals('Semmy')))
   // it would be natural to expect that if there are no friends, the query would return false
   return (
-    nodes.size > 0 &&
-    nodes.every((node) => {
-      return evaluate(node, evaluation);
+    values.length > 0 &&
+    values.every((node) => {
+      return evaluate(node as any, evaluation);
     })
   );
 }
@@ -1184,6 +1221,9 @@ function resolveQuerySteps(
   queryPath: (QueryStep | SubQueryPaths)[],
   resultObjects?: NodeResultMap | QResult<any, any>,
 ) {
+  if (!subject) {
+    return subject;
+  }
   if (queryPath.length === 0) {
     return subject;
   }
@@ -1199,7 +1239,10 @@ function resolveQuerySteps(
     // let shape = getShapeClass(NamedNode.getNamedNode((currentStep as ShapeReferenceValue).shape.id));
     // const shapeInstance = (shape as any).getFromURI((currentStep as ShapeReferenceValue).id) as Shape;
     // subject = shapeInstance;
-    subject = NamedNode.getOrCreate((currentStep as ShapeReferenceValue).id);
+    subject = NamedNode.getNamedNode((currentStep as ShapeReferenceValue).id);
+    if (!subject) {
+      return undefined;
+    }
     //continue with the next step for this new subject
     [currentStep, ...restPath] = restPath;
   }
@@ -1749,6 +1792,10 @@ function resolveQueryStepForNodesEndResults(
       }
     });
     return result;
+  } else if ((queryStep as SizeStep).count) {
+    return subject.map((singleNode) =>
+      resolveCountStep(singleNode, queryStep as SizeStep),
+    );
   } else if ((queryStep as PropertyQueryStep).where) {
     //in some cases there is a query step without property but WITH where
     //this happens when the where clause is on the root of the query
@@ -1760,6 +1807,30 @@ function resolveQueryStepForNodesEndResults(
     );
     return whereResult;
   }
+}
+
+function normalizeWhereValue(value: any) {
+  if (value instanceof Literal) {
+    return literalToPrimitiveForWhere(value);
+  }
+  return value;
+}
+
+function literalToPrimitiveForWhere(literal: Literal): JSPrimitive {
+  let datatype = literal.datatype;
+  let value = literal.value;
+  if (datatype) {
+    if (datatype.equals(xsd.boolean)) {
+      return value === 'true';
+    } else if (datatype.equals(xsd.integer)) {
+      return parseInt(value);
+    } else if (datatype.equals(xsd.decimal) || datatype.equals(xsd.double)) {
+      return parseFloat(value);
+    } else if (datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
+      return new Date(value);
+    }
+  }
+  return value;
 }
 
 function XSDDate_fromNativeDate(nativeDate: Date, datatype) {
