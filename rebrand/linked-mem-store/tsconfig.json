@@ -2,6 +2,8 @@
   "compilerOptions": {
     "sourceMap": true,
     "declaration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "downlevelIteration": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
@@ -10,7 +12,9 @@
     "types": ["node", "jest"],
     "baseUrl": "./",
     "paths": {
-      "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
+      "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"],
+      "linked-js": ["../linked-js/src/index.ts"],
+      "linked-js/*": ["../linked-js/src/*"]
     }
   },
   "include": [

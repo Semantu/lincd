@@ -28,9 +28,10 @@
     "build": "node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js",
     "compile": "echo '💫 Compiling CJS' && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && echo '💫 Compiling ESM' && node ../../node_modules/.bin/tsc -p tsconfig-esm.json",
     "dual-package": "node ./scripts/dual-package.js",
-    "test": "node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js && node ../../node_modules/.bin/jest --config jest.config.cjs"
+    "test": "cd ../linked-js && node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js && cd ../linked-mem-store && node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js && node ../../node_modules/.bin/jest --config jest.config.cjs"
   },
   "dependencies": {
+    "linked-js": "0.0.0",
     "eventemitter3": "5.0.1",
     "rdflib": "^2.2.33"
   },
