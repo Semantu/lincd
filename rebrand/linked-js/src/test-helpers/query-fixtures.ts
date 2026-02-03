@@ -44,10 +44,10 @@ class Person extends Shape {
   declare bestFriend: Person;
 
   @objectProperty({path: friends, shape: Person})
-  declare friends: Person;
+  declare friends: Person[];
 
   @objectProperty({path: pets, shape: Pet})
-  declare pets: Pet;
+  declare pets: Pet[];
 
   @objectProperty({path: firstPet, shape: Pet, maxCount: 1})
   declare firstPet: Pet;
@@ -64,7 +64,28 @@ class Person extends Shape {
 
 Person.shape.targetClass = {id: personClass};
 
-export const queryTestFixtures = {
+export type QueryTestFixtures = {
+  Pet: typeof Pet;
+  Dog: typeof Dog;
+  Person: typeof Person;
+  name: string;
+  bestFriend: string;
+  friends: string;
+  pets: string;
+  firstPet: string;
+  hobby: string;
+  birthDate: string;
+  isRealPerson: string;
+  guardDogLevel: string;
+  personClass: string;
+  petClass: string;
+  dogClass: string;
+  xsdDateTime: string;
+  xsdBoolean: string;
+  xsdInteger: string;
+};
+
+export const queryTestFixtures: QueryTestFixtures = {
   Pet,
   Dog,
   Person,

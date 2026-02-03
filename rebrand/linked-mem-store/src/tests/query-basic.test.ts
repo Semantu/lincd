@@ -68,10 +68,7 @@ describe('query results - basic property selection', () => {
   });
 
   test('can select a literal property of all instances', async () => {
-    const names = (await Person.select((p) => p.name)) as Array<{
-      id: string;
-      name: string;
-    }>;
+    const names = await Person.select((p) => p.name);
     const p1 = names.find((person) => person.name === 'Semmy');
     const firstName: string = names[0].name;
 
@@ -120,10 +117,7 @@ describe('query results - basic property selection', () => {
   });
 
   test('can select a boolean', async () => {
-    const isRealPersons = (await Person.select((p) => p.isRealPerson)) as Array<{
-      id: string;
-      isRealPerson: boolean | null;
-    }>;
+    const isRealPersons = await Person.select((p) => p.isRealPerson);
     const p1 = isRealPersons.find(
       (person) => person.id === people.p1.uri,
     );
@@ -145,10 +139,7 @@ describe('query results - basic property selection', () => {
 
   test('can select properties of a specific subject', async () => {
     const id = people.p1.uri;
-    const qRes = (await Person.select({id}, (p) => p.name)) as {
-      id: string;
-      name: string;
-    };
+    const qRes = await Person.select({id}, (p) => p.name);
     const selectedName: string = qRes.name;
     expect(qRes.name).toBe('Semmy');
     expect(qRes.id).toBe(id);
@@ -156,10 +147,10 @@ describe('query results - basic property selection', () => {
   });
 
   test('select with a non existing returns undefined', async () => {
-    const qRes = (await Person.select(
+    const qRes = await Person.select(
       {id: 'https://does.not/exist'},
       (p) => p.name,
-    )) as {id: string; name: string} | undefined;
+    );
     expect(qRes).toBeUndefined();
     expect(NamedNode.getNamedNode('https://does.not/exist')).toBeUndefined();
   });
@@ -168,11 +159,7 @@ describe('query results - basic property selection', () => {
     const qRes = (await Person.select(
       {id: people.p3.uri},
       (p) => [p.hobby, p.bestFriend],
-    )) as {
-      id: string;
-      hobby: string | null;
-      bestFriend: {id: string} | null;
-    };
+    )) as {id: string; hobby: string | null; bestFriend: {id: string} | null};
     const bestFriendId: string | null =
       qRes.bestFriend?.id ?? null;
     expect(qRes.hobby).toBeNull();

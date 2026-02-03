@@ -1,34 +1,95 @@
 import {CreateQueryFactory} from '../queries/CreateQuery.js';
 import {DeleteQueryFactory} from '../queries/DeleteQuery.js';
-import {SelectQueryFactory} from '../queries/SelectQuery.js';
+import {
+  GetQueryResponseType,
+  PatchedQueryPromise,
+  QResult,
+  QShape,
+  QueryResponseToResultType,
+  SelectQueryFactory,
+} from '../queries/SelectQuery.js';
 import {UpdateQueryFactory} from '../queries/UpdateQuery.js';
 import type {IQueryParser} from '../interfaces/IQueryParser.js';
 import {NodeShape} from './ShapeDefinition.js';
 
 export class Shape {
+  declare protected __shapeBrand: void;
   static queryParser: IQueryParser;
   static shape: NodeShape;
 
-  static select<ShapeType extends Shape, ResultType = unknown[]>(
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<S, ShapeType>[],
+  >(
     this: {new (): ShapeType; queryParser: IQueryParser},
-    subjectOrSelectFn?: ShapeType | {id: string} | ((shape: ShapeType) => unknown),
-    selectFn?: (shape: ShapeType) => unknown,
-  ): Promise<ResultType> {
-    const subject =
-      typeof subjectOrSelectFn === 'function' || !subjectOrSelectFn
-        ? undefined
-        : subjectOrSelectFn;
-    const queryBuildFn =
-      typeof subjectOrSelectFn === 'function' ? subjectOrSelectFn : selectFn;
-    const query = new SelectQueryFactory(
-      this as unknown as typeof Shape,
-      queryBuildFn,
+    selectFn: (shape: QShape<ShapeType>) => S,
+  ): PatchedQueryPromise<ResultType, ShapeType>;
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
+      ShapeType
+    >[],
+  >(this: {
+    new (): ShapeType;
+    queryParser: IQueryParser;
+  }): PatchedQueryPromise<ResultType, ShapeType>;
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
+      ShapeType
+    >,
+  >(
+    this: {new (): ShapeType; queryParser: IQueryParser},
+    subjects?: ShapeType | QResult<ShapeType>,
+    selectFn?: (shape: QShape<ShapeType>) => S,
+  ): PatchedQueryPromise<ResultType, ShapeType>;
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
+      ShapeType
+    >[],
+  >(
+    this: {new (): ShapeType; queryParser: IQueryParser},
+    subjects?: ShapeType[] | QResult<ShapeType>[],
+    selectFn?: (shape: QShape<ShapeType>) => S,
+  ): PatchedQueryPromise<ResultType, ShapeType>;
+  static select<
+    ShapeType extends Shape,
+    S = unknown,
+    ResultType = QueryResponseToResultType<
+      GetQueryResponseType<SelectQueryFactory<ShapeType, S>>,
+      ShapeType
+    >[],
+  >(
+    this: {new (): ShapeType; queryParser: IQueryParser},
+    targetOrSelectFn?: ShapeType | ((shape: QShape<ShapeType>) => S),
+    selectFn?: (shape: QShape<ShapeType>) => S,
+  ): PatchedQueryPromise<ResultType, ShapeType> {
+    let _selectFn;
+    let subject;
+    if (selectFn) {
+      _selectFn = selectFn;
+      subject = targetOrSelectFn;
+    } else {
+      _selectFn = targetOrSelectFn;
+    }
+
+    const query = new SelectQueryFactory<ShapeType, S>(
+      this as unknown as {new (): ShapeType},
+      _selectFn,
       subject as ShapeType,
     );
     const result = this.queryParser.selectQuery(
-      query as SelectQueryFactory<ShapeType>,
-    );
-    return query.patchResultPromise(result) as Promise<ResultType>;
+      query as SelectQueryFactory<ShapeType, S>,
+    ) as Promise<ResultType>;
+    return query.patchResultPromise(result);
   }
 
   static create<ShapeType extends Shape, ResultType = unknown>(
