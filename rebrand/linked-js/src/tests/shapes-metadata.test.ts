@@ -2,11 +2,22 @@ import {describe, expect, test} from '@jest/globals';
 import {linkedPackage} from '../utils/Package.js';
 import {linkedShape, literalProperty, objectProperty, Shape} from '../package.js';
 import {getNodeShapeUri} from '../shapes/shacl.js';
+import {
+  getMostSpecificSubShapes,
+  getShapeClassById,
+  getSubShapesClasses,
+  getSuperShapesClasses,
+  resetShapeClassRegistry,
+} from '../utils/ShapeClass.js';
 
 const name = 'name';
 const friend = 'friend';
 
 describe('shape metadata generation', () => {
+  afterEach(() => {
+    resetShapeClassRegistry();
+  });
+
   test('creates NodeShape and PropertyShape metadata with ids', () => {
     const pkg = linkedPackage('lincd-org');
 
@@ -39,5 +50,23 @@ describe('shape metadata generation', () => {
 
     const prop = Animal.shape.getPropertyShapes()[0].getResult();
     expect(prop.shape).toEqual({id: 'https://example.com/shape/Animal'});
+  });
+
+  test('shape registry tracks inheritance and reverse lookups', () => {
+    @linkedShape
+    class Base extends Shape {}
+
+    @linkedShape
+    class Child extends Base {}
+
+    const baseId = Base.shape.id;
+    const childId = Child.shape.id;
+
+    expect(getShapeClassById(baseId)).toBe(Base);
+    expect(getShapeClassById(childId)).toBe(Child);
+
+    expect(getSubShapesClasses(Base)).toContain(Child);
+    expect(getSuperShapesClasses(Child)).toContain(Base);
+    expect(getMostSpecificSubShapes(Base)).toContain(Child);
   });
 });

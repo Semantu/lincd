@@ -2,11 +2,16 @@ import {PropertyShape, PropertyShapeConfig} from './PropertyShape.js';
 import {Shape} from './Shape.js';
 import {NodeShape} from './ShapeDefinition.js';
 import {getNodeShapeUri, LINCD_DATA_ROOT, sanitizeUriFragment} from './shacl.js';
+import {registerShapeClass} from '../utils/ShapeClass.js';
 
 type PropertyDecoratorConfig<ShapeType> = PropertyShapeConfig<ShapeType>;
 
 const ensureShape = (shapeClass: typeof Shape) => {
-  if (!shapeClass.shape) {
+  const hasOwnShape = Object.prototype.hasOwnProperty.call(
+    shapeClass,
+    'shape',
+  );
+  if (!hasOwnShape || !shapeClass.shape) {
     const packageName = (shapeClass as any).packageName || 'default';
     const shapeName = shapeClass.name;
     const id = getNodeShapeUri(packageName, shapeName);
@@ -14,6 +19,7 @@ const ensureShape = (shapeClass: typeof Shape) => {
       id,
       label: shapeName,
     });
+    registerShapeClass(shapeClass);
   }
 };
 
@@ -23,6 +29,7 @@ export const linkedShape = <T extends typeof Shape>(shapeClass: T): T => {
   const newId = getNodeShapeUri(packageName, shapeClass.name);
   if (shapeClass.shape.id !== newId) {
     shapeClass.shape.id = newId;
+    registerShapeClass(shapeClass);
     shapeClass.shape.getPropertyShapes().forEach((propertyShape) => {
       propertyShape.id = `${newId}/${sanitizeUriFragment(propertyShape.label)}`;
       if (propertyShape.valueShapeClass?.shape?.id) {
@@ -30,6 +37,7 @@ export const linkedShape = <T extends typeof Shape>(shapeClass: T): T => {
       }
     });
   }
+  registerShapeClass(shapeClass);
   return shapeClass;
 };
 
