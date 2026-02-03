@@ -52,8 +52,8 @@ export class InMemoryStore implements IQuadStore {
     return Promise.resolve(createLocal(query));
   }
 
-  deleteQuery(query: DeleteQuery): Promise<unknown> {
-    return Promise.resolve(deleteLocal(query));
+  deleteQuery<ResultType>(query: DeleteQuery): Promise<ResultType> {
+    return Promise.resolve(deleteLocal(query) as ResultType);
   }
 
   selectQuery<ResultType>(query: SelectQuery): Promise<ResultType> {

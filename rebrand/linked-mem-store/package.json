@@ -25,10 +25,10 @@
     }
   },
   "scripts": {
-    "build": "node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js",
+    "build": "../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js",
     "compile": "echo '💫 Compiling CJS' && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && echo '💫 Compiling ESM' && node ../../node_modules/.bin/tsc -p tsconfig-esm.json",
     "dual-package": "node ./scripts/dual-package.js",
-    "test": "cd ../linked-js && node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js && cd ../linked-mem-store && node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js && node ../../node_modules/.bin/jest --config jest.config.cjs"
+    "test": "cd ../linked-js && ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js && cd ../linked-mem-store && ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js && node ../../node_modules/.bin/jest --config jest.config.cjs"
   },
   "dependencies": {
     "linked-js": "0.0.0",

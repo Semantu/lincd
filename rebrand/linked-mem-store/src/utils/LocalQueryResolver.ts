@@ -64,6 +64,16 @@ const nodeValueToPrimitive = (node: Node, prop?: PropertyShape) => {
   return undefined;
 };
 
+const normalizeWhereValue = (value: unknown, prop?: PropertyShape) => {
+  if (value instanceof Literal) {
+    return nodeValueToPrimitive(value, prop);
+  }
+  if (value instanceof NamedNode) {
+    return {id: value.uri};
+  }
+  return value;
+};
+
 const convertUpdateValue = async (
   prop: PropertyShape,
   value: UpdateValue,
@@ -202,16 +212,47 @@ const resolveWhereEvaluation = (
 ): boolean => {
   const endValues = resolveQueryPathEndResults(subject, evaluation.path);
   const arg = evaluation.args[0];
-  const expected = typeof arg === 'object' && arg && 'id' in arg ? (arg as {id: string}).id : arg;
+  const expected =
+    typeof arg === 'object' && arg && 'id' in arg ? (arg as {id: string}).id : arg;
+  const lastPropertyStep = [...evaluation.path]
+    .reverse()
+    .find((step) => 'property' in step) as {property?: PropertyShape} | undefined;
+  const prop = lastPropertyStep?.property;
   return endValues.some((value) => {
-    if (typeof expected === 'string' && value instanceof NamedNode) {
-      return value.uri === expected;
+    const normalized = normalizeWhereValue(value, prop);
+    if (
+      normalized &&
+      typeof normalized === 'object' &&
+      'id' in normalized &&
+      typeof (normalized as {id: string}).id === 'string'
+    ) {
+      return typeof expected === 'string'
+        ? (normalized as {id: string}).id === expected
+        : false;
     }
-    if (value instanceof Literal) {
-      return value.value === String(expected);
-    }
-    return false;
+    return normalized === expected;
   });
+};
+
+const resolveWhereSomeEvery = (
+  subject: NamedNode,
+  evaluation: WhereEvaluationPath,
+  method: WhereMethods.SOME | WhereMethods.EVERY,
+): boolean => {
+  const arg = evaluation.args[0];
+  if (!arg || typeof arg !== 'object') {
+    return false;
+  }
+  const nodes = resolveQueryPathEndResults(subject, evaluation.path).filter(
+    (value) => value instanceof NamedNode,
+  ) as NamedNode[];
+  if (nodes.length === 0) {
+    return false;
+  }
+  const predicate = (node: NamedNode) => resolveWhere(node, arg as WherePath);
+  return method === WhereMethods.SOME
+    ? nodes.some(predicate)
+    : nodes.every(predicate);
 };
 
 const resolveWhere = (subject: NamedNode, where: WherePath): boolean => {
@@ -219,6 +260,9 @@ const resolveWhere = (subject: NamedNode, where: WherePath): boolean => {
   if ('method' in where) {
     if (where.method === WhereMethods.EQUALS) {
       return resolveWhereEvaluation(subject, where);
+    }
+    if (where.method === WhereMethods.SOME || where.method === WhereMethods.EVERY) {
+      return resolveWhereSomeEvery(subject, where, where.method);
     }
     return false;
   }
@@ -240,22 +284,27 @@ const resolveQueryPathEndResults = (
   path: QueryPropertyPath,
 ): Node[] => {
   let current: NodeSet<NamedNode> = new NodeSet([subject]);
-  for (const step of path) {
+  let values: Node[] = [];
+  path.forEach((step, index) => {
     if (!('property' in step)) {
-      continue;
+      return;
     }
     const predicate = toPredicate(step.property);
     const next = new NodeSet<NamedNode>();
+    const isLast = index === path.length - 1;
     current.forEach((node) => {
       node.getAll(predicate).forEach((value) => {
         if (value instanceof NamedNode) {
           next.add(value);
         }
+        if (isLast) {
+          values.push(value);
+        }
       });
     });
     current = next;
-  }
-  return Array.from(current.values());
+  });
+  return values;
 };
 
 const resolveSizeStep = (subject: NamedNode, step: SizeStep): number => {
@@ -314,7 +363,8 @@ const applyQueryPath = (
     const firstStep = path[0] as QueryStep;
     if ('property' in firstStep) {
       const value = resolvePathValues(subject, path as QueryStep[]);
-      result[firstStep.property.label] = value;
+      result[firstStep.property.label] =
+        typeof value === 'undefined' ? null : value;
     }
     return;
   }
@@ -330,9 +380,15 @@ const applyQueryPath = (
 const resolveSelect = (query: SelectQuery): Record<string, unknown>[] => {
   let subjects: NamedNode[] = [];
   if (query.subject && typeof query.subject === 'object' && 'id' in query.subject) {
-    subjects = [NamedNode.getOrCreate((query.subject as {id: string}).id)];
+    const node = NamedNode.getNamedNode((query.subject as {id: string}).id);
+    if (node) {
+      subjects = [node];
+    }
   } else if (typeof query.subject === 'string') {
-    subjects = [NamedNode.getOrCreate(query.subject)];
+    const node = NamedNode.getNamedNode(query.subject);
+    if (node) {
+      subjects = [node];
+    }
   } else if ((query.shape as any)?.shape?.targetClass?.id) {
     const target = NamedNode.getOrCreate((query.shape as any).shape.targetClass.id);
     subjects = Array.from(NamedNode.getAllNamedNodes().values()).filter((node) =>
@@ -346,7 +402,11 @@ const resolveSelect = (query: SelectQuery): Record<string, unknown>[] => {
       return;
     }
     const result: Record<string, unknown> = {id: subject.uri};
-    query.select.forEach((path) => applyQueryPath(result, subject, path));
+    if (Array.isArray(query.select)) {
+      query.select.forEach((path) => applyQueryPath(result, subject, path));
+    } else {
+      applyQueryPath(result, subject, query.select);
+    }
     results.push(result);
   });
   return results;
