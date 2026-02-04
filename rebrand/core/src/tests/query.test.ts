@@ -9,7 +9,7 @@ import {UpdateQueryFactory} from '../queries/UpdateQuery';
 import {CreateQueryFactory} from '../queries/CreateQuery';
 import {DeleteQueryFactory} from '../queries/DeleteQuery';
 import {NodeId} from '../queries/MutationQuery';
-import {Dog, Person, Pet, queryFactories} from '../test-helpers/query-fixtures';
+import {Dog, Person, Pet, queryFactories, name as namePath} from '../test-helpers/query-fixtures';
 import {setQueryContext} from '../queries/QueryContext';
 
 class QueryCaptureStore implements IQueryParser {
@@ -580,6 +580,6 @@ describe('8. NodeReferenceValue', () => {
   test('property paths normalize to NodeReferenceValue', () => {
     const property = Person.shape.getPropertyShape('name');
     expect(property).toBeDefined();
-    expect(property?.path).toEqual({id: 'name'});
+    expect(property?.path).toEqual({id: namePath});
   });
 });

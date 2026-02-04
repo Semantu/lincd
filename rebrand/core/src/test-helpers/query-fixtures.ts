@@ -6,19 +6,22 @@ import {ShapeSet} from '../collections/ShapeSet';
 import {getQueryContext} from '../queries/QueryContext';
 import {NodeReferenceValue, UpdatePartial} from '../queries/QueryFactory';
 
-export const name = 'name';
-export const hobby = 'hobby';
-export const nickName = 'nickName';
-export const bestFriend = 'bestFriend';
-export const hasFriend = 'hasFriend';
-export const birthDate = 'birthDate';
-export const isRealPerson = 'isRealPerson';
-export const hasPet = 'hasPet';
-export const guardDogLevel = 'guardDogLevel';
-export const pluralTestProp = 'pluralTestProp';
-export const personClass: NodeReferenceValue = {id: 'http://example.com/Person'};
-export const petClass: NodeReferenceValue = {id: 'http://example.com/Pet'};
-export const dogClass: NodeReferenceValue = {id: 'http://example.com/Dog'};
+const tmpPropBase = 'linked://tmp/props/';
+const tmpTypeBase = 'linked://tmp/types/';
+
+export const name = `${tmpPropBase}name`;
+export const hobby = `${tmpPropBase}hobby`;
+export const nickName = `${tmpPropBase}nickName`;
+export const bestFriend = `${tmpPropBase}bestFriend`;
+export const hasFriend = `${tmpPropBase}hasFriend`;
+export const birthDate = `${tmpPropBase}birthDate`;
+export const isRealPerson = `${tmpPropBase}isRealPerson`;
+export const hasPet = `${tmpPropBase}hasPet`;
+export const guardDogLevel = `${tmpPropBase}guardDogLevel`;
+export const pluralTestProp = `${tmpPropBase}pluralTestProp`;
+export const personClass: NodeReferenceValue = {id: `${tmpTypeBase}Person`};
+export const petClass: NodeReferenceValue = {id: `${tmpTypeBase}Pet`};
+export const dogClass: NodeReferenceValue = {id: `${tmpTypeBase}Dog`};
 
 @linkedShape
 export class Pet extends Shape {
