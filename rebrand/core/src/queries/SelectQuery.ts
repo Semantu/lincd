@@ -1,5 +1,4 @@
 import {Shape,ShapeType} from '../shapes/Shape.js';
-import {TestNode} from '../utils/TraceShape.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {shacl} from '../ontologies/shacl-named.js';
@@ -27,7 +26,11 @@ export type SingleResult<ResultType> =
 /**
  * All the possible types that a regular get/set method of a Shape can return
  */
-export type AccessorReturnValue = Shape | ShapeSet | JSPrimitive | TestNode;
+export type AccessorReturnValue =
+  | Shape
+  | ShapeSet
+  | JSPrimitive
+  | NodeReferenceValue;
 
 export type WhereClause<S extends Shape | AccessorReturnValue> =
   | Evaluation
@@ -659,16 +662,21 @@ export class QueryBuilderObject<
       return new QueryDate(originalValue, property, subject);
     } else if (Array.isArray(originalValue)) {
       return new QueryPrimitiveSet(originalValue, property, subject);
-    } else if ((originalValue as any) instanceof TestNode) {
-      //Temporary solution to support accessors with decorators that return named nodes.
-      //As long as the decorator indicates the shape the values should have, we can still use it.
-      //In the future queries will only use the decorators, not the actually returned value. Then this can go
+    } else if (
+      originalValue &&
+      typeof originalValue === 'object' &&
+      'id' in originalValue
+    ) {
+      //Support accessors that return NodeReferenceValue when a value shape is known.
       if (property.valueShape) {
         const shapeClass = getShapeClass(property.valueShape.namedNode) as any;
-        if(!shapeClass) {
-          throw new Error(`Shape class not found for ${property.valueShape.namedNode}`);
+        if (!shapeClass) {
+          throw new Error(
+            `Shape class not found for ${property.valueShape.namedNode}`,
+          );
         }
-        const shape = new shapeClass(originalValue);
+        const shape = new shapeClass();
+        shape.id = (originalValue as NodeReferenceValue).id;
         return QueryShape.create(shape, property, subject);
       }
       throw new Error(
@@ -711,15 +719,6 @@ export class QueryBuilderObject<
         ]);
       }
     }
-    let path = property.path;
-    if (Array.isArray(path)) {
-      console.error(
-        'Unimplemented: property shape has multiple paths, using the first one for query generation. This is WRONG',
-        property,
-      );
-      path = path[0];
-    }
-
     if (valueShape) {
       const shapeClass = getShapeClass(valueShape.namedNode) as any;
       if(!shapeClass) {
@@ -729,9 +728,7 @@ export class QueryBuilderObject<
         // but the problem remains that the ImageObject shape needs to be available, but thats easier, as its data
         throw new Error(`Shape class not found for ${valueShape.namedNode}`);
       }
-      const shapeValue = new shapeClass(
-        new TestNode(path),
-      );
+      const shapeValue = new shapeClass();
       if (singleValue) {
         return QueryShape.create(shapeValue, property, subject);
       } else {
@@ -870,7 +867,7 @@ export class QueryBuilderObject<
       return this.subject.getPropertyPath(path);
     }
     //when query context is used as the first step, then the first step is just a pointer to the subject it represents
-    if (((this.originalValue as Shape).node as TestNode)?.targetID) {
+    if ((this.originalValue as Shape)?.__queryContextId) {
       path.unshift(convertQueryContext(this as any as QueryShape));
     }
     return path;
@@ -938,7 +935,7 @@ export class BoundComponent<
  */
 const convertQueryContext = (shape: QueryShape): ShapeReferenceValue => {
   return {
-    id: (shape.originalValue.node as TestNode).targetID,
+    id: (shape.originalValue as Shape).__queryContextId,
     shape: {
       id: shape.originalValue.nodeShape.id,
     },
@@ -1219,11 +1216,10 @@ export class QueryShape<
   }
 
   get id() {
-    //if the QueryShape was created for a TestNode that points to a specific node, then return that node's targetID
     return (
-      (this.originalValue.node as TestNode)?.targetID ||
+      (this.originalValue as Shape).__queryContextId ||
       this.originalValue['id'] ||
-      this.originalValue.node?.id
+      (this.originalValue as Shape).node?.id
     );
   }
 
@@ -1316,7 +1312,10 @@ export class QueryShape<
   ): QShape<InstanceType<ShapeClass>, Source, Property> {
     //if the shape is not the same as the original value, then we need to create a new query shape
     if (!shape.shape.equals(this.originalValue.nodeShape)) {
-      let newOriginal = new (shape as any)(this.originalValue.namedNode);
+      let newOriginal = new (shape as any)();
+      if (this.originalValue.id) {
+        newOriginal.id = this.originalValue.id;
+      }
       return QueryShape.create(newOriginal, this.property, this.subject as any);
     }
     // else return this
@@ -1710,10 +1709,9 @@ export class SelectQueryFactory<
 
   getSubject() {
     //if the subject is a QueryShape which comes from query context
-    //then it will point to a target node with "targetID"
-    //and we convert it to a node reference
-    //NOTE: its important to access originalValue instead of .node directly because QueryShape.node will give errors 
-    if (((this.subject as QueryShape)?.originalValue?.node as TestNode)?.targetID) {
+    //then it will carry a query context id and we convert it to a node reference
+    //NOTE: its important to access originalValue instead of .node directly because QueryShape.node may be undefined
+    if ((this.subject as QueryShape)?.originalValue?.__queryContextId) {
       return convertQueryContext(this.subject as QueryShape);
     }
     // }
@@ -1881,7 +1879,6 @@ export class SelectQueryFactory<
    * @private
    */
   private getQueryShape() {
-    let dummyNode = new TestNode();
     let queryShape: QueryBuilderObject;
     //if the given class already extends QueryValue
     if (this.shape instanceof QueryBuilderObject) {
@@ -1890,7 +1887,7 @@ export class SelectQueryFactory<
       queryShape = this.shape;
     } else {
       //else a shape class is given, and we need to create a dummy node to apply and trace the query
-      let dummyShape = new (this.shape as any)(dummyNode);
+      let dummyShape = new (this.shape as any)();
       queryShape = QueryShape.create(dummyShape);
     }
     return queryShape;

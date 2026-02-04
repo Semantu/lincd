@@ -41,6 +41,7 @@ const normalizeNamedNodePath = (
 export class SHACL_Shape extends Shape
 {
   static targetClass: NamedNode = shacl.Shape;
+  static autoCreateNode = true;
   static validating: Set<string> = new Set();
 
   get type()
@@ -1021,6 +1022,7 @@ export function disallowProperty(target: any, propertyKey: string, descriptor: P
 export class ValidationResult extends Shape
 {
   static targetClass: NamedNode = shacl.ValidationResult;
+  static autoCreateNode = true;
 
   @objectProperty({
     path: shacl.focusNode,
@@ -1290,6 +1292,7 @@ export class ValidationResult extends Shape
 export class ValidationReport extends Shape
 {
   static targetClass: NamedNode = shacl.ValidationReport;
+  static autoCreateNode = true;
   static validating: CoreMap<string,ValidationReport> = new CoreMap<string,ValidationReport>();
 
   @literalProperty({

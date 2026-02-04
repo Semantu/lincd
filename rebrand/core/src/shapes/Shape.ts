@@ -36,7 +36,6 @@ import {
   SelectQueryFactory,
 } from '../queries/SelectQuery.js';
 import {IQueryParser} from '../interfaces/IQueryParser.js';
-import {TestNode} from '../utils/TraceShape.js';
 import {AddId,NodeReferenceValue,UpdatePartial} from '../queries/QueryFactory.js';
 import {toNamedNode} from '../utils/NodeReference.js';
 
@@ -121,6 +120,7 @@ export abstract class Shape implements IShape {
   static typesToShapes: Map<NamedNode, CoreSet<IClassConstruct>> = new Map();
   //TODO: rename to nodeShape to avoid confusing things like shape.shape
   static shape: NodeShape;
+  static autoCreateNode = false;
   // static shapeCallbacks: ((shape) => void)[] = [];
   protected static instancesLoaded: Map<
     NamedNode,
@@ -135,11 +135,13 @@ export abstract class Shape implements IShape {
    * If you want to create an instance of an existing node, use `node.getAs(Class)` or `Class.getOf(node)`
    * @param node
    */
-  constructor(node?: Node | any) {
+  constructor(node?: Node | NodeReferenceValue | string) {
     this.setupNode(node);
   }
 
-  protected _node: Node;
+  protected _node?: Node;
+  protected _id?: string;
+  __queryContextId?: string;
 
   /**
    * Returns the node this instance represents.
@@ -188,7 +190,11 @@ export abstract class Shape implements IShape {
   }
 
   get id(): string {
-    return this._node?.id ?? this._node?.value;
+    return this._id ?? this._node?.id ?? this._node?.value;
+  }
+
+  set id(value: string) {
+    this._id = value;
   }
 
   //TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
@@ -420,8 +426,7 @@ export abstract class Shape implements IShape {
     this: {new (node: Node): ShapeType; targetClass: any},
     mapFunction?: PropertyShapeMapFunction<ShapeType, ResponseType>,
   ): ResponseType {
-    let dummyNode = new TestNode();
-    let dummyShape = new (this as any)(dummyNode);
+    let dummyShape = new (this as any)();
     //store the proxy on the shape, so we can access it later
     dummyShape.proxy = new Proxy(dummyShape, {
       get(target, key, receiver) {
@@ -788,16 +793,11 @@ export abstract class Shape implements IShape {
    * @internal
    * @param node
    */
-  setupNode(node: Node) {
-    if (node) {
-      if (!(node instanceof Node)) {
-        console.error('Invalid argument to constructor of shape:', node);
-        throw new Error(
-          'Invalid argument provided to constructor of shape. Please provide an instance of a node.',
-        );
+  setupNode(node?: Node | NodeReferenceValue | string) {
+    if (!node) {
+      if (!(this.constructor as typeof Shape).autoCreateNode) {
+        return;
       }
-      this._node = node;
-    } else {
       //this code gets triggered when you call new SomeShapeClass() without providing a node
       //some classes prefer a certain term type. E.g. RdfsLiteral will create a Literal node, and NodeShape will create a BlankNode
       //TODO: also look at inheritance chain, so that a class without preferredNodeKind that extends a class with preferredTermType still gets that inherited termType
@@ -816,7 +816,28 @@ export abstract class Shape implements IShape {
       if (targetClass) {
         this._node.set(rdf.type, targetClass);
       }
+      return;
     }
+    if (typeof node === 'string') {
+      this._id = node;
+      return;
+    }
+    if (!(node instanceof Node)) {
+      if (
+        typeof node === 'object' &&
+        node !== null &&
+        'id' in node &&
+        typeof (node as NodeReferenceValue).id === 'string'
+      ) {
+        this._id = (node as NodeReferenceValue).id;
+        return;
+      }
+      console.error('Invalid argument to constructor of shape:', node);
+      throw new Error(
+        'Invalid argument provided to constructor of shape. Please provide a node reference or a node instance.',
+      );
+    }
+    this._node = node;
 
     //@TODO: do this for RdfsLiteral as well if they implement events at some point?
     // if (this._node instanceof NamedNode) {

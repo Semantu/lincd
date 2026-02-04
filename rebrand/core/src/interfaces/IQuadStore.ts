@@ -5,7 +5,7 @@ import {ICoreIterable} from './ICoreIterable.js';
 import {Shape} from '../shapes/Shape.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {SelectQuery} from '../queries/SelectQuery.js';
-import {LinkedDataRequest} from '../utils/TraceShape.js';
+import {LinkedDataRequest} from '../utils/LinkedDataRequest.js';
 import {QuadArray} from '../collections/QuadArray.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {UpdateQuery} from '../queries/UpdateQuery.js';

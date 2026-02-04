@@ -1,6 +1,5 @@
 import {QShape, QueryShape} from './SelectQuery.js';
 import {Shape} from '../shapes/Shape.js';
-import {TestNode} from '../utils/TraceShape.js';
 
 const queryContext = new Map<string, QShape<any, any, any>>();
 
@@ -24,9 +23,9 @@ export function setQueryContext(name: string, value: any, shapeType?) {
       );
       return;
     }
-    const testNode = new TestNode();
-    testNode.targetID = value.id;
-    const shape = new (shapeType as any)(testNode); //.getFromURI(value.id);
+    const shape = new (shapeType as any)();
+    shape.id = value.id;
+    shape.__queryContextId = value.id;
     value = QueryShape.create(shape);
     //const converted = QueryBuilderObject.convertOriginal(shape,null,null);
   }

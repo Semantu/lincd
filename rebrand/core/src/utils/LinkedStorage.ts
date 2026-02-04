@@ -12,7 +12,7 @@ import {CoreSet} from '../collections/CoreSet.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass.js';
 import {SelectQuery} from '../queries/SelectQuery.js';
-import {LinkedDataRequest} from './TraceShape.js';
+import {LinkedDataRequest} from './LinkedDataRequest.js';
 import {UpdateQuery} from '../queries/UpdateQuery.js';
 import {UpdatePartial} from '../queries/QueryFactory.js';
 import {rdf} from '../ontologies/rdf-named.js';
