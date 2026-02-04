@@ -5,6 +5,7 @@ import {NamedNode} from '../models';
 import {xsd} from '../ontologies/xsd';
 import {ShapeSet} from '../collections/ShapeSet';
 import {getQueryContext} from '../queries/QueryContext';
+import {UpdatePartial} from '../queries/QueryFactory';
 
 export const name = NamedNode.getOrCreate('name');
 export const hobby = NamedNode.getOrCreate('hobby');
@@ -94,6 +95,33 @@ export class Person extends Shape {
     return null;
   }
 }
+
+const updateSimple: UpdatePartial<Person> = {hobby: 'Chess'};
+const updateOverwriteSet: UpdatePartial<Person> = {friends: [{id: 'p2'}]};
+const updateUnsetSingleUndefined: UpdatePartial<Person> = {hobby: undefined};
+const updateUnsetSingleNull: UpdatePartial<Person> = {hobby: null};
+const updateOverwriteNested: UpdatePartial<Person> = {
+  bestFriend: {name: 'Bestie'},
+};
+const updatePassIdReferences: UpdatePartial<Person> = {
+  bestFriend: {id: 'p2'},
+};
+const updateAddRemoveMulti: UpdatePartial<Person> = {
+  friends: {add: [{id: 'p2'}], remove: [{id: 'p3'}]},
+};
+const updateRemoveMulti: UpdatePartial<Person> = {
+  friends: {remove: [{id: 'p2'}]},
+};
+const updateAddRemoveSame: UpdatePartial<Person> = {
+  friends: {add: [{id: 'p2'}], remove: [{id: 'p3'}]},
+};
+const updateUnsetMultiUndefined: UpdatePartial<Person> = {friends: undefined};
+const updateNestedWithPredefinedId: UpdatePartial<Person> = {
+  bestFriend: {id: 'p3-best-friend', name: 'Bestie'},
+};
+const updateBirthDate: UpdatePartial<Person> = {
+  birthDate: new Date('2020-01-01'),
+};
 
 export const queryFactories = {
   selectName: () => Person.select((p) => p.name),
@@ -227,7 +255,7 @@ export const queryFactories = {
   sortByAsc: () => Person.select((p) => p.name).sortBy((p) => p.name),
   sortByDesc: () =>
     Person.select((p) => p.name).sortBy((p) => p.name, 'DESC'),
-  updateSimple: () => Person.update({id: 'p1'}, {hobby: 'Chess'}),
+  updateSimple: () => Person.update({id: 'p1'}, updateSimple),
   createSimple: () => Person.create({name: 'Test Create', hobby: 'Chess'}),
   createWithFriends: () =>
     Person.create({
@@ -246,37 +274,22 @@ export const queryFactories = {
     Person.delete([{id: 'to-delete-1'}, {id: 'to-delete-2'}]),
   deleteMultipleFull: () =>
     Person.delete([{id: 'to-delete-1'}, {id: 'to-delete-2'}]),
-  updateOverwriteSet: () =>
-    Person.update({id: 'p1'}, {friends: [{id: 'p2'}]}),
+  updateOverwriteSet: () => Person.update({id: 'p1'}, updateOverwriteSet),
   updateUnsetSingleUndefined: () =>
-    Person.update({id: 'p1'}, {hobby: undefined}),
-  updateUnsetSingleNull: () => Person.update({id: 'p1'}, {hobby: null}),
+    Person.update({id: 'p1'}, updateUnsetSingleUndefined),
+  updateUnsetSingleNull: () =>
+    Person.update({id: 'p1'}, updateUnsetSingleNull),
   updateOverwriteNested: () =>
-    Person.update({id: 'p1'}, {bestFriend: {name: 'Bestie'}}),
+    Person.update({id: 'p1'}, updateOverwriteNested),
   updatePassIdReferences: () =>
-    Person.update({id: 'p1'}, {bestFriend: {id: 'p2'}}),
+    Person.update({id: 'p1'}, updatePassIdReferences),
   updateAddRemoveMulti: () =>
-    Person.update(
-      {id: 'p1'},
-      {friends: {add: [{id: 'p2'}], remove: [{id: 'p3'}]}} as any,
-    ),
-  updateRemoveMulti: () =>
-    Person.update(
-      {id: 'p1'},
-      {friends: {remove: [{id: 'p2'}]}} as any,
-    ),
-  updateAddRemoveSame: () =>
-    Person.update(
-      {id: 'p1'},
-      {friends: {add: [{id: 'p2'}], remove: [{id: 'p3'}]}} as any,
-    ),
+    Person.update({id: 'p1'}, updateAddRemoveMulti),
+  updateRemoveMulti: () => Person.update({id: 'p1'}, updateRemoveMulti),
+  updateAddRemoveSame: () => Person.update({id: 'p1'}, updateAddRemoveSame),
   updateUnsetMultiUndefined: () =>
-    Person.update({id: 'p1'}, {friends: undefined}),
+    Person.update({id: 'p1'}, updateUnsetMultiUndefined),
   updateNestedWithPredefinedId: () =>
-    Person.update(
-      {id: 'p1'},
-      {bestFriend: {id: 'p3-best-friend', name: 'Bestie'}},
-    ),
-  updateBirthDate: () =>
-    Person.update({id: 'p1'}, {birthDate: new Date('2020-01-01')}),
+    Person.update({id: 'p1'}, updateNestedWithPredefinedId),
+  updateBirthDate: () => Person.update({id: 'p1'}, updateBirthDate),
 };
