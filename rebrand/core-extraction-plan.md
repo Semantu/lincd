@@ -203,7 +203,7 @@ Move all existing tests into `src/tests/old/`. Create a new `src/tests/query.tes
 **Sub-step 1.3 — Create query factories (`test-helpers/query-fixtures.ts`).** ✅ Done (500ee53)
 Extract the test shape definitions (Person, Pet, Dog) and property path constants into a shared `src/test-helpers/query-fixtures.ts`. This file exports the shape classes and a structured set of query factory functions — each factory invokes a specific query (e.g. `selectName()`, `selectNestedFriend()`, `filterByName()`, etc.) and returns the promise. The factories don't capture or assert anything themselves — they just invoke the query and return the promise. Each test file decides how to consume the result: `query.test.ts` intercepts the query object via `QueryCaptureStore`, while `@_linked/memstore` will later await real results. This keeps the factories pure and reusable across packages.
 
-**Sub-step 1.4 — Build out `query.test.ts` with all ~70 non-React tests.**
+**Sub-step 1.4 — Build out `query.test.ts` with all ~70 non-React tests.** ✅ Done (5ae6c71)
 Re-enable tests one at a time (or in small batches). For each test: use the corresponding query factory, capture the query object via `QueryCaptureStore`, and assert the structure of the resulting plain JS object in detail (type, select paths, where clauses, sort, limit, CRUD fields, etc.). Cover all 7 describe groups from the original tests: basic property selection, nested/path selection, filtering (where clauses), aggregation/sub-select, type casting/transformations, sorting/limiting, and CRUD operations. All ~70 tests should pass.
 
 **Sub-step 1.5 — Create `query.types.test.ts` with compile-only type assertions.**
