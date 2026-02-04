@@ -280,6 +280,11 @@ describe('3. Filtering (Where Clauses)', () => {
 
     expectSelectQuery(query);
     expectWhere(query);
+    expect(query?.where?.path?.[0]?.property?.label).toBe('bestFriend');
+    expect(query?.where?.args?.[0]).toEqual({
+      id: 'user-1',
+      shape: {id: Person.shape.id},
+    });
   });
 
   test('where with query context as base of property path', async () => {
@@ -287,6 +292,15 @@ describe('3. Filtering (Where Clauses)', () => {
 
     expectSelectQuery(query);
     expectWhere(query);
+    expect(query?.where?.method).toBe('some');
+    const nestedWhere = query?.where?.args?.[0];
+    expect(nestedWhere?.method).toBe('=');
+    expect(nestedWhere?.path?.[0]?.property?.label).toBe('name');
+    expect(nestedWhere?.args?.[0]?.subject).toEqual({
+      id: 'user-1',
+      shape: {id: Person.shape.id},
+    });
+    expect(nestedWhere?.args?.[0]?.path?.[0]?.property?.label).toBe('name');
   });
 });
 
