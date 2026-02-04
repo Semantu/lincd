@@ -1,0 +1,41 @@
+{
+  "name": "linked-js2",
+  "version": "0.0.0",
+  "license": "MPL-2.0",
+  "description": "Linked.js v2 core query and SHACL shape DSL (copy-then-prune baseline)",
+  "main": "lib/cjs/index.js",
+  "module": "lib/esm/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/esm/index.d.ts",
+      "import": "./lib/esm/index.js",
+      "require": "./lib/cjs/index.js"
+    },
+    "./*": {
+      "types": "./lib/esm/*.d.ts",
+      "import": "./lib/esm/*.js",
+      "require": "./lib/cjs/*.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "lib/esm/*"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js",
+    "compile": "echo '💫 Compiling CJS' && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && echo '💫 Compiling ESM' && node ../../node_modules/.bin/tsc -p tsconfig-esm.json",
+    "dual-package": "node ./scripts/dual-package.js"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "rimraf": "^5.0.7",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.7.3"
+  }
+}

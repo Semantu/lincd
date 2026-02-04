@@ -1,0 +1,49 @@
+/* ============================================================================
+   LINCD Utilities - Reusable across all apps
+   Import this in your app theme or reference it in CSS Modules
+   We use the variables defined in the theme-defaults.css file to define the utilities.
+   These are short-hand utilities for the most common use cases.
+   For example, we can use the card-base utility to set the background color, border radius, and shadow of the card.
+   ============================================================================ */
+
+/* === Component Base Utilities (mixins via @apply) === */
+@utility surface-base {
+  background: var(--bg-page);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-surface);
+}
+
+@utility card-base {
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--spacing-card);
+}
+
+@utility modal-base {
+  background: var(--bg-modal);
+  border-radius: var(--radius-modal);
+  padding: var(--spacing-modal);
+  box-shadow: var(--shadow-modal);
+  z-index: var(--z-modal);
+}
+
+@utility popover-base {
+  background: var(--bg-popover);
+  border-radius: var(--radius-popover);
+  padding: var(--spacing-popover);
+  box-shadow: var(--shadow-popover);
+  z-index: var(--z-popover);
+}
+
+@utility section-base {
+  background: var(--bg-section);
+  border-radius: var(--radius-surface);
+  padding: var(--spacing-section);
+}
+
+@utility element-base {
+  border-radius: var(--radius-element);
+  padding: var(--spacing-element-y) var(--spacing-element-x);
+}
+
