@@ -209,7 +209,7 @@ Re-enable tests one at a time (or in small batches). For each test: use the corr
 **Sub-step 1.5 — Create `query.types.test.ts` with compile-only type assertions.** ✅ Done
 Create `src/tests/query.types.test.ts`. For every test in `query.test.ts`, add a corresponding test in this file. Each test is wrapped in `describe.skip` so it never runs at runtime — it only needs to compile. Each test invokes the same query factory and asserts the inferred result types by accessing properties on the result. If the code compiles, TypeScript has verified the types are correct. Use an `expectType<T>()` utility or direct typed variable assignments to make the assertions explicit and thorough. Cover all ~70 select-query tests. For operations that return `Promise<void>` or `DeleteResponse` (not rich inferred types), include at least one type assertion test per operation type — these don't need the same multiplicity as select queries since there's less type inference to verify.
 
-**Sub-step 1.6 — Verify full green baseline.**
+**Sub-step 1.6 — Verify full green baseline.** ✅ Done
 Run the full build and test suite. All ~70 tests in `query.test.ts` pass. `query.types.test.ts` compiles without errors. This is the green baseline. Commit.
 
 ## Phase 2 — Remove React layer
