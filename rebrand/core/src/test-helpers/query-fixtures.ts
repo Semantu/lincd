@@ -4,6 +4,7 @@ import {Shape} from '../shapes/Shape';
 import {NamedNode} from '../models';
 import {xsd} from '../ontologies/xsd';
 import {ShapeSet} from '../collections/ShapeSet';
+import {getQueryContext} from '../queries/QueryContext';
 
 export const name = NamedNode.getOrCreate('name');
 export const hobby = NamedNode.getOrCreate('hobby');
@@ -96,4 +97,186 @@ export class Person extends Shape {
 
 export const queryFactories = {
   selectName: () => Person.select((p) => p.name),
+  selectFriends: () => Person.select((p) => p.friends),
+  selectBirthDate: () => Person.select((p) => p.birthDate),
+  selectIsRealPerson: () => Person.select((p) => p.isRealPerson),
+  selectById: () => Person.select({id: 'p1'}, (p) => p.name),
+  selectByIdReference: () => Person.select({id: 'p1'}, (p) => p.name),
+  selectNonExisting: () =>
+    Person.select({id: 'https://does.not/exist'}, (p) => p.name),
+  selectUndefinedOnly: () =>
+    Person.select({id: 'p3'}, (p) => [p.hobby, p.bestFriend]),
+  selectFriendsName: () => Person.select((p) => p.friends.name),
+  selectNestedFriendsName: () => Person.select((p) => p.friends.friends.name),
+  selectMultiplePaths: () =>
+    Person.select((p) => [p.name, p.friends, p.bestFriend.name]),
+  selectBestFriendName: () => Person.select((p) => p.bestFriend.name),
+  selectDeepNested: () =>
+    Person.select((p) => p.friends.bestFriend.bestFriend.name),
+  whereFriendsNameEquals: () =>
+    Person.select((p) => p.friends.where((f) => f.name.equals('Moa'))),
+  whereBestFriendEquals: () =>
+    Person.select().where((p) => p.bestFriend.equals({id: 'p3'})),
+  whereHobbyEquals: () =>
+    Person.select((p) => p.hobby.where((h) => h.equals('Jogging'))),
+  whereAnd: () =>
+    Person.select((p) =>
+      p.friends.where((f) => f.name.equals('Moa').and(f.hobby.equals('Jogging'))),
+    ),
+  whereOr: () =>
+    Person.select((p) =>
+      p.friends.where((f) => f.name.equals('Jinx').or(f.hobby.equals('Jogging'))),
+    ),
+  selectAll: () => Person.select(),
+  selectWhereNameSemmy: () =>
+    Person.select().where((p) => p.name.equals('Semmy')),
+  whereAndOrAnd: () =>
+    Person.select((p) =>
+      p.friends.where((f) =>
+        f.name.equals('Jinx').or(f.hobby.equals('Jogging')).and(f.name.equals('Moa')),
+      ),
+    ),
+  whereAndOrAndNested: () =>
+    Person.select((p) =>
+      p.friends.where((f) =>
+        f.name.equals('Jinx').or(f.hobby.equals('Jogging').and(f.name.equals('Moa'))),
+      ),
+    ),
+  whereSomeImplicit: () =>
+    Person.select().where((p) => p.friends.name.equals('Moa')),
+  whereSomeExplicit: () =>
+    Person.select().where((p) => p.friends.some((f) => f.name.equals('Moa'))),
+  whereEvery: () =>
+    Person.select().where((p) =>
+      p.friends.every((f) => f.name.equals('Moa').or(f.name.equals('Jinx'))),
+    ),
+  whereSequences: () =>
+    Person.select().where((p) =>
+      p.friends
+        .some((f) => f.name.equals('Jinx'))
+        .and(p.name.equals('Semmy')),
+    ),
+  outerWhere: () =>
+    Person.select((p) => p.friends).where((p) => p.name.equals('Semmy')),
+  whereWithContext: () =>
+    Person.select((p) => p.name).where((p) =>
+      p.bestFriend.equals(getQueryContext('user')),
+    ),
+  whereWithContextPath: () =>
+    Person.select((p) => p.name).where((p) => {
+      const userName = getQueryContext<Person>('user').name;
+      return p.friends.some((f) => f.name.equals(userName));
+    }),
+  countFriends: () => Person.select((p) => p.friends.size()),
+  countNestedFriends: () => Person.select((p) => p.friends.friends.size()),
+  countLabel: () =>
+    Person.select((p) =>
+      p.friends.select((f) => ({numFriends: f.friends.size()})),
+    ),
+  nestedObjectProperty: () => Person.select((p) => p.friends.bestFriend),
+  nestedObjectPropertySingle: () => Person.select((p) => p.friends.bestFriend),
+  subSelectSingleProp: () =>
+    Person.select((p) => p.bestFriend.select((f) => ({name: f.name}))),
+  subSelectPluralCustom: () =>
+    Person.select((p) =>
+      p.friends.select((f) => ({name: f.name, hobby: f.hobby})),
+    ),
+  doubleNestedSubSelect: () =>
+    Person.select((p) =>
+      p.friends.select((p2) =>
+        p2.bestFriend.select((p3) => ({name: p3.name})),
+      ),
+    ),
+  subSelectAllPrimitives: () =>
+    Person.select((p) =>
+      p.bestFriend.select((f) => [f.name, f.birthDate, f.isRealPerson]),
+    ),
+  customResultEqualsBoolean: () =>
+    Person.select((p) => ({isBestFriend: p.bestFriend.equals({id: 'p3'})})),
+  customResultNumFriends: () =>
+    Person.select((p) => ({numFriends: p.friends.size()})),
+  countEquals: () =>
+    Person.select().where((p) => p.friends.size().equals(2)),
+  subSelectArray: () =>
+    Person.select((p) => p.friends.select((f) => [f.name, f.hobby])),
+  selectShapeSetAs: () =>
+    Person.select((p) => p.pets.as(Dog).guardDogLevel),
+  selectNonExistingMultiple: () =>
+    Person.select((p) => [p.bestFriend, p.friends]),
+  selectShapeAs: () =>
+    Person.select((p) => p.firstPet.as(Dog).guardDogLevel),
+  selectOne: () =>
+    Person.select((p) => p.name).where((p) => p.equals({id: 'p1'})).one(),
+  nestedQueries2: () =>
+    Person.select((p) => [
+      p.friends.select((p2) => [
+        p2.firstPet,
+        p2.bestFriend.select((p3) => ({name: p3.name})),
+      ]),
+    ]),
+  selectDuplicatePaths: () =>
+    Person.select((p) => [
+      p.bestFriend.name,
+      p.bestFriend.hobby,
+      p.bestFriend.isRealPerson,
+    ]),
+  outerWhereLimit: () =>
+    Person.select((p) => p.name)
+      .where((p) => p.name.equals('Semmy').or(p.name.equals('Moa')))
+      .limit(1),
+  sortByAsc: () => Person.select((p) => p.name).sortBy((p) => p.name),
+  sortByDesc: () =>
+    Person.select((p) => p.name).sortBy((p) => p.name, 'DESC'),
+  updateSimple: () => Person.update({id: 'p1'}, {hobby: 'Chess'}),
+  createSimple: () => Person.create({name: 'Test Create', hobby: 'Chess'}),
+  createWithFriends: () =>
+    Person.create({
+      name: 'Test Create',
+      friends: [{id: 'p2'}, {name: 'New Friend'}],
+    }),
+  createWithFixedId: () =>
+    Person.create({
+      __id: 'fixed-id',
+      name: 'Fixed',
+      bestFriend: {id: 'fixed-id-2'},
+    } as any),
+  deleteSingle: () => Person.delete({id: 'to-delete'}),
+  deleteSingleRef: () => Person.delete({id: 'to-delete'}),
+  deleteMultiple: () =>
+    Person.delete([{id: 'to-delete-1'}, {id: 'to-delete-2'}]),
+  deleteMultipleFull: () =>
+    Person.delete([{id: 'to-delete-1'}, {id: 'to-delete-2'}]),
+  updateOverwriteSet: () =>
+    Person.update({id: 'p1'}, {friends: [{id: 'p2'}]}),
+  updateUnsetSingleUndefined: () =>
+    Person.update({id: 'p1'}, {hobby: undefined}),
+  updateUnsetSingleNull: () => Person.update({id: 'p1'}, {hobby: null}),
+  updateOverwriteNested: () =>
+    Person.update({id: 'p1'}, {bestFriend: {name: 'Bestie'}}),
+  updatePassIdReferences: () =>
+    Person.update({id: 'p1'}, {bestFriend: {id: 'p2'}}),
+  updateAddRemoveMulti: () =>
+    Person.update(
+      {id: 'p1'},
+      {friends: {add: [{id: 'p2'}], remove: [{id: 'p3'}]}} as any,
+    ),
+  updateRemoveMulti: () =>
+    Person.update(
+      {id: 'p1'},
+      {friends: {remove: [{id: 'p2'}]}} as any,
+    ),
+  updateAddRemoveSame: () =>
+    Person.update(
+      {id: 'p1'},
+      {friends: {add: [{id: 'p2'}], remove: [{id: 'p3'}]}} as any,
+    ),
+  updateUnsetMultiUndefined: () =>
+    Person.update({id: 'p1'}, {friends: undefined}),
+  updateNestedWithPredefinedId: () =>
+    Person.update(
+      {id: 'p1'},
+      {bestFriend: {id: 'p3-best-friend', name: 'Bestie'}},
+    ),
+  updateBirthDate: () =>
+    Person.update({id: 'p1'}, {birthDate: new Date('2020-01-01')}),
 };
