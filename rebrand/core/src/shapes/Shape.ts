@@ -5,9 +5,9 @@
  */
 import nextTick from 'next-tick';
 import {Literal,NamedNode,Node,Quad} from '../models.js';
-import {rdf} from '../ontologies/rdf.js';
+import {rdf} from '../ontologies/rdf-named.js';
 import {NodeValuesSet} from '../collections/NodeValuesSet.js';
-import {rdfs} from '../ontologies/rdfs.js';
+import {rdfs} from '../ontologies/rdfs-named.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {QuadArray} from '../collections/QuadArray.js';
 import {Find} from '../utils/Find.js';
@@ -38,6 +38,13 @@ import {
 import {IQueryParser} from '../interfaces/IQueryParser.js';
 import {TestNode} from '../utils/TraceShape.js';
 import {AddId,NodeReferenceValue,UpdatePartial} from '../queries/QueryFactory.js';
+import {toNamedNode} from '../utils/NodeReference.js';
+
+const resolveNamedNode = (
+  value?: NamedNode | NodeReferenceValue | null,
+): NamedNode | null => {
+  return value ? toNamedNode(value) : null;
+};
 import {ClassOf} from '../utils/Types.js';
 import {CreateResponse} from '../queries/CreateQuery.js';
 import {NodeId} from '../queries/MutationQuery.js';
@@ -104,7 +111,7 @@ export abstract class Shape implements IShape {
    }
    ```
    */
-  static targetClass: NamedNode = null;
+  static targetClass: NamedNode | NodeReferenceValue = null;
 
   static queryParser: IQueryParser;
   /**
@@ -180,6 +187,10 @@ export abstract class Shape implements IShape {
     return this._node.value;
   }
 
+  get id(): string {
+    return this._node?.id ?? this._node?.value;
+  }
+
   //TODO: move to rdfs:Resource or owl:Thing shape? (and decide which one of those we want to promote)
   get label() {
     return this.getValue(rdfs.label);
@@ -211,7 +222,10 @@ export abstract class Shape implements IShape {
    * @param shapeClass
    * @param type
    */
-  static registerByType(shapeClass: typeof Shape, type?: NamedNode) {
+  static registerByType(
+    shapeClass: typeof Shape,
+    type?: NamedNode | NodeReferenceValue,
+  ) {
     if (!type) {
       if (shapeClass === Shape) {
         return;
@@ -220,7 +234,7 @@ export abstract class Shape implements IShape {
       //warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
       if (!shapeClass.hasOwnProperty('targetClass')) {
         console.warn(
-          `Shape ${shapeClass.name} is not linked to a targetClass. Please define 'static targetClass:NamedNode'`,
+          `Shape ${shapeClass.name} is not linked to a targetClass. Please define 'static targetClass:NodeReferenceValue'`,
         );
         return;
       }
@@ -228,10 +242,14 @@ export abstract class Shape implements IShape {
     }
 
     //save in a map for finding the Shape back based on the type
-    if (!this.typesToShapes.has(type)) {
-      this.typesToShapes.set(type, new CoreSet());
+    const resolvedType = resolveNamedNode(type);
+    if (!resolvedType) {
+      return;
     }
-    this.typesToShapes.get(type).add(shapeClass as any);
+    if (!this.typesToShapes.has(resolvedType)) {
+      this.typesToShapes.set(resolvedType, new CoreSet());
+    }
+    this.typesToShapes.get(resolvedType).add(shapeClass as any);
   }
 
   /**
@@ -241,21 +259,26 @@ export abstract class Shape implements IShape {
    * @param allowSuperClass
    */
   static getClassesForType(
-    type: NamedNode,
+    type: NamedNode | NodeReferenceValue,
     allowSuperClass: boolean = false,
   ): CoreSet<typeof Shape> {
-    let instanceClasses = this.typesToShapes.get(type);
+    const resolvedType = resolveNamedNode(type);
+    let instanceClasses = resolvedType ? this.typesToShapes.get(resolvedType) : null;
     if (allowSuperClass) {
-      let subClasses = type.getDeep(rdfs.subClassOf) as any;
+      let subClasses = resolvedType
+        ? (resolvedType.getDeep(rdfs.subClassOf) as any)
+        : null;
       // subClasses = Order.typesByDepth(subClasses);
-      subClasses.delete(type); //<-- only delete after ordering, as it will be a new set and not the original PropertySet
-      subClasses.forEach((subViewType) => {
-        if (this.typesToShapes.has(subViewType)) {
-          instanceClasses = instanceClasses.concat(
-            this.typesToShapes.get(subViewType),
-          );
-        }
-      });
+      if (subClasses) {
+        subClasses.delete(resolvedType); //<-- only delete after ordering, as it will be a new set and not the original PropertySet
+        subClasses.forEach((subViewType) => {
+          if (this.typesToShapes.has(subViewType)) {
+            instanceClasses = instanceClasses.concat(
+              this.typesToShapes.get(subViewType),
+            );
+          }
+        });
+      }
     }
     return instanceClasses as any as CoreSet<typeof Shape>;
   }
@@ -383,7 +406,7 @@ export abstract class Shape implements IShape {
 
   static update<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
     this: {new (node: Node): ShapeType; queryParser: IQueryParser},
-    id: string | {id: string} | {uri: string} | QShape<ShapeType>,
+    id: string | NodeReferenceValue | QShape<ShapeType>,
     updateObjectOrFn?: U,
   ): Promise<AddId<U>> {
     return this.queryParser.updateQuery(
@@ -434,15 +457,21 @@ export abstract class Shape implements IShape {
   }
 
   static isInstanceOfTargetClass(node: Node) {
-    return node.has(rdf.type, this.targetClass);
+    const targetClass = resolveNamedNode(this.targetClass);
+    return targetClass ? node.has(rdf.type, targetClass) : false;
   }
 
   static getInstanceByType<T extends IShape>(
     node: Node,
-    ...shapes: {new (): T; targetClass: NamedNode; getOf(node: Node): T}[]
+    ...shapes: {
+      new (): T;
+      targetClass: NamedNode | NodeReferenceValue;
+      getOf(node: Node): T;
+    }[]
   ): T {
     let matchingShape = shapes.find((shape) => {
-      return node.has(rdf.type, shape.targetClass);
+      const targetClass = resolveNamedNode(shape.targetClass);
+      return targetClass ? node.has(rdf.type, targetClass) : false;
     });
     if (matchingShape) {
       return matchingShape.getOf(node);
@@ -459,9 +488,10 @@ export abstract class Shape implements IShape {
     properties: SearchMap,
     sanitized: boolean = false,
   ): ShapeSet<T> {
+    const targetClass = resolveNamedNode(this.targetClass);
     let quads = Find.byPropertyValues(
       properties,
-      this.targetClass,
+      targetClass,
       true,
       true,
       sanitized,
@@ -514,16 +544,18 @@ export abstract class Shape implements IShape {
     this: ShapeType<T>,
   ): NodeSet {
     //get all instances of the target class of this shape
-    let nodes = this.targetClass.getAllInverse(rdf.type);
+    const targetClass = resolveNamedNode(this.targetClass);
+    let nodes = targetClass ? targetClass.getAllInverse(rdf.type) : new NodeSet();
     //also look for shapes that extend this shape
     getSubShapesClasses(this as any).forEach((shapeClass) => {
       //and add instances of those classes as well
       if (shapeClass.targetClass) {
-        return shapeClass.targetClass
-          .getAllInverse(rdf.type)
-          .forEach((node) => {
+        const subTargetClass = resolveNamedNode(shapeClass.targetClass);
+        if (subTargetClass) {
+          return subTargetClass.getAllInverse(rdf.type).forEach((node) => {
             nodes.add(node);
           });
+        }
       }
     });
     return nodes;
@@ -562,22 +594,23 @@ export abstract class Shape implements IShape {
     //by default, look for instances of this shape class and all classes that extend it
     let targetClasses = [this].concat(getSubShapesClasses(this));
     targetClasses.forEach((shapeClass) => {
-      if (!shapeClass.targetClass) {
+      const targetClass = resolveNamedNode(shapeClass.targetClass);
+      if (!targetClass) {
         console.warn(
           'Shape class ' +
             shapeClass.name +
-            ' does not have a targetClass. Please define a static targetClass:NamedNode',
+            ' does not have a targetClass. Please define a static targetClass:NodeReferenceValue',
         );
         return;
       }
       let potentialInstances = new NodeSet();
       if (explicitInstancesOnly) {
-        potentialInstances = shapeClass.targetClass
+        potentialInstances = targetClass
           .getInverseQuads(rdf.type)
           .filter((quad) => !quad.implicit)
           .getSubjects();
       } else {
-        potentialInstances = shapeClass.targetClass.getAllInverse(rdf.type);
+        potentialInstances = targetClass.getAllInverse(rdf.type);
       }
       //return only those instance nodes that are actual valid instances of this shape
       instanceNodes = instanceNodes.concat(
@@ -616,8 +649,9 @@ export abstract class Shape implements IShape {
       return new (this as ClassOf<T>)(node);
     } else {
       node = NamedNode.getOrCreate(uri, isTemporaryNodeIfNew);
-      if (this.targetClass) {
-        node.set(rdf.type, this.targetClass);
+      const targetClass = resolveNamedNode(this.targetClass);
+      if (targetClass) {
+        node.set(rdf.type, targetClass);
       }
       return new (this as ClassOf<T>)(node);
     }
@@ -776,8 +810,11 @@ export abstract class Shape implements IShape {
       this._node = termType.create(true);
 
       let nodeShape = this.nodeShape;
-      if (nodeShape && nodeShape.targetClass) {
-        this._node.set(rdf.type, nodeShape.targetClass);
+      const targetClass = nodeShape
+        ? resolveNamedNode(nodeShape.targetClass)
+        : null;
+      if (targetClass) {
+        this._node.set(rdf.type, targetClass);
       }
     }
 
@@ -1202,7 +1239,7 @@ interface Constructor<M> {
 }
 
 export interface ShapeLike<M extends Shape> extends Constructor<M> {
-  targetClass: NamedNode;
+  targetClass: NamedNode | NodeReferenceValue;
 
   getSetOf<M extends Shape>(
     this: ShapeLike<M>,

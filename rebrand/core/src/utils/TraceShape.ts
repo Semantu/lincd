@@ -1,7 +1,8 @@
 import {Shape} from '../shapes/Shape.js';
 import {NamedNode, Quad} from '../models.js';
 import {PropertyShape} from '../shapes/SHACL.js';
-import {rdfs} from '../ontologies/rdfs.js';
+import {rdfs} from '../ontologies/rdfs-named.js';
+import {NodeReferenceValue,toNamedNode} from './NodeReference.js';
 import {NodeSet} from '../collections/NodeSet.js';
 
 export interface TraceShape extends Shape {
@@ -162,9 +163,13 @@ export function createTraceShape<ShapeType extends Shape>(
 
 export class TestNode extends NamedNode {
   public targetID: string; //used to store the node that this test node is a placeholder for
-  constructor(public property?: NamedNode) {
+  public property?: NamedNode;
+  constructor(property?: NamedNode | NodeReferenceValue | string) {
     let uri = NamedNode.createNewTempUri();
     super(uri, true);
+    if (property) {
+      this.property = toNamedNode(property);
+    }
   }
 
   getValue() {
@@ -173,7 +178,7 @@ export class TestNode extends NamedNode {
       if (this.property.hasProperty(rdfs.label)) {
         label = this.property.getValue(rdfs.label);
       } else {
-        label = this.property.uri.split(/[\/#]/).pop();
+        label = this.property.id.split(/[\/#]/).pop();
       }
     }
     return label;

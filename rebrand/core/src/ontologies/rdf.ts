@@ -3,20 +3,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models.js';
+import {NodeReferenceValue} from '../utils/NodeReference.js';
 import {Prefix} from '../utils/Prefix.js';
 
-var base: string = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);
+const base = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+export const ns = (term: string): NodeReferenceValue => ({id: base + term});
+
+export const _ontologyResource = ns('');
 Prefix.add('rdf', base);
 
-var langString: NamedNode = NamedNode.getOrCreate(base + 'langString');
-var type: NamedNode = NamedNode.getOrCreate(base + 'type');
-var Property: NamedNode = NamedNode.getOrCreate(base + 'Property');
-var List: NamedNode = NamedNode.getOrCreate(base + 'List');
-var rest: NamedNode = NamedNode.getOrCreate(base + 'rest');
-var first: NamedNode = NamedNode.getOrCreate(base + 'first');
-var nil: NamedNode = NamedNode.getOrCreate(base + 'nil');
+const langString = ns('langString');
+const type = ns('type');
+const Property = ns('Property');
+const List = ns('List');
+const rest = ns('rest');
+const first = ns('first');
+const nil = ns('nil');
 
 export const rdf = {
   _ontologyResource,

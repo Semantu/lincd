@@ -3,88 +3,76 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models.js';
+import {NodeReferenceValue} from '../utils/NodeReference.js';
 import {Prefix} from '../utils/Prefix.js';
 import {createNameSpace} from '../utils/NameSpace.js';
 
-var base: string = 'http://www.w3.org/ns/shacl#';
-export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);
+const base = 'http://www.w3.org/ns/shacl#';
+export const _ontologyResource: NodeReferenceValue = {id: base};
 Prefix.add('shacl', base);
 
-export var ns = createNameSpace('http://www.w3.org/ns/shacl#');
+export const ns = createNameSpace(base);
 
 //add your ontology nodes here
-var _class: NamedNode = ns('class');
-var datatype: NamedNode = ns('datatype');
-var declare: NamedNode = ns('declare');
-var _in: NamedNode = ns('in');
-var maxCount: NamedNode = ns('maxCount');
-var minCount: NamedNode = ns('minCount');
-var inList: NamedNode = ns('inList');
-var name: NamedNode = ns('name');
-var description: NamedNode = ns('description');
-var NodeShape: NamedNode = ns('NodeShape');
-var optional: NamedNode = ns('optional');
-var Parameter: NamedNode = ns('Parameter');
-var PrefixDeclaration: NamedNode = NamedNode.getOrCreate(
-  base + 'PrefixDeclaration',
-);
-var path: NamedNode = ns('path');
-var property: NamedNode = ns('property');
-var prefix: NamedNode = ns('prefix');
-var PropertyShape: NamedNode = ns('PropertyShape');
-var targetClass: NamedNode = ns('targetClass');
-var targetNode: NamedNode = ns('targetNode');
-var node: NamedNode = ns('node');
-var nodeKind: NamedNode = ns('nodeKind');
-var Shape: NamedNode = ns('Shape');
+const _class = ns('class');
+const datatype = ns('datatype');
+const declare = ns('declare');
+const _in = ns('in');
+const maxCount = ns('maxCount');
+const minCount = ns('minCount');
+const inList = ns('inList');
+const name = ns('name');
+const description = ns('description');
+const NodeShape = ns('NodeShape');
+const optional = ns('optional');
+const Parameter = ns('Parameter');
+const PrefixDeclaration = ns('PrefixDeclaration');
+const path = ns('path');
+const property = ns('property');
+const prefix = ns('prefix');
+const PropertyShape = ns('PropertyShape');
+const targetClass = ns('targetClass');
+const targetNode = ns('targetNode');
+const node = ns('node');
+const nodeKind = ns('nodeKind');
+const Shape = ns('Shape');
 
-var BlankNode: NamedNode = ns('BlankNode');
-var IRI: NamedNode = ns('IRI');
-var Literal: NamedNode = ns('Literal');
-var BlankNodeOrIRI: NamedNode = ns('BlankNodeOrIRI');
-var BlankNodeOrLiteral: NamedNode = NamedNode.getOrCreate(
-  base + 'BlankNodeOrLiteral',
-);
-var IRIOrLiteral: NamedNode = ns('IRIOrLiteral');
+const BlankNode = ns('BlankNode');
+const IRI = ns('IRI');
+const Literal = ns('Literal');
+const BlankNodeOrIRI = ns('BlankNodeOrIRI');
+const BlankNodeOrLiteral = ns('BlankNodeOrLiteral');
+const IRIOrLiteral = ns('IRIOrLiteral');
 
-export var languageIn: NamedNode = ns('languageIn');
-export var lessThan: NamedNode = ns('lessThan');
-export var lessThanOrEquals: NamedNode = ns('lessThanOrEquals');
-export var maxExclusive: NamedNode = ns('maxExclusive');
-export var maxInclusive: NamedNode = ns('maxInclusive');
-export var maxLength: NamedNode = ns('maxLength');
-export var minExclusive: NamedNode = ns('minExclusive');
-export var minInclusive: NamedNode = ns('minInclusive');
-export var minLength: NamedNode = ns('minLength');
-export var pattern: NamedNode = ns('pattern');
-export var uniqueLang: NamedNode = ns('uniqueLang');
-export var ValidationReport: NamedNode = ns('ValidationReport');
-export var conforms: NamedNode = ns('conforms');
-export var ValidationResult: NamedNode = ns('ValidationResult');
-export var focusNode: NamedNode = ns('focusNode');
-export var sourceShape: NamedNode = ns('sourceShape');
-export var resultSeverity: NamedNode = ns('resultSeverity');
-export var resultPath: NamedNode = ns('resultPath');
-export var value: NamedNode = ns('value');
-export var message: NamedNode = ns('message');
-export var Violation: NamedNode = ns('Violation');
-export var AbstractResult: NamedNode = ns('AbstractResult');
-export var sourceConstraintComponent: NamedNode = ns(
-  'sourceConstraintComponent',
-);
-export var ClassConstraintComponent: NamedNode = ns('ClassConstraintComponent');
-export var NodeConstraintComponent: NamedNode = ns('NodeConstraintComponent');
-export var DatatypeConstraintComponent: NamedNode = ns(
-  'DatatypeConstraintComponent',
-);
-export var MinLengthConstraintComponent: NamedNode = ns(
-  'MinLengthConstraintComponent',
-);
-export var MaxLengthConstraintComponent: NamedNode = ns(
-  'MaxLengthConstraintComponent',
-);
-export var result: NamedNode = ns('result');
+export const languageIn = ns('languageIn');
+export const lessThan = ns('lessThan');
+export const lessThanOrEquals = ns('lessThanOrEquals');
+export const maxExclusive = ns('maxExclusive');
+export const maxInclusive = ns('maxInclusive');
+export const maxLength = ns('maxLength');
+export const minExclusive = ns('minExclusive');
+export const minInclusive = ns('minInclusive');
+export const minLength = ns('minLength');
+export const pattern = ns('pattern');
+export const uniqueLang = ns('uniqueLang');
+export const ValidationReport = ns('ValidationReport');
+export const conforms = ns('conforms');
+export const ValidationResult = ns('ValidationResult');
+export const focusNode = ns('focusNode');
+export const sourceShape = ns('sourceShape');
+export const resultSeverity = ns('resultSeverity');
+export const resultPath = ns('resultPath');
+export const value = ns('value');
+export const message = ns('message');
+export const Violation = ns('Violation');
+export const AbstractResult = ns('AbstractResult');
+export const sourceConstraintComponent = ns('sourceConstraintComponent');
+export const ClassConstraintComponent = ns('ClassConstraintComponent');
+export const NodeConstraintComponent = ns('NodeConstraintComponent');
+export const DatatypeConstraintComponent = ns('DatatypeConstraintComponent');
+export const MinLengthConstraintComponent = ns('MinLengthConstraintComponent');
+export const MaxLengthConstraintComponent = ns('MaxLengthConstraintComponent');
+export const result = ns('result');
 
 //make sure every node is also exported here
 export const shacl = {

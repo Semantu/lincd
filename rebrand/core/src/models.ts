@@ -46,6 +46,14 @@ export abstract class Node extends EventEmitter {
     this._value = val;
   }
 
+  get id(): string {
+    return this.value;
+  }
+
+  set id(id: string) {
+    this.value = id;
+  }
+
   /**
    * Create an instance of the given class (or one of its subclasses) as a presentation of this node.
    * NOTE: this node MUST have the static.type of the given class as its rdf:type property
@@ -498,6 +506,14 @@ export class NamedNode
 
   set uri(uri: string) {
     this.value = uri;
+  }
+
+  get id(): string {
+    return this.uri;
+  }
+
+  set id(id: string) {
+    this.uri = id;
   }
 
   /**

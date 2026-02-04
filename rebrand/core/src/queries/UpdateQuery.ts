@@ -1,5 +1,11 @@
 import {Shape} from '../shapes/Shape.js';
-import {AddId, NodeDescriptionValue, UpdatePartial} from './QueryFactory.js';
+import {
+  AddId,
+  NodeDescriptionValue,
+  NodeReferenceValue,
+  UpdatePartial,
+  toNodeReference,
+} from './QueryFactory.js';
 import {NodeShape} from '../shapes/SHACL.js';
 import {MutationQueryFactory} from './MutationQuery.js';
 
@@ -19,18 +25,11 @@ export class UpdateQueryFactory<
 
   constructor(
     public shapeClass: typeof Shape,
-    id:
-      | string
-      | {id: string}
-      | {
-          uri: string;
-        },
+    id: string | NodeReferenceValue,
     updateObjectOrFn: U,
   ) {
     super();
-    this.id = (
-      typeof id === 'string' ? id : (id as any).id || (id as any).uri
-    ) as string;
+    this.id = toNodeReference(id).id;
     this.fields = this.convertUpdateObject(
       updateObjectOrFn,
       this.shapeClass.shape,

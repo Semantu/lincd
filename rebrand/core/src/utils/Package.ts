@@ -15,15 +15,16 @@ import {
 } from '../shapes/SHACL.js';
 import {Shape} from '../shapes/Shape.js';
 import {Prefix} from './Prefix.js';
-import {lincd as lincdOntology} from '../ontologies/lincd.js';
-import {npm} from '../ontologies/npm.js';
-import {rdf} from '../ontologies/rdf.js';
+import {lincd as lincdOntology} from '../ontologies/lincd-named.js';
+import {npm} from '../ontologies/npm-named.js';
+import {rdf} from '../ontologies/rdf-named.js';
 import {URI} from './URI.js';
 import {addNodeShapeToShapeClass,getShapeClass} from './ShapeClass.js';
-import {shacl} from '../ontologies/shacl.js';
-import {rdfs} from '../ontologies/rdfs.js';
-import {xsd} from '../ontologies/xsd.js';
+import {shacl} from '../ontologies/shacl-named.js';
+import {rdfs} from '../ontologies/rdfs-named.js';
+import {xsd} from '../ontologies/xsd-named.js';
 import { createPropertyShape } from '../shapes/SHACL.js';
+import {NodeReferenceValue} from './NodeReference.js';
 
 //global tree
 declare var lincd: any;
@@ -135,7 +136,7 @@ export interface LinkedPackageObject
    */
   linkedOntology: (
     allFileExports,
-    nameSpace: (term: string) => NamedNode,
+    nameSpace: (term: string) => NodeReferenceValue,
     suggestedPrefixAndFileName: string,
     loadDataFunction?: () => Promise<any>,
     dataSource?: string | string[],
@@ -410,7 +411,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
    */
   let linkedOntology = function(
     exports,
-    nameSpace: (term: string) => NamedNode,
+    nameSpace: (term: string) => NodeReferenceValue,
     prefixAndFileName: string,
     loadData?,
     dataSource?: string | string[],
@@ -426,7 +427,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     if (prefixAndFileName)
     {
       //run the namespace without any term name, this will give back a named node with just the namespace as URI, then get that URI to provide it as full URI
-      Prefix.add(prefixAndFileName,nameSpace('').uri);
+      Prefix.add(prefixAndFileName,nameSpace('').id);
     }
 
     ontologies.add(exportsCopy);

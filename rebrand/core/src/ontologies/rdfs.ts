@@ -3,25 +3,25 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models.js';
+import {NodeReferenceValue} from '../utils/NodeReference.js';
 import {Prefix} from '../utils/Prefix.js';
 
-var base: string = 'http://www.w3.org/2000/01/rdf-schema#';
-export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);
+const base = 'http://www.w3.org/2000/01/rdf-schema#';
+export const ns = (term: string): NodeReferenceValue => ({id: base + term});
+
+export const _ontologyResource = ns('');
 Prefix.add('rdfs', base);
 
-export var subPropertyOf: NamedNode = NamedNode.getOrCreate(
-  base + 'subPropertyOf',
-);
-var subClassOf: NamedNode = NamedNode.getOrCreate(base + 'subClassOf');
-var range: NamedNode = NamedNode.getOrCreate(base + 'range');
-var isDefinedBy: NamedNode = NamedNode.getOrCreate(base + 'isDefinedBy');
-var label: NamedNode = NamedNode.getOrCreate(base + 'label');
-var comment: NamedNode = NamedNode.getOrCreate(base + 'comment');
-var Literal: NamedNode = NamedNode.getOrCreate(base + 'Literal');
-var Datatype: NamedNode = NamedNode.getOrCreate(base + 'Datatype');
-var Class: NamedNode = NamedNode.getOrCreate(base + 'Class');
-var Resource: NamedNode = NamedNode.getOrCreate(base + 'Resource');
+const subPropertyOf = ns('subPropertyOf');
+const subClassOf = ns('subClassOf');
+const range = ns('range');
+const isDefinedBy = ns('isDefinedBy');
+const label = ns('label');
+const comment = ns('comment');
+const Literal = ns('Literal');
+const Datatype = ns('Datatype');
+const Class = ns('Class');
+const Resource = ns('Resource');
 
 export const rdfs = {
   _ontologyResource,

@@ -1,5 +1,5 @@
-import {NamedNode} from '../models.js';
+import {NodeReferenceValue} from './NodeReference.js';
 
 export const createNameSpace = (nameSpace: string) => {
-  return (term) => NamedNode.getOrCreate(nameSpace + term);
+  return (term: string): NodeReferenceValue => ({id: nameSpace + term});
 };

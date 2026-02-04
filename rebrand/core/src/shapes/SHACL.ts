@@ -5,21 +5,38 @@
  */
 import {BlankNode,Literal,NamedNode,Node} from '../models.js';
 import {Shape} from './Shape.js';
-import {shacl} from '../ontologies/shacl.js';
+import {shacl} from '../ontologies/shacl-named.js';
 import {List} from './List.js';
-import {xsd} from '../ontologies/xsd.js';
+import {xsd} from '../ontologies/xsd-named.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {NodeSet} from '../collections/NodeSet.js';
-import {rdf} from '../ontologies/rdf.js';
+import {rdf} from '../ontologies/rdf-named.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ForwardReasoning} from '../utils/ForwardReasoning.js';
 import {getShapeClass,getShapeOrSubShape} from '../utils/ShapeClass.js';
 import {ShapeValuesSet} from '../collections/ShapeValuesSet.js';
-import {rdfs} from '../ontologies/rdfs.js';
-import { lincd } from '../ontologies/lincd.js';
+import {rdfs} from '../ontologies/rdfs-named.js';
+import {lincd} from '../ontologies/lincd-named.js';
 import { URI } from '../utils/URI.js';
+import {NodeReferenceValue,toNamedNode,toNodeReference} from '../utils/NodeReference.js';
 
 export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
+
+type PropertyPathInput = string | NodeReferenceValue;
+type PropertyPathInputList = PropertyPathInput | PropertyPathInput[];
+
+const normalizePathInput = (
+  value: PropertyPathInputList,
+): NodeReferenceValue[] => {
+  const entries = Array.isArray(value) ? value : [value];
+  return entries.map((entry) => toNodeReference(entry));
+};
+
+const normalizeNamedNodePath = (
+  value: PropertyPathInputList,
+): NamedNode[] => {
+  return normalizePathInput(value).map((entry) => toNamedNode(entry));
+};
 
 export class SHACL_Shape extends Shape
 {
@@ -79,9 +96,9 @@ export class NodeShape extends SHACL_Shape
     return this.getOne(shacl.targetClass) as NamedNode;
   }
 
-  set targetClass(value)
+  set targetClass(value: NamedNode | NodeReferenceValue | string)
   {
-    this.overwrite(shacl.targetClass,value);
+    this.overwrite(shacl.targetClass, toNamedNode(value));
   }
 
   get properties()
@@ -273,9 +290,9 @@ export class PropertyShape extends SHACL_Shape
     return this.getOne(shacl.class) as NamedNode;
   }
 
-  set class(value: NamedNode)
+  set class(value: NamedNode | NodeReferenceValue | string)
   {
-    this.overwrite(shacl.class,value);
+    this.overwrite(shacl.class, toNamedNode(value));
   }
 
   /**
@@ -305,9 +322,9 @@ export class PropertyShape extends SHACL_Shape
     return this.getOne(shacl.nodeKind) as NamedNode;
   }
 
-  set nodeKind(value: NamedNode)
+  set nodeKind(value: NamedNode | NodeReferenceValue | string)
   {
-    this.overwrite(shacl.nodeKind,value);
+    this.overwrite(shacl.nodeKind, toNamedNode(value));
   }
 
   get datatype(): NamedNode
@@ -315,9 +332,9 @@ export class PropertyShape extends SHACL_Shape
     return this.getOne(shacl.datatype) as NamedNode;
   }
 
-  set datatype(value: NamedNode)
+  set datatype(value: NamedNode | NodeReferenceValue | string)
   {
-    this.overwrite(shacl.datatype,value);
+    this.overwrite(shacl.datatype, toNamedNode(value));
   }
 
   get maxCount(): number
@@ -362,22 +379,24 @@ export class PropertyShape extends SHACL_Shape
     this.overwrite(shacl.description,new Literal(value));
   }
 
-  get path(): NamedNode | NamedNode[]
+  get path(): NodeReferenceValue | NodeReferenceValue[]
   {
-    let propertyPath = this.getAll(shacl.path);
-    if (propertyPath.size === 1)
+    const propertyPath = this.getAll(shacl.path);
+    const refs = [...propertyPath].map((node) => toNodeReference(node.id));
+    return refs.length === 1 ? refs[0] : refs;
+  }
+
+  set path(value: PropertyPathInputList)
+  {
+    const namedNodes = normalizeNamedNodePath(value);
+    if (namedNodes.length === 1)
     {
-      return propertyPath.first() as NamedNode;
+      this.overwrite(shacl.path, namedNodes[0]);
     }
     else
     {
-      return [...propertyPath] as NamedNode[];
+      this.moverwrite(shacl.path, namedNodes);
     }
-  }
-
-  set path(value: NamedNode | NamedNode[])
-  {
-    (value instanceof NamedNode) ? this.overwrite(shacl.path,value) : this.moverwrite(shacl.path,value);
   }
 
   //@TODO: property decorators should support properties that hold List values
@@ -416,15 +435,10 @@ export class PropertyShape extends SHACL_Shape
    */
   getOntologyEntities(): NodeSet<NamedNode>
   {
-    let pathNodes: NamedNode[];
-    if (this.path instanceof NamedNode)
-    {
-      pathNodes = [this.path];
-    }
-    else
-    {
-      pathNodes = this.path;
-    }
+    const pathValue = this.path;
+    const pathNodes = (Array.isArray(pathValue) ? pathValue : [pathValue]).map(
+      (path) => toNamedNode(path),
+    );
     //start with values of those properties that have a NamedNode as value
     const entities = new NodeSet<NamedNode>(
       [this.class,...pathNodes,this.datatype].filter((value) => value && true),
@@ -445,20 +459,14 @@ export class PropertyShape extends SHACL_Shape
   resolveFor(node: NamedNode)
   {
     //TODO: support more complex property paths
-    let path = this.path;
-    if (path instanceof NamedNode)
+    const pathValue = this.path;
+    const pathEntries = Array.isArray(pathValue) ? pathValue : [pathValue];
+    let target: NamedNode | NodeSet = node;
+    for (const prop of pathEntries)
     {
-      return node.getAll(path);
+      target = target.getAll(toNamedNode(prop));
     }
-    else
-    {
-      let target: NamedNode | NodeSet = node;
-      for (let prop of path)
-      {
-        target = target.getAll(prop);
-      }
-      return target;
-    }
+    return target;
   }
 
   protected _validateNode(
@@ -476,21 +484,14 @@ export class PropertyShape extends SHACL_Shape
     SHACL_Shape.validating.add(validationKey);
     
     try {
-      const path = this.path;
-    let values;
-    if (path instanceof NamedNode)
+      const pathValue = this.path;
+    const pathEntries = Array.isArray(pathValue) ? pathValue : [pathValue];
+    let target: NamedNode | NodeSet = node;
+    for (const prop of pathEntries)
     {
-      values = node.getAll(path);
+      target = target.getAll(toNamedNode(prop));
     }
-    else
-    {
-      let target: NamedNode | NodeSet = node;
-      for (let prop of path)
-      {
-        target = target.getAll(prop);
-      }
-      values = target;
-    }
+    const values = target as NodeSet;
     //validate shacl:class
     if (this.class)
     {
@@ -632,7 +633,7 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
   /**
    * Each literal value of this property must use this datatype
    */
-  datatype?: NamedNode;
+  datatype?: NodeReferenceValue | string;
   /**
    * Each value of the property must occur in this set
    */
@@ -644,7 +645,7 @@ export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
   /**
    * Each value of this property must have this class as its rdf:type
    */
-  class?: NamedNode;
+  class?: NodeReferenceValue | string;
   /**
    * The shape that values of this property path need to confirm to.
    * You need to provide a class that extends Shape.
@@ -661,7 +662,7 @@ export interface PropertyShapeConfig {
    *
    * Provide a NamedNode that has is a `rdf:Property`
    */
-  path: NamedNode | NamedNode[];
+  path: PropertyPathInputList;
 
   /**
    * Indicates that this property must exist.
@@ -694,12 +695,12 @@ export interface PropertyShapeConfig {
    * Values of the configured property must equal the values of this 'equals' property.
    * Provide a NamedNode with rdf:type rdf:Property
    */
-  equals?: NamedNode;
+  equals?: NodeReferenceValue | string;
   /**
    * Values of the configured property must differ from the values of this 'disjoint' property
    * Provide a NamedNode with rdf:type rdf:Property
    */
-  disjoint?: NamedNode;
+  disjoint?: NodeReferenceValue | string;
   /**
    * At least one value of this property must equal the given Node
    */
@@ -713,7 +714,7 @@ export interface PropertyShapeConfig {
    * should correlate to the given datatype or class
    * i.e. if class = foaf.Person you should provide a NamedNode with rdf.type foaf.Person or a Shape instance that has targetClass foaf.Person
    */
-  defaultValue?: string | number | Node | Shape;
+  defaultValue?: string | number | Node | Shape | NodeReferenceValue;
   /**
    * Each value of the property must occur in this set
    */
@@ -722,7 +723,7 @@ export interface PropertyShapeConfig {
   /**
    * Values of the configured property path are sorted by the values of this property path.
    */
-  sortBy?: NamedNode | NamedNode[];
+  sortBy?: PropertyPathInputList;
 }
 
 export interface ParameterConfig {
@@ -1067,22 +1068,24 @@ export class ValidationResult extends Shape
     path: shacl.resultPath,
     maxCount: 1,
   })
-  get resultPath(): NamedNode | NamedNode[]
+  get resultPath(): NodeReferenceValue | NodeReferenceValue[]
   {
-    let propertyPath = this.getAll(shacl.resultPath);
-    if (propertyPath.size === 1)
+    const propertyPath = this.getAll(shacl.resultPath);
+    const refs = [...propertyPath].map((node) => toNodeReference(node.id));
+    return refs.length === 1 ? refs[0] : refs;
+  }
+
+  set resultPath(value: PropertyPathInputList)
+  {
+    const namedNodes = normalizeNamedNodePath(value);
+    if (namedNodes.length === 1)
     {
-      return propertyPath.first() as NamedNode;
+      this.overwrite(shacl.resultPath,namedNodes[0]);
     }
     else
     {
-      return [...propertyPath] as NamedNode[];
+      this.moverwrite(shacl.resultPath,namedNodes);
     }
-  }
-
-  set resultPath(value: NamedNode | NamedNode[])
-  {
-    (value instanceof NamedNode) ? this.overwrite(shacl.resultPath,value) : this.moverwrite(shacl.resultPath,value);
   }
 
   @objectProperty({
@@ -1134,28 +1137,22 @@ export class ValidationResult extends Shape
     validationResult.resultSeverity = shacl.Violation;
     validationResult.resultPath = propertyShape.path;
 
-    let path = propertyShape.path;
-    let values;
-    if (path instanceof NamedNode)
+    const pathValue = propertyShape.path;
+    const pathEntries = Array.isArray(pathValue) ? pathValue : [pathValue];
+    let values: NodeSet | NamedNode | null = focusNode;
+    if (pathEntries.length === 0)
     {
-      values = focusNode instanceof NamedNode ? focusNode.getAll(path) : null;
+      values = new NodeSet();
     }
     else
     {
-      if(path.length === 0)
+      for (const prop of pathEntries)
       {
-        values = [];
-      }
-      else
-      {
-        values = focusNode;
-        for (let prop of path)
-        {
-          values = values.getAll(prop);
-        }
+        values = values.getAll(toNamedNode(prop));
       }
     }
-    for (let value of values)
+    const valuesSet = (values || new NodeSet()) as NodeSet;
+    for (let value of valuesSet)
     {
       //validate shacl:class
       if (propertyShape.class)
@@ -1217,12 +1214,12 @@ export class ValidationResult extends Shape
     //validate shacl:minCount
     if (propertyShape.minCount)
     {
-      if (values.size < propertyShape.minCount)
+      if (valuesSet.size < propertyShape.minCount)
       {
         validationResult.message = `Minimum ${
           propertyShape.minCount
         } values required for ${propertyShape.path.toString()}. But only ${
-          values.size
+          valuesSet.size
         } values were found`;
         validationResult.sourceConstraintComponent =
           shacl.MinLengthConstraintComponent;
@@ -1232,12 +1229,12 @@ export class ValidationResult extends Shape
     //validate shacl:maxCount
     if (propertyShape.maxCount)
     {
-      if (values.size > propertyShape.maxCount)
+      if (valuesSet.size > propertyShape.maxCount)
       {
         validationResult.message = `Maximum ${
           propertyShape.maxCount
         } values allowed for  ${propertyShape.path.toString()}. But ${
-          values.size
+          valuesSet.size
         } values were found`;
         validationResult.sourceConstraintComponent =
           shacl.MaxLengthConstraintComponent;
@@ -1255,13 +1252,12 @@ export class ValidationResult extends Shape
     // }
     let resultPathStr = '';
     let resultPath = this.resultPath;
-    if (resultPath instanceof NamedNode)
+    if (resultPath)
     {
-      resultPathStr = resultPath.uri;
-    }
-    else
-    {
-      resultPathStr = resultPath.map((path) => path.uri).join(' -> ');
+      const resultPathEntries = Array.isArray(resultPath)
+        ? resultPath
+        : [resultPath];
+      resultPathStr = resultPathEntries.map((path) => path.id).join(' -> ');
     }
     if (this.focusNode)
     {
@@ -1277,7 +1273,7 @@ export class ValidationResult extends Shape
     }
     if (this.sourceConstraintComponent)
     {
-      result += '\tConstraint:\t' + this.sourceConstraintComponent.uri + '\n';
+      result += '\tConstraint:\t' + this.sourceConstraintComponent.id + '\n';
     }
     if (this.message)
     {
@@ -1285,7 +1281,7 @@ export class ValidationResult extends Shape
     }
     if (this.resultSeverity)
     {
-      result += '\tSeverity:\t' + this.resultSeverity.uri + '\n';
+      result += '\tSeverity:\t' + this.resultSeverity.id + '\n';
     }
     return result;
   }
@@ -1410,12 +1406,18 @@ export class ValidationReport extends Shape
 
   static printForShapeInstances(shape: typeof Shape)
   {
-    let potentialNodes = shape.targetClass.getAllInverse(rdf.type);
+    const targetClass = shape.targetClass ? toNamedNode(shape.targetClass) : null;
+    if (!targetClass)
+    {
+      console.log(`Shape ${shape.name} does not define a targetClass.`);
+      return;
+    }
+    let potentialNodes = targetClass.getAllInverse(rdf.type);
     console.log(
       'Checking ' +
       potentialNodes.size +
       ' instances of ' +
-      shape.targetClass.uri,
+      targetClass.id,
     );
     let allConfirm = true;
     potentialNodes.forEach((node) => {
@@ -1497,4 +1499,3 @@ export const addNodeShapeCallback = (nodeShape: NamedNode, callback: (shape: Nod
 //   },
 //   'type',
 // ));
-

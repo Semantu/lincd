@@ -30,7 +30,7 @@ class QueryCaptureStore implements IQueryParser {
   }
 
   async updateQuery<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
-    id: string | {id: string} | {uri: string},
+    id: string | NodeReferenceValue,
     updateObjectOrFn: U,
     shapeClass: typeof Shape,
   ): Promise<AddId<U>> {
@@ -573,5 +573,13 @@ describe('8. CRUD Operations (Create, Update, Delete)', () => {
     const query = await captureQuery(() => queryFactories.updateBirthDate());
 
     expect(query?.type).toBe('update');
+  });
+});
+
+describe('8. NodeReferenceValue', () => {
+  test('property paths normalize to NodeReferenceValue', () => {
+    const property = Person.shape.getPropertyShape('name');
+    expect(property).toBeDefined();
+    expect(property?.path).toEqual({id: 'name'});
   });
 });

@@ -1,15 +1,15 @@
+import {NodeReferenceValue} from '../utils/NodeReference.js';
 import {createNameSpace} from '../utils/NameSpace.js';
-import {NamedNode} from '../models.js';
 import {Prefix} from '../utils/Prefix.js';
 
-let base = 'http://purl.org/on/npm/';
-export var ns = createNameSpace(base);
+const base = 'http://purl.org/on/npm/';
+export const ns = createNameSpace(base);
 Prefix.add('npm', base);
 
-var packageName: NamedNode = ns('packageName');
-var version: NamedNode = ns('version');
+const packageName: NodeReferenceValue = ns('packageName');
+const version: NodeReferenceValue = ns('version');
 
-export var npm = {
+export const npm = {
   version,
   packageName,
 };

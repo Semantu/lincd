@@ -116,7 +116,7 @@ export class MutationQueryFactory extends QueryFactory {
       let propShape = props.find((p) => p.label === key);
       if (!propShape) {
         throw Error(
-          `Invalid property key: ${key}. The shape ${shape.label || shape.uri.split('/').pop()} does not have a registered property with this name. Make sure the get/set method exists, and that it uses a @objectProperty or @literalProperty decorator.`,
+          `Invalid property key: ${key}. The shape ${shape.label || shape.id.split('/').pop()} does not have a registered property with this name. Make sure the get/set method exists, and that it uses a @objectProperty or @literalProperty decorator.`,
         );
       } else {
         fields.push(this.createNodePropertyValue(obj[key], propShape));

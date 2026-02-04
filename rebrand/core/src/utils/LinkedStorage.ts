@@ -15,7 +15,7 @@ import {SelectQuery} from '../queries/SelectQuery.js';
 import {LinkedDataRequest} from './TraceShape.js';
 import {UpdateQuery} from '../queries/UpdateQuery.js';
 import {UpdatePartial} from '../queries/QueryFactory.js';
-import {rdf} from '../ontologies/rdf.js';
+import {rdf} from '../ontologies/rdf-named.js';
 import nextTick from 'next-tick';
 import {CreateQuery} from '../queries/CreateQuery.js';
 import {QueryParser} from '../queries/QueryParser.js';
@@ -1108,10 +1108,8 @@ export abstract class LinkedStorage {
       this.propShapeMap = new Map();
       PropertyShape.getLocalInstances().forEach((propertyShape) => {
         let path = propertyShape.path;
-        let pathString =
-          path instanceof NamedNode
-            ? path.uri
-            : path.map((p) => p.uri).join(',');
+        const pathEntries = Array.isArray(path) ? path : [path];
+        const pathString = pathEntries.map((p) => p.id).join(',');
         if (!this.propShapeMap.has(pathString)) {
           this.propShapeMap.set(pathString, []);
         }

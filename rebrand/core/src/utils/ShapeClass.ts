@@ -2,7 +2,14 @@ import {NamedNode} from '../models.js';
 import {Shape} from '../shapes/Shape.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';
-import {rdf} from '../ontologies/rdf.js';
+import {rdf} from '../ontologies/rdf-named.js';
+import {NodeReferenceValue,toNamedNode} from './NodeReference.js';
+
+const resolveTargetClass = (
+  targetClass?: NamedNode | NodeReferenceValue | null,
+): NamedNode | null => {
+  return targetClass ? toNamedNode(targetClass) : null;
+};
 
 let subShapesSpecificityCache: Map<string, (typeof Shape)[][]> = new Map();
 let subShapesCache: Map<string, (typeof Shape)[]> = new Map();
@@ -299,9 +306,10 @@ export function getMostSpecificShapesByType(
   node: NamedNode,
   baseShape: typeof Shape | (typeof Shape)[] = Shape,
 ): (typeof Shape)[] {
-  return _getMostSpecificShapes(baseShape, (subShape) =>
-    node.has(rdf.type, subShape.targetClass),
-  );
+  return _getMostSpecificShapes(baseShape, (subShape) => {
+    const targetClass = resolveTargetClass(subShape.targetClass);
+    return targetClass ? node.has(rdf.type, targetClass) : false;
+  });
 }
 
 function getKey(shape: typeof Shape | (typeof Shape)[]) {
@@ -313,7 +321,7 @@ function getKey(shape: typeof Shape | (typeof Shape)[]) {
 function getShapeKey(shape: typeof Shape) {
   //return a unique string for each shape
   return (
-    shape.targetClass?.uri ||
+    resolveTargetClass(shape.targetClass)?.id ||
     shape.name + shape.prototype.constructor.toString().substring(0, 80)
   );
 }

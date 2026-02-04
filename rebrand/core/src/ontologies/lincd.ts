@@ -1,25 +1,25 @@
-import {NamedNode} from '../models.js';
+import {NodeReferenceValue} from '../utils/NodeReference.js';
 import {createNameSpace} from '../utils/NameSpace.js';
 import {Prefix} from '../utils/Prefix.js';
 
-export var ns = createNameSpace('https://purl.org/on/lincd/');
-export var _self: NamedNode = ns('');
-Prefix.add('lincd', _self.uri);
+export const ns = createNameSpace('https://purl.org/on/lincd/');
+export const _self: NodeReferenceValue = ns('');
+Prefix.add('lincd', _self.id);
 
-var Module: NamedNode = ns('Module');
-var ShapeClass: NamedNode = ns('ShapeClass');
-var definesShape: NamedNode = ns('definesShape');
-var module: NamedNode = ns('module');
-var usesShapeClass: NamedNode = ns('usesShapeClass');
-var editInline: NamedNode = ns('editInline');
-var isExtending: NamedNode = ns('isExtending');
+const Module = ns('Module');
+const ShapeClass = ns('ShapeClass');
+const definesShape = ns('definesShape');
+const moduleProperty = ns('module');
+const usesShapeClass = ns('usesShapeClass');
+const editInline = ns('editInline');
+const isExtending = ns('isExtending');
 
-export var lincd = {
+export const lincd = {
   Module,
   ShapeClass,
   definesShape,
-  module,
+  module: moduleProperty,
   usesShapeClass,
   editInline,
-  isExtending
+  isExtending,
 };

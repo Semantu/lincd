@@ -1,6 +1,6 @@
-import {rdf} from '../ontologies/rdf.js';
-import {rdfs} from '../ontologies/rdfs.js';
-import {owl} from '../ontologies/owl.js';
+import {rdf} from '../ontologies/rdf-named.js';
+import {rdfs} from '../ontologies/rdfs-named.js';
+import {owl} from '../ontologies/owl-named.js';
 import {NamedNode} from '../models.js';
 
 export class ForwardReasoning {

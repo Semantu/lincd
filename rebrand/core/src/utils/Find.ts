@@ -5,8 +5,8 @@
  */
 import {NodeSet} from '../collections/NodeSet.js';
 import {NamedNode,Node,Quad} from '../models.js';
-import {rdf} from '../ontologies/rdf.js';
-import {rdfs} from '../ontologies/rdfs.js';
+import {rdf} from '../ontologies/rdf-named.js';
+import {rdfs} from '../ontologies/rdfs-named.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {URI} from './URI.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';

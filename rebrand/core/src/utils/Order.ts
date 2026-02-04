@@ -5,7 +5,7 @@
  */
 import {NodeSet} from '../collections/NodeSet.js';
 import {NamedNode,Node} from '../models.js';
-import {rdfs} from '../ontologies/rdfs.js';
+import {rdfs} from '../ontologies/rdfs-named.js';
 
 export class Order {
   static propertiesByDepth(properties: NodeSet<NamedNode>): NodeSet<NamedNode> {

@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 import {NodeSet} from '../collections/NodeSet.js';
-import {rdf} from '../ontologies/rdf.js';
+import {rdf} from '../ontologies/rdf-named.js';
 import {BlankNode,NamedNode,Node} from '../models.js';
 import {Shape} from './Shape.js';
 

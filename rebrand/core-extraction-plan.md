@@ -88,6 +88,7 @@ These are the resolved design decisions for how `@_linked/core` handles the tran
 - **Copy baseline:** Copy the entire root `src/` into `rebrand/core/src/` first, then prune later.
 - **Reporting rule:** After every run, report back with: what was done, any problems encountered, changes made that were not in the plan, and how the work was validated (including explicit test results like # passed/# failed and what was tested).
 - **Phase commit rule:** After each phase, commit your changes and update this plan to indicate progress. If you later need to revert changes, either commit on top or reset to a previous commit if more applicable.
+- **Single-commit rule:** One commit per phase/sub-step. Update this plan to mark completion *before* committing so the work + plan change are in the same commit.
 - **Validation rule:** Every phase or sub-step must be validated. For test-related steps, validation requires at least the relevant tests to pass (e.g., Sub-step 1.2 requires the single query test to pass).
 - **Next-step rule:** In each report, briefly state what the next step entails and include the exact title of the next sub-step.
 
@@ -230,13 +231,13 @@ Reintroduce `preloadFor` without React dependencies by using a generic component
 
 This is the core transformation. Replace `NamedNode` usage across the codebase with `NodeReferenceValue = {id: string}`. This phase is broken into small sub-steps. After **each** sub-step: verify build compiles, tests pass, and type inference is intact.
 
-**Sub-step 3.1 — Introduce NodeReferenceValue as the canonical type.**
+**Sub-step 3.1 — Introduce NodeReferenceValue as the canonical type.** ✅ Done
 Export `NodeReferenceValue` from a central location (it already exists in `QueryFactory.ts`). Add `toNodeReference()` helper. These coexist with `NamedNode` temporarily.
 
-**Sub-step 3.2 — Convert property paths in decorators/PropertyShape.**
+**Sub-step 3.2 — Convert property paths in decorators/PropertyShape.** ✅ Done
 Change `PropertyShape.path` from `NamedNode` to `NodeReferenceValue`. Update `PropertyShapeConfig` to accept `string | NodeReferenceValue`. Update `SHACL.ts` property shape creation to use `toNodeReference()`. Update tests: replace `NamedNode.getOrCreate('name')` with string or `NodeReferenceValue` literals.
 
-**Sub-step 3.3 — Convert ontology files.**
+**Sub-step 3.3 — Convert ontology files.** ✅ Done
 Replace `NamedNode` instantiation in `ontologies/*.ts` with a namespace helper function that creates `NodeReferenceValue` objects. Preserve the existing namespace pattern (`const base = '...'; const ns = (term) => ({id: base + term})`). Update all imports of ontology terms.
 
 **Sub-step 3.4 — Strip Shape.ts and replace TraceShape/TestNode with Proxy-based tracing.**

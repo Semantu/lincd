@@ -25,7 +25,7 @@ import {
 } from '../queries/SelectQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
-import {shacl} from '../ontologies/shacl.js';
+import {shacl} from '../ontologies/shacl-named.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {UpdateQuery} from '../queries/UpdateQuery.js';
 import {
@@ -38,14 +38,23 @@ import {
   UpdateNodePropertyValue,
 } from '../queries/QueryFactory.js';
 import {Literal, NamedNode} from '../models.js';
-import {xsd} from '../ontologies/xsd.js';
+import {xsd} from '../ontologies/xsd-named.js';
 import {PropertyShape, ValidationReport} from '../shapes/SHACL.js';
-import {rdf} from '../ontologies/rdf.js';
+import {rdf} from '../ontologies/rdf-named.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {CreateQuery} from '../queries/CreateQuery.js';
 import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
+import {toNamedNode} from './NodeReference.js';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
+
+const normalizePropertyPath = (
+  path: NodeReferenceValue | NodeReferenceValue[],
+): NamedNode | NamedNode[] => {
+  const entries = Array.isArray(path) ? path : [path];
+  const namedNodes = entries.map((entry) => toNamedNode(entry));
+  return namedNodes.length === 1 ? namedNodes[0] : namedNodes;
+};
 
 export type ProcessedWhereEvaluationPath = WhereEvaluationPath & {
   processedArgs: any[];
@@ -146,7 +155,7 @@ async function applyFieldUpdates(
   let plainValues = {};
   for (let field of fields) {
     let propShape = field.prop;
-    let propertyPath = propShape.path;
+    let propertyPath = normalizePropertyPath(propShape.path);
 
     if (typeof field.val === 'undefined') {
       unsetPropertyPath(subject, propertyPath);
@@ -552,7 +561,7 @@ async function convertNodeDescription(
   }
 
   await node.save();
-  plainResults['id'] = node.uri;
+  plainResults['id'] = node.id;
 
   return {
     value: node,

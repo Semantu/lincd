@@ -37,7 +37,7 @@ export class QueryParser {
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(
-    id: string | {id: string} | {uri: string},
+    id: string | NodeReferenceValue,
     updateObjectOrFn: U,
     shapeClass: typeof Shape,
   ): Promise<AddId<U>> {

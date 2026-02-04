@@ -2,6 +2,7 @@ import {LinkedQuery} from './SelectQuery.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {Shape} from '../shapes/Shape.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
+import {NodeReferenceValue} from '../utils/NodeReference.js';
 
 export type Prettify<T> = T extends infer R
   ? {
@@ -224,8 +225,9 @@ export type UpdateNodePropertyValue = {
   prop: PropertyShape;
   val: PropUpdateValue;
 };
-export type NodeReferenceValue = {id: string};
 export type ShapeReferenceValue = {id: string; shape: NodeReferenceValue};
+export {toNodeReference} from '../utils/NodeReference.js';
+export type {NodeReferenceValue};
 
 export abstract class QueryFactory {
   getQueryObject(): LinkedQuery | Promise<LinkedQuery> {

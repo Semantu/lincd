@@ -2,13 +2,12 @@ import {Shape,ShapeType} from '../shapes/Shape.js';
 import {TestNode} from '../utils/TraceShape.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {shacl} from '../ontologies/shacl.js';
+import {shacl} from '../ontologies/shacl-named.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {getPropertyShapeByLabel,getShapeClass} from '../utils/ShapeClass.js';
 import {NodeReferenceValue,Prettify,QueryFactory,ShapeReferenceValue} from './QueryFactory.js';
-import {xsd} from '../ontologies/xsd.js';
-import {NamedNode} from '../models.js';
+import {xsd} from '../ontologies/xsd-named.js';
 
 /**
  * ###################################
@@ -186,8 +185,8 @@ export type ToQueryBuilderObject<
             : AT extends boolean
               ? QueryBoolean
               : AT[]
-          : //added support for get/set methods that return NamedNodes, treating them as plain Shapes
-            T extends NamedNode
+          : //added support for get/set methods that return NodeReferenceValue, treating them as plain Shapes
+            T extends NodeReferenceValue
             ? QShape<Shape, Source, Property>
             : QueryBuilderObject<T, Source, Property>;
 
@@ -676,7 +675,7 @@ export class QueryBuilderObject<
         subject.getOriginalValue().nodeShape.label +
           '.' +
           property.label +
-          ': A property accessor should return a Shape or a primitive value. Returning a NamedNode is currently not supported.',
+          ': A property accessor should return a Shape or a primitive value. Returning a NodeReferenceValue is currently not supported.',
       );
     } else {
       throw new Error('Unknown query path result type: ' + originalValue);
@@ -941,7 +940,7 @@ const convertQueryContext = (shape: QueryShape): ShapeReferenceValue => {
   return {
     id: (shape.originalValue.node as TestNode).targetID,
     shape: {
-      id: shape.originalValue.nodeShape.uri,
+      id: shape.originalValue.nodeShape.id,
     },
   } as ShapeReferenceValue;
 };
@@ -1224,7 +1223,7 @@ export class QueryShape<
     return (
       (this.originalValue.node as TestNode)?.targetID ||
       this.originalValue['id'] ||
-      this.originalValue.uri
+      this.originalValue.node?.id
     );
   }
 
@@ -1687,7 +1686,12 @@ export class SelectQueryFactory<
         shape: this.shape,
         sortBy: this.getSortByPath(),
         //the query is selecting a single result if it explicitly requested it, or if the subject is a specific subject (with a URI or ID)
-        singleResult: this.singleResult || !!(this.subject && ('uri' in (this.subject as S) || ('id' in (this.subject as QResult<S>)))),
+        singleResult:
+          this.singleResult ||
+          !!(
+            this.subject &&
+            ('id' in (this.subject as S) || 'id' in (this.subject as QResult<S>))
+          ),
       } as SelectQuery<S>;
 
       if (this.wherePath) {

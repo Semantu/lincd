@@ -1,25 +1,24 @@
 import {linkedShape} from '../package';
 import {literalProperty, objectProperty} from '../shapes/SHACL';
 import {Shape} from '../shapes/Shape';
-import {NamedNode} from '../models';
 import {xsd} from '../ontologies/xsd';
 import {ShapeSet} from '../collections/ShapeSet';
 import {getQueryContext} from '../queries/QueryContext';
-import {UpdatePartial} from '../queries/QueryFactory';
+import {NodeReferenceValue, UpdatePartial} from '../queries/QueryFactory';
 
-export const name = NamedNode.getOrCreate('name');
-export const hobby = NamedNode.getOrCreate('hobby');
-export const nickName = NamedNode.getOrCreate('nickName');
-export const bestFriend = NamedNode.getOrCreate('bestFriend');
-export const hasFriend = NamedNode.getOrCreate('hasFriend');
-export const birthDate = NamedNode.getOrCreate('birthDate');
-export const isRealPerson = NamedNode.getOrCreate('isRealPerson');
-export const hasPet = NamedNode.getOrCreate('hasPet');
-export const guardDogLevel = NamedNode.getOrCreate('guardDogLevel');
-export const pluralTestProp = NamedNode.getOrCreate('pluralTestProp');
-export const personClass = NamedNode.getOrCreate('http://example.com/Person');
-export const petClass = NamedNode.getOrCreate('http://example.com/Pet');
-export const dogClass = NamedNode.getOrCreate('http://example.com/Dog');
+export const name = 'name';
+export const hobby = 'hobby';
+export const nickName = 'nickName';
+export const bestFriend = 'bestFriend';
+export const hasFriend = 'hasFriend';
+export const birthDate = 'birthDate';
+export const isRealPerson = 'isRealPerson';
+export const hasPet = 'hasPet';
+export const guardDogLevel = 'guardDogLevel';
+export const pluralTestProp = 'pluralTestProp';
+export const personClass: NodeReferenceValue = {id: 'http://example.com/Person'};
+export const petClass: NodeReferenceValue = {id: 'http://example.com/Pet'};
+export const dogClass: NodeReferenceValue = {id: 'http://example.com/Dog'};
 
 @linkedShape
 export class Pet extends Shape {

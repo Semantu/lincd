@@ -3,26 +3,28 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {NamedNode} from '../models.js';
+import {NodeReferenceValue} from '../utils/NodeReference.js';
 import {Prefix} from '../utils/Prefix.js';
 
-var base: string = 'http://www.w3.org/2001/XMLSchema#';
-export var _ontologyResource: NamedNode = NamedNode.getOrCreate(base);
+const base = 'http://www.w3.org/2001/XMLSchema#';
+export const ns = (term: string): NodeReferenceValue => ({id: base + term});
+
+export const _ontologyResource = ns('');
 Prefix.add('xsd', base);
 
-var string: NamedNode = NamedNode.getOrCreate(base + 'string');
-var boolean: NamedNode = NamedNode.getOrCreate(base + 'boolean');
-var date: NamedNode = NamedNode.getOrCreate(base + 'date');
-var integer: NamedNode = NamedNode.getOrCreate(base + 'integer');
-var float: NamedNode = NamedNode.getOrCreate(base + 'float');
-var double: NamedNode = NamedNode.getOrCreate(base + 'double');
-var time: NamedNode = NamedNode.getOrCreate(base + 'time');
-var duration: NamedNode = NamedNode.getOrCreate(base + 'duration');
-var decimal: NamedNode = NamedNode.getOrCreate(base + 'decimal');
-var gYear: NamedNode = NamedNode.getOrCreate(base + 'gYear');
-var Bytes: NamedNode = NamedNode.getOrCreate(base + 'Bytes');
-var long: NamedNode = NamedNode.getOrCreate(base + 'long');
-var dateTime: NamedNode = NamedNode.getOrCreate(base + 'dateTime');
+const string = ns('string');
+const boolean = ns('boolean');
+const date = ns('date');
+const integer = ns('integer');
+const float = ns('float');
+const double = ns('double');
+const time = ns('time');
+const duration = ns('duration');
+const decimal = ns('decimal');
+const gYear = ns('gYear');
+const Bytes = ns('Bytes');
+const long = ns('long');
+const dateTime = ns('dateTime');
 
 //not yet required by core so why define it?
 //export var boolean:NamedNode = nodes.getOrCreate(base+"boolean");
