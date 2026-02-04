@@ -1,0 +1,833 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+import {defaultGraph,Literal,NamedNode,Quad} from '../models.js';
+import {
+  getAndClearCallbacks,
+  getNodeShapeUri,
+  LINCD_DATA_ROOT,
+  NodeShape,
+  PropertyShape,
+  ValidationReport,
+  ValidationResult,
+} from '../shapes/SHACL.js';
+import {Shape} from '../shapes/Shape.js';
+import {Prefix} from './Prefix.js';
+import {CoreSet} from '../collections/CoreSet.js';
+import {lincd as lincdOntology} from '../ontologies/lincd.js';
+import {npm} from '../ontologies/npm.js';
+import {rdf} from '../ontologies/rdf.js';
+import {URI} from './URI.js';
+import {addNodeShapeToShapeClass,getShapeClass} from './ShapeClass.js';
+import {
+  Component,
+  createLinkedComponentFn,
+  createLinkedSetComponentFn,
+  LinkedComponentFactoryFn,
+  LinkedSetComponentFactoryFn,
+} from '../utils/LinkedComponent.js';
+import {shacl} from '../ontologies/shacl.js';
+import {rdfs} from '../ontologies/rdfs.js';
+import {xsd} from '../ontologies/xsd.js';
+import { createPropertyShape } from '../shapes/SHACL.js';
+
+//global tree
+declare var lincd: any;
+declare var window;
+declare var global;
+
+
+// var packageParsePromises: Map<string,Promise<any>> = new Map();
+// var loadedPackages: Set<NamedNode> = new Set();
+let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
+let ontologies: Set<any> = new Set();
+let _autoLoadOntologyData = false;
+/**
+ * a map of requested property shapes for specific nodes
+ * The value is a promise if it's still loading, or true if it is fully loaded
+ */
+// type ClassDecorator = <T extends {new (...args: any[]): {}}>(
+//   constructor: T,
+// ) => T;
+
+export type ShapeConfig = {
+  /**
+   * A short description of the shape, what it represents and what it is used for.
+   * will be stored as rdfs:comment on the shape node
+   */
+  description?: string;
+};
+
+/**
+ * This object, returned by [linkedPackage()](/docs/lincd.js/modules/utils_Module#linkedPackage),
+ * contains the decorators to link different parts of a LINCD module.
+ */
+export interface LinkedPackageObject
+{
+  /**
+   * Class decorator that links a class-based component to its shape.
+   * Once linked, the component receives an extra property "sourceShape" which will be an instance of the linked Shape.
+   *
+   * Note that your class needs to extend [LinkedComponentClass](/docs/lincd.js/classes/utils_LinkedComponentClass.LinkedComponentClass), which extends React.Component.
+   * And you will need to provide the same Shape class that you use as a parameter for the decorator as a type generic to LinkedComponentClass (see example).
+   * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
+   *
+   * @example
+   * Linked component class example:
+   * ```tsx
+   * import {React} from "react";
+   * import {linkedComponentClass} from "../package";
+   * import {LinkedComponentClass} from "lincd/utils/ComponentClass";
+   * @linkedComponentClass(Person)
+   * export class PersonView extends LinkedComponentClass<Person> {
+   *   render() {
+   *     //typescript knows that person is of type Person
+   *     let person = this.props.sourceShape;
+   *
+   *     //get the name of the person from the graph
+   *     return <h1>Hello {person.name}!</h1>;
+   *   }
+   * }
+   * ```
+   */
+  // linkedComponentClass: <ShapeType extends Shape, P = {}>(
+  //   shapeClass: typeof Shape,
+  // ) => ClassDecorator;
+  /**
+   * Links a typescript class to a SHACL shape.
+   * This decorator creates a SHACL shape and looks at the static property [targetClass](/docs/lincd.js/classes/shapes_Shape.Shape#targetclass)
+   * The rest of the shape is typically 'shaped' by methods that use [property decorators](/docs/lincd.js/modules/utils_ShapeDecorators).
+   *
+   * @example
+   * Example of a typescript class using the \@linkedShape decorator:
+   * ```tsx
+   * @linkedShape
+   * export class Person extends Shape { ... }
+   * ```
+   * Or with options:
+   * ```tsx
+   * @linkedShape({ description: "..." })
+   * export class Person extends Shape { ... }
+   * ```
+   */
+  linkedShape: {
+    <T extends typeof Shape>(constructor: T): void;
+    <T extends typeof Shape>(config?: ShapeConfig): (constructor: T) => void;
+  };
+  /**
+   * Use this decorator to make any other classes or functions available on demand to other LINCD modules.
+   * It does not change the object it is applied on.
+   * This is specifically required for their use in an open-ended LINCD application.
+   *
+   * @example
+   * An example helper utility using the \@linkedUtil decorator:
+   * ```tsx
+   * @linkedUtil
+   * export class Sort {
+   *   static byName(persons:Person[]) {
+   *     return persons.sort((p1,p2) => p1.name < p2.name ? -1 : 1)
+   *   }
+   * ```
+   */
+  linkedUtil: (constructor: any) => any;
+  /**
+   * Used to notify LINCD.js of an ontology.
+   * See also the [Ontology guides](/docs/guides/linked-code/ontologies).
+   *
+   * @param allFileExports - all the objects that are exported by the ontology file (use `import * as _this from "./path-to-this-file")`)
+   * @param nameSpace - the result of [createNameSpace](/docs/lincd.js/modules/utils_NameSpace#createnamespace). This allows consumers to generate NamedNodes that may not be listed in this ontology if needed
+   * @param prefixAndFileName - a suggested prefix chosen by you. Make sure the suggestedPrefix matches the file name and the name of the exported object that groups all entities together
+   * @param loadDataFunction - a method that loads _and parses_ the raw ontology data. This means the ontology will be loaded into the local graph. The returned result is mostly a JSONLDParsePromise (from lincd-jsonld/JSONLD, not bundled in LINCD.js)
+   * @param dataSource - the relative path to the raw data of the ontology
+   * @example
+   * Example of an Ontology File that used linkedOntology()
+   * ```tsx
+   * import {NamedNode} from 'lincd/models';
+   * import {JSONLD} from 'lincd-jsonld/JSONLD';
+   * import {createNameSpace} from 'lincd/utils/NameSpace';
+   * import {linkedOntology} from '../package.js';
+   * import * as _this from './my.js-ontology';
+   *
+   * let dataFile = '../data/my.js-ontology.json';
+   * export var loadData = () => JSONLD.parsePromise(import(dataFile));
+   *
+   * export var ns = createNameSpace('http://www.my-ontology.com/');
+   *
+   * export var _self: NamedNode = ns('');
+   *
+   * // Classes
+   * export var ExampleClass: NamedNode = ns('ExampleClass');
+   *
+   * // Properties
+   * export var exampleProperty: NamedNode = ns('exampleProperty');
+   *
+   * export const myOntology = {
+   *   ExampleClass,
+   *   exampleProperty,
+   * };
+   *
+   * linkedOntology(_this, ns, 'myOntology', loadData, dataFile);
+   * ```
+   */
+  linkedOntology: (
+    allFileExports,
+    nameSpace: (term: string) => NamedNode,
+    suggestedPrefixAndFileName: string,
+    loadDataFunction?: () => Promise<any>,
+    dataSource?: string | string[],
+  ) => void;
+  /**
+   * Low level method used by other decorators to write to the modules' object in the LINCD tree.
+   * You should typically not need this.
+   * @param exportFileName - the file name that this exported object is available under. Needs to be unique across the module.
+   * @param exportedObject - the exported object (the class, constant, function, etc)
+   */
+  registerPackageExport: (exportedObject: any) => void;
+
+  /**
+   * A method to get a shape class in this package by its name.
+   * This is helpful to avoid circular dependencies between shapes.
+   * For example see Thing.ts which uses get image():ImageObject.
+   * ImageObject extends Things.
+   * So get image() is implemented with getOneAs(...,getPackageShape('ImageObject'))
+   * @param name
+   */
+  getPackageShape: (name: string) => typeof Shape;
+  /**
+   * A reference to the modules' object in the LINCD tree.
+   * Contains all linked components of the module.
+   */
+  packageExports: any;
+  packageName: string;
+
+  /**
+   * Links a functional component to its shape
+   * Once linked, the component receives an extra property "sourceShape" which will be an instance of the linked Shape.
+   *
+   * Note that the shape needs to be provided twice, as a type and as a value, see examples below.
+   * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
+   * @param functionalComponent - a functional rect component
+   *
+   * @example
+   * Linked Functional Component example:
+   * ```tsx
+   * import {Person} from "../shapes/Person";
+   * export const PersonView = linkedComponent<Person>(Person, ({source, sourceShape}) => {
+   *   //source is a NamedNode, and sourceShape is an instance of Person (for the same named node)
+   *   let person = sourceShape;
+   *   //get the name of the person from the graph
+   *   return <h1>Hello {person.name}!</h1>;
+   * });
+   * ```
+   */
+  linkedComponent: LinkedComponentFactoryFn;
+
+  /**
+   * Links a functional Set component to its shape
+   * Set components are components that show a set of data sources.
+   * Once linked, the component receives an extra property "sources" which will be a ShapeSet with instance of the linked Shape.
+   *
+   * Note that the shape needs to be provided twice, as a type and as a value, see examples below.
+   * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
+   * @param functionalComponent - a functional react component
+   *
+   * @example
+   * Linked Functional Set Component example:
+   * ```tsx
+   * import {Person} from "../shapes/Person";
+   * export const PersonView = linkedSetComponent<Person>(Person, ({sources}) => {
+   *   //source is a NamedNode, and sourceShape is an instance of Person (for the same named node)
+   *   let persons = sources;
+   *   //get the name of the person from the graph
+   *   return <div>{persons.map(person => <p>{person.name}</p>)}</div>;
+   * });
+   * ```
+   */
+  linkedSetComponent: LinkedSetComponentFactoryFn;
+
+  /**
+   * Register a file (a javascript module) and all its exported objects.
+   * Specifically helpful for registering multiple functional components if you declare them without a function name
+   * @param _this
+   * @param _module
+   */
+  registerPackageModule(_module): void;
+}
+
+/**
+ *  Convert some node to a prefixed format:
+ * - http://some-example.org/prop > ex:prop
+ *  */
+const prefix = (n) => Prefix.toPrefixed(n.uri);
+
+export var DEFAULT_LIMIT = 12;
+
+export function setDefaultPageLimit(limit: number)
+{
+  DEFAULT_LIMIT = limit;
+}
+
+export function autoLoadOntologyData(value: boolean)
+{
+  _autoLoadOntologyData = value;
+  //this may be set to true after some ontologies have already indexed,
+  if (_autoLoadOntologyData)
+  {
+    // so in that case we load all data of ontologies that are already indexed
+    ontologies.forEach((ontologyExport) => {
+      //see linkedOntology() where we store the data loading method under the _load key
+      if (ontologyExport['_load'])
+      {
+        ontologyExport['_load']();
+      }
+    });
+  }
+}
+
+
+export function linkedPackage(packageName: string): LinkedPackageObject
+{
+  let packageNode = NamedNode.getOrCreate(
+    `${LINCD_DATA_ROOT}module/${packageName}`,
+    true,
+  );
+  let packageNameURI = URI.sanitize(packageName);
+
+  //set certain values but don't emit change events or alteration events
+  new Quad(
+    packageNode,
+    rdf.type,
+    lincdOntology.Module,
+    defaultGraph,
+    false,
+    false,
+    false,
+  );
+  new Quad(
+    packageNode,
+    npm.packageName,
+    new Literal(packageName),
+    defaultGraph,
+    false,
+    false,
+    false,
+  );
+
+  let packageTreeObject = registerPackageInTree(packageName);
+
+  //#Create declarators for this module
+  let registerPackageExport = function(object) {
+    if (object.name in packageTreeObject)
+    {
+      console.warn(
+        `Key ${object.name} was already defined for package ${packageName}. Note that LINCD currently only supports unique names across your entire package. Overwriting ${object.name} with new value`,
+      );
+    }
+    packageTreeObject[object.name] = object;
+  };
+
+  let registerInPackageTree = function(exportName,exportedObject) {
+    packageTreeObject[exportName] = exportedObject;
+  };
+
+  function registerPackageModule(_module): void
+  {
+    for (var key in _module.exports)
+    {
+      //if the exported object itself (usually FunctionalComponents) is not named or its name is _wrappedComponent (which ends up happening in the linkedComponent method above)
+      //then we give it the same name as it's export name.
+      if (
+        !_module.exports[key].name ||
+        _module.exports[key].name === '_wrappedComponent'
+      )
+      {
+        Object.defineProperty(_module.exports[key],'name',{value: key});
+        //manual 'hack' to set the name of the original function
+        if (
+          _module.exports[key]['original'] &&
+          !_module.exports[key]['original']['name']
+        )
+        {
+          Object.defineProperty(_module.exports[key]['original'],'name',{
+            value: key + '_implementation',
+          });
+        }
+      }
+      registerInPackageTree(key,_module.exports[key]);
+    }
+  }
+
+  //create a declarator function which Components of this module can use register themselves and add themselves to the global tree
+  let linkedUtil = function(constructor) {
+    //add the component class of this module to the global tree
+    registerPackageExport(constructor);
+
+    //return the original class without modifications
+    return constructor;
+  };
+
+  //method to create a linked functional component
+  const linkedComponent = createLinkedComponentFn(
+    registerPackageExport,
+    registerComponent,
+  );
+
+  const linkedSetComponent = createLinkedSetComponentFn(
+    registerPackageExport,
+    registerComponent,
+  );
+
+  // helper that contains the previous body; applies the decorator work to a given constructor
+  function applyLinkedShape<T extends typeof Shape>(
+    constructor: T,
+    options?: ShapeConfig,
+  ): void
+  {
+    if(!constructor) {
+      throw new Error('Constructor is undefined, skipping registration: '+constructor?.toString().substring(0,100)+' '+JSON.stringify(options));
+      return;
+    }
+    // add the component class of this module to the global tree
+    registerPackageExport(constructor);
+
+    // register the component and its shape
+    Shape.registerByType(constructor);
+
+    // if no shape object has been attached to the constructor
+    if (!Object.getOwnPropertyNames(constructor).includes('shape'))
+    {
+      // create a new node shape for this shapeClass
+      let nodeShape: NodeShape = NodeShape.getFromURI(
+        getNodeShapeUri(packageName,constructor.name),
+      );
+      //small fix, for some reason sometimes a node with this URI already exists but is not a NodeShape
+      if (!nodeShape.type) {
+        nodeShape.type = shacl.NodeShape;
+      }
+      // connect the typescript class to its NodeShape
+      constructor.shape = nodeShape;
+      // set the name
+      nodeShape.label = constructor.name;
+
+      if (options)
+      {
+        if (options.description)
+        {
+          nodeShape.description = options.description;
+        }
+      }
+
+      // also keep track of the reverse: nodeShape to typescript class
+      addNodeShapeToShapeClass(nodeShape,constructor);
+
+      // also create a representation in the graph of the shape class itself
+      let shapeClass = NamedNode.getOrCreate(getNodeShapeUri(packageName,constructor.name),
+        true,
+      );
+      shapeClass.set(lincdOntology.definesShape,nodeShape.node);
+      shapeClass.set(rdf.type,lincdOntology.ShapeClass);
+      // and connect it back to the module
+      shapeClass.set(lincdOntology.module,packageNode);
+
+      //track what extends what (both on nodeShape level and shapeClass level)
+      const extendingShapeClass = (Object.getPrototypeOf(constructor) as typeof Shape);
+      const extendingShape = extendingShapeClass.shape;
+      //if this shape class is extending something other then Shape
+      if(extendingShape && !(extendingShapeClass === Shape)) {
+        //store which nodeShape this nodeShape extends
+        nodeShape.extends = extendingShape;
+        //store which shapeClass this shapeClass extends
+        const extendingShapeClassNode = extendingShape.getOneInverse(lincdOntology.definesShape);
+        if(extendingShapeClassNode) {
+          shapeClass.set(lincdOntology.isExtending,extendingShapeClassNode);
+        }
+      }
+      
+
+      // run deferred callbacks from property decorators
+      if (constructor['shapeCallbacks'])
+      {
+        constructor['shapeCallbacks'].forEach((callback) => {
+          callback(nodeShape);
+        });
+        const nodeCallbacks = getAndClearCallbacks(nodeShape.namedNode);
+        if(nodeCallbacks) {
+          nodeCallbacks.forEach((callback) => {
+            callback(nodeShape);
+          });
+        }
+        delete constructor['shapeCallbacks'];
+      }
+    }
+    else
+    {
+      console.warn('This ShapeClass already has a shape: ',constructor.shape);
+    }
+
+    if (constructor.targetClass)
+    {
+      (constructor.shape as NodeShape).targetClass = constructor.targetClass;
+    }
+
+    // return the original class without modifications
+    // return constructor;
+  }
+
+  // Overloaded signatures to support both usages
+  function linkedShape<T extends typeof Shape>(constructor: T): void;
+  function linkedShape<T extends typeof Shape>(
+    options?: ShapeConfig,
+  ): (constructor: T) => void;
+  function linkedShape(arg?: any): void | ((constructor: any) => void)
+  {
+    // usage as @linkedShape
+    if (typeof arg === 'function')
+    {
+      applyLinkedShape(arg);
+      return;
+    }
+    // usage as @linkedShape({...}) or @linkedShape()
+    const options: ShapeConfig | undefined = arg;
+    return function <T extends typeof Shape>(constructor: T): void {
+      applyLinkedShape(constructor,options);
+    };
+  }
+
+  /**
+   *
+   * @param exports all exports of the file, simply provide "this" as value!
+   * @param dataSource the path leading to the ontology's data file
+   * @param nameSpace the base URI of the ontology
+   * @param prefixAndFileName the file name MUST match the prefix for this ontology
+   */
+  let linkedOntology = function(
+    exports,
+    nameSpace: (term: string) => NamedNode,
+    prefixAndFileName: string,
+    loadData?,
+    dataSource?: string | string[],
+  ) {
+    let exportsCopy = {...exports};
+    //store specifics in exports. And make sure we can detect this as an ontology later
+    exportsCopy['_ns'] = nameSpace;
+    exportsCopy['_prefix'] = prefixAndFileName;
+    exportsCopy['_load'] = loadData;
+    exportsCopy['_data'] = dataSource;
+
+    //register the prefix here (so just calling linkedOntology with a prefix will automatically register that prefix)
+    if (prefixAndFileName)
+    {
+      //run the namespace without any term name, this will give back a named node with just the namespace as URI, then get that URI to provide it as full URI
+      Prefix.add(prefixAndFileName,nameSpace('').uri);
+    }
+
+    ontologies.add(exportsCopy);
+    //register all the exports under the prefix. NOTE: this means the file name HAS to match the prefix
+    registerInPackageTree(prefixAndFileName,exportsCopy);
+    // });
+
+    if (_autoLoadOntologyData)
+    {
+      loadData().catch((err) => {
+        console.warn(
+          'Could not load ontology data. Do you need to rebuild the module of the ' +
+          prefixAndFileName +
+          ' ontology?',
+          err,
+        );
+      });
+    }
+  };
+
+  /**
+   * This method is used to get a shape class in this package by its name.
+   * This can be used to avoid circular dependencies between shapes.
+   * @param name
+   */
+  let getPackageShape = (name: string): typeof Shape => {
+    //get the named node of the node shape first,
+    //then get the shape class that defines this node shape
+    return getShapeClass(
+      NamedNode.getOrCreate(getNodeShapeUri(packageName,name)),
+    );
+  };
+
+  //return the declarators so the module can use them
+  return {
+    linkedComponent,
+    linkedSetComponent,
+    linkedShape,
+    linkedUtil,
+    linkedOntology,
+    registerPackageExport,
+    registerPackageModule,
+    getPackageShape,
+    packageExports: packageTreeObject,
+    packageName: packageName,
+  } as LinkedPackageObject;
+}
+
+function registerComponent(exportedComponent: Component,shape?: typeof Shape)
+{
+  if (!shape)
+  {
+    //warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
+    if (!exportedComponent.hasOwnProperty('shape'))
+    {
+      console.warn(
+        `Component ${
+          exportedComponent.displayName || exportedComponent.name
+        } is not linked to a shape.`,
+      );
+      return;
+    }
+    shape = exportedComponent.shape;
+  }
+
+  if (!shapeToComponents.has(shape))
+  {
+    shapeToComponents.set(shape,new CoreSet<any>());
+  }
+
+  shapeToComponents.get(shape).add(exportedComponent);
+}
+
+function registerPackageInTree(packageName,packageExports?)
+{
+  //prepare name for global tree reference
+  // let packageTreeKey = packageName.replace(/-/g,'_');
+  //if something with this name already registered in the global tree
+  if (packageName in lincd._modules)
+  {
+    //This probably means package.ts is loaded twice, through different paths and could point to a problem
+    //So we log about it. But there is one exception. LINCD itself registers itself twice: once in the bottom of this file and once in its package.ts file.
+    //But if there are already other packages registered, then probably there is 2 versions of LINCD being loaded, and that IS a problem.
+    if (packageName !== 'lincd' || Object.keys(lincd._modules).length !== 1)
+    {
+      console.warn(
+        'A package with the name ' +
+        packageName +
+        ' has already been registered. Adding to existing object',
+      );
+    }
+    Object.assign(lincd._modules[packageName],packageExports);
+  }
+  else
+  {
+    //initiate an empty object for this module in the global tree
+    lincd._modules[packageName] = packageExports || {};
+  }
+  return lincd._modules[packageName];
+}
+
+
+export function initTree()
+{
+  let globalObject =
+    typeof window !== 'undefined'
+      ? window
+      : typeof global !== 'undefined'
+        ? global
+        : undefined;
+  if ('lincd' in globalObject)
+  {
+    throw new Error('Multiple versions of LINCD are loaded');
+  }
+  else
+  {
+    globalObject['lincd'] = {_modules: {}};
+  }
+}
+
+//when this file is used, make sure the tree is initialized
+initTree();
+
+//now that this file is set up, we can link linked shapes in the LINCD module itself
+let lincdPackage = linkedPackage('lincd');
+lincdPackage.linkedShape({
+  description:
+    'Represents a SHACL NodeShape; defines constraints for a class of RDF nodes. Links to multiple PropertyShapes. (schema, constraint, class validation)',
+})(NodeShape);
+lincdPackage.linkedShape({
+  description:
+    'Represents a SHACL PropertyShape; specifies rules for one property of a NodeShape (path, datatype, cardinality). (validation rule, property constraint)',
+})(PropertyShape);
+lincdPackage.linkedShape({
+  description:
+    'ValidationReport produced by a SHACL engine; summarizes results of validating data against NodeShapes and PropertyShapes. (report, conformance, summary)',
+})(ValidationReport);
+lincdPackage.linkedShape({
+  description:
+    'Individual result entry in a ValidationReport; details a specific violation or success, pointing to the node, property, and constraint. (error, issue, finding)',
+})(ValidationResult);
+
+//ALL the following is to support Shape having get/set methods with property shapes
+//and Shape itself having a nodeShape
+//if we dont need Shape to have get/set methods (like label and type) then this can be removed
+Shape.shape = NodeShape.getFromURI(
+  'https://data.lincd.org/module/lincd/shape/shape',
+);
+addNodeShapeToShapeClass(Shape.shape,Shape);
+
+//Here we can register the properties of the Shape class itself
+//We can't do that inside of Shape because it would cause circular dependencies
+createPropertyShape({
+    path: rdfs.label,
+    //TODO: multiple labels should be possible
+    maxCount: 1,//currently get label is implemented to return a single value
+  },
+  'label',
+  shacl.Literal,
+  Shape,
+);
+createPropertyShape(
+  {
+    path: rdf.type,
+    shape: Shape,
+  },
+  'type',
+  shacl.IRI,
+  Shape,
+);
+
+createPropertyShape(
+  {
+    path: shacl.property,
+    shape: PropertyShape,
+  },
+  'properties',
+  shacl.IRI,
+  NodeShape,
+);
+
+createPropertyShape({
+      path: rdfs.comment,
+      maxCount: 1,
+    },'description',shacl.Literal, NodeShape);
+
+createPropertyShape({
+  path: rdf.type,
+  maxCount: 1,
+  shape: Shape,
+},'type',shacl.IRI, NodeShape);
+
+createPropertyShape(
+  {
+    path: shacl.targetClass,
+    shape: Shape, //should be rdfs Class, but that's currently not available in LINCD. So queries currently cannot continue after accessing targetClass
+    maxCount: 1,
+  },
+  'targetClass',
+  shacl.IRI,
+  NodeShape,
+);
+
+createPropertyShape({
+  path: shacl.description,
+  maxCount: 1,
+},'type',shacl.Literal, NodeShape);
+
+createPropertyShape({
+  path: shacl.targetNode,
+  shape: Shape,//actually returns a NamedNode... is this correct then? Should we define or use a rdfs Class that matches the potential values?
+},'targetNode',shacl.IRI, NodeShape);
+
+createPropertyShape({
+  path: lincdOntology.isExtending,
+  shape: NodeShape,
+},'extends',shacl.IRI, NodeShape);
+
+//currently path accepts multiple values, so its a multi-value property
+//these values will be consequent properties that follow each other. Other property paths are not supported yet.
+createPropertyShape(
+  {
+    path: shacl.path,
+    shape: Shape,
+  },
+  'path',
+  shacl.IRI,
+  PropertyShape,
+);
+
+createPropertyShape(
+  {
+    path: shacl.node,
+    shape: NodeShape,
+    maxCount: 1,
+  },
+  'valueShape',
+  shacl.IRI,
+  PropertyShape,
+);
+
+createPropertyShape(
+  {
+    maxCount: 1,
+    path: shacl.nodeKind,
+    shape: Shape, //actually returns a NamedNode. Queries currently cannot continue after accessing nodeKind
+  },
+  'nodeKind',
+  shacl.IRI,
+  PropertyShape,
+);
+
+createPropertyShape(
+  {
+    path: shacl.datatype,
+    shape: Shape,
+    maxCount: 1,
+  },
+  'datatype',
+  shacl.IRI,
+  PropertyShape,
+);
+
+//PropertyShape.maxCount
+createPropertyShape(
+  {
+    path: shacl.maxCount,
+    datatype: xsd.integer,
+    maxCount: 1,
+  },
+  'maxCount',
+  shacl.Literal,
+  PropertyShape,
+);
+
+//PropertyShape.minCount
+createPropertyShape(
+  {
+    path: shacl.minCount,
+    datatype: xsd.integer,
+    maxCount: 1,
+  },
+  'minCount',
+  shacl.Literal,
+  PropertyShape,
+);
+
+//PropertyShape.name
+createPropertyShape(
+  {
+    path: shacl.name,
+    maxCount: 1,
+  },
+  'name',
+  shacl.Literal,
+  PropertyShape,
+);
+
+//PropertyShape.description
+createPropertyShape(
+  {
+    path: shacl.description,
+    maxCount: 1,
+  },
+  'description',
+  shacl.Literal,
+  PropertyShape,
+);
+
+//PropertyShape.inList

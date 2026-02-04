@@ -1,0 +1,883 @@
+/* ============================================================================
+   LINCD Default Theme Values
+   Import this to use LINCD's default theme. You can still override these values.
+   Alternatively, you can define all your own theme variables in your own theme.css file.
+   ============================================================================ */
+
+/* Safelist primary, secondary, and tertiary colors for theme showcase (Tailwind v4 approach) */
+@source inline("bg-primary-{50,{100..900..100},950}");
+@source inline("text-primary-{50,{100..900..100},950}");
+@source inline("border-primary-{50,{100..900..100},950}");
+@source inline("bg-secondary-{50,{100..900..100},950}");
+@source inline("text-secondary-{50,{100..900..100},950}");
+@source inline("border-secondary-{50,{100..900..100},950}");
+@source inline("bg-tertiary-{50,{100..900..100},950}");
+@source inline("text-tertiary-{50,{100..900..100},950}");
+@source inline("border-tertiary-{50,{100..900..100},950}");
+
+/* Safelist ALL Tailwind color families across common color-based utilities */
+/* Families: slate, gray, zinc, neutral, stone, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose */
+@source inline("bg-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("text-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("border-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("ring-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("outline-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("divide-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("stroke-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("fill-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("caret-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("accent-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("decoration-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("shadow-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}");
+@source inline("from-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("via-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+@source inline("to-{slate,gray,zinc,neutral,stone,red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose}-{50,{100..900..100},950}");
+
+/* static ensures that all css variables are generated in the final bundle. */
+/* this ensures the app can access all of them without having to use any tailwind class in the html */
+@theme static {
+    /* Primary Palette - app-specific brand color */
+    --color-primary-50: var(--color-sky-50);
+    --color-primary-100: var(--color-sky-100);
+    --color-primary-200: var(--color-sky-200);
+    --color-primary-300: var(--color-sky-300);
+    --color-primary-400: var(--color-sky-400);
+    --color-primary-500: var(--color-sky-500);
+    --color-primary-600: var(--color-sky-600);
+    --color-primary-700: var(--color-sky-700);
+    --color-primary-800: var(--color-sky-800);
+    --color-primary-900: var(--color-sky-900);
+    
+    /* Secondary Palette - green (default fallback) */
+    --color-secondary-50: var(--color-emerald-50);
+    --color-secondary-100: var(--color-emerald-100);
+    --color-secondary-200: var(--color-emerald-200);
+    --color-secondary-300: var(--color-emerald-300);
+    --color-secondary-400: var(--color-emerald-400);
+    --color-secondary-500: var(--color-emerald-500);
+    --color-secondary-600: var(--color-emerald-600);
+    --color-secondary-700: var(--color-emerald-700);
+    --color-secondary-800: var(--color-emerald-800);
+    --color-secondary-900: var(--color-emerald-900);
+
+    /* Tertiary Palette - cyan (default fallback) */
+    --color-tertiary-50: var(--color-cyan-50);
+    --color-tertiary-100: var(--color-cyan-100);
+    --color-tertiary-200: var(--color-cyan-200);
+    --color-tertiary-300: var(--color-cyan-300);
+    --color-tertiary-400: var(--color-cyan-400);
+    --color-tertiary-500: var(--color-cyan-500);
+    --color-tertiary-600: var(--color-cyan-600);
+    --color-tertiary-700: var(--color-cyan-700);
+    --color-tertiary-800: var(--color-cyan-800);
+    --color-tertiary-900: var(--color-cyan-900);
+
+    /* === Base Spacing Unit (required for --spacing() function) === */
+    --spacing: 0.25rem; /* 4px - base unit for --spacing() function */
+
+    /* === Shadow Tokens (auto-generates shadow-* utilities) === */
+    --shadow-section: none;
+    --shadow-surface: var(--shadow-sm);
+    --shadow-box: var(--shadow-md);
+    --shadow-popover: var(--shadow-lg);
+    --shadow-tooltip: var(--shadow-popover);
+    --shadow-modal: var(--shadow-2xl);
+    --shadow-navigation: none;
+    --shadow-tabs: var(--shadow-navigation);
+    --shadow-menubar: var(--shadow-navigation);
+    --shadow-breadcrumb-nav: none;
+    --shadow-list-item: none;
+    --shadow-control: none;
+    --shadow-field: none;
+    --shadow-selector: var(--shadow-popover);
+    --shadow-choice: none;
+    --shadow-track-control: var(--shadow-sm);
+    --shadow-notification: var(--shadow-lg);
+    --shadow-meter: none;
+    --shadow-media: none;
+    --shadow-typography: none;
+    --shadow-icon: none;
+    --shadow-separator: none;
+
+    /* === Radius Tokens (auto-generates rounded-* utilities) === */
+    --radius-none: 0px;
+    --radius-full: calc(infinity * 1px);
+    --radius-section: var(--radius-none);
+    --radius-surface: var(--radius-sm);
+    --radius-box: var(--radius-lg);
+    --radius-popover: var(--radius-md);
+    --radius-tooltip: var(--radius-sm);
+    --radius-modal: var(--radius-2xl);
+    --radius-navigation: var(--radius-sm);
+    --radius-tabs: var(--radius-navigation);
+    --radius-menubar: var(--radius-navigation);
+    --radius-breadcrumb-nav: var(--radius-none);
+    --radius-list-item: var(--radius-sm);
+    --radius-control: var(--radius-md);
+    --radius-field: var(--radius-md);
+    --radius-selector: var(--radius-md);
+    --radius-choice: var(--radius-md);
+    --radius-track-control: var(--radius-full);
+    --radius-notification: var(--radius-md);
+    --radius-meter: var(--radius-full);
+    --radius-media: var(--radius-full);
+    --radius-typography: var(--radius-none);
+    --radius-icon: var(--radius-full);
+    --radius-separator: var(--radius-none);
+}
+
+/* ============================================================================
+   CSS VARIABLES (accessible everywhere)
+   These need to be at root level to be usable in custom CSS
+   It is not possible to define these in the theme directive, so we define them here.
+   And then we can use these variables in the utilities below to define extra tailwind utilities.
+   ============================================================================ */
+
+:root {
+  /* === Global Layer Tokens === */
+  --layer-base: 0;
+  --layer-surface: 10;
+  --layer-popover: 30;
+  --layer-modal: 50;
+  --layer-overlay: 40;
+  --layer-tooltip: 100;
+
+  /* === Global State Tokens (explicit names) === */
+  /* Backgrounds */
+  --bg-panel: var(--color-white);               /* Default background for panels */
+  --bg-hover: var(--color-gray-100);            /* Light hover background */
+  --bg-active: var(--color-primary-100);        /* Selected/pressed backgrounds */
+  --bg-focus: var(--color-primary-50);          /* Optional focus background tint */
+  --bg-disabled: var(--color-gray-200);         /* Disabled backgrounds */
+  --bg-overlay: color-mix(in srgb, var(--color-gray-900) 60%, transparent); /* Backdrop scrim */
+  
+  /* Borders */
+  --border-focus: var(--color-primary-500);     /* Focus ring/border */
+  --border-default: var(--color-gray-200);
+  --border-strong: var(--color-gray-300);
+  --border-hover: var(--color-gray-400);
+  --border-active: var(--color-gray-500);
+  --border-disabled: var(--color-gray-200);
+
+  /* Text */
+  --text-primary: var(--color-gray-900);        /* Main foreground, active text, body copy */
+  --text-auxiliary: var(--color-gray-600);      /* Secondary/muted text */
+  --text-placeholder: var(--color-gray-500);    /* Placeholder text */
+  --text-disabled: var(--color-gray-400);       /* Disabled text */
+
+  /* === Global Transition Control === */
+  --transition-duration-fast: 150ms;
+  --transition-duration-normal: 300ms;
+  --transition-duration-slow: 500ms;
+  /* Our semantic variable for transition easing points directly to that of tailwind by default */
+  --transition-easing: var(--default-transition-timing-function);
+  
+  /* Complete transition shorthands */
+  --transition-fast: all var(--transition-duration-fast) var(--transition-easing);
+  --transition-normal: all var(--default-transition-duration) var(--default-transition-timing-function); /* The normal transition uses tailwind's default transition duration and easing */
+  --transition-slow: all var(--transition-duration-slow) var(--transition-easing);
+  --transition: var(--transition-normal); /* Default transition shorthand */
+
+  /* ============================================================================
+     LAYOUT CONTAINER TYPES
+     Structural and content containers with increasing elevation
+     ============================================================================ */
+
+  /* Section - Page sections, hero areas, structural layout */
+  --section-bg: var(--color-gray-50);
+  --section-border: transparent;
+  --section-text: var(--text-primary);
+  --section-padding: --spacing(16);
+  --section-gap: --spacing(8);
+  --section-radius: var(--radius-section);
+  --section-shadow: var(--shadow-section);
+
+  /* Surface - Neutral panels, simple containers */
+  --surface-bg: var(--color-gray-100);
+  --surface-border: var(--border-default);
+  --surface-text: var(--text-primary);
+  --surface-padding: --spacing(6);
+  --surface-gap: --spacing(4);
+  --surface-radius: var(--radius-surface);
+  --surface-shadow: var(--shadow-surface);
+
+  /* Box (Card, Accordion, Command panel, Drawer panel) */
+  --box-bg: var(--bg-panel);
+  --box-border: var(--border-default);
+  --box-text: var(--text-primary);
+  --box-padding: --spacing(6);
+  --box-gap: --spacing(4);
+  --box-radius: var(--radius-box);
+  --box-shadow: var(--shadow-box);
+
+  /* ============================================================================
+     OVERLAY TYPES
+     Floating content that appears above the page
+     ============================================================================ */
+
+  /* Popover - Base for floating content (HoverCard, Tooltip inherit from this) */
+  --popover-bg: var(--bg-panel);
+  --popover-border: var(--border-default);
+  --popover-text: var(--text-primary);
+  --popover-padding: --spacing(4);
+  --popover-gap: --spacing(2);
+  --popover-radius: var(--radius-popover);
+  --popover-shadow: var(--shadow-popover);
+
+  /* Modal - Dialogs, Drawer, sheets, full-attention overlays */
+  --modal-bg: var(--bg-panel);
+  --modal-border: var(--border-default);
+  --modal-text: var(--text-primary);
+  --modal-padding: --spacing(6);
+  --modal-gap: --spacing(4);
+  --modal-overlay-bg: var(--bg-overlay);
+  --modal-radius: var(--radius-modal);
+  --modal-shadow: var(--shadow-modal);
+
+  /* ============================================================================
+     NAVIGATION TYPES
+     Directional controls and wayfinding
+     ============================================================================ */
+
+  /* Navigation - Base for all navigation (Tabs, Menubar, NavigationMenu, Breadcrumb inherit) */
+  --navigation-bg: transparent;
+  --navigation-border: var(--border-default);
+  --navigation-text: var(--color-gray-700);
+  --navigation-text-active: var(--text-primary);
+  --navigation-padding: --spacing(2);
+  --navigation-gap: --spacing(2);
+  --navigation-radius: var(--radius-navigation);
+  --navigation-shadow: var(--shadow-navigation);
+
+  /* ============================================================================
+     INTERACTIVE TYPES
+     User input and interactive controls
+     ============================================================================ */
+
+  /* ListItem - Selectable list items */
+  --list-item-bg: transparent;
+  --list-item-bg-hover: var(--bg-hover);
+  --list-item-bg-active: var(--bg-active);
+  --list-item-text: var(--text-primary);
+  --list-item-text-disabled: var(--text-disabled);
+  --list-item-text-auxiliary: var(--text-auxiliary);
+  --list-item-padding-x: --spacing(3);
+  --list-item-padding-y: --spacing(2);
+  --list-item-gap: --spacing(2);
+  --list-item-radius: var(--radius-list-item);
+  --list-item-shadow: var(--shadow-list-item);
+
+  /* Control - Buttons, IconButtons, Toggles, ToggleGroups */
+  --control-bg: var(--color-gray-100);
+  --control-bg-hover: var(--color-gray-200);
+  --control-bg-active: var(--color-gray-300);
+  --control-border: var(--border-strong);
+  --control-border-hover: var(--border-hover);
+  --control-text: var(--text-primary);
+  --control-text-contrast: var(--color-white);
+  --control-accent: var(--color-primary-500);
+  --control-accent-hover: var(--color-primary-700);
+  --control-padding-x: --spacing(4);
+  --control-padding-y: --spacing(2);
+  --control-padding-sm-x: --spacing(3);
+  --control-padding-sm-y: --spacing(1.5);
+  --control-padding-lg-x: --spacing(6);
+  --control-padding-lg-y: --spacing(3);
+  --control-gap: --spacing(2);
+  --control-height-sm: var(--field-height-sm);
+  --control-height-md: var(--field-height-md);
+  --control-height-lg: var(--field-height-lg);
+  --control-outline-width: 2px;
+  --control-outline-color: color-mix(in srgb, var(--control-accent) 60%, transparent);
+  --control-outline-offset: 2px;
+  --control-radius: var(--radius-control);
+  --control-shadow: var(--shadow-control);
+  --control-toggle-size: 2.5rem;
+
+  /* Field - Text inputs, Textareas */
+  --field-bg: var(--color-white);
+  --field-bg-hover: var(--color-gray-50);
+  --field-bg-focus: var(--color-white);
+  --field-border: var(--color-gray-300);
+  --field-border-hover: var(--color-gray-400);
+  --field-border-focus: var(--border-focus);
+  --field-text: var(--text-primary);
+  --field-text-placeholder: var(--text-placeholder);
+  --field-padding-x: calc(var(--spacing) * 3);
+  --field-padding-y: calc(var(--spacing) * 2);
+  --field-height-sm: 2rem;
+  --field-height-md: 2.5rem;
+  --field-height-lg: 3rem;
+  --field-radius: var(--radius-field);
+  --field-shadow: var(--shadow-field);
+  --field-font-family: var(--typography-font-family);
+  --field-font-size: var(--typography-font-size);
+  --field-font-size-sm: var(--text-sm);
+  --field-font-size-lg: var(--text-lg);
+  --field-font-weight: var(--typography-font-weight);
+  --field-line-height: var(--typography-line-height);
+
+  /* Selector - Select, MultiSelect */
+  --selector-trigger-bg: var(--field-bg);
+  --selector-trigger-border: var(--field-border);
+  --selector-trigger-text: var(--field-text);
+  --selector-trigger-padding-x: var(--field-padding-x);
+  --selector-trigger-padding-y: --spacing(2);
+  --selector-trigger-gap: --spacing(2);
+  --selector-trigger-height-sm: var(--field-height-sm);
+  --selector-trigger-height-md: var(--field-height-md);
+  --selector-trigger-height-lg: var(--field-height-lg);
+  --selector-trigger-icon-size: var(--icon-size-md);
+  --selector-trigger-shadow: var(--shadow-selector);
+  --selector-panel-bg: var(--popover-bg);
+  --selector-panel-border: var(--popover-border);
+  --selector-panel-shadow: var(--shadow-popover);
+  --selector-option-bg: var(--list-item-bg);
+  --selector-option-bg-hover: var(--list-item-bg-hover);
+  --selector-option-bg-active: var(--list-item-bg-active);
+  --selector-option-text: var(--list-item-text);
+  --selector-radius: var(--radius-selector);
+  --selector-shadow: var(--shadow-selector);
+
+  /* Choice - Checkbox, RadioGroup, Switch */
+  --choice-bg: var(--field-bg);
+  --choice-bg-hover: var(--field-bg-hover);
+  --choice-bg-checked: var(--control-accent);
+  --choice-border: var(--field-border);
+  --choice-border-hover: var(--field-border-hover);
+  --choice-border-checked: var(--control-accent);
+  --choice-indicator: var(--color-white);
+  --choice-text: var(--text-primary);
+  --choice-size: --spacing(6);
+  --choice-indicator-size: --spacing(6);
+  --choice-radius: var(--radius-choice);
+  --choice-shadow: var(--shadow-choice);
+  --choice-gap: --spacing(3);
+
+  /* TrackControl - Sliders */
+  --track-control-width: 100%;
+  --track-control-height: --spacing(5);
+  --track-control-track-height: --spacing(1);
+  --track-control-thumb-size: --spacing(5);
+  --track-control-track-bg: var(--color-gray-200);
+  --track-control-track-bg-active: var(--control-accent);
+  --track-control-track-radius: var(--radius-track-control);
+  --track-control-thumb-bg: var(--color-white);
+  --track-control-thumb-border: var(--control-accent);
+  --track-control-thumb-shadow: var(--shadow-track-control);
+  --track-control-radius: var(--radius-track-control);
+  --track-control-shadow: var(--shadow-track-control);
+
+  /* ============================================================================
+     FEEDBACK TYPES
+     Status and progress indicators
+     ============================================================================ */
+
+  /* Notification - Toast notifications */
+  --notification-bg: var(--color-white);
+  --notification-border: var(--color-gray-200);
+  --notification-text: var(--text-primary);
+  --notification-accent: var(--control-accent);
+  --notification-padding: --spacing(4);
+  --notification-gap: --spacing(3);
+  --notification-radius: var(--radius-notification);
+  --notification-shadow: var(--shadow-notification);
+
+  /* Meter - Progress bars */
+  --meter-track-bg: var(--color-gray-200);
+  --meter-indicator-bg: var(--control-accent);
+  --meter-text: var(--text-primary);
+  --meter-radius: var(--radius-meter);
+  --meter-shadow: var(--shadow-meter);
+
+  /* ============================================================================
+     CONTENT TYPES
+     Typography, media, and visual elements
+     ============================================================================ */
+
+  /* Media - Images, Avatars */
+  --media-bg: var(--color-gray-200);
+  --media-border: transparent;
+  --media-radius: var(--radius-media);
+  --media-shadow: var(--shadow-media);
+
+  /* Avatar - Media subtype with specific sizing */
+  --avatar-size-sm: --spacing(8);
+  --avatar-size-md: --spacing(10);
+  --avatar-size-lg: --spacing(12);
+  --avatar-radius: var(--radius-full);
+  --avatar-bg: var(--media-bg);
+  --avatar-color: var(--text-auxiliary);
+  --avatar-shadow: var(--media-shadow);
+  --avatar-font-weight: var(--font-medium);
+
+  /* Typography - Body text styles */
+  --typography-font-family: var(--font-family-sans);
+  --typography-font-size: var(--text-base);/* tailwind base size */
+  --typography-font-weight: var(--font-normal);
+  --typography-line-height: var(--line-height-normal);
+  --typography-line-height-none: 1;
+  --typography-color: var(--text-primary);
+  --typography-auxiliary-color: var(--text-auxiliary);
+  --typography-small-size: var(--text-sm);
+  --typography-large-size: var(--text-lg);
+  --typography-radius: var(--radius-typography);
+  --typography-shadow: var(--shadow-typography);
+
+  /* Link - Hyperlink styles */
+  --link-color: var(--control-accent);
+  --link-color-hover: var(--color-primary-600);
+  --link-font-family: var(--font-family-sans);
+  --link-font-weight: var(--font-medium);
+  --link-text-decoration: underline;
+  --link-text-decoration-hover: underline;
+  --link-transition: color 0.15s ease-in-out;
+
+  /* Heading (base defaults for all headings) */
+  --heading-font-family: var(--font-family-sans);
+  --heading-font-weight: var(--font-semibold);
+  --heading-line-height: var(--line-height-tight);
+  --heading-letter-spacing: var(--letter-spacing-tight);
+  --heading-color: var(--text-primary);
+  --heading-font-style: normal;
+
+  /* Heading 1 */
+  --heading-1-font-family: var(--heading-font-family);
+  --heading-1-font-size: 2.25rem; /* 36px */
+  --heading-1-font-weight: var(--heading-font-weight);
+  --heading-1-line-height: var(--heading-line-height);
+  --heading-1-letter-spacing: var(--heading-letter-spacing);
+  --heading-1-color: var(--heading-color);
+  --heading-1-font-style: var(--heading-font-style);
+  --heading-1-margin-top: --spacing(0);
+  --heading-1-margin-bottom: --spacing(4);
+
+  /* Heading 2 */
+  --heading-2-font-family: var(--heading-font-family);
+  --heading-2-font-size: 1.875rem; /* 30px */
+  --heading-2-font-weight: var(--heading-font-weight);
+  --heading-2-line-height: var(--heading-line-height);
+  --heading-2-letter-spacing: var(--heading-letter-spacing);
+  --heading-2-color: var(--heading-color);
+  --heading-2-font-style: var(--heading-font-style);
+  --heading-2-margin-top: --spacing(0);
+  --heading-2-margin-bottom: --spacing(3);
+
+  /* Heading 3 */
+  --heading-3-font-family: var(--heading-font-family);
+  --heading-3-font-size: 1.5rem; /* 24px */
+  --heading-3-font-weight: var(--heading-font-weight);
+  --heading-3-line-height: var(--heading-line-height);
+  --heading-3-letter-spacing: var(--heading-letter-spacing);
+  --heading-3-color: var(--heading-color);
+  --heading-3-font-style: var(--heading-font-style);
+  --heading-3-margin-top: --spacing(0);
+  --heading-3-margin-bottom: --spacing(3);
+
+  /* Heading 4 */
+  --heading-4-font-family: var(--heading-font-family);
+  --heading-4-font-size: 1.25rem; /* 20px */
+  --heading-4-font-weight: var(--heading-font-weight);
+  --heading-4-line-height: var(--heading-line-height);
+  --heading-4-letter-spacing: var(--heading-letter-spacing);
+  --heading-4-color: var(--heading-color);
+  --heading-4-font-style: var(--heading-font-style);
+  --heading-4-margin-top: --spacing(0);
+  --heading-4-margin-bottom: --spacing(2);
+
+  /* Heading 5 */
+  --heading-5-font-family: var(--heading-font-family);
+  --heading-5-font-size: 1.125rem; /* 18px */
+  --heading-5-font-weight: var(--heading-font-weight);
+  --heading-5-line-height: var(--heading-line-height);
+  --heading-5-letter-spacing: var(--heading-letter-spacing);
+  --heading-5-color: var(--heading-color);
+  --heading-5-font-style: var(--heading-font-style);
+  --heading-5-margin-top: --spacing(0);
+  --heading-5-margin-bottom: --spacing(2);
+
+  /* Heading 6 */
+  --heading-6-font-family: var(--heading-font-family);
+  --heading-6-font-size: 1rem; /* 16px */
+  --heading-6-font-weight: var(--heading-font-weight);
+  --heading-6-line-height: var(--heading-line-height);
+  --heading-6-letter-spacing: var(--heading-letter-spacing);
+  --heading-6-color: var(--heading-color);
+  --heading-6-font-style: var(--heading-font-style);
+  --heading-6-margin-top: --spacing(0);
+  --heading-6-margin-bottom: --spacing(1);
+
+  /* Icon */
+  --icon-color: var(--color-gray-500);
+  --icon-color-active: var(--control-accent);
+  --icon-size-sm: 1rem;
+  --icon-size-md: 1.25rem;
+  --icon-size-lg: 1.5rem;
+  --icon-radius: var(--radius-icon);
+  --icon-shadow: var(--shadow-icon);
+
+  /* Separator - Dividers */
+  --separator-color: var(--color-gray-200);
+  --separator-thickness: 1px;
+  --separator-radius: var(--radius-separator);
+  --separator-shadow: var(--shadow-separator);
+
+  /* === Variant & Component-Specific Tokens === */
+  --button-primary-bg: var(--control-accent);
+  --button-primary-bg-hover: var(--control-accent-hover);
+  --button-secondary-bg: var(--color-secondary-500);
+  --button-secondary-bg-hover: var(--color-secondary-700);
+  --button-tertiary-bg: var(--color-tertiary-500);
+  --button-tertiary-bg-hover: var(--color-tertiary-700);
+  --button-primary-color: var(--control-text-contrast);
+  --button-primary-color-hover: var(--control-text-contrast);
+  --button-secondary-color: var(--control-text-contrast);
+  --button-secondary-color-hover: var(--control-text-contrast);
+  --button-tertiary-color: var(--control-text-contrast);
+  --button-tertiary-color-hover: var(--control-text-contrast);
+  --button-font-family: var(--typography-font-family);
+  --button-font-size: calc(var(--typography-font-size) - 0.0625rem); /* 15px */
+  --button-font-size-sm: calc(var(--typography-font-size) - 0.125rem); /* 14px */
+  --button-font-weight: var(--typography-font-weight);
+  --button-line-height: var(--typography-line-height);
+  --button-gap: --spacing(2); /* 8px */
+  --button-padding-x: --spacing(4); /* 16px */
+  --button-padding-y: --spacing(2); /* 8px */
+  --button-padding-sm-x: --spacing(3); /* 12px */
+  --button-padding-sm-y: --spacing(1.5); /* 6px */
+  --button-padding-lg-x: --spacing(6); /* 24px */
+  --button-padding-lg-y: --spacing(3); /* 12px */
+  --button-height-sm: --spacing(9); /* 36px */
+  --button-height-md: --spacing(10); /* 40px */
+  --button-height-lg: --spacing(11); /* 44px */
+  --toggle-size: var(--control-toggle-size);
+}
+
+@layer theme {
+  :root, :host {
+    /* Tailwind runtime defaults so components work without utilities */
+    /* Transition */
+    --tw-duration: var(--default-transition-duration);
+    --tw-ease: var(--default-transition-timing-function);
+
+    /* Transform pipeline */
+    --tw-rotate-x: ;
+    --tw-rotate-y: ;
+    --tw-rotate-z: ;
+    --tw-skew-x: ;
+    --tw-skew-y: ;
+    --tw-scale-x: 100%;
+    --tw-scale-y: 100%;
+    --tw-scale-z: ;
+    --tw-translate-x: 0;
+    --tw-translate-y: 0;
+
+    /* Filters */
+    --tw-blur: ;
+    --tw-brightness: ;
+    --tw-contrast: ;
+    --tw-grayscale: ;
+    --tw-hue-rotate: ;
+    --tw-invert: ;
+    --tw-saturate: ;
+    --tw-sepia: ;
+    --tw-drop-shadow: ;
+
+    /* Gradients */
+    --tw-gradient-position: to bottom in oklab;
+    --tw-gradient-from: transparent;
+    --tw-gradient-to: transparent;
+    --tw-gradient-via-stops: ;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position, 0%), var(--tw-gradient-to) var(--tw-gradient-to-position, 100%));
+
+    /* Outline & ring */
+    --tw-outline-style: solid;
+    --tw-ring-inset: ;
+    --tw-ring-offset-width: 0px;
+    --tw-ring-color: currentcolor;
+    --tw-ring-offset-shadow: ;
+    --tw-ring-shadow: ;
+
+    /* Shadows */
+    --tw-inset-shadow: ;
+    --tw-inset-ring-shadow: ;
+    --tw-ring-offset-shadow: ;
+    --tw-shadow-color: rgb(0 0 0 / 0.1);
+    --tw-shadow: 0 0 #0000;
+
+    /* Spacing helpers */
+    --tw-space-x-reverse: 0;
+    --tw-space-y-reverse: 0;
+  }
+}
+
+/* ============================================================================
+   SEMANTIC UTILITIES
+   ============================================================================ */
+
+/* === Layout Container Utilities === */
+@utility bg-section { background-color: var(--section-bg); }
+@utility bg-surface { background-color: var(--surface-bg); }
+@utility bg-box { background-color: var(--box-bg); }
+@utility text-section { color: var(--section-text); }
+@utility text-surface { color: var(--surface-text); }
+@utility text-box { color: var(--box-text); }
+@utility border-section { border-color: var(--section-border); }
+@utility border-surface { border-color: var(--surface-border); }
+@utility border-box { border-color: var(--box-border); }
+@utility p-section { padding: var(--section-padding); }
+@utility p-surface { padding: var(--surface-padding); }
+@utility p-box { padding: var(--box-padding); }
+@utility gap-section { gap: var(--section-gap); }
+@utility gap-surface { gap: var(--surface-gap); }
+@utility gap-box { gap: var(--box-gap); }
+
+/* === Overlay Utilities === */
+@utility bg-popover { background-color: var(--popover-bg); }
+@utility bg-modal { background-color: var(--modal-bg); }
+@utility bg-modal-overlay { background-color: var(--modal-overlay-bg); }
+@utility text-popover { color: var(--popover-text); }
+@utility text-modal { color: var(--modal-text); }
+@utility border-popover { border-color: var(--popover-border); }
+@utility border-modal { border-color: var(--modal-border); }
+@utility p-popover { padding: var(--popover-padding); }
+@utility p-modal { padding: var(--modal-padding); }
+@utility gap-popover { gap: var(--popover-gap); }
+@utility gap-modal { gap: var(--modal-gap); }
+
+/* === Navigation Utilities === */
+@utility bg-navigation { background-color: var(--navigation-bg); }
+@utility text-navigation { color: var(--navigation-text); }
+@utility text-navigation-active { color: var(--navigation-text-active); }
+@utility border-navigation { border-color: var(--navigation-border); }
+@utility p-navigation { padding: var(--navigation-padding); }
+@utility gap-navigation { gap: var(--navigation-gap); }
+
+/* === Interactive Utilities === */
+@utility bg-list-item { background-color: var(--list-item-bg); }
+@utility bg-list-item-hover { background-color: var(--list-item-bg-hover); }
+@utility bg-list-item-active { background-color: var(--list-item-bg-active); }
+@utility text-list-item { color: var(--list-item-text); }
+@utility text-list-item-auxiliary { color: var(--list-item-text-auxiliary); }
+@utility text-list-item-disabled { color: var(--list-item-text-disabled); }
+@utility px-list-item { padding-left: var(--list-item-padding-x); padding-right: var(--list-item-padding-x); }
+@utility py-list-item { padding-top: var(--list-item-padding-y); padding-bottom: var(--list-item-padding-y); }
+@utility gap-list-item { gap: var(--list-item-gap); }
+
+@utility bg-control { background-color: var(--control-bg); }
+@utility bg-control-hover { background-color: var(--control-bg-hover); }
+@utility bg-control-active { background-color: var(--control-bg-active); }
+@utility text-control { color: var(--control-text); }
+@utility text-control-contrast { color: var(--control-text-contrast); }
+@utility border-control { border-color: var(--control-border); }
+@utility border-control-hover { border-color: var(--control-border-hover); }
+@utility px-control { padding-left: var(--control-padding-x); padding-right: var(--control-padding-x); }
+@utility py-control { padding-top: var(--control-padding-y); padding-bottom: var(--control-padding-y); }
+@utility px-control-sm { padding-left: var(--control-padding-sm-x); padding-right: var(--control-padding-sm-x); }
+@utility py-control-sm { padding-top: var(--control-padding-sm-y); padding-bottom: var(--control-padding-sm-y); }
+@utility px-control-lg { padding-left: var(--control-padding-lg-x); padding-right: var(--control-padding-lg-x); }
+@utility py-control-lg { padding-top: var(--control-padding-lg-y); padding-bottom: var(--control-padding-lg-y); }
+@utility gap-control { gap: var(--control-gap); }
+@utility accent-control { color: var(--control-accent); }
+@utility accent-control-hover { color: var(--control-accent-hover); }
+
+@utility bg-field { background-color: var(--field-bg); }
+@utility bg-field-hover { background-color: var(--field-bg-hover); }
+@utility bg-field-focus { background-color: var(--field-bg-focus); }
+@utility text-field { color: var(--field-text); }
+@utility text-field-placeholder { color: var(--field-text-placeholder); }
+@utility border-field { border-color: var(--field-border); }
+@utility border-field-hover { border-color: var(--field-border-hover); }
+@utility border-field-focus { border-color: var(--field-border-focus); }
+@utility px-field { padding-left: var(--field-padding-x); padding-right: var(--field-padding-x); }
+@utility py-field { padding-top: var(--field-padding-y); padding-bottom: var(--field-padding-y); }
+@utility h-field-sm { height: var(--field-height-sm); }
+@utility h-field-md { height: var(--field-height-md); }
+@utility h-field-lg { height: var(--field-height-lg); }
+@utility font-field { font-family: var(--field-font-family); }
+@utility text-field-sm { font-size: var(--field-font-size-sm); }
+@utility text-field-md { font-size: var(--field-font-size); }
+@utility text-field-lg { font-size: var(--field-font-size-lg); }
+@utility font-weight-field { font-weight: var(--field-font-weight); }
+@utility leading-field { line-height: var(--field-line-height); }
+
+@utility bg-selector-trigger { background-color: var(--selector-trigger-bg); }
+@utility bg-selector-panel { background-color: var(--selector-panel-bg); }
+@utility bg-selector-option { background-color: var(--selector-option-bg); }
+@utility bg-selector-option-hover { background-color: var(--selector-option-bg-hover); }
+@utility bg-selector-option-active { background-color: var(--selector-option-bg-active); }
+@utility text-selector-trigger { color: var(--selector-trigger-text); }
+@utility text-selector-option { color: var(--selector-option-text); }
+@utility border-selector-trigger { border-color: var(--selector-trigger-border); }
+@utility border-selector-panel { border-color: var(--selector-panel-border); }
+
+@utility bg-choice { background-color: var(--choice-bg); }
+@utility bg-choice-hover { background-color: var(--choice-bg-hover); }
+@utility bg-choice-checked { background-color: var(--choice-bg-checked); }
+@utility text-choice { color: var(--choice-text); }
+@utility border-choice { border-color: var(--choice-border); }
+@utility border-choice-hover { border-color: var(--choice-border-hover); }
+@utility border-choice-checked { border-color: var(--choice-border-checked); }
+@utility indicator-choice { color: var(--choice-indicator); }
+
+@utility bg-track-control-track { background-color: var(--track-control-track-bg); }
+@utility bg-track-control-track-active { background-color: var(--track-control-track-bg-active); }
+@utility bg-track-control-thumb { background-color: var(--track-control-thumb-bg); }
+@utility border-track-control-thumb { border-color: var(--track-control-thumb-border); }
+
+/* === Feedback Utilities === */
+@utility bg-notification { background-color: var(--notification-bg); }
+@utility bg-meter-track { background-color: var(--meter-track-bg); }
+@utility bg-meter-indicator { background-color: var(--meter-indicator-bg); }
+@utility text-notification { color: var(--notification-text); }
+@utility text-meter { color: var(--meter-text); }
+@utility border-notification { border-color: var(--notification-border); }
+@utility p-notification { padding: var(--notification-padding); }
+@utility gap-notification { gap: var(--notification-gap); }
+@utility accent-notification { color: var(--notification-accent); }
+
+/* === Content Utilities === */
+@utility bg-media { background-color: var(--media-bg); }
+@utility border-media { border-color: var(--media-border); }
+
+@utility text-typography-heading { color: var(--typography-heading-color); }
+@utility text-typography-body { color: var(--typography-color); }
+@utility text-typography-auxiliary { color: var(--typography-auxiliary-color); }
+@utility font-typography { font-family: var(--typography-font-family); }
+@utility text-typography { font-size: var(--typography-font-size); }
+@utility font-weight-typography { font-weight: var(--typography-font-weight); }
+@utility leading-typography { line-height: var(--typography-line-height); }
+@utility text-typography-small { font-size: var(--typography-small-size); }
+@utility text-typography-large { font-size: var(--typography-large-size); }
+
+@utility text-link { color: var(--link-color); }
+@utility text-link-hover { color: var(--link-color-hover); }
+@utility font-link { font-family: var(--link-font-family); }
+@utility font-weight-link { font-weight: var(--link-font-weight); }
+@utility underline-link { text-decoration: var(--link-text-decoration); }
+@utility underline-link-hover { text-decoration: var(--link-text-decoration-hover); }
+@utility transition-link { transition: var(--link-transition); }
+
+@utility font-heading { font-family: var(--heading-font-family); }
+@utility font-weight-heading { font-weight: var(--heading-font-weight); }
+@utility leading-heading { line-height: var(--heading-line-height); }
+@utility tracking-heading { letter-spacing: var(--heading-letter-spacing); }
+@utility text-heading { color: var(--heading-color); }
+@utility font-style-heading { font-style: var(--heading-font-style); }
+
+/* Individual Heading Utilities */
+@utility font-h1 { font-family: var(--heading-1-font-family); }
+@utility text-h1 { font-size: var(--heading-1-font-size); }
+@utility font-weight-h1 { font-weight: var(--heading-1-font-weight); }
+@utility leading-h1 { line-height: var(--heading-1-line-height); }
+@utility tracking-h1 { letter-spacing: var(--heading-1-letter-spacing); }
+@utility text-h1-color { color: var(--heading-1-color); }
+@utility font-style-h1 { font-style: var(--heading-1-font-style); }
+@utility mt-h1 { margin-top: var(--heading-1-margin-top); }
+@utility mb-h1 { margin-bottom: var(--heading-1-margin-bottom); }
+
+@utility font-h2 { font-family: var(--heading-2-font-family); }
+@utility text-h2 { font-size: var(--heading-2-font-size); }
+@utility font-weight-h2 { font-weight: var(--heading-2-font-weight); }
+@utility leading-h2 { line-height: var(--heading-2-line-height); }
+@utility tracking-h2 { letter-spacing: var(--heading-2-letter-spacing); }
+@utility text-h2-color { color: var(--heading-2-color); }
+@utility font-style-h2 { font-style: var(--heading-2-font-style); }
+@utility mt-h2 { margin-top: var(--heading-2-margin-top); }
+@utility mb-h2 { margin-bottom: var(--heading-2-margin-bottom); }
+
+@utility font-h3 { font-family: var(--heading-3-font-family); }
+@utility text-h3 { font-size: var(--heading-3-font-size); }
+@utility font-weight-h3 { font-weight: var(--heading-3-font-weight); }
+@utility leading-h3 { line-height: var(--heading-3-line-height); }
+@utility tracking-h3 { letter-spacing: var(--heading-3-letter-spacing); }
+@utility text-h3-color { color: var(--heading-3-color); }
+@utility font-style-h3 { font-style: var(--heading-3-font-style); }
+@utility mt-h3 { margin-top: var(--heading-3-margin-top); }
+@utility mb-h3 { margin-bottom: var(--heading-3-margin-bottom); }
+
+@utility font-h4 { font-family: var(--heading-4-font-family); }
+@utility text-h4 { font-size: var(--heading-4-font-size); }
+@utility font-weight-h4 { font-weight: var(--heading-4-font-weight); }
+@utility leading-h4 { line-height: var(--heading-4-line-height); }
+@utility tracking-h4 { letter-spacing: var(--heading-4-letter-spacing); }
+@utility text-h4-color { color: var(--heading-4-color); }
+@utility font-style-h4 { font-style: var(--heading-4-font-style); }
+@utility mt-h4 { margin-top: var(--heading-4-margin-top); }
+@utility mb-h4 { margin-bottom: var(--heading-4-margin-bottom); }
+
+@utility font-h5 { font-family: var(--heading-5-font-family); }
+@utility text-h5 { font-size: var(--heading-5-font-size); }
+@utility font-weight-h5 { font-weight: var(--heading-5-font-weight); }
+@utility leading-h5 { line-height: var(--heading-5-line-height); }
+@utility tracking-h5 { letter-spacing: var(--heading-5-letter-spacing); }
+@utility text-h5-color { color: var(--heading-5-color); }
+@utility font-style-h5 { font-style: var(--heading-5-font-style); }
+@utility mt-h5 { margin-top: var(--heading-5-margin-top); }
+@utility mb-h5 { margin-bottom: var(--heading-5-margin-bottom); }
+
+@utility font-h6 { font-family: var(--heading-6-font-family); }
+@utility text-h6 { font-size: var(--heading-6-font-size); }
+@utility font-weight-h6 { font-weight: var(--heading-6-font-weight); }
+@utility leading-h6 { line-height: var(--heading-6-line-height); }
+@utility tracking-h6 { letter-spacing: var(--heading-6-letter-spacing); }
+@utility text-h6-color { color: var(--heading-6-color); }
+@utility font-style-h6 { font-style: var(--heading-6-font-style); }
+@utility mt-h6 { margin-top: var(--heading-6-margin-top); }
+@utility mb-h6 { margin-bottom: var(--heading-6-margin-bottom); }
+
+@utility text-icon { color: var(--icon-color); }
+@utility text-icon-active { color: var(--icon-color-active); }
+@utility size-icon-sm { width: var(--icon-size-sm); height: var(--icon-size-sm); }
+@utility size-icon-md { width: var(--icon-size-md); height: var(--icon-size-md); }
+@utility size-icon-lg { width: var(--icon-size-lg); height: var(--icon-size-lg); }
+
+@utility text-separator { color: var(--separator-color); }
+@utility border-separator { border-color: var(--separator-color); }
+@utility border-separator-thickness { border-width: var(--separator-thickness); }
+
+/* === State Utilities === */
+@utility bg-hover { background-color: var(--bg-hover); }
+@utility bg-active { background-color: var(--bg-active); }
+@utility bg-focus { background-color: var(--bg-focus); }
+@utility bg-disabled { background-color: var(--bg-disabled); }
+@utility text-primary { color: var(--text-primary); }
+@utility text-auxiliary { color: var(--text-auxiliary); }
+@utility text-placeholder { color: var(--text-placeholder); }
+@utility text-disabled { color: var(--text-disabled); }
+@utility border-focus { border-color: var(--border-focus); }
+
+/* === Transition Utilities === */
+@utility transition { transition: var(--transition); }
+@utility transition-fast { transition: var(--transition-fast); }
+@utility transition-normal { transition: var(--transition-normal); }
+@utility transition-slow { transition: var(--transition-slow); }
+@utility transition-duration-fast { transition-duration: var(--transition-duration-fast); }
+@utility transition-duration-normal { transition-duration: var(--transition-duration-normal); }
+@utility transition-duration-slow { transition-duration: var(--transition-duration-slow); }
+@utility transition-easing { transition-timing-function: var(--transition-easing); }
+
+/* === Z-Index Utilities === */
+@utility z-base { z-index: var(--layer-base); }
+@utility z-surface { z-index: var(--layer-surface); }
+@utility z-popover { z-index: var(--layer-popover); }
+@utility z-modal { z-index: var(--layer-modal); }
+@utility z-overlay { z-index: var(--layer-overlay); }
+@utility z-tooltip { z-index: var(--layer-tooltip); }
+
+/* === Size Utilities === */
+@utility size-toggle { width: var(--toggle-size); height: var(--toggle-size); }
+
+/* === Button Component Utilities === */
+@utility bg-button-primary { background-color: var(--button-primary-bg); }
+@utility bg-button-primary-hover { background-color: var(--button-primary-bg-hover); }
+@utility bg-button-secondary { background-color: var(--button-secondary-bg); }
+@utility bg-button-secondary-hover { background-color: var(--button-secondary-bg-hover); }
+@utility bg-button-tertiary { background-color: var(--button-tertiary-bg); }
+@utility bg-button-tertiary-hover { background-color: var(--button-tertiary-bg-hover); }
+@utility text-button-primary { color: var(--button-primary-color); }
+@utility text-button-primary-hover { color: var(--button-primary-color-hover); }
+@utility text-button-secondary { color: var(--button-secondary-color); }
+@utility text-button-secondary-hover { color: var(--button-secondary-color-hover); }
+@utility text-button-tertiary { color: var(--button-tertiary-color); }
+@utility text-button-tertiary-hover { color: var(--button-tertiary-color-hover); }

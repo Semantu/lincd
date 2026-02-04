@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "declaration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "downlevelIteration": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "pretty": true,
+    "target": "es6",
+    "jsx": "react",
+    "moduleResolution": "node",
+    "types": ["node", "jest", "react", "eventemitter3"],
+    "baseUrl": "./",
+    "paths": {
+      "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
+    }
+  },
+  "include": [
+    "./src/**/*.ts",
+    "./src/**/*.tsx",
+    "../node_modules/ts-jest/globals.d.ts"
+  ]
+}
