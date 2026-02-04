@@ -418,6 +418,16 @@ describe('5. Type Casting & Transformations', () => {
   });
 });
 
+describe('6. Preload (Component-like Queries)', () => {
+  test('can preload a component query onto a property path', async () => {
+    const query = await captureQuery(() => queryFactories.preloadBestFriend());
+
+    expectSelectQuery(query);
+    expect(query?.select[0][0].property.label).toBe('bestFriend');
+    expect(query?.select[0][1]?.name?.[0]?.property?.label).toBe('name');
+  });
+});
+
 describe('7. Sorting & Limiting', () => {
   test('outer where with limit', async () => {
     const query = await captureQuery(() => queryFactories.outerWhereLimit());

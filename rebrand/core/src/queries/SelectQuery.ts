@@ -226,6 +226,14 @@ export type ArgPath = {
   path: QueryPropertyPath;
   subject: ShapeReferenceValue;
 };
+
+export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
+
+export type QueryComponentLike<ShapeType extends Shape, CompQueryResult> = {
+  query:
+    | SelectQueryFactory<ShapeType, CompQueryResult>
+    | Record<string, SelectQueryFactory<ShapeType, CompQueryResult>>;
+};
 /**
  * ###################################
  * ####    QUERY RESULT TYPES     ####
@@ -333,11 +341,18 @@ export type GetQueryObjectResultType<
       : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
         ? CreateQResult<Source, ShapeType, Property, SubProperties, HasName>
         : //   CreateQResult<Source, ShapeType, Property>
-          QV extends QueryShapeSet<
-                infer ShapeType,
-                infer Source,
-                infer Property
-              >
+          QV extends BoundComponent<infer Source, infer CompQueryResult>
+          ? GetQueryObjectResultType<
+              Source,
+              SubProperties & QueryResponseToResultType<CompQueryResult>,
+              PrimitiveArray,
+              HasName
+            >
+          : QV extends QueryShapeSet<
+              infer ShapeType,
+              infer Source,
+              infer Property
+            >
             ? CreateShapeSetQResult<
                 ShapeType,
                 Source,
@@ -833,6 +848,12 @@ export class QueryBuilderObject<
     };
   }
 
+  preloadFor<ShapeType extends Shape, CompQueryRes>(
+    component: QueryComponentLike<ShapeType, CompQueryRes>,
+  ): BoundComponent<this, CompQueryRes> {
+    return new BoundComponent<this, CompQueryRes>(component, this);
+  }
+
   limit(lim: number) {
     console.log(lim);
   }
@@ -854,6 +875,62 @@ export class QueryBuilderObject<
       path.unshift(convertQueryContext(this as any as QueryShape));
     }
     return path;
+  }
+}
+
+export class BoundComponent<
+  Source extends QueryBuilderObject,
+  CompQueryResult = any,
+> extends QueryBuilderObject {
+  constructor(
+    public originalValue: QueryComponentLike<any, CompQueryResult>,
+    public source: Source,
+  ) {
+    super(null, null);
+  }
+
+  getParentQueryFactory(): SelectQueryFactory<any> {
+    let parentQuery: SelectQueryFactory<any> | Object =
+      this.originalValue.query;
+
+    if (parentQuery instanceof SelectQueryFactory) {
+      return parentQuery;
+    }
+    if (typeof parentQuery === 'object') {
+      if (Object.keys(parentQuery).length > 1) {
+        throw new Error(
+          'Only one key is allowed to map a query to a property for linkedSetComponents',
+        );
+      }
+      for (let key in parentQuery) {
+        if (parentQuery[key] instanceof SelectQueryFactory) {
+          return parentQuery[key];
+        }
+        throw new Error(
+          'Unknown value type for query object. Keep to this format: {propName: Shape.query(s => ...)}',
+        );
+      }
+    }
+    throw new Error(
+      'Unknown data query type. Expected a LinkedQuery (from Shape.query()) or an object with 1 key whose value is a LinkedQuery',
+    );
+  }
+
+  getPropertyPath() {
+    let sourcePath: ComponentQueryPath = this.source.getPropertyPath();
+    let requestQuery = this.getParentQueryFactory();
+    let compSelectQuery = requestQuery.getQueryObject().select;
+
+    if (Array.isArray(sourcePath)) {
+      sourcePath.push(
+        compSelectQuery.length === 1
+          ? compSelectQuery[0].length === 1
+            ? compSelectQuery[0][0]
+            : compSelectQuery[0]
+          : compSelectQuery,
+      );
+    }
+    return sourcePath as QueryPropertyPath;
   }
 }
 

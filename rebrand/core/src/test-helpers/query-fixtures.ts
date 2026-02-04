@@ -96,6 +96,9 @@ export class Person extends Shape {
   }
 }
 
+const componentQuery = Person.query((p) => ({name: p.name}));
+const componentLike = {query: componentQuery};
+
 const updateSimple: UpdatePartial<Person> = {hobby: 'Chess'};
 const updateOverwriteSet: UpdatePartial<Person> = {friends: [{id: 'p2'}]};
 const updateUnsetSingleUndefined: UpdatePartial<Person> = {hobby: undefined};
@@ -292,4 +295,6 @@ export const queryFactories = {
   updateNestedWithPredefinedId: () =>
     Person.update({id: 'p1'}, updateNestedWithPredefinedId),
   updateBirthDate: () => Person.update({id: 'p1'}, updateBirthDate),
+  preloadBestFriend: () =>
+    Person.select((p) => p.bestFriend.preloadFor(componentLike)),
 };

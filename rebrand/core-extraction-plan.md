@@ -221,6 +221,9 @@ Run the full build and test suite. All ~70 tests in `query.test.ts` pass. `query
 - Strip React imports from any remaining files.
 - Verify build compiles, tests pass, type inference intact.
 
+**Phase 2 follow-up — Keep `preloadFor` in core via generic component-like interface.** ✅ Done
+Reintroduce `preloadFor` without React dependencies by using a generic component-like query interface, and add a minimal preload test + type assertion that mimic component usage.
+
 **Expected difficulty:** Low. React is not imported by any of the query or shape files. The active tests don't use React. This is mostly deleting files and cleaning `Package.ts`.
 
 ## Phase 3 — Replace NamedNode with NodeReferenceValue

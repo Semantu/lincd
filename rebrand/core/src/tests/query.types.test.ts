@@ -417,6 +417,13 @@ describe.skip('query result type inference (compile only)', () => {
     expectType<boolean | null | undefined>(first.bestFriend.isRealPerson);
   });
 
+  test('can preload a component query onto a property path', () => {
+    const promise = queryFactories.preloadBestFriend();
+    type Result = Awaited<typeof promise>;
+    const first = (null as unknown as Result)[0];
+    expectType<string | null | undefined>(first.bestFriend.name);
+  });
+
   test('outer where with limit', () => {
     const promise = queryFactories.outerWhereLimit();
     type Result = Awaited<typeof promise>;
