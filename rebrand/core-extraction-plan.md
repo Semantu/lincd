@@ -18,7 +18,7 @@ Two prior attempts at extracting the core package exist in this repo. Both conta
 
 - **`rebrand/linked-js2`** — copy-then-prune with a full copy of root `src/`. Had working query-object tests and type inference tests, and was on a good trajectory. **What went wrong:** the agent session got stuck and some of the last work was not committed. When the branch was cloned to continue, the tests no longer passed — defeating the whole point of maintaining a green baseline at all times. The work itself was sound, but the loss of the green state made it unrecoverable.
 
-Both folders are kept as reference for the approach and design patterns. However, we should not copy large chunks from them wholesale — the goal is to prune the existing linked-js2 code step by step, using the earlier attempts only as inspiration for what the target state looks like.
+Both folders are kept as reference for the approach and design patterns. However, we should not copy large chunks from them wholesale — the goal is to prune the existing code step by step, using the earlier attempts only as inspiration for what the target state looks like.
 
 ### Why copy-then-prune (done carefully) is the right approach
 
@@ -38,13 +38,15 @@ Building from scratch (linked-js) made it hard to reproduce this chain. The link
 2. The tests pass.
 3. The type inference tests (`query.types.test.ts`) still validate that inferred types are correct.
 
-### Shared test fixtures
+### Shared test fixtures & query factories
 
-The codex branch version of `rebrand/linked-js` introduced a `test-helpers/query-fixtures.ts` factory that exports reusable `Person`, `Pet`, `Dog` shape classes and property path constants as plain strings. This factory was designed so that the exact same query tests can run in both `@_linked/core` (asserting query objects) and `@_linked/memstore` (asserting query results). This pattern should be adopted in the final version.
+The test setup exports query factories — functions or objects that invoke the same queries used by both test files. This is also designed so that `@_linked/memstore` can later import the same query factories to test actual query results against the in-memory store, without duplicating the queries. One source of truth for what is being tested.
+
+The codex branch version of `rebrand/linked-js` introduced a `test-helpers/query-fixtures.ts` that exports reusable `Person`, `Pet`, `Dog` shape classes and property path constants. This pattern should be adopted and extended with the full set of query factories.
 
 ### Methodology
 
-1. Start from the full copy of `src/` already in `rebrand/linked-js2/src/`.
+1. Start from a fresh copy of root `src/` in a new `rebrand/core/` folder, reusing the root `node_modules`.
 2. Incrementally remove pieces that don't belong in `@_linked/core`.
 3. After each removal step, verify that build compiles and tests pass — **including type inference tests**.
 4. **Commit after each successful step.** A lesson from the linked-js2 attempt: uncommitted work can be lost. Every green state should be committed so we can always recover.
@@ -153,31 +155,49 @@ The current `Package.ts` creates RDF quads for registration. In `@_linked/core`,
 - `targetClass` is set manually after class definition: `Person.shape.targetClass = {id: personClass}`.
 - The React decorators (`@linkedComponent`, `@linkedSetComponent`) are removed.
 
-### Ontology files use NodeReferenceValue objects
+### Ontology files use a namespace function to create NodeReferenceValue objects
 
-The current `ontologies/rdf.ts`, `ontologies/shacl.ts`, `ontologies/xsd.ts` etc. instantiate `NamedNode`. In `@_linked/core`, they export `NodeReferenceValue` objects instead:
+The current `ontologies/rdf.ts`, `ontologies/shacl.ts`, `ontologies/xsd.ts` etc. use a namespace pattern: a base URI string, then `NamedNode.getOrCreate(base + term)` for each term. In `@_linked/core`, the namespace pattern is preserved but produces `NodeReferenceValue` objects instead of `NamedNode` instances:
 
 ```typescript
 // ontologies/xsd.ts
+const base = 'http://www.w3.org/2001/XMLSchema#';
+const ns = (term: string): NodeReferenceValue => ({id: base + term});
+
 export const xsd = {
-  integer: {id: 'http://www.w3.org/2001/XMLSchema#integer'} as NodeReferenceValue,
-  string: {id: 'http://www.w3.org/2001/XMLSchema#string'} as NodeReferenceValue,
-  boolean: {id: 'http://www.w3.org/2001/XMLSchema#boolean'} as NodeReferenceValue,
-  dateTime: {id: 'http://www.w3.org/2001/XMLSchema#dateTime'} as NodeReferenceValue,
+  string: ns('string'),
+  boolean: ns('boolean'),
+  integer: ns('integer'),
+  dateTime: ns('dateTime'),
   // ...
 };
 ```
 
-Or, where only the string URI is needed, plain string constants suffice.
+This keeps the ontology files clean and consistent with the existing code style.
 
 ---
 
-## Phase 1 — Baseline verification
+## Phase 1 — Setup and green baseline
 
-- Confirm `rebrand/linked-js2/src` mirrors the current root `src/` structure.
-- Verify build configs are present and the package compiles (tsconfig/tsconfig-cjs/tsconfig-esm).
-- Run the existing tests (query-object tests, type inference tests) and confirm they pass.
-- Establish the green baseline: build passes, tests pass, type inference is correct. Every subsequent phase must maintain this.
+Create the `rebrand/core/` working folder from scratch with an exact copy of root `src/`, set up build configs that reuse the root `node_modules`, and restructure the tests into two files (query object assertions + type inference assertions) backed by shared query factories. The goal is a fully green baseline before any pruning begins.
+
+**Sub-step 1.1 — Create `rebrand/core/` with copy of root `src/`.**
+Create the `rebrand/core/` folder. Copy the entire root `src/` directory into `rebrand/core/src/`. Add build configs (tsconfig, tsconfig-cjs, tsconfig-esm) that reuse the root `node_modules` — follow the same approach used by `rebrand/linked-js` and `rebrand/linked-js2`. Add a `package.json` with scripts for build and test. Add a `jest.config` that works with the folder structure. Verify the package compiles.
+
+**Sub-step 1.2 — Move old tests aside, keep one query test working.**
+Move all existing tests into `src/tests/old/`. Create a new `src/tests/query.test.ts` with a single test. Set up the `QueryCaptureStore` pattern (a test spy implementing `IQueryParser` that stores the last query object, assigned to `Shape.queryParser`). Get this one test passing — it should invoke a query like `Person.select(p => p.name)`, capture the query object, and assert the structure of that plain JS query object (type, shape, select paths, property shapes). Reference: the linked-js2 `query.test.tsx` for how this was done.
+
+**Sub-step 1.3 — Create query factories (`test-helpers/query-fixtures.ts`).**
+Extract the test shape definitions (Person, Pet, Dog) and property path constants into a shared `src/test-helpers/query-fixtures.ts`. This file exports the shape classes and a structured set of query factory functions — each factory invokes a specific query (e.g. `selectName()`, `selectNestedFriend()`, `filterByName()`, etc.) and returns the captured query object. Both test files will import from this factory. This is also designed so `@_linked/memstore` can later import the same factories and test actual results instead of query objects.
+
+**Sub-step 1.4 — Build out `query.test.ts` with all ~70 non-React tests.**
+Re-enable tests one at a time (or in small batches). For each test: use the corresponding query factory, capture the query object via `QueryCaptureStore`, and assert the structure of the resulting plain JS object in detail (type, select paths, where clauses, sort, limit, CRUD fields, etc.). Cover all 7 describe groups from the original tests: basic property selection, nested/path selection, filtering (where clauses), aggregation/sub-select, type casting/transformations, sorting/limiting, and CRUD operations. All ~70 tests should pass.
+
+**Sub-step 1.5 — Create `query.types.test.ts` with compile-only type assertions.**
+Create `src/tests/query.types.test.ts`. For every test in `query.test.ts`, add a corresponding test in this file. Each test is wrapped in `describe.skip` so it never runs at runtime — it only needs to compile. Each test invokes the same query factory and asserts the inferred result types by accessing properties on the result. If the code compiles, TypeScript has verified the types are correct. Use an `expectType<T>()` utility or direct typed variable assignments to make the assertions explicit and thorough. Cover all ~70 tests.
+
+**Sub-step 1.6 — Verify full green baseline.**
+Run the full build and test suite. All ~70 tests in `query.test.ts` pass. `query.types.test.ts` compiles without errors. This is the green baseline. Commit.
 
 ## Phase 2 — Remove React layer
 
@@ -201,7 +221,7 @@ Export `NodeReferenceValue` from a central location (it already exists in `Query
 Change `PropertyShape.path` from `NamedNode` to `NodeReferenceValue`. Update `PropertyShapeConfig` to accept `string | NodeReferenceValue`. Update `SHACL.ts` property shape creation to use `toNodeReference()`. Update tests: replace `NamedNode.getOrCreate('name')` with string or `NodeReferenceValue` literals.
 
 **Sub-step 3.3 — Convert ontology files.**
-Replace `NamedNode` instantiation in `ontologies/*.ts` with `NodeReferenceValue` object literals. Update all imports of ontology terms.
+Replace `NamedNode` instantiation in `ontologies/*.ts` with a namespace helper function that creates `NodeReferenceValue` objects. Preserve the existing namespace pattern (`const base = '...'; const ns = (term) => ({id: base + term})`). Update all imports of ontology terms.
 
 **Sub-step 3.4 — Strip Shape.ts and replace TraceShape/TestNode with Proxy-based tracing.**
 These two changes are tightly coupled and should happen together. Remove the `NamedNode` instance reference from Shape. Remove instance methods that operate on RDF data (`getOne`, `getAll`, `set`, `overwrite`, `hasProperty`, etc.). Keep the static structure: `static shape`, `static queryParser`, static CRUD methods. Keep decorated property accessors as `declare` (or empty getters if needed). Simultaneously, delete `TraceShape.ts` and implement Proxy-based query tracing in `SelectQuery.ts` — the key change: `SelectQueryFactory.getQueryShape()` creates a dummy Shape instance, wraps it in `QueryShape.create()` (Proxy), and invokes the callback. Update `QueryContext.ts` if needed. The codex branch `Shape.ts` and `SelectQuery.ts` are the reference targets.
@@ -230,15 +250,13 @@ Once no file imports from `models.ts`, delete: `models.ts`, `Datafactory.ts`, `L
 
 ## Phase 5 — Final test suite for `@_linked/core`
 
-- Rename `query.test.tsx` to `query.test.ts` (no React).
 - Remove old/archived tests from `src/tests/old/`.
-- Adopt the `query-fixtures.ts` shared factory pattern from the codex branch so the same shapes/queries can be reused by `@_linked/memstore`.
 - Ensure all tests run and pass against the pruned package.
 - Verify type inference tests still validate that inferred result types are correct.
 
 ## Phase 6 — Integration verification with `@_linked/memstore`
 
 - Confirm `@_linked/memstore` can depend on `@_linked/core` as a peer dependency.
-- Reuse query fixtures from `@_linked/core` tests inside `@_linked/memstore` tests to validate runtime query execution.
+- Import query factories from `@_linked/core` test helpers inside `@_linked/memstore` tests to validate runtime query execution with actual results.
 - Validate that type inference flows correctly from core shapes through memstore query resolution.
 - Tests must fail if inference breaks (no `unknown` or `any` leaks).
