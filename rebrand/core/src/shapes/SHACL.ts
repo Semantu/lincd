@@ -22,7 +22,7 @@ import {NodeReferenceValue,toNamedNode,toNodeReference} from '../utils/NodeRefer
 
 export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 
-type PropertyPathInput = string | NodeReferenceValue;
+type PropertyPathInput = NodeReferenceValue;
 type PropertyPathInputList = PropertyPathInput | PropertyPathInput[];
 
 const normalizePathInput = (
@@ -660,7 +660,7 @@ export interface PropertyShapeConfig {
    *
    * Currently, only 1 property is supported.
    *
-   * Provide a NamedNode that has is a `rdf:Property`
+   * Provide a NodeReferenceValue that refers to an `rdf:Property`
    */
   path: PropertyPathInputList;
 
@@ -693,12 +693,12 @@ export interface PropertyShapeConfig {
   maxCount?: number;
   /**
    * Values of the configured property must equal the values of this 'equals' property.
-   * Provide a NamedNode with rdf:type rdf:Property
+   * Provide a NodeReferenceValue with rdf:type rdf:Property
    */
   equals?: NodeReferenceValue | string;
   /**
    * Values of the configured property must differ from the values of this 'disjoint' property
-   * Provide a NamedNode with rdf:type rdf:Property
+   * Provide a NodeReferenceValue with rdf:type rdf:Property
    */
   disjoint?: NodeReferenceValue | string;
   /**
@@ -712,7 +712,7 @@ export interface PropertyShapeConfig {
   group?: string;
   /**
    * should correlate to the given datatype or class
-   * i.e. if class = foaf.Person you should provide a NamedNode with rdf.type foaf.Person or a Shape instance that has targetClass foaf.Person
+   * i.e. if class = foaf.Person you should provide a NodeReferenceValue with rdf.type foaf.Person or a Shape instance that has targetClass foaf.Person
    */
   defaultValue?: string | number | Node | Shape | NodeReferenceValue;
   /**

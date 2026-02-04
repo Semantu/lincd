@@ -580,6 +580,6 @@ describe('8. NodeReferenceValue', () => {
   test('property paths normalize to NodeReferenceValue', () => {
     const property = Person.shape.getPropertyShape('name');
     expect(property).toBeDefined();
-    expect(property?.path).toEqual({id: namePath});
+    expect(property?.path).toEqual(namePath);
   });
 });

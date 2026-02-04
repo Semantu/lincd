@@ -9,19 +9,26 @@ import {NodeReferenceValue, UpdatePartial} from '../queries/QueryFactory';
 const tmpPropBase = 'linked://tmp/props/';
 const tmpTypeBase = 'linked://tmp/types/';
 
-export const name = `${tmpPropBase}name`;
-export const hobby = `${tmpPropBase}hobby`;
-export const nickName = `${tmpPropBase}nickName`;
-export const bestFriend = `${tmpPropBase}bestFriend`;
-export const hasFriend = `${tmpPropBase}hasFriend`;
-export const birthDate = `${tmpPropBase}birthDate`;
-export const isRealPerson = `${tmpPropBase}isRealPerson`;
-export const hasPet = `${tmpPropBase}hasPet`;
-export const guardDogLevel = `${tmpPropBase}guardDogLevel`;
-export const pluralTestProp = `${tmpPropBase}pluralTestProp`;
-export const personClass: NodeReferenceValue = {id: `${tmpTypeBase}Person`};
-export const petClass: NodeReferenceValue = {id: `${tmpTypeBase}Pet`};
-export const dogClass: NodeReferenceValue = {id: `${tmpTypeBase}Dog`};
+const prop = (suffix: string): NodeReferenceValue => ({
+  id: `${tmpPropBase}${suffix}`,
+});
+const type = (suffix: string): NodeReferenceValue => ({
+  id: `${tmpTypeBase}${suffix}`,
+});
+
+export const name = prop('name');
+export const hobby = prop('hobby');
+export const nickName = prop('nickName');
+export const bestFriend = prop('bestFriend');
+export const hasFriend = prop('hasFriend');
+export const birthDate = prop('birthDate');
+export const isRealPerson = prop('isRealPerson');
+export const hasPet = prop('hasPet');
+export const guardDogLevel = prop('guardDogLevel');
+export const pluralTestProp = prop('pluralTestProp');
+export const personClass = type('Person');
+export const petClass = type('Pet');
+export const dogClass = type('Dog');
 
 @linkedShape
 export class Pet extends Shape {

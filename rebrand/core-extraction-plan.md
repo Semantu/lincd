@@ -240,6 +240,9 @@ Change `PropertyShape.path` from `NamedNode` to `NodeReferenceValue`. Update `Pr
 **Sub-step 3.3 — Convert ontology files.** ✅ Done
 Replace `NamedNode` instantiation in `ontologies/*.ts` with a namespace helper function that creates `NodeReferenceValue` objects. Preserve the existing namespace pattern (`const base = '...'; const ns = (term) => ({id: base + term})`). Update all imports of ontology terms.
 
+**Phase 3 follow-up — Require NodeReferenceValue paths in decorators.** ✅ Done
+Restrict `PropertyShapeConfig.path` to `NodeReferenceValue` (no string inputs) since ontology terms already provide NodeReferenceValue. Update fixtures/tests to use NodeReferenceValue paths and assert accordingly.
+
 **Sub-step 3.4 — Strip Shape.ts and replace TraceShape/TestNode with Proxy-based tracing.**
 These two changes are tightly coupled and should happen together. Remove the `NamedNode` instance reference from Shape. Remove instance methods that operate on RDF data (`getOne`, `getAll`, `set`, `overwrite`, `hasProperty`, etc.). Keep the static structure: `static shape`, `static queryParser`, static CRUD methods. Keep decorated property accessors as `declare` (or empty getters if needed). Simultaneously, delete `TraceShape.ts` and implement Proxy-based query tracing in `SelectQuery.ts` — the key change: `SelectQueryFactory.getQueryShape()` creates a dummy Shape instance, wraps it in `QueryShape.create()` (Proxy), and invokes the callback. Update `QueryContext.ts` if needed. The codex branch `Shape.ts` and `SelectQuery.ts` are the reference targets.
 
