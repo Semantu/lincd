@@ -78,6 +78,17 @@ The codex branch version of `rebrand/linked-js` introduced a `test-helpers/query
 
 These are the resolved design decisions for how `@_linked/core` handles the transition away from RDF models.
 
+### Phase 1 setup choices (2026-02-04)
+
+- **Config approach:** Use the `rebrand/linked-js2` pattern for build/test configs (ts-jest running from `src/tests`, `testMatch` in `jest.config.js`, and tsconfig paths that point to the root `node_modules`). This avoids a separate build step to run tests and keeps the setup minimal.
+- **Package name:** Set `package.json` name to `@_linked/core` immediately.
+- **Test files:** Use `.ts` (no TSX).
+- **Test environment:** Use `testEnvironment: "node"` (no React involved).
+- **Sub-step 1.2 QueryCaptureStore:** Implement `select`, `create`, `update`, and `delete` from the start.
+- **Copy baseline:** Copy the entire root `src/` into `rebrand/core/src/` first, then prune later.
+- **Reporting rule:** After every run, report back with: what was done, any problems encountered, changes made that were not in the plan, and how the work was validated (including explicit test results like # passed/# failed and what was tested).
+- **Phase commit rule:** After each phase, commit your changes and update this plan to indicate progress. If you later need to revert changes, either commit on top or reset to a previous commit if more applicable.
+
 ### NodeReferenceValue replaces NamedNode
 
 The type `NodeReferenceValue = {id: string}` already exists in `QueryFactory.ts`. Everywhere the current code uses `NamedNode`, we replace it with `NodeReferenceValue` (or import it under a shorter alias if convenient). This is a plain object with an `id` key holding the URI.
@@ -181,10 +192,10 @@ This keeps the ontology files clean and consistent with the existing code style.
 
 Create the `rebrand/core/` working folder from scratch with an exact copy of root `src/`, set up build configs that reuse the root `node_modules`, and restructure the tests into two files (query object assertions + type inference assertions) backed by shared query factories. The goal is a fully green baseline before any pruning begins.
 
-**Sub-step 1.1 — Create `rebrand/core/` with copy of root `src/`.**
+**Sub-step 1.1 — Create `rebrand/core/` with copy of root `src/`.** ✅ Done (c92af85)
 Create the `rebrand/core/` folder. Copy the entire root `src/` directory into `rebrand/core/src/`. Add build configs (tsconfig, tsconfig-cjs, tsconfig-esm) that reuse the root `node_modules` — follow the same approach used by `rebrand/linked-js` and `rebrand/linked-js2`. Add a `package.json` with scripts for build and test. Add a `jest.config` that works with the folder structure. Verify the package compiles.
 
-**Sub-step 1.2 — Move old tests aside, keep one query test working.**
+**Sub-step 1.2 — Move old tests aside, keep one query test working.** ✅ Done (c92af85)
 Move all existing tests into `src/tests/old/`. Create a new `src/tests/query.test.ts` with a single test. Set up the `QueryCaptureStore` pattern (a test spy implementing `IQueryParser` that stores the last query object, assigned to `Shape.queryParser`). Get this one test passing — it should invoke a query like `Person.select(p => p.name)`, capture the query object, and assert the structure of that plain JS query object (type, shape, select paths, property shapes). Reference: the linked-js2 `query.test.tsx` for how this was done.
 
 **Sub-step 1.3 — Create query factories (`test-helpers/query-fixtures.ts`).**
