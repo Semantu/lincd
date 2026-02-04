@@ -50,6 +50,7 @@ The codex branch version of `rebrand/linked-js` introduced a `test-helpers/query
 4. **Commit after each successful step.** A lesson from the linked-js2 attempt: uncommitted work can be lost. Every green state should be committed so we can always recover.
 5. **Tests may only be changed with explicit user approval.** If a test fails after a pruning step, ask the user for feedback rather than silently changing what is validated.
 6. Use both `rebrand/linked-js` and `rebrand/linked-js2` as reference for inspiration, but don't copy large chunks wholesale — prune the existing files toward the target step by step.
+7. **Update this plan after every step.** When a phase or sub-step is completed and committed, mark it as done in this file (with the commit hash) and commit the plan update. This plan is the single source of truth for progress.
 
 ### What belongs in `@_linked/core`
 
