@@ -199,7 +199,7 @@ Create the `rebrand/core/` folder. Copy the entire root `src/` directory into `r
 **Sub-step 1.2 — Move old tests aside, keep one query test working.** ✅ Done (c92af85)
 Move all existing tests into `src/tests/old/`. Create a new `src/tests/query.test.ts` with a single test. Set up the `QueryCaptureStore` pattern (a test spy implementing `IQueryParser` that stores the last query object, assigned to `Shape.queryParser`). Get this one test passing — it should invoke a query like `Person.select(p => p.name)`, capture the query object, and assert the structure of that plain JS query object (type, shape, select paths, property shapes). Reference: the linked-js2 `query.test.tsx` for how this was done.
 
-**Sub-step 1.3 — Create query factories (`test-helpers/query-fixtures.ts`).**
+**Sub-step 1.3 — Create query factories (`test-helpers/query-fixtures.ts`).** ✅ Done (500ee53)
 Extract the test shape definitions (Person, Pet, Dog) and property path constants into a shared `src/test-helpers/query-fixtures.ts`. This file exports the shape classes and a structured set of query factory functions — each factory invokes a specific query (e.g. `selectName()`, `selectNestedFriend()`, `filterByName()`, etc.) and returns the promise. The factories don't capture or assert anything themselves — they just invoke the query and return the promise. Each test file decides how to consume the result: `query.test.ts` intercepts the query object via `QueryCaptureStore`, while `@_linked/memstore` will later await real results. This keeps the factories pure and reusable across packages.
 
 **Sub-step 1.4 — Build out `query.test.ts` with all ~70 non-React tests.**
