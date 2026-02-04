@@ -212,7 +212,7 @@ Create `src/tests/query.types.test.ts`. For every test in `query.test.ts`, add a
 **Sub-step 1.6 — Verify full green baseline.** ✅ Done
 Run the full build and test suite. All ~70 tests in `query.test.ts` pass. `query.types.test.ts` compiles without errors. This is the green baseline. Commit.
 
-## Phase 2 — Remove React layer
+## Phase 2 — Remove React layer ✅ Done
 
 - Delete React utility files: `LinkedComponent.ts`, `LinkedComponentClass.tsx`, `Hooks.ts`.
 - Remove `@linkedComponent`, `@linkedSetComponent`, `@linkedComponentClass` from `Package.ts`.

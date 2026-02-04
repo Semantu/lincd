@@ -4,7 +4,6 @@ import {PropertyShape} from '../shapes/SHACL.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
-import {LinkedComponent,LinkedSetComponent} from '../utils/LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {getPropertyShapeByLabel,getShapeClass} from '../utils/ShapeClass.js';
 import {NodeReferenceValue,Prettify,QueryFactory,ShapeReferenceValue} from './QueryFactory.js';
@@ -227,8 +226,6 @@ export type ArgPath = {
   path: QueryPropertyPath;
   subject: ShapeReferenceValue;
 };
-export type ComponentQueryPath = (QueryStep | SubQueryPaths)[] | WherePath;
-
 /**
  * ###################################
  * ####    QUERY RESULT TYPES     ####
@@ -336,19 +333,7 @@ export type GetQueryObjectResultType<
       : QV extends QueryShape<infer ShapeType, infer Source, infer Property>
         ? CreateQResult<Source, ShapeType, Property, SubProperties, HasName>
         : //   CreateQResult<Source, ShapeType, Property>
-          QV extends BoundComponent<
-              infer Source,
-              infer ShapeType,
-              infer ComponentResultType
-            >
-          ? // ? ComponentResultType
-            GetQueryObjectResultType<
-              Source,
-              SubProperties & ComponentResultType,
-              PrimitiveArray,
-              HasName
-            >
-          : QV extends QueryShapeSet<
+          QV extends QueryShapeSet<
                 infer ShapeType,
                 infer Source,
                 infer Property
@@ -848,14 +833,6 @@ export class QueryBuilderObject<
     };
   }
 
-  preloadFor<ShapeType extends Shape, CompQueryRes>(
-    component:
-      | LinkedComponent<any, ShapeType, CompQueryRes>
-      | LinkedSetComponent<any, ShapeType, CompQueryRes>,
-  ): BoundComponent<this, ShapeType, CompQueryRes> {
-    return new BoundComponent<this, ShapeType, CompQueryRes>(component, this);
-  }
-
   limit(lim: number) {
     console.log(lim);
   }
@@ -1293,79 +1270,6 @@ export class QueryShape<
   //   return new SetSize(this, countable, resultKey);
   //   // return this._count;
   // }
-}
-
-export class BoundComponent<
-  Source extends QueryBuilderObject,
-  ShapeType extends Shape,
-  CompQueryResult = any,
-> extends QueryBuilderObject {
-  constructor(
-    public originalValue:
-      | LinkedComponent<any, ShapeType, CompQueryResult>
-      | LinkedSetComponent<any, ShapeType, CompQueryResult>,
-    public source: Source, // property?: PropertyShape, // subject?: QueryShape<any> | QueryShapeSet<any>,
-  ) {
-    super(null, null);
-  }
-
-  getParentQueryFactory(): SelectQueryFactory<any> {
-    let parentQuery: SelectQueryFactory<any> | Object =
-      this.originalValue.query;
-
-    //if a Shape class was given (the actual class that extends Shape)
-    if (parentQuery instanceof SelectQueryFactory) {
-      return parentQuery;
-    } else if (typeof parentQuery === 'object') {
-      if (Object.keys(parentQuery).length > 1) {
-        throw new Error(
-          'Only one key is allowed to map a query to a property for linkedSetComponents',
-        );
-      }
-      for (let key in parentQuery) {
-        if (parentQuery[key] instanceof SelectQueryFactory) {
-          return parentQuery[key];
-        } else {
-          throw new Error(
-            'Unknown value type for query object. Keep to this format: {propName: Shape.query(s => ...)}',
-          );
-        }
-      }
-    } else {
-      throw new Error(
-        'Unknown data query type. Expected a LinkedQuery (from Shape.query()) or an object with 1 key whose value is a LinkedQuery',
-      );
-    }
-  }
-
-  getPropertyPath() {
-    //get the path that is passed to Component.of(some.path.here)
-    let sourcePath: ComponentQueryPath = this.source.getPropertyPath();
-    //add the path steps that this component itself requires (so we are combining the data request of 2 components)
-    // let childRequests = [];
-    // this.dataRequest.forEach((queryStep) => {
-    //   childRequests.push(queryStep);
-    // });
-    let requestQuery = this.getParentQueryFactory();
-    let compSelectQuery = requestQuery.getQueryObject().select;
-
-    if (Array.isArray(sourcePath)) {
-      //add the path steps that this component itself requires (so we are combining the data request of 2 components)
-      //if this component only requests one path, then add it directly so that the query object stays flat
-      sourcePath.push(
-        compSelectQuery.length === 1
-          ? compSelectQuery[0].length === 1
-            ? compSelectQuery[0][0]
-            : compSelectQuery[0]
-          : compSelectQuery,
-      );
-      // sourcePath.push({
-      // component: this,
-      // path: childRequests as any,
-      // });
-    }
-    return sourcePath as QueryPropertyPath;
-  }
 }
 
 export class Evaluation {

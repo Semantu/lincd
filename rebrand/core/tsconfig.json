@@ -12,7 +12,7 @@
     "target": "es6",
     "jsx": "react",
     "moduleResolution": "node",
-    "types": ["node", "jest", "react", "eventemitter3"],
+    "types": ["node", "jest", "eventemitter3"],
     "baseUrl": "./",
     "paths": {
       "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]

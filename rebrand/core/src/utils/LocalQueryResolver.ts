@@ -1,6 +1,5 @@
 import {
   ArgPath,
-  ComponentQueryPath,
   CustomQueryObject,
   Evaluation,
   GetQueryResponseType,
@@ -798,7 +797,7 @@ function writeResultObject(resultObject, key, result) {
 export function resolveLocalEndResults<S extends SelectQueryFactory<any>>(
   query: S,
   subject?: NodeSet<NamedNode> | NamedNode,
-  queryPaths?: CustomQueryObject | ComponentQueryPath[],
+  queryPaths?: CustomQueryObject | QueryPath[],
 ): QueryResponseToEndValues<GetQueryResponseType<S>> {
   queryPaths = queryPaths || query.getQueryPaths();
   subject = subject || (query.shape as any).getLocalInstances();
@@ -846,7 +845,7 @@ export function resolveLocalEndResults<S extends SelectQueryFactory<any>>(
 
 function resolveQueryPath(
   subject: NamedNode | NodeSet<NamedNode>,
-  queryPath: QueryPath | ComponentQueryPath,
+  queryPath: QueryPath,
   resultObjects?: NodeResultMap | QResult<any, any>,
 ) {
   //start with the local instance as the subject
@@ -865,7 +864,7 @@ function resolveQueryPath(
 
 function resolveQueryPathEndResults(
   subject: NodeSet<NamedNode> | NamedNode,
-  queryPath: QueryPath | ComponentQueryPath,
+  queryPath: QueryPath,
 ) {
   //start with the local instance as the subject
   let result: NodeSet<NamedNode> | NamedNode[] | NamedNode | boolean[] =

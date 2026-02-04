@@ -15,19 +15,11 @@ import {
 } from '../shapes/SHACL.js';
 import {Shape} from '../shapes/Shape.js';
 import {Prefix} from './Prefix.js';
-import {CoreSet} from '../collections/CoreSet.js';
 import {lincd as lincdOntology} from '../ontologies/lincd.js';
 import {npm} from '../ontologies/npm.js';
 import {rdf} from '../ontologies/rdf.js';
 import {URI} from './URI.js';
 import {addNodeShapeToShapeClass,getShapeClass} from './ShapeClass.js';
-import {
-  Component,
-  createLinkedComponentFn,
-  createLinkedSetComponentFn,
-  LinkedComponentFactoryFn,
-  LinkedSetComponentFactoryFn,
-} from '../utils/LinkedComponent.js';
 import {shacl} from '../ontologies/shacl.js';
 import {rdfs} from '../ontologies/rdfs.js';
 import {xsd} from '../ontologies/xsd.js';
@@ -41,7 +33,6 @@ declare var global;
 
 // var packageParsePromises: Map<string,Promise<any>> = new Map();
 // var loadedPackages: Set<NamedNode> = new Set();
-let shapeToComponents: Map<typeof Shape,CoreSet<Component>> = new Map();
 let ontologies: Set<any> = new Set();
 let _autoLoadOntologyData = false;
 /**
@@ -66,35 +57,6 @@ export type ShapeConfig = {
  */
 export interface LinkedPackageObject
 {
-  /**
-   * Class decorator that links a class-based component to its shape.
-   * Once linked, the component receives an extra property "sourceShape" which will be an instance of the linked Shape.
-   *
-   * Note that your class needs to extend [LinkedComponentClass](/docs/lincd.js/classes/utils_LinkedComponentClass.LinkedComponentClass), which extends React.Component.
-   * And you will need to provide the same Shape class that you use as a parameter for the decorator as a type generic to LinkedComponentClass (see example).
-   * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
-   *
-   * @example
-   * Linked component class example:
-   * ```tsx
-   * import {React} from "react";
-   * import {linkedComponentClass} from "../package";
-   * import {LinkedComponentClass} from "lincd/utils/ComponentClass";
-   * @linkedComponentClass(Person)
-   * export class PersonView extends LinkedComponentClass<Person> {
-   *   render() {
-   *     //typescript knows that person is of type Person
-   *     let person = this.props.sourceShape;
-   *
-   *     //get the name of the person from the graph
-   *     return <h1>Hello {person.name}!</h1>;
-   *   }
-   * }
-   * ```
-   */
-  // linkedComponentClass: <ShapeType extends Shape, P = {}>(
-  //   shapeClass: typeof Shape,
-  // ) => ClassDecorator;
   /**
    * Links a typescript class to a SHACL shape.
    * This decorator creates a SHACL shape and looks at the static property [targetClass](/docs/lincd.js/classes/shapes_Shape.Shape#targetclass)
@@ -203,51 +165,6 @@ export interface LinkedPackageObject
   packageName: string;
 
   /**
-   * Links a functional component to its shape
-   * Once linked, the component receives an extra property "sourceShape" which will be an instance of the linked Shape.
-   *
-   * Note that the shape needs to be provided twice, as a type and as a value, see examples below.
-   * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
-   * @param functionalComponent - a functional rect component
-   *
-   * @example
-   * Linked Functional Component example:
-   * ```tsx
-   * import {Person} from "../shapes/Person";
-   * export const PersonView = linkedComponent<Person>(Person, ({source, sourceShape}) => {
-   *   //source is a NamedNode, and sourceShape is an instance of Person (for the same named node)
-   *   let person = sourceShape;
-   *   //get the name of the person from the graph
-   *   return <h1>Hello {person.name}!</h1>;
-   * });
-   * ```
-   */
-  linkedComponent: LinkedComponentFactoryFn;
-
-  /**
-   * Links a functional Set component to its shape
-   * Set components are components that show a set of data sources.
-   * Once linked, the component receives an extra property "sources" which will be a ShapeSet with instance of the linked Shape.
-   *
-   * Note that the shape needs to be provided twice, as a type and as a value, see examples below.
-   * @param shape - the Shape class that this component is linked to. Import a LINCD Shape class and use this class directly for this parameter
-   * @param functionalComponent - a functional react component
-   *
-   * @example
-   * Linked Functional Set Component example:
-   * ```tsx
-   * import {Person} from "../shapes/Person";
-   * export const PersonView = linkedSetComponent<Person>(Person, ({sources}) => {
-   *   //source is a NamedNode, and sourceShape is an instance of Person (for the same named node)
-   *   let persons = sources;
-   *   //get the name of the person from the graph
-   *   return <div>{persons.map(person => <p>{person.name}</p>)}</div>;
-   * });
-   * ```
-   */
-  linkedSetComponent: LinkedSetComponentFactoryFn;
-
-  /**
    * Register a file (a javascript module) and all its exported objects.
    * Specifically helpful for registering multiple functional components if you declare them without a function name
    * @param _this
@@ -336,7 +253,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
   {
     for (var key in _module.exports)
     {
-      //if the exported object itself (usually FunctionalComponents) is not named or its name is _wrappedComponent (which ends up happening in the linkedComponent method above)
+      //if the exported object itself is not named or its name is _wrappedComponent
       //then we give it the same name as it's export name.
       if (
         !_module.exports[key].name ||
@@ -367,17 +284,6 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     //return the original class without modifications
     return constructor;
   };
-
-  //method to create a linked functional component
-  const linkedComponent = createLinkedComponentFn(
-    registerPackageExport,
-    registerComponent,
-  );
-
-  const linkedSetComponent = createLinkedSetComponentFn(
-    registerPackageExport,
-    registerComponent,
-  );
 
   // helper that contains the previous body; applies the decorator work to a given constructor
   function applyLinkedShape<T extends typeof Shape>(
@@ -556,8 +462,6 @@ export function linkedPackage(packageName: string): LinkedPackageObject
 
   //return the declarators so the module can use them
   return {
-    linkedComponent,
-    linkedSetComponent,
     linkedShape,
     linkedUtil,
     linkedOntology,
@@ -567,31 +471,6 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     packageExports: packageTreeObject,
     packageName: packageName,
   } as LinkedPackageObject;
-}
-
-function registerComponent(exportedComponent: Component,shape?: typeof Shape)
-{
-  if (!shape)
-  {
-    //warn developers against a common mistake: if no static shape is set by the Component it will inherit the one of the class it extends
-    if (!exportedComponent.hasOwnProperty('shape'))
-    {
-      console.warn(
-        `Component ${
-          exportedComponent.displayName || exportedComponent.name
-        } is not linked to a shape.`,
-      );
-      return;
-    }
-    shape = exportedComponent.shape;
-  }
-
-  if (!shapeToComponents.has(shape))
-  {
-    shapeToComponents.set(shape,new CoreSet<any>());
-  }
-
-  shapeToComponents.get(shape).add(exportedComponent);
 }
 
 function registerPackageInTree(packageName,packageExports?)

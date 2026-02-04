@@ -1,15 +1,8 @@
-import {useEffect} from 'react';
 import {QShape, QueryShape} from './SelectQuery.js';
 import {Shape} from '../shapes/Shape.js';
 import {TestNode} from '../utils/TraceShape.js';
 
 const queryContext = new Map<string, QShape<any, any, any>>();
-
-export function useQueryContext(name: string, initialData: any, shapeType) {
-  useEffect(() => {
-    setQueryContext(name, initialData, shapeType);
-  }, [initialData, name]);
-}
 
 export function getQueryContext<T extends Shape>(name: string): QShape<T> {
   if (!queryContext.has(name)) {

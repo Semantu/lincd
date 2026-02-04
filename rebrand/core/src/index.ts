@@ -36,11 +36,8 @@ import * as DeleteQuery from './queries/DeleteQuery.js';
 import * as CreateQuery from './queries/CreateQuery.js';
 import * as QueryParser from './queries/QueryParser.js';
 import * as QueryFactory from './queries/QueryFactory.js';
-import * as LinkedComponent from './utils/LinkedComponent.js';
-import * as LinkedComponentClass from './utils/LinkedComponentClass.js';
 import * as ForwardReasoning from './utils/ForwardReasoning.js';
 import * as NameSpace from './utils/NameSpace.js';
-import * as Hooks from './utils/Hooks.js';
 import * as ShapeClass from './utils/ShapeClass.js';
 import * as ClassNames from './utils/ClassNames.js';
 import * as cached from './utils/cached.js';
@@ -55,8 +52,6 @@ import * as rdfs from './ontologies/rdfs.js';
 import * as xsd from './ontologies/xsd.js';
 import * as shacl from './ontologies/shacl.js';
 import * as DataFactory from './Datafactory.js';
-import React from 'react';
-
 import nextTick from 'next-tick';
 export {nextTick};
 
@@ -91,7 +86,6 @@ export function initModularApp() {
     ClassNames,
     cached,
     URI,
-    Hooks,
     ShapeClass,
     ForwardReasoning,
     Find,
@@ -105,8 +99,6 @@ export function initModularApp() {
     ICoreIterable,
     IFileStore,
     IQuadStore,
-    LinkedComponentClass,
-    LinkedComponent,
     SelectQuery,
     UpdateQuery,
     MutationQuery,
@@ -135,7 +127,4 @@ export function initModularApp() {
     Object.assign(global['lincd'], lincdExport);
   }
 
-  //modular apps will expect React to be available as a global variable
-  //therefor when enabling modular apps, lincd makes its own React version available through window
-  window['React'] = React;
 }
