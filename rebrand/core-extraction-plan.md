@@ -88,6 +88,7 @@ These are the resolved design decisions for how `@_linked/core` handles the tran
 - **Copy baseline:** Copy the entire root `src/` into `rebrand/core/src/` first, then prune later.
 - **Reporting rule:** After every run, report back with: what was done, any problems encountered, changes made that were not in the plan, and how the work was validated (including explicit test results like # passed/# failed and what was tested).
 - **Phase commit rule:** After each phase, commit your changes and update this plan to indicate progress. If you later need to revert changes, either commit on top or reset to a previous commit if more applicable.
+- **Validation rule:** Every phase or sub-step must be validated. For test-related steps, validation requires at least the relevant tests to pass (e.g., Sub-step 1.2 requires the single query test to pass).
 
 ### NodeReferenceValue replaces NamedNode
 
