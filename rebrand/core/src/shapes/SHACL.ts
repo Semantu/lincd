@@ -3,27 +3,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {BlankNode, Literal, NamedNode, Node} from '../models.js';
+import {NodeReferenceValue} from '../utils/NodeReference.js';
 import {Shape} from './Shape.js';
 import {shacl} from '../ontologies/shacl.js';
 import {URI} from '../utils/URI.js';
-import {
-  NodeReferenceValue,
-  toNamedNode,
-  toNodeReference,
-} from '../utils/NodeReference.js';
+import {toNodeReference} from '../utils/NodeReference.js';
 import {QResult} from '../queries/SelectQuery.js';
 import {getShapeClass} from '../utils/ShapeClass.js';
 
 export const LINCD_DATA_ROOT: string = 'https://data.lincd.org/';
 
-type NodeKindConfig =
-  | NodeReferenceValue
-  | NodeReferenceValue[]
-  | typeof NamedNode
-  | typeof BlankNode
-  | typeof Literal
-  | Array<typeof NamedNode | typeof BlankNode | typeof Literal>;
+type NodeKindConfig = NodeReferenceValue | NodeReferenceValue[];
 
 export type PropertyPathInput = NodeReferenceValue;
 export type PropertyPathInputList = PropertyPathInput | PropertyPathInput[];
@@ -57,10 +47,10 @@ const normalizeNodeKind = (
     return defaultNodeKind;
   }
   if (Array.isArray(nodeKind)) {
-    const nodeKinds = nodeKind as Array<any>;
-    const includesBlank = nodeKinds.includes(BlankNode);
-    const includesNamed = nodeKinds.includes(NamedNode);
-    const includesLiteral = nodeKinds.includes(Literal);
+    const ids = nodeKind.map((entry) => entry?.id);
+    const includesBlank = ids.includes(shacl.BlankNode.id);
+    const includesNamed = ids.includes(shacl.IRI.id);
+    const includesLiteral = ids.includes(shacl.Literal.id);
     if (includesBlank && includesNamed) {
       return shacl.BlankNodeOrIRI;
     }
@@ -70,18 +60,9 @@ const normalizeNodeKind = (
     if (includesLiteral && includesBlank) {
       return shacl.BlankNodeOrLiteral;
     }
-    return undefined;
+    return nodeKind[0];
   }
-  if (nodeKind === Literal) {
-    return shacl.Literal;
-  }
-  if (nodeKind === NamedNode) {
-    return shacl.IRI;
-  }
-  if (nodeKind === BlankNode) {
-    return shacl.BlankNode;
-  }
-  return toPlainNodeRef(nodeKind as NodeReferenceValue);
+  return nodeKind;
 };
 
 export interface NodeShapeConfig {
@@ -97,7 +78,7 @@ export interface NodeShapeConfig {
 }
 
 export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
-  nodeKind?: typeof Literal | NodeReferenceValue;
+  nodeKind?: NodeReferenceValue;
   /**
    * Values of the configured property must be less than the values of this 'lessThan' property
    */
@@ -153,7 +134,7 @@ export interface LiteralPropertyShapeConfig extends PropertyShapeConfig {
 }
 
 export interface ObjectPropertyShapeConfig extends PropertyShapeConfig {
-  nodeKind?: typeof NamedNode | typeof BlankNode | NodeReferenceValue;
+  nodeKind?: NodeReferenceValue;
   /**
    * Each value of this property must have this class as its rdf:type
    */
@@ -229,7 +210,7 @@ export class NodeShape extends Shape {
   extends?: NodeReferenceValue;
   private propertyShapes: PropertyShape[] = [];
 
-  constructor(node?: string | NodeReferenceValue | Node) {
+  constructor(node?: string | NodeReferenceValue) {
     super(node);
     if (this.id) {
       this.nodeRef = {id: this.id};
@@ -237,10 +218,6 @@ export class NodeShape extends Shape {
   }
 
   nodeRef?: NodeReferenceValue;
-
-  get namedNode(): NamedNode {
-    return this.nodeRef ? toNamedNode(this.nodeRef) : null;
-  }
 
   get label(): string {
     return this._label;

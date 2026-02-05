@@ -1,14 +1,12 @@
-import {NamedNode} from '../models.js';
 import {Shape} from '../shapes/Shape.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';
-import {rdf} from '../ontologies/rdf-named.js';
-import {NodeReferenceValue,toNamedNode} from './NodeReference.js';
+import {NodeReferenceValue} from './NodeReference.js';
 
-const resolveTargetClass = (
-  targetClass?: NamedNode | NodeReferenceValue | null,
-): NamedNode | null => {
-  return targetClass ? toNamedNode(targetClass) : null;
+const resolveTargetClassId = (
+  targetClass?: NodeReferenceValue | null,
+): string | null => {
+  return targetClass?.id ?? null;
 };
 
 let subShapesSpecificityCache: Map<string, (typeof Shape)[][]> = new Map();
@@ -195,7 +193,7 @@ function filterShapeClasses(filterFn) {
 
 export function getLeastSpecificShapeClasses(shapes: ICoreIterable<Shape>) {
   let shapeClasses = shapes.map((shape) =>
-    getShapeClass(shape.nodeShape.namedNode),
+    getShapeClass(shape.nodeShape.id),
   );
   return filterShapesToLeastSpecific(shapeClasses);
 }
@@ -252,73 +250,30 @@ function filterShapesToLeastSpecific(shapeClasses) {
  * @param shape
  */
 export function getShapeOrSubShape<S extends Shape = Shape>(
-  node,
-  shape: typeof Shape | (typeof Shape)[],
+  _node: unknown,
+  _shape: typeof Shape | (typeof Shape)[],
 ): S {
-  if (!node) return null;
-
-  //new:
-  //find all shapes that extend the given shape(s)
-  let mostSpecificShapes = getMostSpecificShapesByType(node, shape);
-
-  //take the first one and return a new instance of that shape
-  if (mostSpecificShapes.length > 0) {
-    return new (mostSpecificShapes[0] as any)(node) as S;
-  }
-  //by default, if no more specific shapes were found, just create an instance of the (first) given shape
-  if (Array.isArray(shape)) {
-    return new (shape[0] as any)(node) as S;
-  }
-  return new (shape as any)(node) as S;
-
-  // //start with the shape itself, but add any extending shapes
-  // let extendingShapes:typeof Shape[] = [];
-  //
-  // //if shape is an array, we check if the node is an instance of any of the shapes in the array
-  // //NOTE: I'm not exactly sure why we have to add .constructor, but the shapeClasses coming in are
-  // //apparently not of the same kind (class) as the shapeClasses in the nodeShapeToShapeClass map
-  // //so, we have to compare by its constructors prototype, that seems to work
-  // let classExtendsGivenShapeClass = Array.isArray(shape) ? (shapeClass) => {
-  //   return shape.some(s => shapeClass.constructor.prototype instanceof s);
-  // } : (shapeClass) => {
-  //   return shapeClass.constructor.prototype instanceof shape;
-  // }
-  //
-  // let shapesOfNode = NodeShape.getShapesOf(node);
-  // shapesOfNode.forEach(nodeShape => {
-  //   let shapeClass = getShapeClass(nodeShape.namedNode);
-  //   if(classExtendsGivenShapeClass(shapeClass.prototype)) {
-  //     extendingShapes.push(shapeClass);
-  //   }
-  // });
-  //
-  // extendingShapes.sort((s1,s2) => {
-  //   return s1.prototype instanceof s2 ? -1 : 1;
-  // });
-  // if(extendingShapes.length > 0) {
-  //   return new (extendingShapes[0] as any)(node) as S;
-  // }
-  //
-  // return new (shape as any)(node) as S;
+  throw new Error(
+    'getShapeOrSubShape requires RDF node models and is not supported in @_linked/core.',
+  );
 }
 
 export function getMostSpecificShapes(
-  node: NamedNode,
-  baseShape: typeof Shape | (typeof Shape)[] = Shape,
+  _node: unknown,
+  _baseShape: typeof Shape | (typeof Shape)[] = Shape,
 ): (typeof Shape)[] {
-  return _getMostSpecificShapes(baseShape, (subShape) =>
-    subShape.shape.validateNode(node),
+  throw new Error(
+    'getMostSpecificShapes requires RDF node models and is not supported in @_linked/core.',
   );
 }
 
 export function getMostSpecificShapesByType(
-  node: NamedNode,
-  baseShape: typeof Shape | (typeof Shape)[] = Shape,
+  _node: unknown,
+  _baseShape: typeof Shape | (typeof Shape)[] = Shape,
 ): (typeof Shape)[] {
-  return _getMostSpecificShapes(baseShape, (subShape) => {
-    const targetClass = resolveTargetClass(subShape.targetClass);
-    return targetClass ? node.has(rdf.type, targetClass) : false;
-  });
+  throw new Error(
+    'getMostSpecificShapesByType requires RDF node models and is not supported in @_linked/core.',
+  );
 }
 
 function getKey(shape: typeof Shape | (typeof Shape)[]) {
@@ -330,7 +285,7 @@ function getKey(shape: typeof Shape | (typeof Shape)[]) {
 function getShapeKey(shape: typeof Shape) {
   //return a unique string for each shape
   return (
-    resolveTargetClass(shape.targetClass)?.id ||
+    resolveTargetClassId(shape.targetClass) ||
     shape.name + shape.prototype.constructor.toString().substring(0, 80)
   );
 }

@@ -1,5 +1,4 @@
 import {Shape} from '../shapes/Shape.js';
-import {NamedNode} from '../models.js';
 
 const _cache = new Map<string, {timeout: number; value: any}>();
 
@@ -18,9 +17,9 @@ export function cached(fn: () => any, args: any[], cacheTimeMs?: number,alsoCach
     const now = Date.now();
     args = args.map((a) => {
       if (a instanceof Shape) {
-        return a.uri;
-      } else if (a instanceof NamedNode) {
-        return a.uri;
+        return a.id ?? a.uri;
+      } else if (a && typeof a === 'object' && 'id' in a) {
+        return (a as {id: string}).id;
       } else {
         return a?.toString();
       }

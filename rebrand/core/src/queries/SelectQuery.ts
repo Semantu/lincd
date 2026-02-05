@@ -1070,7 +1070,15 @@ export class QueryShapeSet<
   ): QShapeSet<InstanceType<ShapeClass>, Source, Property> {
     //if the shape is not the same as the original value, then we need to create a new query shape
     if (!shape.shape.equals(this.originalValue.getLeastSpecificShape().shape)) {
-      let newOriginal = (shape as any).getSetOf(this.originalValue.getNodes());
+      let newOriginal = new ShapeSet(
+        this.originalValue.map((existing) => {
+          const instance = new (shape as any)();
+          if (existing?.id) {
+            instance.id = existing.id;
+          }
+          return instance;
+        }),
+      );
       return QueryShapeSet.create(
         newOriginal,
         this.property,
@@ -1228,8 +1236,7 @@ export class QueryShape<
   get id() {
     return (
       (this.originalValue as Shape).__queryContextId ||
-      this.originalValue['id'] ||
-      (this.originalValue as Shape).node?.id
+      this.originalValue['id']
     );
   }
 
@@ -1341,7 +1348,7 @@ export class QueryShape<
     subQueryFn: QueryBuildFn<S, QF>,
   ): SelectQueryFactory<S, QF, QueryShape<S, Source, Property>> {
     let leastSpecificShape = getShapeClass(
-      (this.getOriginalValue() as Shape).nodeShape.namedNode,
+      (this.getOriginalValue() as Shape).nodeShape.id,
     );
     let subQuery = new SelectQueryFactory(
       leastSpecificShape as ShapeType,

@@ -261,7 +261,10 @@ Keep a `PackageMetadata` registry in the global LINCD tree with the same id as t
 **Phase 3 follow-up — Add metadata registration tests.** ✅ Done
 Add tests that assert package, node shape, and property shape metadata IDs and structure.
 
-**Sub-step 3.7 — Convert remaining utilities.**
+**Phase 3 follow-up — Add store routing tests.** ✅ Done
+Add tests that assert LinkedStorage routes queries to the correct store based on the root shape.
+
+**Sub-step 3.7 — Convert remaining utilities.** ✅ Done
 Update `ShapeClass.ts`, `LinkedStorage.ts`, and any other files that still import from `models.ts`. Reference: codex branch versions.
 
 **Sub-step 3.8 — Delete RDF model files.**

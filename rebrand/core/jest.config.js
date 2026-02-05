@@ -7,6 +7,7 @@ module.exports = {
     '**/query.test.ts',
     '**/query.types.test.ts',
     '**/metadata.test.ts',
+    '**/store-routing.test.ts',
   ],
   testPathIgnorePatterns: ['/old/'],
   transform: {

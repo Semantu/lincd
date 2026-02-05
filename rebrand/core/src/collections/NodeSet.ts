@@ -9,7 +9,6 @@ import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
 import {QuadSet} from './QuadSet.js';
 import {QuadArray} from './QuadArray.js';
 import {ICoreIterable} from '../interfaces/ICoreIterable.js';
-import {Debug} from '../utils/Debug.js';
 import {URI} from '../utils/URI.js';
 
 export class NodeSet<R extends Node = Node>
@@ -335,7 +334,7 @@ export class NodeSet<R extends Node = Node>
     );
   }
 
-  print(includeIncomingProperties: boolean = true) {
-    return Debug.print(this, includeIncomingProperties);
+  print() {
+    console.log(this.toString());
   }
 }
