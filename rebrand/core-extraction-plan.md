@@ -88,8 +88,7 @@ These are the resolved design decisions for how `@_linked/core` handles the tran
 - **Copy baseline:** Copy the entire root `src/` into `rebrand/core/src/` first, then prune later.
 - **Reporting rule:** After every run, report back with: what was done, any problems encountered, changes made that were not in the plan, and how the work was validated (including explicit test results like # passed/# failed and what was tested).
 - **Phase commit rule:** After each phase, commit your changes and update this plan to indicate progress. If you later need to revert changes, either commit on top or reset to a previous commit if more applicable.
-- **Single-commit rule:** One commit per phase/sub-step for the code changes. Update this plan to mark completion *before* committing so the work + plan change are in the same commit.
-- **Commit-id rule:** After committing a phase/sub-step, update this plan again to replace `commit TBD` with the actual commit id (plan-only follow-up commit).
+- **Single-commit rule:** One commit per phase/sub-step. Update this plan to mark completion *before* committing so the work + plan change are in the same commit. If you add the commit hash afterward, that plan-only tweak can wait and be included with the next phase’s commit (no extra immediate commit needed).
 - **Validation rule:** Every phase or sub-step must be validated. For test-related steps, validation requires at least the relevant tests to pass (e.g., Sub-step 1.2 requires the single query test to pass).
 - **Next-step rule:** In each report, briefly state what the next step entails and include the exact title of the next sub-step.
 
@@ -271,7 +270,7 @@ Update `ShapeClass.ts`, `LinkedStorage.ts`, and any other files that still impor
 **Sub-step 3.8 — Delete RDF model files.** ✅ Done (60a95f6)
 Once no file imports from `models.ts`, delete: `models.ts`, `Datafactory.ts`, `LocalQueryResolver.ts`, and RDF-dependent collections (`NodeSet`, `NodeMap`, `NodeURIMappings`, `NodeValuesSet`, `QuadSet`, `QuadMap`, `QuadArray`). Delete CSS files.
 
-## Phase 4 — Clean up remaining utilities & exports
+## Phase 4 — Clean up remaining utilities & exports ✅ Done (commit TBD)
 
 - Audit `utils/` — remove any utilities unused after Phase 2–3 pruning (likely: `NQuads`, `ForwardReasoning`, `Find`, `Order`, `ClassNames`, `Debug`, `LinkedFileStorage`, `Prefix`, `NameSpace`, `Module`, `TraceShape`, `cached`).
 - Audit `collections/` — keep only what core needs (`CoreSet`, `CoreMap`, `ShapeSet`, `ShapeValuesSet`, `SearchMap` — evaluate each).

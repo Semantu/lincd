@@ -23,7 +23,6 @@ import * as QueryParser from './queries/QueryParser.js';
 import * as QueryFactory from './queries/QueryFactory.js';
 import * as NameSpace from './utils/NameSpace.js';
 import * as ShapeClass from './utils/ShapeClass.js';
-import * as ClassNames from './utils/ClassNames.js';
 import * as cached from './utils/cached.js';
 import * as List from './shapes/List.js';
 import * as ICoreIterable from './interfaces/ICoreIterable.js';
@@ -51,7 +50,6 @@ export function initModularApp() {
     ShapeSet,
     Prefix,
     NameSpace,
-    ClassNames,
     cached,
     URI,
     ShapeClass,
