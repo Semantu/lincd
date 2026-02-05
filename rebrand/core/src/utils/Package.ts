@@ -7,6 +7,7 @@ import {
   createPropertyShape,
   getAndClearCallbacks,
   getNodeShapeUri,
+  LINCD_DATA_ROOT,
   NodeShape,
   PropertyShape,
 } from '../shapes/SHACL.js';
@@ -44,6 +45,12 @@ export type ShapeConfig = {
    * will be stored as rdfs:comment on the shape node
    */
   description?: string;
+};
+
+export type PackageMetadata = {
+  id: string;
+  packageName: string;
+  type: NodeReferenceValue;
 };
 
 /**
@@ -158,6 +165,7 @@ export interface LinkedPackageObject
    */
   packageExports: any;
   packageName: string;
+  packageMetadata: PackageMetadata;
 
   /**
    * Register a file (a javascript module) and all its exported objects.
@@ -195,6 +203,7 @@ export function autoLoadOntologyData(value: boolean)
 
 export function linkedPackage(packageName: string): LinkedPackageObject
 {
+  let packageMetadata = registerPackageMetadata(packageName);
   let packageTreeObject = registerPackageInTree(packageName);
 
   //#Create declarators for this module
@@ -417,6 +426,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     getPackageShape,
     packageExports: packageTreeObject,
     packageName: packageName,
+    packageMetadata,
   } as LinkedPackageObject;
 }
 
@@ -448,6 +458,25 @@ function registerPackageInTree(packageName,packageExports?)
   return lincd._modules[packageName];
 }
 
+function registerPackageMetadata(packageName: string): PackageMetadata
+{
+  if (!lincd._packages)
+  {
+    lincd._packages = {};
+  }
+  if (packageName in lincd._packages)
+  {
+    return lincd._packages[packageName];
+  }
+  const packageMetadata: PackageMetadata = {
+    id: `${LINCD_DATA_ROOT}module/${packageName}`,
+    packageName,
+    type: lincdOntology.Module,
+  };
+  lincd._packages[packageName] = packageMetadata;
+  return packageMetadata;
+}
+
 
 export function initTree()
 {
@@ -463,7 +492,7 @@ export function initTree()
   }
   else
   {
-    globalObject['lincd'] = {_modules: {}};
+    globalObject['lincd'] = {_modules: {}, _packages: {}};
   }
 }
 

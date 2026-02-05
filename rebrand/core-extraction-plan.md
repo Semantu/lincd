@@ -255,6 +255,9 @@ Replace the RDF-triple-based `NodeShape` / `PropertyShape` with plain JS classes
 **Sub-step 3.6 — Convert Package.ts to plain JS metadata.** ✅ Done
 Remove RDF quad creation. Replace with `NodeShape`/`PropertyShape` construction and `registerShapeClass()` calls. Reference: codex branch `decorators.ts`.
 
+**Phase 3 follow-up — Store package metadata in plain JS.** ✅ Done
+Keep a `PackageMetadata` registry in the global LINCD tree with the same id as the old package URI, so package info remains accessible without RDF.
+
 **Sub-step 3.7 — Convert remaining utilities.**
 Update `ShapeClass.ts`, `LinkedStorage.ts`, and any other files that still import from `models.ts`. Reference: codex branch versions.
 
