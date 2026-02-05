@@ -258,6 +258,9 @@ Remove RDF quad creation. Replace with `NodeShape`/`PropertyShape` construction 
 **Phase 3 follow-up — Store package metadata in plain JS.** ✅ Done
 Keep a `PackageMetadata` registry in the global LINCD tree with the same id as the old package URI, so package info remains accessible without RDF.
 
+**Phase 3 follow-up — Add metadata registration tests.** ✅ Done
+Add tests that assert package, node shape, and property shape metadata IDs and structure.
+
 **Sub-step 3.7 — Convert remaining utilities.**
 Update `ShapeClass.ts`, `LinkedStorage.ts`, and any other files that still import from `models.ts`. Reference: codex branch versions.
 

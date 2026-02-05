@@ -3,7 +3,11 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   rootDir: 'src/tests',
-  testMatch: ['**/query.test.ts', '**/query.types.test.ts'],
+  testMatch: [
+    '**/query.test.ts',
+    '**/query.types.test.ts',
+    '**/metadata.test.ts',
+  ],
   testPathIgnorePatterns: ['/old/'],
   transform: {
     '^.+\\.(ts|tsx)$': [
