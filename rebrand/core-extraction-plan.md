@@ -270,7 +270,7 @@ Update `ShapeClass.ts`, `LinkedStorage.ts`, and any other files that still impor
 **Sub-step 3.8 — Delete RDF model files.** ✅ Done (60a95f6)
 Once no file imports from `models.ts`, delete: `models.ts`, `Datafactory.ts`, `LocalQueryResolver.ts`, and RDF-dependent collections (`NodeSet`, `NodeMap`, `NodeURIMappings`, `NodeValuesSet`, `QuadSet`, `QuadMap`, `QuadArray`). Delete CSS files.
 
-## Phase 4 — Clean up remaining utilities & exports ✅ Done (commit TBD)
+## Phase 4 — Clean up remaining utilities & exports ✅ Done (a789604)
 
 - Audit `utils/` — remove any utilities unused after Phase 2–3 pruning (likely: `NQuads`, `ForwardReasoning`, `Find`, `Order`, `ClassNames`, `Debug`, `LinkedFileStorage`, `Prefix`, `NameSpace`, `Module`, `TraceShape`, `cached`).
 - Audit `collections/` — keep only what core needs (`CoreSet`, `CoreMap`, `ShapeSet`, `ShapeValuesSet`, `SearchMap` — evaluate each).
@@ -280,11 +280,14 @@ Once no file imports from `models.ts`, delete: `models.ts`, `Datafactory.ts`, `L
 - Rename the package in `package.json` to `@_linked/core`.
 - Verify build compiles, tests pass, type inference intact.
 
-## Phase 5 — Final test suite for `@_linked/core` ✅ Done (commit TBD)
+## Phase 5 — Final test suite for `@_linked/core` ✅ Done (4a40632)
 
 - Remove old/archived tests from `src/tests/old/`.
 - Ensure all tests run and pass against the pruned package.
 - Verify type inference tests still validate that inferred result types are correct.
+
+**Phase 5 follow-up — Add unit tests for core utilities.** ✅ Done (commit TBD)
+Add coverage for `ShapeClass`, extra `LinkedStorage` behaviors, `QueryParser` delegation, `QueryContext` edge cases, and `Package.ts` registration helpers.
 
 ## Phase 6 — Integration verification with `@_linked/memstore`
 
