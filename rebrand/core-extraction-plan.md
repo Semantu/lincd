@@ -267,7 +267,7 @@ Add tests that assert LinkedStorage routes queries to the correct store based on
 **Sub-step 3.7 — Convert remaining utilities.** ✅ Done
 Update `ShapeClass.ts`, `LinkedStorage.ts`, and any other files that still import from `models.ts`. Reference: codex branch versions.
 
-**Sub-step 3.8 — Delete RDF model files.**
+**Sub-step 3.8 — Delete RDF model files.** ✅ Done (commit TBD)
 Once no file imports from `models.ts`, delete: `models.ts`, `Datafactory.ts`, `LocalQueryResolver.ts`, and RDF-dependent collections (`NodeSet`, `NodeMap`, `NodeURIMappings`, `NodeValuesSet`, `QuadSet`, `QuadMap`, `QuadArray`). Delete CSS files.
 
 ## Phase 4 — Clean up remaining utilities & exports

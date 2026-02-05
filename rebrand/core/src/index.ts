@@ -12,7 +12,6 @@ import * as CoreMap from './collections/CoreMap.js';
 import * as Shape from './shapes/Shape.js';
 import * as SHACLShapes from './shapes/SHACL.js';
 import * as ShapeSet from './collections/ShapeSet.js';
-import * as ShapeValuesSet from './collections/ShapeValuesSet.js';
 import * as Prefix from './utils/Prefix.js';
 import * as URI from './utils/URI.js';
 import * as SelectQuery from './queries/SelectQuery.js';
@@ -50,7 +49,6 @@ export function initModularApp() {
     CoreMap,
     Shape,
     ShapeSet,
-    ShapeValuesSet,
     Prefix,
     NameSpace,
     ClassNames,
