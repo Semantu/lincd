@@ -10,8 +10,6 @@ import {
   LINCD_DATA_ROOT,
   NodeShape,
   PropertyShape,
-  ValidationReport,
-  ValidationResult,
 } from '../shapes/SHACL.js';
 import {Shape} from '../shapes/Shape.js';
 import {Prefix} from './Prefix.js';
@@ -306,13 +304,9 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     if (!Object.getOwnPropertyNames(constructor).includes('shape'))
     {
       // create a new node shape for this shapeClass
-      let nodeShape: NodeShape = NodeShape.getFromURI(
-        getNodeShapeUri(packageName,constructor.name),
+      let nodeShape: NodeShape = new NodeShape(
+        getNodeShapeUri(packageName, constructor.name),
       );
-      //small fix, for some reason sometimes a node with this URI already exists but is not a NodeShape
-      if (!nodeShape.type) {
-        nodeShape.type = shacl.NodeShape;
-      }
       // connect the typescript class to its NodeShape
       constructor.shape = nodeShape;
       // set the name
@@ -329,27 +323,15 @@ export function linkedPackage(packageName: string): LinkedPackageObject
       // also keep track of the reverse: nodeShape to typescript class
       addNodeShapeToShapeClass(nodeShape,constructor);
 
-      // also create a representation in the graph of the shape class itself
-      let shapeClass = NamedNode.getOrCreate(getNodeShapeUri(packageName,constructor.name),
-        true,
-      );
-      shapeClass.set(lincdOntology.definesShape,nodeShape.node);
-      shapeClass.set(rdf.type,lincdOntology.ShapeClass);
-      // and connect it back to the module
-      shapeClass.set(lincdOntology.module,packageNode);
-
-      //track what extends what (both on nodeShape level and shapeClass level)
-      const extendingShapeClass = (Object.getPrototypeOf(constructor) as typeof Shape);
+      //track what extends what (nodeShape level)
+      const extendingShapeClass = Object.getPrototypeOf(
+        constructor,
+      ) as typeof Shape;
       const extendingShape = extendingShapeClass.shape;
       //if this shape class is extending something other then Shape
-      if(extendingShape && !(extendingShapeClass === Shape)) {
+      if (extendingShape && !(extendingShapeClass === Shape)) {
         //store which nodeShape this nodeShape extends
-        nodeShape.extends = extendingShape;
-        //store which shapeClass this shapeClass extends
-        const extendingShapeClassNode = extendingShape.getOneInverse(lincdOntology.definesShape);
-        if(extendingShapeClassNode) {
-          shapeClass.set(lincdOntology.isExtending,extendingShapeClassNode);
-        }
+        nodeShape.extends = {id: extendingShape.id};
       }
       
 
@@ -359,7 +341,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
         constructor['shapeCallbacks'].forEach((callback) => {
           callback(nodeShape);
         });
-        const nodeCallbacks = getAndClearCallbacks(nodeShape.namedNode);
+        const nodeCallbacks = getAndClearCallbacks(nodeShape.id);
         if(nodeCallbacks) {
           nodeCallbacks.forEach((callback) => {
             callback(nodeShape);
@@ -457,7 +439,7 @@ export function linkedPackage(packageName: string): LinkedPackageObject
     //get the named node of the node shape first,
     //then get the shape class that defines this node shape
     return getShapeClass(
-      NamedNode.getOrCreate(getNodeShapeUri(packageName,name)),
+      getNodeShapeUri(packageName, name),
     );
   };
 
@@ -534,19 +516,12 @@ lincdPackage.linkedShape({
   description:
     'Represents a SHACL PropertyShape; specifies rules for one property of a NodeShape (path, datatype, cardinality). (validation rule, property constraint)',
 })(PropertyShape);
-lincdPackage.linkedShape({
-  description:
-    'ValidationReport produced by a SHACL engine; summarizes results of validating data against NodeShapes and PropertyShapes. (report, conformance, summary)',
-})(ValidationReport);
-lincdPackage.linkedShape({
-  description:
-    'Individual result entry in a ValidationReport; details a specific violation or success, pointing to the node, property, and constraint. (error, issue, finding)',
-})(ValidationResult);
+// ValidationReport / ValidationResult removed in core metadata rewrite
 
 //ALL the following is to support Shape having get/set methods with property shapes
 //and Shape itself having a nodeShape
 //if we dont need Shape to have get/set methods (like label and type) then this can be removed
-Shape.shape = NodeShape.getFromURI(
+Shape.shape = new NodeShape(
   'https://data.lincd.org/module/lincd/shape/shape',
 );
 addNodeShapeToShapeClass(Shape.shape,Shape);

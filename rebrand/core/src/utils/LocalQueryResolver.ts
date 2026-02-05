@@ -25,7 +25,7 @@ import {
 } from '../queries/SelectQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
-import {shacl} from '../ontologies/shacl-named.js';
+import {shacl} from '../ontologies/shacl.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {UpdateQuery} from '../queries/UpdateQuery.js';
 import {
@@ -38,15 +38,32 @@ import {
   UpdateNodePropertyValue,
 } from '../queries/QueryFactory.js';
 import {Literal, NamedNode} from '../models.js';
-import {xsd} from '../ontologies/xsd-named.js';
-import {PropertyShape, ValidationReport} from '../shapes/SHACL.js';
+import {xsd} from '../ontologies/xsd.js';
+import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {rdf} from '../ontologies/rdf-named.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {CreateQuery} from '../queries/CreateQuery.js';
 import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
 import {toNamedNode} from './NodeReference.js';
+import {getShapeClass} from './ShapeClass.js';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
+
+const getRefId = (value?: {id?: string} | string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+  return typeof value === 'string' ? value : value.id || null;
+};
+
+const isSameRef = (
+  a?: {id?: string} | string | null,
+  b?: {id?: string} | string | null,
+): boolean => {
+  const aId = getRefId(a);
+  const bId = getRefId(b);
+  return !!aId && !!bId && aId === bId;
+};
 
 const normalizePropertyPath = (
   path: NodeReferenceValue | NodeReferenceValue[],
@@ -409,12 +426,12 @@ async function convertValue(
   value: any,
   createQuery: boolean = false,
 ): Promise<{value: Literal | NamedNode; plainValue: any}> {
-  if (propShape.nodeKind === shacl.Literal) {
+  if (isSameRef(propShape.nodeKind, shacl.Literal)) {
     return convertLiteral(propShape, value);
   } else if (
-    propShape.nodeKind === shacl.BlankNodeOrIRI ||
-    propShape.nodeKind === shacl.BlankNode ||
-    propShape.nodeKind === shacl.IRI
+    isSameRef(propShape.nodeKind, shacl.BlankNodeOrIRI) ||
+    isSameRef(propShape.nodeKind, shacl.BlankNode) ||
+    isSameRef(propShape.nodeKind, shacl.IRI)
   ) {
     return await convertNamedNode(propShape, value, createQuery);
   } else {
@@ -538,26 +555,18 @@ async function convertNodeDescription(
     : NamedNode.create();
   let plainResults = await applyFieldUpdates(value.fields, node, createQuery);
 
-  let valueShape = propShape?.valueShape || value.shape;
+  let valueShape: NodeShape = null;
+  if (propShape?.valueShape) {
+    const shapeClass = getShapeClass(propShape.valueShape);
+    valueShape = shapeClass?.shape || null;
+  } else if (value.shape) {
+    valueShape = value.shape as NodeShape;
+  }
   //if this property comes with a restriction that all values need to be of a certain shape
-  if (valueShape) {
-    //if that shape comes with a target class
-    if (valueShape.targetClass) {
-      //then we set the type of the node to the target class
-      //this is a "free" automatic property that we set for the user, so they don't need to always manually type it into the create() or update() queries
-      node.set(rdf.type, valueShape.targetClass);
-    }
-    //However... for other restrictions of the shape, the user needs to make sure that the node is valid
-    //So lets check if the node is valid according to the shape
-    if (!valueShape.validateNode(node)) {
-      let report = ValidationReport.forNodeAgainstShape(
-        node,
-        valueShape,
-      ).toString();
-      throw new Error(
-        `Property: ${propShape?.label} expects all values to be valid instances of shape ${valueShape.label}. Validation failed. Node: ${node.toString()}. Report: ${report}`,
-      );
-    }
+  if (valueShape?.targetClass) {
+    //then we set the type of the node to the target class
+    //this is a "free" automatic property that we set for the user, so they don't need to always manually type it into the create() or update() queries
+    node.set(rdf.type, toNamedNode(valueShape.targetClass));
   }
 
   await node.save();
@@ -581,9 +590,9 @@ function convertLiteral(
   let datatype = propShape.datatype;
   let res: Literal;
   if (datatype) {
-    if (datatype.equals(xsd.integer)) {
+    if (isSameRef(datatype, xsd.integer)) {
       if (typeof value === 'number') {
-        res = new Literal(value.toString(), xsd.integer);
+        res = new Literal(value.toString(), toNamedNode(xsd.integer));
       } else {
         throw new Error(
           `Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.integer, so it expects a number value. Given value: ` +
@@ -592,7 +601,7 @@ function convertLiteral(
             typeof value,
         );
       }
-    } else if (datatype.equals(xsd.boolean)) {
+    } else if (isSameRef(datatype, xsd.boolean)) {
       if (typeof value === 'boolean') {
         res = Boolean_toLiteral(value);
       } else {
@@ -603,9 +612,12 @@ function convertLiteral(
             typeof value,
         );
       }
-    } else if (datatype.equals(xsd.string)) {
-      res = new Literal(value.toString(), xsd.string);
-    } else if (datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
+    } else if (isSameRef(datatype, xsd.string)) {
+      res = new Literal(value.toString(), toNamedNode(xsd.string));
+    } else if (
+      isSameRef(datatype, xsd.date) ||
+      isSameRef(datatype, xsd.dateTime)
+    ) {
       //check if value is a date
       if (value instanceof Date) {
         res = XSDDate_fromNativeDate(value, datatype);
@@ -619,7 +631,7 @@ function convertLiteral(
       }
     } else {
       console.warn(
-        `Unknown datatype :${datatype.toString()}. Assuming it's a string value`,
+        `Unknown datatype :${getRefId(datatype)}. Assuming it's a string value`,
       );
     }
   }
@@ -646,7 +658,7 @@ function convertLiteral(
     }
     //and we convert the string to a literal
     //Note: datatype could be null or any other unsupported datatype
-    res = new Literal(value, datatype);
+    res = new Literal(value, datatype ? toNamedNode(datatype) : null);
   }
   return {
     value: res,
@@ -1265,13 +1277,19 @@ function literalNodeToResultObject(literal: Literal, property: PropertyShape) {
   let datatype = property.datatype;
   let value = literal.value;
   if (datatype) {
-    if (datatype.equals(xsd.boolean)) {
+    if (isSameRef(datatype, xsd.boolean)) {
       return value === 'true';
-    } else if (datatype.equals(xsd.integer)) {
+    } else if (isSameRef(datatype, xsd.integer)) {
       return parseInt(value);
-    } else if (datatype.equals(xsd.decimal) || datatype.equals(xsd.double)) {
+    } else if (
+      isSameRef(datatype, xsd.decimal) ||
+      isSameRef(datatype, xsd.double)
+    ) {
       return parseFloat(value);
-    } else if (datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
+    } else if (
+      isSameRef(datatype, xsd.date) ||
+      isSameRef(datatype, xsd.dateTime)
+    ) {
       return new Date(value);
     }
   }
@@ -1699,7 +1717,10 @@ function resolveQueryStepForNodesEndResults(
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
     let result =
-      (queryStep as PropertyQueryStep).property.nodeKind === shacl.Literal ||
+      isSameRef(
+        (queryStep as PropertyQueryStep).property.nodeKind,
+        shacl.Literal,
+      ) ||
       (queryStep as SizeStep).count
         ? []
         : new NodeSet();
@@ -1770,14 +1791,17 @@ function resolveQueryStepForNodesEndResults(
   }
 }
 
-function XSDDate_fromNativeDate(nativeDate: Date, datatype) {
+function XSDDate_fromNativeDate(
+  nativeDate: Date,
+  datatype: NodeReferenceValue,
+) {
   if (!nativeDate) return null;
 
   var value = nativeDate.toISOString();
-  let literal = new Literal(value, datatype);
+  let literal = new Literal(value, datatype ? toNamedNode(datatype) : null);
   return literal;
 }
 
 function Boolean_toLiteral(value: boolean) {
-  return new Literal(value.toString(), xsd.boolean);
+  return new Literal(value.toString(), toNamedNode(xsd.boolean));
 }

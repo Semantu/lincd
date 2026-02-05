@@ -14,14 +14,17 @@ const resolveTargetClass = (
 let subShapesSpecificityCache: Map<string, (typeof Shape)[][]> = new Map();
 let subShapesCache: Map<string, (typeof Shape)[]> = new Map();
 let mostSpecificSubShapesCache: Map<string, (typeof Shape)[]> = new Map();
-let nodeShapeToShapeClass: Map<NamedNode, typeof Shape> = new Map();
+let nodeShapeToShapeClass: Map<string, typeof Shape> = new Map();
 let shouldResetCache = false;
 
 export function addNodeShapeToShapeClass(
   nodeShape: NodeShape,
   shapeClass: typeof Shape,
 ) {
-  nodeShapeToShapeClass.set(nodeShape.namedNode, shapeClass);
+  if (!nodeShape?.id) {
+    return;
+  }
+  nodeShapeToShapeClass.set(nodeShape.id, shapeClass);
   //make sure that the cache is reset after the next event loop
   if (!shouldResetCache) {
     shouldResetCache = true;
@@ -34,8 +37,14 @@ export function addNodeShapeToShapeClass(
   }
 }
 
-export function getShapeClass(nodeShape: NamedNode): typeof Shape {
-  return nodeShapeToShapeClass.get(nodeShape);
+export function getShapeClass(
+  nodeShape: NodeReferenceValue | {id: string} | string,
+): typeof Shape {
+  const id = typeof nodeShape === 'string' ? nodeShape : nodeShape?.id;
+  if (!id) {
+    return null;
+  }
+  return nodeShapeToShapeClass.get(id);
 }
 
 /**

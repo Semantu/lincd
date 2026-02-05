@@ -13,6 +13,7 @@ import {ShapeSet} from '../collections/ShapeSet.js';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass.js';
 import {SelectQuery} from '../queries/SelectQuery.js';
 import {LinkedDataRequest} from './LinkedDataRequest.js';
+import {toNamedNode} from './NodeReference.js';
 import {UpdateQuery} from '../queries/UpdateQuery.js';
 import {UpdatePartial} from '../queries/QueryFactory.js';
 import {rdf} from '../ontologies/rdf-named.js';
@@ -26,7 +27,7 @@ export abstract class LinkedStorage {
   private static _initialized: boolean;
   private static graphToStore: CoreMap<Graph, IQuadStore> = new CoreMap();
   private static shapesToGraph: CoreMap<typeof Shape, Graph> = new CoreMap();
-  private static nodeShapesToGraph: CoreMap<NamedNode, Graph> = new CoreMap();
+  private static nodeShapesToGraph: CoreMap<string, Graph> = new CoreMap();
   private static graphToTargetClasses: CoreMap<Graph, NodeSet<NamedNode>> =
     new CoreMap();
   private static defaultStorageGraph: Graph;
@@ -200,18 +201,24 @@ export abstract class LinkedStorage {
         if (!this.graphToTargetClasses.has(graph)) {
           this.graphToTargetClasses.set(graph, new NodeSet());
         }
-        this.graphToTargetClasses
-          .get(graph)
-          .add(shapeClass['shape'].targetClass);
+        if (shapeClass['shape'].targetClass) {
+          this.graphToTargetClasses
+            .get(graph)
+            .add(toNamedNode(shapeClass['shape'].targetClass));
+        }
         //we also add any shape class that extends this shape class
         //For example, if storage is configured for Thing, then we want to also list all the shapes that extend Thing
         //because the types of all those super shapes should be pointing towards the same graph
         getSuperShapesClasses(shapeClass).forEach((subShape) => {
-          this.graphToTargetClasses
-            .get(graph)
-            .add(subShape['shape'].targetClass);
+          if (subShape['shape'].targetClass) {
+            this.graphToTargetClasses
+              .get(graph)
+              .add(toNamedNode(subShape['shape'].targetClass));
+          }
         });
-        this.nodeShapesToGraph.set(shapeClass['shape'].namedNode, graph);
+        if (shapeClass['shape'].id) {
+          this.nodeShapesToGraph.set(shapeClass['shape'].id, graph);
+        }
       }
     });
     this.init();
@@ -270,12 +277,15 @@ export abstract class LinkedStorage {
 
   static getGraphForShapeClass(shapeClass: typeof Shape) {
     //currently, the target graph of the very first shape that has a target graph is returned
-    if (this.nodeShapesToGraph.has(shapeClass.shape.namedNode)) {
-      return this.nodeShapesToGraph.get(shapeClass.shape.namedNode);
+    if (shapeClass.shape?.id && this.nodeShapesToGraph.has(shapeClass.shape.id)) {
+      return this.nodeShapesToGraph.get(shapeClass.shape.id);
     }
     for (let superShapeClass of getSuperShapesClasses(shapeClass)) {
-      if (this.nodeShapesToGraph.has(superShapeClass.shape.namedNode)) {
-        return this.nodeShapesToGraph.get(superShapeClass.shape.namedNode);
+      if (
+        superShapeClass.shape?.id &&
+        this.nodeShapesToGraph.has(superShapeClass.shape.id)
+      ) {
+        return this.nodeShapesToGraph.get(superShapeClass.shape.id);
       }
     }
     return defaultGraph;
@@ -1106,15 +1116,6 @@ export abstract class LinkedStorage {
   > {
     if (!this.propShapeMap) {
       this.propShapeMap = new Map();
-      PropertyShape.getLocalInstances().forEach((propertyShape) => {
-        let path = propertyShape.path;
-        const pathEntries = Array.isArray(path) ? path : [path];
-        const pathString = pathEntries.map((p) => p.id).join(',');
-        if (!this.propShapeMap.has(pathString)) {
-          this.propShapeMap.set(pathString, []);
-        }
-        this.propShapeMap.get(pathString).push(propertyShape);
-      });
     }
     return this.propShapeMap;
   }

@@ -249,7 +249,7 @@ These two changes are tightly coupled and should happen together. Remove the `Na
 **Phase 3 follow-up — Strengthen query context tests.** ✅ Done
 Expand the two query-context tests to assert the full ShapeReferenceValue structure in the generated query object (both direct context equality and context-based property paths).
 
-**Sub-step 3.5 — Convert SHACL.ts to plain JS metadata.**
+**Sub-step 3.5 — Convert SHACL.ts to plain JS metadata.** ✅ Done
 Replace the RDF-triple-based `NodeShape` / `PropertyShape` with plain JS classes (reference: codex branch `ShapeDefinition.ts` + `PropertyShape.ts`). Remove `ValidationReport`, `ValidationResult`, and validation logic. Preserve: metadata tracking, `getPropertyShapes()`, `getNodeShapeUri()`, property shape IDs.
 
 **Sub-step 3.6 — Convert Package.ts to plain JS metadata.**

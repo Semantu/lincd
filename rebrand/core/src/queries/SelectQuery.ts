@@ -1,12 +1,12 @@
 import {Shape,ShapeType} from '../shapes/Shape.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {shacl} from '../ontologies/shacl-named.js';
+import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {getPropertyShapeByLabel,getShapeClass} from '../utils/ShapeClass.js';
 import {NodeReferenceValue,Prettify,QueryFactory,ShapeReferenceValue} from './QueryFactory.js';
-import {xsd} from '../ontologies/xsd-named.js';
+import {xsd} from '../ontologies/xsd.js';
 
 /**
  * ###################################
@@ -15,6 +15,11 @@ import {xsd} from '../ontologies/xsd-named.js';
  */
 export type JSPrimitive = JSNonNullPrimitive | null | undefined;
 export type JSNonNullPrimitive = string | number | boolean | Date;
+
+const isSameRef = (
+  a?: NodeReferenceValue,
+  b?: NodeReferenceValue,
+): boolean => !!a && !!b && a.id === b.id;
 
 export type SingleResult<ResultType> =
   ResultType extends Array<infer R>
@@ -669,10 +674,10 @@ export class QueryBuilderObject<
     ) {
       //Support accessors that return NodeReferenceValue when a value shape is known.
       if (property.valueShape) {
-        const shapeClass = getShapeClass(property.valueShape.namedNode) as any;
+        const shapeClass = getShapeClass(property.valueShape) as any;
         if (!shapeClass) {
           throw new Error(
-            `Shape class not found for ${property.valueShape.namedNode}`,
+            `Shape class not found for ${property.valueShape.id}`,
           );
         }
         const shape = new shapeClass();
@@ -703,13 +708,16 @@ export class QueryBuilderObject<
     let singleValue = property.maxCount <= 1;
     if (datatype) {
       if (singleValue) {
-        if (datatype.equals(xsd.integer)) {
+        if (isSameRef(datatype, xsd.integer)) {
           return new QueryNumber(0, property, subject);
-        } else if (datatype.equals(xsd.boolean)) {
+        } else if (isSameRef(datatype, xsd.boolean)) {
           return new QueryBoolean(false, property, subject);
-        } else if (datatype.equals(xsd.dateTime) || datatype.equals(xsd.date)) {
+        } else if (
+          isSameRef(datatype, xsd.dateTime) ||
+          isSameRef(datatype, xsd.date)
+        ) {
           return new QueryDate(new Date(), property, subject);
-        } else if (datatype.equals(xsd.string)) {
+        } else if (isSameRef(datatype, xsd.string)) {
           return new QueryString('', property, subject);
         }
       } else {
@@ -720,13 +728,13 @@ export class QueryBuilderObject<
       }
     }
     if (valueShape) {
-      const shapeClass = getShapeClass(valueShape.namedNode) as any;
+      const shapeClass = getShapeClass(valueShape) as any;
       if(!shapeClass) {
         //TODO: getShapeClassAsync -> which will lazy load the shape class
         // but Im not sure if that's even possible with dynamic import paths, that are only known at runtime
         //UPDATE: we should not need to load shapeclasses. We just need to be able to access shapes.
         // but the problem remains that the ImageObject shape needs to be available, but thats easier, as its data
-        throw new Error(`Shape class not found for ${valueShape.namedNode}`);
+        throw new Error(`Shape class not found for ${valueShape.id}`);
       }
       const shapeValue = new shapeClass();
       if (singleValue) {
@@ -743,8 +751,8 @@ export class QueryBuilderObject<
     //no value shape and no data type.
     //Lets look at the node kind
     if (
-      property.nodeKind.equals(shacl.Literal) ||
-      property.nodeKind.equals(shacl.BlankNodeOrLiteral)
+      isSameRef(property.nodeKind, shacl.Literal) ||
+      isSameRef(property.nodeKind, shacl.BlankNodeOrLiteral)
     ) {
       if (singleValue) {
         //default to string if no datatype is set
@@ -1019,9 +1027,11 @@ export class QueryShapeSet<
           let leastSpecificShape = queryShapeSet
             .getOriginalValue()
             .getLeastSpecificShape();
-          let valueShape = leastSpecificShape
-            ? leastSpecificShape.shape
-            : queryShapeSet.property.valueShape;
+          let valueShape = leastSpecificShape ? leastSpecificShape.shape : null;
+          if (!valueShape && queryShapeSet.property?.valueShape) {
+            const shapeClass = getShapeClass(queryShapeSet.property.valueShape);
+            valueShape = shapeClass?.shape;
+          }
           let propertyShape: PropertyShape = valueShape
             ?.getPropertyShapes(true)
             .find((propertyShape) => propertyShape.label === key);
@@ -1043,7 +1053,7 @@ export class QueryShapeSet<
               'Could not find property shape for key ' +
                 key +
                 ' on shape ' +
-                valueShape.label +
+                valueShape?.label +
                 '. Make sure the get method exists and is decorated with @linkedProperty / @objectProperty / @literalProperty',
             );
           }
@@ -1120,7 +1130,7 @@ export class QueryShapeSet<
     let result: QueryPrimitiveSet | QueryShapeSet; //QueryValueSetOfSets;
 
     //if we expect the accessor to return a Primitive (string,number,boolean,Date)
-    if (propertyShape.nodeKind === shacl.Literal) {
+    if (isSameRef(propertyShape.nodeKind, shacl.Literal)) {
       //then return a Set of QueryPrimitives
       result = new QueryPrimitiveSet(null, propertyShape, this);
     } else {
@@ -1128,7 +1138,7 @@ export class QueryShapeSet<
       result = QueryShapeSet.create(null, propertyShape, this);
     }
     let expectSingleValues =
-      propertyShape.hasProperty(shacl.maxCount) && propertyShape.maxCount <= 1;
+      typeof propertyShape.maxCount === 'number' && propertyShape.maxCount <= 1;
 
     this.queryShapes.forEach((shape) => {
       //access the propertyShapes accessor,

@@ -12,6 +12,7 @@ import {
 } from './QueryFactory.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {Shape} from '../shapes/Shape.js';
+import {getShapeClass} from '../utils/ShapeClass.js';
 
 export type NodeId = {id: string} | string;
 
@@ -177,7 +178,16 @@ export class MutationQueryFactory extends QueryFactory {
       if (this.isNodeReference(value)) {
         return this.convertNodeReference(value);
       } else {
-        let valueShape = propShape.valueShape;
+        let valueShape: NodeShape = null;
+        if (propShape.valueShape) {
+          const shapeClass = getShapeClass(propShape.valueShape);
+          valueShape = shapeClass?.shape || null;
+          if (!valueShape) {
+            throw new Error(
+              `Shape class not found for ${propShape.valueShape.id}`,
+            );
+          }
+        }
         //pass the value shape of the property as the node shape of this value
         if (!propShape.valueShape) {
           //It's possible to define the shape of the value in the value itself for properties who do not define the shape in their objectProperty
@@ -199,7 +209,7 @@ export class MutationQueryFactory extends QueryFactory {
         //never keep a shape key in the value object
         if (value.shape) {
           //double check that IF a shape value is provided, that it matches the shape from the @objectProperty decorator
-          if (!(value.shape as typeof Shape).shape.equals(valueShape)) {
+          if ((value.shape as typeof Shape).shape.id !== valueShape.id) {
             throw new Error(
               `The property 'shape' is reserved in LINCD and should not be used here in this way. The ${propShape.label} property already defines the shape of the value as ${propShape.label}. If you want to use a different shape, use the 'shape' key in the @objectProperty decorator.`,
             );
