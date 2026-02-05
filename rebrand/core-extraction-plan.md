@@ -280,7 +280,7 @@ Once no file imports from `models.ts`, delete: `models.ts`, `Datafactory.ts`, `L
 - Rename the package in `package.json` to `@_linked/core`.
 - Verify build compiles, tests pass, type inference intact.
 
-## Phase 5 — Final test suite for `@_linked/core`
+## Phase 5 — Final test suite for `@_linked/core` ✅ Done (commit TBD)
 
 - Remove old/archived tests from `src/tests/old/`.
 - Ensure all tests run and pass against the pruned package.
