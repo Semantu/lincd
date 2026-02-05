@@ -252,7 +252,7 @@ Expand the two query-context tests to assert the full ShapeReferenceValue struct
 **Sub-step 3.5 — Convert SHACL.ts to plain JS metadata.** ✅ Done
 Replace the RDF-triple-based `NodeShape` / `PropertyShape` with plain JS classes (reference: codex branch `ShapeDefinition.ts` + `PropertyShape.ts`). Remove `ValidationReport`, `ValidationResult`, and validation logic. Preserve: metadata tracking, `getPropertyShapes()`, `getNodeShapeUri()`, property shape IDs.
 
-**Sub-step 3.6 — Convert Package.ts to plain JS metadata.**
+**Sub-step 3.6 — Convert Package.ts to plain JS metadata.** ✅ Done
 Remove RDF quad creation. Replace with `NodeShape`/`PropertyShape` construction and `registerShapeClass()` calls. Reference: codex branch `decorators.ts`.
 
 **Sub-step 3.7 — Convert remaining utilities.**

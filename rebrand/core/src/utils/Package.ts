@@ -3,25 +3,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {defaultGraph,Literal,NamedNode,Quad} from '../models.js';
 import {
+  createPropertyShape,
   getAndClearCallbacks,
   getNodeShapeUri,
-  LINCD_DATA_ROOT,
   NodeShape,
   PropertyShape,
 } from '../shapes/SHACL.js';
 import {Shape} from '../shapes/Shape.js';
 import {Prefix} from './Prefix.js';
-import {lincd as lincdOntology} from '../ontologies/lincd-named.js';
-import {npm} from '../ontologies/npm-named.js';
-import {rdf} from '../ontologies/rdf-named.js';
-import {URI} from './URI.js';
+import {lincd as lincdOntology} from '../ontologies/lincd.js';
+import {rdf} from '../ontologies/rdf.js';
 import {addNodeShapeToShapeClass,getShapeClass} from './ShapeClass.js';
-import {shacl} from '../ontologies/shacl-named.js';
-import {rdfs} from '../ontologies/rdfs-named.js';
-import {xsd} from '../ontologies/xsd-named.js';
-import { createPropertyShape } from '../shapes/SHACL.js';
+import {shacl} from '../ontologies/shacl.js';
+import {rdfs} from '../ontologies/rdfs.js';
+import {xsd} from '../ontologies/xsd.js';
 import {NodeReferenceValue} from './NodeReference.js';
 
 //global tree
@@ -172,12 +168,6 @@ export interface LinkedPackageObject
   registerPackageModule(_module): void;
 }
 
-/**
- *  Convert some node to a prefixed format:
- * - http://some-example.org/prop > ex:prop
- *  */
-const prefix = (n) => Prefix.toPrefixed(n.uri);
-
 export var DEFAULT_LIMIT = 12;
 
 export function setDefaultPageLimit(limit: number)
@@ -205,32 +195,6 @@ export function autoLoadOntologyData(value: boolean)
 
 export function linkedPackage(packageName: string): LinkedPackageObject
 {
-  let packageNode = NamedNode.getOrCreate(
-    `${LINCD_DATA_ROOT}module/${packageName}`,
-    true,
-  );
-  let packageNameURI = URI.sanitize(packageName);
-
-  //set certain values but don't emit change events or alteration events
-  new Quad(
-    packageNode,
-    rdf.type,
-    lincdOntology.Module,
-    defaultGraph,
-    false,
-    false,
-    false,
-  );
-  new Quad(
-    packageNode,
-    npm.packageName,
-    new Literal(packageName),
-    defaultGraph,
-    false,
-    false,
-    false,
-  );
-
   let packageTreeObject = registerPackageInTree(packageName);
 
   //#Create declarators for this module
