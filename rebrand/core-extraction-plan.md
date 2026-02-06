@@ -286,8 +286,11 @@ Once no file imports from `models.ts`, delete: `models.ts`, `Datafactory.ts`, `L
 - Ensure all tests run and pass against the pruned package.
 - Verify type inference tests still validate that inferred result types are correct.
 
-**Phase 5 follow-up — Add unit tests for core utilities.** ✅ Done (commit TBD)
+**Phase 5 follow-up — Add unit tests for core utilities.** ✅ Done (69f5ff8)
 Add coverage for `ShapeClass`, extra `LinkedStorage` behaviors, `QueryParser` delegation, `QueryContext` edge cases, and `Package.ts` registration helpers.
+
+**Phase 5 follow-up — Add WherePath type guard for safer access.** ✅ Done (commit TBD)
+Add a type guard for `WherePath` so callers can read `args` without `any` casts.
 
 ## Phase 6 — Integration verification with `@_linked/memstore`
 

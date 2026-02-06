@@ -220,6 +220,13 @@ export type WhereEvaluationPath = {
   args: QueryArg[];
 };
 
+// WherePath can also be an and/or wrapper; use this guard to safely access args.
+export const isWhereEvaluationPath = (
+  value: WherePath,
+): value is WhereEvaluationPath => {
+  return !!value && 'args' in value;
+};
+
 /**
  * An argument can be a direct reference to a node, a js primitive (boolean,number), a path to resolve (like from a query context variables)
  * Or a wherePath in the case of some() or every() (e.g. x.where(x.friends.some(f => f.age > 18) -> the argument is a wherePath)

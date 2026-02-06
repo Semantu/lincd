@@ -13,6 +13,7 @@ import {
 } from '../utils/ShapeClass';
 import {LinkedStorage} from '../utils/LinkedStorage';
 import {QueryParser} from '../queries/QueryParser';
+import {isWhereEvaluationPath} from '../queries/SelectQuery';
 import {getQueryContext, setQueryContext} from '../queries/QueryContext';
 import {NodeReferenceValue} from '../utils/NodeReference';
 
@@ -242,9 +243,16 @@ describe('QueryContext edge cases', () => {
       p.bestFriend.equals(context),
     );
     const queryObject = query.getQueryObject();
-
-    const whereArg = (queryObject as any)?.where?.args?.[0];
-    expect(whereArg).toEqual({
+    const where = queryObject?.where;
+    expect(where).toBeDefined();
+    if (!where) {
+      throw new Error('Expected where clause');
+    }
+    const evaluation = isWhereEvaluationPath(where) ? where : where.firstPath;
+    if (!isWhereEvaluationPath(evaluation)) {
+      throw new Error('Expected evaluation where clause');
+    }
+    expect(evaluation.args[0]).toEqual({
       id: 'ctx-2',
       shape: {id: ContextPerson.shape.id},
     });
