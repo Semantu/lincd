@@ -5,13 +5,13 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "downlevelIteration": true,
-    "lib": ["es2017", "dom"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
     "skipLibCheck": true,
     "pretty": true,
-    "types": ["node", "jest"],
+    "target": "es6",
+    "types": ["node", "jest", "eventemitter3"],
     "baseUrl": "./",
     "paths": {
       "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"],
@@ -26,7 +26,6 @@
     "../node_modules/ts-jest/globals.d.ts"
   ],
   "exclude": [
-    "./src/tests/query-basic.test.ts",
-    "./src/tests/store.test.ts"
+    "./src/tests/**"
   ]
 }

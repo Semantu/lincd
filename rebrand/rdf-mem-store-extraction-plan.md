@@ -81,6 +81,16 @@ Goal: get a *single* core query executing end-to-end ASAP.
 
 **Status:** ✅ Completed (tsc compile + query-minimal: 1 passed, 0 failed).
 
+## Phase B.1 — Test setup alignment (core-style)
+
+- Align Jest config with `@_linked/core` (rootDir in `src/tests`, ts-jest transform, moduleNameMapper).
+- Run npm install from `rebrand/rdf-mem-store` using local node_modules.
+- Ensure `npm test` passes with real Jest (no stubs).
+
+**Validation:** `npm test` passes in `rebrand/rdf-mem-store`.
+
+**Status:** ✅ Completed (2 passed, 2 total).
+
 ## Phase C — Basic where + single subject
 
 - Add support for `where.equals` and subject `{id}` selection.

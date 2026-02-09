@@ -1,14 +1,21 @@
 /** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'jsdom',
-  rootDir: 'lib/cjs/src/tests',
+  testEnvironment: 'node',
+  rootDir: 'src/tests',
+  testMatch: ['**/models.test.ts', '**/query-minimal.test.ts'],
+  transform: {
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/../../tsconfig.json',
+      },
+    ],
+  },
   moduleNameMapper: {
-    '^@_linked/core/(.*)\\.js$': '<rootDir>/../../../../../core/lib/cjs/$1',
-    '^@_linked/core/(.*)$': '<rootDir>/../../../../../core/lib/cjs/$1',
-    '^@_linked/core$': '<rootDir>/../../../../../core/lib/cjs/index.js',
-    '^linked-js/(.*)\\.js$': '<rootDir>/../../../../../linked-js/lib/cjs/$1',
-    '^linked-js/(.*)$': '<rootDir>/../../../../../linked-js/lib/cjs/$1',
-    '^linked-js$': '<rootDir>/../../../../../linked-js/lib/cjs/index.js',
+    '^@_linked/core/(.*)\\.js$': '<rootDir>/../../../core/src/$1',
+    '^@_linked/core$': '<rootDir>/../../../core/src/index.ts',
+    '^next-tick$': '<rootDir>/../../node_modules/next-tick',
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
 };
