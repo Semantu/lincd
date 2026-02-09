@@ -319,3 +319,20 @@ await Person.delete({id: 'https://my.app/node1'});
 ## TODO
 
 - Allow `preloadFor` to accept another query (not just a component).
+- Make and expose functions for auto syncing shapes to the graph.
+
+## Changelog
+
+### 1.0.0 (from LINCD.js)
+
+This is a rebranding + extraction release. It moves the core query/shape system into `@_linked/core` and removes RDF models and React-specific code.
+
+Key changes:
+- **New package name:** import from `@_linked/core` instead of `lincd`.
+- **Node references:** use `NodeReferenceValue = {id: string}` everywhere. `NamedNode` does not exist in this package.
+- **Shape instances:** shape classes no longer carry RDF nodes or instance graph APIs. Decorated accessors register SHACL metadata but do not implement runtime get/set behavior.
+- **Query tracing:** query tracing is proxy-based (no `TestNode`/`TraceShape`).
+- **SHACL metadata:** node/property shapes are plain JS objects (`QResult`), not RDF triples.
+- **Package registration:** `linkedPackage` now stores package metadata as plain JS (`PackageMetadata`) and keeps legacy URI ids for compatibility.
+- **Storage routing:** `LinkedStorage` routes queries to an `IQuadStore` implementation (e.g. `@_linked/rdf-mem-store`).
+- **Imports updated:** ontology namespaces now return `NodeReferenceValue` objects, and decorators require `NodeReferenceValue` paths.
