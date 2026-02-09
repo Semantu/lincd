@@ -79,6 +79,8 @@ Goal: get a *single* core query executing end-to-end ASAP.
 
 **Validation:** compile + that one query test passes.
 
+**Status:** ✅ Completed (tsc compile + query-minimal: 1 passed, 0 failed).
+
 ## Phase C — Basic where + single subject
 
 - Add support for `where.equals` and subject `{id}` selection.
