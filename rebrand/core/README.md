@@ -3,10 +3,6 @@ Core Linked package for the query DSL, SHACL shape decorators/metadata, and pack
 
 Linked core gives you a type-safe, schema-parameterized query language and SHACL-driven Shape classes for linked data. It compiles queries into a plain JS query object that can be executed by a store.
 
-See also
-- documentation: https://docs.lincd.org
-- registry: https://www.lincd.org
-
 ## Linked core offers
 
 - **Schema-Parameterized Query DSL**: TypeScript-embedded queries driven by your Shape definitions.
@@ -29,6 +25,7 @@ import {linkedPackage} from '@_linked/core/utils/Package';
 ## Related packages
 
 - `@_linked/rdf-mem-store`: in-memory RDF store that implements `IQuadStore`.
+- `@_linked/react`: React bindings for Linked queries and shapes.
 
 ## Linked Package Setup
 
@@ -90,29 +87,44 @@ export class Person extends Shape {
 Queries are expressed with the same Shape classes and compile to a query object that a store executes.
 
 ```typescript
+/* Result: Array<{id: string; name: string}> */
 const names = await Person.select((p) => p.name);
 
 const myNode = {id: 'https://my.app/node1'};
-const person = await Person.select(myNode, (p) => ({
-  name: p.name,
-  friends: p.knows,
-}));
+/* Result: {id: string; name: string} | null */
+const person = await Person.select(myNode, (p) => p.name);
+const missing = await Person.select({id: 'https://my.app/missing'}, (p) => p.name); // null
 
+/* Result: {id: string} & UpdatePartial<Person> */
 const created = await Person.create({
   name: 'Alice',
   knows: [{id: 'https://my.app/node2'}],
 });
 
-const updated = await Person.update(myNode.id, {
+const updated = await Person.update(myNode, {
   name: 'Alicia',
 });
 
-await Person.delete(myNode.id);
+// Overwrite a multi-value property
+const overwriteFriends = await Person.update(myNode, {
+  knows: [{id: 'https://my.app/node2'}],
+});
+
+// Add/remove items in a multi-value property
+const addRemoveFriends = await Person.update(myNode, {
+  knows: {
+    add: [{id: 'https://my.app/node3'}],
+    remove: [{id: 'https://my.app/node2'}],
+  },
+});
+
+/* Result: {deleted: Array<{id: string}>, count: number} */
+await Person.delete(myNode);
 ```
 
 ## Storage configuration
 
-`LinkedStorage` routes query objects to a store that implements `IQuadStore`.
+`LinkedStorage` is the routing helper (not an interface). It forwards query objects to a store that implements `IQuadStore`.
 
 ```typescript
 import {LinkedStorage} from '@_linked/core';
@@ -156,10 +168,16 @@ The query DSL is schema-parameterized: you define your own SHACL shapes, and Lin
 
 ### Query examples
 
+Result types are inferred from your Shape definitions and the selected paths. Examples below show abbreviated result shapes.
+
 #### Basic selection
 ```typescript
+/* Result: Array<{id: string; name: string}> */
 const names = await Person.select((p) => p.name);
+
+/* Result: Array<{id: string; knows: Array<{id: string}>}> */
 const friends = await Person.select((p) => p.knows);
+
 const dates = await Person.select((p) => [p.birthDate, p.name]);
 const flags = await Person.select((p) => p.isRealPerson);
 ```
@@ -167,12 +185,14 @@ const flags = await Person.select((p) => p.isRealPerson);
 #### Target a specific subject
 ```typescript
 const myNode = {id: 'https://my.app/node1'};
+/* Result: {id: string; name: string} | null */
 const one = await Person.select(myNode, (p) => p.name);
-const missing = await Person.select({id: 'https://my.app/missing'}, (p) => p.name);
+const missing = await Person.select({id: 'https://my.app/missing'}, (p) => p.name); // null
 ```
 
 #### Multiple paths + nested paths
 ```typescript
+/* Result: Array<{id: string; name: string; knows: Array<{id: string}>; bestFriend: {id: string; name: string}}> */
 const mixed = await Person.select((p) => [p.name, p.knows, p.bestFriend.name]);
 const deep = await Person.select((p) => p.knows.bestFriend.name);
 ```
@@ -180,7 +200,7 @@ const deep = await Person.select((p) => p.knows.bestFriend.name);
 #### Sub-queries
 ```typescript
 const detailed = await Person.select((p) =>
-  p.knows.select((f) => ({name: f.name, hobby: f.hobby})),
+  p.knows.select((f) => f.name),
 );
 ```
 
@@ -195,10 +215,14 @@ const byRef = await Person.select().where((p) =>
 #### And / Or
 ```typescript
 const andQuery = await Person.select((p) =>
-  p.knows.where((f) => f.name.equals('Moa').and(f.hobby.equals('Jogging'))),
+  p.knows.where((f) =>
+    f.name.equals('Moa').and(f.hobby.equals('Jogging')),
+  ),
 );
 const orQuery = await Person.select((p) =>
-  p.knows.where((f) => f.name.equals('Jinx').or(f.hobby.equals('Jogging'))),
+  p.knows.where((f) =>
+    f.name.equals('Jinx').or(f.hobby.equals('Jogging')),
+  ),
 );
 ```
 
@@ -224,11 +248,13 @@ const outer = await Person.select((p) => p.knows).where((p) =>
 
 #### Counting (size)
 ```typescript
+/* Result: Array<{id: string; knows: number}> */
 const count = await Person.select((p) => p.knows.size());
 ```
 
 #### Custom result formats
 ```typescript
+/* Result: Array<{id: string; nameIsMoa: boolean; numFriends: number}> */
 const custom = await Person.select((p) => ({
   nameIsMoa: p.name.equals('Moa'),
   numFriends: p.knows.size(),
@@ -248,6 +274,8 @@ const single = await Person.select((p) => p.name).one();
 ```
 
 #### Query context
+Query context lets you inject request-scoped values (like the current user) into filters without threading them through every call.
+
 ```typescript
 setQueryContext('user', {id: 'https://my.app/user1'}, Person);
 const ctx = await Person.select((p) => p.name).where((p) =>
@@ -256,6 +284,8 @@ const ctx = await Person.select((p) => p.name).where((p) =>
 ```
 
 #### Preload
+Preloading appends another query to the current query so the combined data is loaded in one round-trip. This is helpful when rendering a nested tree of components and loading all data at once.
+
 ```typescript
 const preloaded = await Person.select((p) => [
   p.hobby,
@@ -265,7 +295,27 @@ const preloaded = await Person.select((p) => [
 
 #### Create / Update / Delete
 ```typescript
+/* Result: {id: string} & UpdatePartial<Person> */
 const created = await Person.create({name: 'Alice'});
+
 const updated = await Person.update({id: 'https://my.app/node1'}, {name: 'Alicia'});
+
+// Overwrite a multi-value property
+const overwriteFriends = await Person.update({id: 'https://my.app/node1'}, {
+  knows: [{id: 'https://my.app/node2'}],
+});
+
+// Add/remove items in a multi-value property
+const addRemoveFriends = await Person.update({id: 'https://my.app/node1'}, {
+  knows: {
+    add: [{id: 'https://my.app/node3'}],
+    remove: [{id: 'https://my.app/node2'}],
+  },
+});
+
 await Person.delete({id: 'https://my.app/node1'});
 ```
+
+## TODO
+
+- Allow `preloadFor` to accept another query (not just a component).
