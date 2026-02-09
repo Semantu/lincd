@@ -139,7 +139,7 @@ const applySetModification = async (
   if (value.$add) {
     const addedValues: unknown[] = [];
     for (const addValue of value.$add) {
-      const res = await convertUpdateValue(prop, addValue, createQuery);
+      const res = await convertUpdateValue(prop, addValue as any, createQuery);
       if (res.value) {
         subject.set(predicate, res.value);
         addedValues.push(res.plainValue);
@@ -170,7 +170,7 @@ const applyFieldUpdates = async (
       const values: Node[] = [];
       const plainArray: unknown[] = [];
       for (const item of value) {
-        const res = await convertUpdateValue(propShape, item, createQuery);
+        const res = await convertUpdateValue(propShape, item as any, createQuery);
         if (res.value) {
           values.push(res.value);
         }
@@ -295,7 +295,7 @@ const resolveQueryPathEndResults = (
     if (!('property' in step)) {
       return;
     }
-    const predicate = toPredicate(step.property);
+    const predicate = toPredicate((step as any).property);
     const next = new NodeSet<NamedNode>();
     const isLast = index === path.length - 1;
     current.forEach((node) => {
@@ -327,14 +327,14 @@ const resolvePathValues = (
   }
   const [step, ...rest] = path;
   if ('count' in step) {
-    return resolveSizeStep(subject, step);
+    return resolveSizeStep(subject, step as SizeStep);
   }
-  const predicate = toPredicate(step.property);
+  const predicate = toPredicate((step as any).property);
   const values = subject.getAll(predicate);
-  const filteredValues = step.where
+  const filteredValues = (step as any).where
     ? new NodeSet<NamedNode>(
         Array.from(values).filter((value) =>
-          value instanceof NamedNode ? resolveWhere(value, step.where) : true,
+          value instanceof NamedNode ? resolveWhere(value, (step as any).where) : true,
         ) as NamedNode[],
       )
     : values;
@@ -342,12 +342,12 @@ const resolvePathValues = (
   const results: unknown[] = [];
   filteredValues.forEach((value) => {
     if (rest.length === 0) {
-      results.push(nodeValueToPrimitive(value, step.property));
+      results.push(nodeValueToPrimitive(value, (step as any).property));
     } else if (value instanceof NamedNode) {
       results.push(resolvePathValues(value, rest));
     }
   });
-  if (step.property.maxCount === 1) {
+  if ((step as any).property?.maxCount === 1) {
     return results[0];
   }
   return results;
@@ -356,7 +356,7 @@ const resolvePathValues = (
 const applyQueryPath = (
   result: Record<string, unknown>,
   subject: NamedNode,
-  path: QueryPath,
+  path: QueryPath | CustomQueryObject,
 ) => {
   if (Array.isArray(path)) {
     if (path.length === 0) return;
@@ -367,9 +367,9 @@ const applyQueryPath = (
       return;
     }
     const firstStep = path[0] as QueryStep;
-    if ('property' in firstStep) {
+    if ('property' in (firstStep as any)) {
       const value = resolvePathValues(subject, path as QueryStep[]);
-      result[firstStep.property.label] =
+      result[(firstStep as any).property.label] =
         typeof value === 'undefined' ? null : value;
     }
     return;

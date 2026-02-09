@@ -35,6 +35,7 @@ The goal is to align it with the **new** `@_linked/core`, use core’s query obj
 - One commit per phase/sub-phase. Update this plan to mark completion **before** committing so the work + plan update are in the same commit.
 - If a commit hash needs to be added later, the plan-only tweak can be bundled into the next phase’s commit (no extra immediate commit).
 - After each phase/sub-phase, **validate** the work. If it’s a test-related step, validation must include at least one passing test relevant to that step.
+- If a phase/sub-phase validation fails, keep working until it passes.
 - After each run, report: what was done, problems encountered, changes not in the plan, and how validation was done (with explicit pass/fail counts and what was tested).
 - After each phase/sub-phase, commit changes and update the plan to indicate progress. If a revert is needed, either commit on top or reset to a previous commit if more applicable.
 - In status updates, always state what the next step entails and include its exact title.
@@ -63,7 +64,7 @@ Goal: point the package at core types without changing runtime behavior.
 
 **Validation:** compile succeeds + `models.test.ts` passes.
 
-**Status:** ✅ Completed (validation blocked: missing local `@types/node` and `@types/jest`).
+**Status:** ✅ Completed (tsc compile + models.test: 3 passed, 0 failed).
 
 ## Phase B — Minimal query execution (first green query)
 
