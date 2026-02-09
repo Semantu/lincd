@@ -30,6 +30,16 @@ The goal is to align it with the **new** `@_linked/core`, use core’s query obj
 - Tests must reuse **core query fixtures** (`@_linked/core/src/test-helpers/query-fixtures.ts`).
 - Store must implement **core** `IQuadStore` and be compatible with **core** `LinkedStorage`.
 
+## Working agreements (process)
+
+- One commit per phase/sub-phase. Update this plan to mark completion **before** committing so the work + plan update are in the same commit.
+- If a commit hash needs to be added later, the plan-only tweak can be bundled into the next phase’s commit (no extra immediate commit).
+- After each phase/sub-phase, **validate** the work. If it’s a test-related step, validation must include at least one passing test relevant to that step.
+- After each run, report: what was done, problems encountered, changes not in the plan, and how validation was done (with explicit pass/fail counts and what was tested).
+- After each phase/sub-phase, commit changes and update the plan to indicate progress. If a revert is needed, either commit on top or reset to a previous commit if more applicable.
+- In status updates, always state what the next step entails and include its exact title.
+- For parallel/branching work, create new plans/documents as needed and capture key context for handoff.
+
 ## What should NOT be in this package
 
 - Query DSL & query object construction logic
@@ -137,4 +147,3 @@ Update `src/utils/LocalQueryResolver.ts` to consume core query objects:
 - Should resolver operate on **global NamedNode registry** or **store-local QuadSet**?
 - Should updates create nodes if missing, or throw? (core update factory assumes existing id)
 - What is the expected behavior when `where` is applied to empty sets (especially for `every`)?
-
