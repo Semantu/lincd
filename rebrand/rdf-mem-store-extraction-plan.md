@@ -52,91 +52,54 @@ The goal is to align it with the **new** `@_linked/core`, use core’s query obj
 - [x] Copy `rebrand/linked-mem-store` from `origin/codex/implement-additional-query-tests-in-linked-js` → `rebrand/rdf-mem-store`
 - [x] Rename package to `@_linked/rdf-mem-store`
 
-## Phase 1 — Package + dependency alignment
+## Phase A — Core type plumbing (compile-only)
 
-1) Update package metadata
-- Ensure `package.json` name/version/description match new package intent.
-- Adjust test script to **not** build `linked-js` first.
+Goal: point the package at core types without changing runtime behavior.
 
-2) Replace `linked-js` with `@_linked/core`
-- Replace all imports from `linked-js/*` to `@_linked/core/*`.
-- Remove mem-store’s own `IQuadStore` in favor of core’s interface.
+- Update imports in store/resolver/interfaces to use `@_linked/core` types.
+- Add `@_linked/core` path mappings in `tsconfig.json` (keep `linked-js` for now).
+- Keep existing runtime logic intact.
+- Adjust package metadata/scripts only if needed to compile.
 
-3) Update exports
-- Keep exporting RDF models/collections/events/utils/store.
-- Ensure no exports shadow core types.
+**Validation:** compile succeeds + `models.test.ts` passes.
 
-## Phase 2 — Query object compatibility (core -> resolver)
+**Status:** ✅ Completed (validation blocked: missing local `@types/node` and `@types/jest`).
 
-Update `src/utils/LocalQueryResolver.ts` to consume core query objects:
+## Phase B — Minimal query execution (first green query)
 
-- Property path handling
-  - Core uses `PropertyShape.path` as `NodeReferenceValue | NodeReferenceValue[]`.
-  - Convert to NamedNodes by `id` and handle **path arrays**.
+Goal: get a *single* core query executing end-to-end ASAP.
 
-- Node references
-  - Accept `NodeReferenceValue` for comparisons (`equals`, `where`, context variables).
-  - Avoid `.equals()` (NamedNode); compare via `id`.
+- Support a minimal `SelectQuery` with:
+  - subject = undefined (all instances)
+  - one property path (`NodeReferenceValue`)
+  - no where/sort/limit
+- Seed a minimal dataset using core fixture URIs.
+- Add one execution test (e.g., `Person.select(p => p.name)`).
 
-- QueryContext / ShapeReferenceValue
-  - Core query paths may start with `ShapeReferenceValue` (from `getQueryContext`).
-  - If encountered, replace subject with the referenced node.
+**Validation:** compile + that one query test passes.
 
-- Sorting / limit / offset
-  - Implement `sortBy`, `limit`, `offset` fields on SelectQuery.
+## Phase C — Basic where + single subject
 
-- subselect/custom object
-  - Ensure custom object selections map to nested result objects (already partial).
+- Add support for `where.equals` and subject `{id}` selection.
+- Add 2–3 tests: select-by-id, where equals on literal, non-existing id.
 
-- .as(Shape)
-  - Allow `ShapeReferenceValue` in query paths (used by `.as`).
+**Validation:** compile + those tests pass.
 
-- Mutation results
-  - Confirm update/create/delete result shapes match core types:
-    - update → `{id, ...}` and set updates with `{updatedTo: []}`
-    - create → `{id, ...}` with arrays (no `updatedTo`)
+## Phase D — Mutations & CRUD smoke
 
-- Missing subject behavior
-  - If subject ID does not exist, return `undefined` (not `null`), to match old expectations.
+- Align create/update/delete with core mutation query shapes.
+- Add CRUD roundtrip test (create → select → update → delete).
 
-## Phase 3 — Store alignment with core
+**Validation:** compile + CRUD test passes.
 
-- Update `InMemoryStore` to implement core `IQuadStore`:
-  - `selectQuery` expects `SelectQuery` (core)
-  - `updateQuery` / `createQuery` / `deleteQuery` use core mutation query types
+## Phase E — Coverage expansion
 
-- Decide scope for graph lookup:
-  - Current resolver uses `NamedNode.getAllNamedNodes()` (global).
-  - Evaluate whether to restrict to `InMemoryStore.contents` instead (store-local).
+- Add nested paths, some/every, size, subselects, sort/limit/one, context, `.as`, preload.
+- Expand the execution test suite gradually.
 
-- Preserve deprecated quad-level APIs only if still useful for legacy code.
+**Validation:** compile + incremental test additions pass.
 
-## Phase 4 — Test migration (execute queries)
-
-1) Replace test fixtures
-- Use core query factories:
-  - `@_linked/core/src/test-helpers/query-fixtures.ts`
-
-2) Rebuild test dataset
-- Seed the exact same graph as the old monolith tests:
-  - Persons: p1, p2, p3, p4
-  - Pets: dog1, dog2
-  - Paths must use fixture URIs (e.g., `linked://tmp/props/name`)
-
-3) Full query execution suite
-- Re-implement (or port) old query tests:
-  - basic selects, nested paths, subselects
-  - `where` / `equals` / `some` / `every`
-  - `size()`, `and/or`, context queries
-  - `.as()` and nested `.as()`
-  - `sortBy`, `limit`, `.one()`
-  - `preloadFor` (if needed) — at least ensure it doesn’t break
-
-4) Mutation tests
-- Use core query factories for create/update/delete
-- Assert results **and** actual graph changes
-
-## Phase 5 — Cleanup & docs
+## Phase F — Cleanup & docs
 
 - Update README to reflect core integration and current capabilities.
 - Remove unused legacy interfaces or deprecated exports (if safe).

@@ -4,10 +4,10 @@ import type {NodeSet} from '../collections/NodeSet.js';
 import type {ICoreIterable} from './ICoreIterable.js';
 import type {CoreMap} from '../collections/CoreMap.js';
 import type {QuadArray} from '../collections/QuadArray.js';
-import type {CreateQuery} from 'linked-js/queries/CreateQuery.js';
-import type {DeleteQuery} from 'linked-js/queries/DeleteQuery.js';
-import type {SelectQuery} from 'linked-js/queries/SelectQuery.js';
-import type {UpdateQuery} from 'linked-js/queries/UpdateQuery.js';
+import type {CreateQuery} from '@_linked/core/queries/CreateQuery.js';
+import type {DeleteQuery} from '@_linked/core/queries/DeleteQuery.js';
+import type {SelectQuery} from '@_linked/core/queries/SelectQuery.js';
+import type {UpdateQuery} from '@_linked/core/queries/UpdateQuery.js';
 
 export interface IQuadStore {
   /**

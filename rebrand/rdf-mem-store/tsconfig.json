@@ -13,6 +13,8 @@
     "baseUrl": "./",
     "paths": {
       "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"],
+      "@_linked/core": ["../core/src/index.ts"],
+      "@_linked/core/*": ["../core/src/*"],
       "linked-js": ["../linked-js/src/index.ts"],
       "linked-js/*": ["../linked-js/src/*"]
     }

@@ -1,7 +1,7 @@
-import type {CreateQuery} from 'linked-js/queries/CreateQuery.js';
-import type {DeleteQuery} from 'linked-js/queries/DeleteQuery.js';
-import type {SelectQuery} from 'linked-js/queries/SelectQuery.js';
-import type {UpdateQuery} from 'linked-js/queries/UpdateQuery.js';
+import type {CreateQuery} from '@_linked/core/queries/CreateQuery.js';
+import type {DeleteQuery} from '@_linked/core/queries/DeleteQuery.js';
+import type {SelectQuery} from '@_linked/core/queries/SelectQuery.js';
+import type {UpdateQuery} from '@_linked/core/queries/UpdateQuery.js';
 import {Graph, NamedNode, Quad} from '../models.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {QuadArray} from '../collections/QuadArray.js';

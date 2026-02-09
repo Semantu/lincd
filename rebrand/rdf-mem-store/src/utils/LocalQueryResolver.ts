@@ -1,3 +1,14 @@
+import type {PropertyShape} from '@_linked/core/shapes/SHACL.js';
+import type {
+  NodeReferenceValue,
+  NodeDescriptionValue,
+  UpdateNodePropertyValue,
+  PropUpdateValue,
+  SetModificationValue,
+} from '@_linked/core/queries/QueryFactory.js';
+import type {CreateQuery} from '@_linked/core/queries/CreateQuery.js';
+import type {UpdateQuery} from '@_linked/core/queries/UpdateQuery.js';
+import type {DeleteQuery} from '@_linked/core/queries/DeleteQuery.js';
 import {
   AndOrQueryToken,
   CustomQueryObject,
@@ -10,12 +21,7 @@ import {
   WhereEvaluationPath,
   WhereMethods,
   WherePath,
-} from 'linked-js/queries/SelectQuery.js';
-import type {PropertyShape} from 'linked-js/shapes/PropertyShape.js';
-import type {NodeReferenceValue, NodeDescriptionValue, UpdateNodePropertyValue, UpdateValue, SetModificationValue} from 'linked-js/queries/MutationQuery.js';
-import type {CreateQuery} from 'linked-js/queries/CreateQuery.js';
-import type {UpdateQuery} from 'linked-js/queries/UpdateQuery.js';
-import type {DeleteQuery} from 'linked-js/queries/DeleteQuery.js';
+} from '@_linked/core/queries/SelectQuery.js';
 import {Graph, Literal, NamedNode, Node} from '../models.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {QuadSet} from '../collections/QuadSet.js';
@@ -76,7 +82,7 @@ const normalizeWhereValue = (value: unknown, prop?: PropertyShape) => {
 
 const convertUpdateValue = async (
   prop: PropertyShape,
-  value: UpdateValue,
+  value: PropUpdateValue,
   createQuery: boolean,
 ): Promise<{value: Node | undefined; plainValue: unknown}> => {
   if (typeof value === 'undefined') {
