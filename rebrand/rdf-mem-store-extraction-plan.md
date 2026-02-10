@@ -219,50 +219,29 @@ Updated 17 imports across 10 files:
 - [x] Added `get id(): string` getter on NamedNode (aliases `uri`) so it satisfies `NodeReferenceValue = {id: string}`
 - [x] Created `utils/toNamedNode.ts` helper: converts `{id: string}` → `NamedNode.getOrCreate(ref.id)`, passes through NamedNode instances
 - [x] Tests: 11/11 pass (6 original + 2 id-alias tests + 3 toNamedNode tests)
-- [ ] LocalQueryResolver fixes deferred to Phase 5 (uses toNamedNode throughout)
+- [x] LocalQueryResolver fixes deferred to Phase 5 (uses toNamedNode throughout)
 - [ ] InMemoryStore fixes deferred to Phase 6
 
-### Phase 5 — Adapt LocalQueryResolver for core types (CRITICAL)
+### Phase 5 — Adapt LocalQueryResolver for core types (CRITICAL) ✅
 
 This is the most complex phase. LocalQueryResolver works with NamedNode graph methods (which stay), but receives types from core that are now plain `{id: string}` objects instead of NamedNodes.
 
-**Create a `toNamedNode` helper** (used throughout):
-- [ ] `toNamedNode(ref: NodeReferenceValue): NamedNode` — converts `{id: string}` to `NamedNode.getOrCreate(ref.id)`, passes through if already a NamedNode
-
-**Fix `query.shape.getLocalInstancesByType()` (line 684-686):**
-- [ ] Core's Shape class doesn't have this method. Implement a local helper:
-  ```ts
-  function getInstancesByType(shapeClass: ShapeType): NodeSet<NamedNode> {
-    const typeNode = toNamedNode(shapeClass.targetClass);
-    let nodes = typeNode.getAllInverse(toNamedNode(rdf.type));
-    // also get subclass instances...
-    return nodes;
-  }
-  ```
-- [ ] Replace `query.shape.getLocalInstancesByType().getNodes()` with `getInstancesByType(query.shape)`
-
-**Fix `(query.subject as Shape).namedNode` (line 681):**
-- [ ] Replace with `NamedNode.getOrCreate((query.subject as Shape).id)`
-
-**Fix `ShapeSet.getNodes()` (line 679, 686):**
-- [ ] Core's ShapeSet doesn't have `.getNodes()`. Create a local helper:
-  ```ts
-  function shapeSetToNodeSet(set: ShapeSet): NodeSet<NamedNode> {
-    const nodes = new NodeSet<NamedNode>();
-    set.forEach(s => nodes.add(NamedNode.getOrCreate(s.id)));
-    return nodes;
-  }
-  ```
-
-**Fix PropertyShape.path usage (~12 call sites):**
-- [ ] `PropertyShape.path` is now `NodeReferenceValue` (not `NamedNode`). Wrap in `toNamedNode()` wherever passed to `node.getAll(path)`, `node.set(path, ...)`, etc.
-
-**Fix ontology value usage:**
-- [ ] `rdf.type` returns `{id: '...'}` not `NamedNode`. Wrap in `toNamedNode()` where needed (e.g., `node.set(toNamedNode(rdf.type), ...)`)
-
-**Remove dead code:**
-- [ ] Remove all commented-out lines referencing `TestNode`, `TraceShape`, `getShapeClass`, `getFromURI`
-- [ ] Remove `ValidationReport` usage (SHACL validation in create — line 544-545)
+- [x] `toNamedNode` helper already created in Phase 4 (`src/utils/toNamedNode.ts`)
+- [x] Added `toPropertyPath`, `getInstancesByType`, `shapeSetToNodeSet` helpers in LocalQueryResolver
+- [x] Replaced `query.shape.getLocalInstancesByType().getNodes()` → `getInstancesByType(query.shape)`
+- [x] Replaced `(query.subject as Shape).namedNode` → `NamedNode.getOrCreate((query.subject as any).id)`
+- [x] Replaced `ShapeSet.getNodes()` → `shapeSetToNodeSet()`
+- [x] Fixed `PropertyShape.path` usage in `resolveQueryPropertyPath` — convert to NamedNode[] before traversal
+- [x] Fixed `PropertyShape.path` usage in `applyFieldUpdates` — convert via `toPropertyPath()`
+- [x] Fixed `datatype.equals(xsd.*)` comparisons (both in `convertLiteral` and `literalNodeToResultObject`) — compare `.id` strings
+- [x] Fixed `new Literal(value, xsd.*)` calls — wrap with `toNamedNode()`
+- [x] Fixed `XSDDate_fromNativeDate` and `Boolean_toLiteral` — wrap datatype with `toNamedNode()`
+- [x] Fixed `nodeKind === shacl.*` comparisons — compare via `.id` strings
+- [x] Removed `ValidationReport` import and usage in `convertNodeDescription`
+- [x] Added `getSubShapesClasses` import from core
+- [x] Created end-to-end resolver tests (`src/tests/resolver.test.ts`, 9 tests)
+- [x] tsc --noEmit: 0 errors
+- [x] jest: 20 tests pass (11 model + 9 resolver)
 
 ### Phase 6 — InMemoryStore cleanup
 

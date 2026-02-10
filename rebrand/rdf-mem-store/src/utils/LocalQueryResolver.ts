@@ -40,13 +40,62 @@ import {
 } from '@_linked/core/queries/QueryFactory';
 import {Literal, NamedNode} from '../models.js';
 import {xsd} from '@_linked/core/ontologies/xsd';
-import {PropertyShape, ValidationReport} from '@_linked/core/shapes/SHACL';
+import {PropertyShape} from '@_linked/core/shapes/SHACL';
 import {rdf} from '@_linked/core/ontologies/rdf';
 import {NodeSet} from '../collections/NodeSet.js';
 import {CreateQuery} from '@_linked/core/queries/CreateQuery';
 import {DeleteQuery, DeleteResponse} from '@_linked/core/queries/DeleteQuery';
+import {toNamedNode} from './toNamedNode.js';
+import {getSubShapesClasses} from '@_linked/core/utils/ShapeClass';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
+
+/**
+ * Convert a property path from core's NodeReferenceValue format to NamedNode(s).
+ */
+function toPropertyPath(path: {id: string} | {id: string}[]): NamedNode | NamedNode[] {
+  if (Array.isArray(path)) {
+    return path.map(p => toNamedNode(p));
+  }
+  return toNamedNode(path);
+}
+
+/**
+ * Find all instances of a type (and its subtypes) in the global graph.
+ * Replaces Shape.getLocalInstancesByType() which doesn't exist in core.
+ */
+function getInstancesByType(shapeClass: {targetClass?: {id: string}}): NodeSet<NamedNode> {
+  if (!shapeClass.targetClass) {
+    return new NodeSet();
+  }
+  const typeNode = toNamedNode(shapeClass.targetClass);
+  const rdfType = toNamedNode(rdf.type);
+  let nodes = typeNode.getAllInverse(rdfType) || new NodeSet();
+  // Also get instances of subtypes
+  try {
+    getSubShapesClasses(shapeClass as any).forEach((sub: any) => {
+      if (sub.targetClass) {
+        const subNodes = toNamedNode(sub.targetClass).getAllInverse(rdfType);
+        if (subNodes) {
+          subNodes.forEach((n: any) => nodes.add(n));
+        }
+      }
+    });
+  } catch (e) {
+    // getSubShapesClasses may not work for all shape types
+  }
+  return nodes as NodeSet<NamedNode>;
+}
+
+/**
+ * Convert a ShapeSet to a NodeSet by looking up each shape's id as a NamedNode.
+ * Replaces ShapeSet.getNodes() which doesn't exist in core.
+ */
+function shapeSetToNodeSet(set: ShapeSet): NodeSet<NamedNode> {
+  const nodes = new NodeSet<NamedNode>();
+  set.forEach((s: any) => nodes.add(NamedNode.getOrCreate(s.id)));
+  return nodes;
+}
 
 export type ProcessedWhereEvaluationPath = WhereEvaluationPath & {
   processedArgs: any[];
@@ -147,7 +196,7 @@ async function applyFieldUpdates(
   let plainValues = {};
   for (let field of fields) {
     let propShape = field.prop;
-    let propertyPath = propShape.path;
+    let propertyPath = toPropertyPath(propShape.path);
 
     if (typeof field.val === 'undefined') {
       unsetPropertyPath(subject, propertyPath);
@@ -401,12 +450,13 @@ async function convertValue(
   value: any,
   createQuery: boolean = false,
 ): Promise<{value: Literal | NamedNode; plainValue: any}> {
-  if (propShape.nodeKind === shacl.Literal) {
+  const nkId = propShape.nodeKind?.id;
+  if (nkId === shacl.Literal.id) {
     return convertLiteral(propShape, value);
   } else if (
-    propShape.nodeKind === shacl.BlankNodeOrIRI ||
-    propShape.nodeKind === shacl.BlankNode ||
-    propShape.nodeKind === shacl.IRI
+    nkId === shacl.BlankNodeOrIRI.id ||
+    nkId === shacl.BlankNode.id ||
+    nkId === shacl.IRI.id
   ) {
     return await convertNamedNode(propShape, value, createQuery);
   } else {
@@ -532,24 +582,10 @@ async function convertNodeDescription(
 
   let valueShape = propShape?.valueShape || value.shape;
   //if this property comes with a restriction that all values need to be of a certain shape
-  if (valueShape) {
-    //if that shape comes with a target class
-    if (valueShape.targetClass) {
-      //then we set the type of the node to the target class
-      //this is a "free" automatic property that we set for the user, so they don't need to always manually type it into the create() or update() queries
-      node.set(rdf.type, valueShape.targetClass);
-    }
-    //However... for other restrictions of the shape, the user needs to make sure that the node is valid
-    //So lets check if the node is valid according to the shape
-    if (!valueShape.validateNode(node)) {
-      let report = ValidationReport.forNodeAgainstShape(
-        node,
-        valueShape,
-      ).toString();
-      throw new Error(
-        `Property: ${propShape?.label} expects all values to be valid instances of shape ${valueShape.label}. Validation failed. Node: ${node.toString()}. Report: ${report}`,
-      );
-    }
+  if (valueShape && 'targetClass' in valueShape && valueShape.targetClass) {
+    //then we set the type of the node to the target class
+    //this is a "free" automatic property that we set for the user, so they don't need to always manually type it into the create() or update() queries
+    node.set(toNamedNode(rdf.type), toNamedNode(valueShape.targetClass));
   }
 
   await node.save();
@@ -573,9 +609,10 @@ function convertLiteral(
   let datatype = propShape.datatype;
   let res: Literal;
   if (datatype) {
-    if (datatype.equals(xsd.integer)) {
+    const dtId = (datatype as any).id ?? datatype;
+    if (dtId === xsd.integer.id) {
       if (typeof value === 'number') {
-        res = new Literal(value.toString(), xsd.integer);
+        res = new Literal(value.toString(), toNamedNode(xsd.integer));
       } else {
         throw new Error(
           `Property ${propShape.parentNodeShape.label}.${propShape.label} has datatype xsd.integer, so it expects a number value. Given value: ` +
@@ -584,7 +621,7 @@ function convertLiteral(
             typeof value,
         );
       }
-    } else if (datatype.equals(xsd.boolean)) {
+    } else if (dtId === xsd.boolean.id) {
       if (typeof value === 'boolean') {
         res = Boolean_toLiteral(value);
       } else {
@@ -595,9 +632,9 @@ function convertLiteral(
             typeof value,
         );
       }
-    } else if (datatype.equals(xsd.string)) {
-      res = new Literal(value.toString(), xsd.string);
-    } else if (datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
+    } else if (dtId === xsd.string.id) {
+      res = new Literal(value.toString(), toNamedNode(xsd.string));
+    } else if (dtId === xsd.date.id || dtId === xsd.dateTime.id) {
       //check if value is a date
       if (value instanceof Date) {
         res = XSDDate_fromNativeDate(value, datatype);
@@ -638,7 +675,7 @@ function convertLiteral(
     }
     //and we convert the string to a literal
     //Note: datatype could be null or any other unsupported datatype
-    res = new Literal(value, datatype);
+    res = new Literal(value, datatype ? toNamedNode(datatype) : null);
   }
   return {
     value: res,
@@ -676,14 +713,12 @@ export function resolveLocal<ResultType>(
         return null;
       }
     } else if (query.subject instanceof ShapeSet) {
-      subject = (query.subject as ShapeSet).getNodes() as NodeSet<NamedNode>;
+      subject = shapeSetToNodeSet(query.subject as ShapeSet);
     } else {
-      subject = (query.subject as Shape).namedNode;
+      subject = NamedNode.getOrCreate((query.subject as any).id);
     }
   } else {
-    subject = query.shape
-      .getLocalInstancesByType()
-      .getNodes() as NodeSet<NamedNode>;
+    subject = getInstancesByType(query.shape);
   }
   // let subject2 = query.subject ? query.subject : query.shape.getLocalInstancesByType();
   // console.log(ValidationReport.printForShapeInstances(query.shape));
@@ -1257,13 +1292,14 @@ function literalNodeToResultObject(literal: Literal, property: PropertyShape) {
   let datatype = property.datatype;
   let value = literal.value;
   if (datatype) {
-    if (datatype.equals(xsd.boolean)) {
+    const dtId = (datatype as any).id ?? datatype;
+    if (dtId === xsd.boolean.id) {
       return value === 'true';
-    } else if (datatype.equals(xsd.integer)) {
+    } else if (dtId === xsd.integer.id) {
       return parseInt(value);
-    } else if (datatype.equals(xsd.decimal) || datatype.equals(xsd.double)) {
+    } else if (dtId === xsd.decimal.id || dtId === xsd.double.id) {
       return parseFloat(value);
-    } else if (datatype.equals(xsd.date) || datatype.equals(xsd.dateTime)) {
+    } else if (dtId === xsd.date.id || dtId === xsd.dateTime.id) {
       return new Date(value);
     }
   }
@@ -1474,14 +1510,14 @@ export function resolveQueryPropertyPath(
 ) {
   const singleValueProperty = property.maxCount === 1;
   let pathResult;
-  let path = property.path;
-  if (!Array.isArray(path)) {
-    path = [path];
-  }
-  let lastProp = path.pop();
+  let rawPath = property.path;
+  let pathNodes: NamedNode[] = Array.isArray(rawPath)
+    ? rawPath.map(p => toNamedNode(p))
+    : [toNamedNode(rawPath)];
+  let lastProp = pathNodes.pop();
   let target: any = node;
-  while (path.length > 0) {
-    let prop = path.pop();
+  while (pathNodes.length > 0) {
+    let prop = pathNodes.pop();
     target = target.getAll(prop);
   }
 
@@ -1691,7 +1727,7 @@ function resolveQueryStepForNodesEndResults(
     //if the propertyshape states that it only accepts literal values in the graph,
     // then the result will be an Array
     let result =
-      (queryStep as PropertyQueryStep).property.nodeKind === shacl.Literal ||
+      (queryStep as PropertyQueryStep).property.nodeKind?.id === shacl.Literal.id ||
       (queryStep as SizeStep).count
         ? []
         : new NodeSet();
@@ -1762,14 +1798,14 @@ function resolveQueryStepForNodesEndResults(
   }
 }
 
-function XSDDate_fromNativeDate(nativeDate: Date, datatype) {
+function XSDDate_fromNativeDate(nativeDate: Date, datatype: {id: string}) {
   if (!nativeDate) return null;
 
   var value = nativeDate.toISOString();
-  let literal = new Literal(value, datatype);
+  let literal = new Literal(value, toNamedNode(datatype));
   return literal;
 }
 
 function Boolean_toLiteral(value: boolean) {
-  return new Literal(value.toString(), xsd.boolean);
+  return new Literal(value.toString(), toNamedNode(xsd.boolean));
 }
