@@ -9,13 +9,13 @@ module.exports = {
     '^.+\\.(ts|tsx)$': [
       'ts-jest',
       {
-        tsconfig: '<rootDir>/../../tsconfig.json',
+        tsconfig: '<rootDir>/../../tsconfig-test.json',
       },
     ],
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@_linked/core/(.*)$': '<rootDir>/../../node_modules/@_linked/core/src/$1',
-    '^@_linked/core$': '<rootDir>/../../node_modules/@_linked/core/src/index',
+    '^@_linked/core/(.*)$': '<rootDir>/../../../core/src/$1',
+    '^@_linked/core$': '<rootDir>/../../../core/src/index',
   },
 };

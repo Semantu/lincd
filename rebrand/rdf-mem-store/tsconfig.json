@@ -13,11 +13,7 @@
     "jsx": "react",
     "moduleResolution": "node",
     "types": ["node", "jest"],
-    "baseUrl": "./",
-    "paths": {
-      "@_linked/core": ["../core/src/index"],
-      "@_linked/core/*": ["../core/src/*"]
-    }
+    "baseUrl": "./"
   },
   "include": [
     "./src/**/*.ts",
