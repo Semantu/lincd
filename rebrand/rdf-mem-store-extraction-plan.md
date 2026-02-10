@@ -241,7 +241,10 @@ This is the most complex phase. LocalQueryResolver works with NamedNode graph me
 - [x] Added `getSubShapesClasses` import from core
 - [x] Created end-to-end resolver tests (`src/tests/resolver.test.ts`, 9 tests)
 - [x] tsc --noEmit: 0 errors
-- [x] jest: 20 tests pass (11 model + 9 resolver)
+- [x] jest: 59 tests pass (11 model + 48 resolver — full select query parity with original query-tests.tsx)
+- [x] Phase 5b: Expanded resolver tests to cover all non-React select queries from original src/tests/utils/query-tests.tsx
+  - 8 Basic Property Selection, 5 Nested & Path Selection, 13 Filtering (Where), 12 Aggregation & Sub-Select, 6 Type Casting, 3 Sorting & Limiting
+  - Test data matches original exactly: 4 persons (Semmy, Moa, Jinx, Quinn), 2 dogs, all relationships
 
 ### Phase 6 — InMemoryStore cleanup
 
