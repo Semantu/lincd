@@ -8,12 +8,16 @@ import {NodeReferenceValue, UpdatePartial} from '../queries/QueryFactory';
 
 const tmpPropBase = 'linked://tmp/props/';
 const tmpTypeBase = 'linked://tmp/types/';
+export const tmpEntityBase = 'linked://tmp/entities/';
 
 const prop = (suffix: string): NodeReferenceValue => ({
   id: `${tmpPropBase}${suffix}`,
 });
 const type = (suffix: string): NodeReferenceValue => ({
   id: `${tmpTypeBase}${suffix}`,
+});
+const entity = (suffix: string): NodeReferenceValue => ({
+  id: `${tmpEntityBase}${suffix}`,
 });
 
 export const name = prop('name');
@@ -109,27 +113,27 @@ const componentQuery = Person.query((p) => ({name: p.name}));
 const componentLike = {query: componentQuery};
 
 const updateSimple: UpdatePartial<Person> = {hobby: 'Chess'};
-const updateOverwriteSet: UpdatePartial<Person> = {friends: [{id: 'p2'}]};
+const updateOverwriteSet: UpdatePartial<Person> = {friends: [entity('p2')]};
 const updateUnsetSingleUndefined: UpdatePartial<Person> = {hobby: undefined};
 const updateUnsetSingleNull: UpdatePartial<Person> = {hobby: null};
 const updateOverwriteNested: UpdatePartial<Person> = {
   bestFriend: {name: 'Bestie'},
 };
 const updatePassIdReferences: UpdatePartial<Person> = {
-  bestFriend: {id: 'p2'},
+  bestFriend: entity('p2'),
 };
 const updateAddRemoveMulti: UpdatePartial<Person> = {
-  friends: {add: [{id: 'p2'}], remove: [{id: 'p3'}]},
+  friends: {add: [entity('p2')], remove: [entity('p3')]},
 };
 const updateRemoveMulti: UpdatePartial<Person> = {
-  friends: {remove: [{id: 'p2'}]},
+  friends: {remove: [entity('p2')]},
 };
 const updateAddRemoveSame: UpdatePartial<Person> = {
-  friends: {add: [{id: 'p2'}], remove: [{id: 'p3'}]},
+  friends: {add: [entity('p2')], remove: [entity('p3')]},
 };
 const updateUnsetMultiUndefined: UpdatePartial<Person> = {friends: undefined};
 const updateNestedWithPredefinedId: UpdatePartial<Person> = {
-  bestFriend: {id: 'p3-best-friend', name: 'Bestie'},
+  bestFriend: {id: `${tmpEntityBase}p3-best-friend`, name: 'Bestie'},
 };
 const updateBirthDate: UpdatePartial<Person> = {
   birthDate: new Date('2020-01-01'),
@@ -140,12 +144,12 @@ export const queryFactories = {
   selectFriends: () => Person.select((p) => p.friends),
   selectBirthDate: () => Person.select((p) => p.birthDate),
   selectIsRealPerson: () => Person.select((p) => p.isRealPerson),
-  selectById: () => Person.select({id: 'p1'}, (p) => p.name),
-  selectByIdReference: () => Person.select({id: 'p1'}, (p) => p.name),
+  selectById: () => Person.select(entity('p1'), (p) => p.name),
+  selectByIdReference: () => Person.select(entity('p1'), (p) => p.name),
   selectNonExisting: () =>
     Person.select({id: 'https://does.not/exist'}, (p) => p.name),
   selectUndefinedOnly: () =>
-    Person.select({id: 'p3'}, (p) => [p.hobby, p.bestFriend]),
+    Person.select(entity('p3'), (p) => [p.hobby, p.bestFriend]),
   selectFriendsName: () => Person.select((p) => p.friends.name),
   selectNestedFriendsName: () => Person.select((p) => p.friends.friends.name),
   selectMultiplePaths: () =>
@@ -156,7 +160,7 @@ export const queryFactories = {
   whereFriendsNameEquals: () =>
     Person.select((p) => p.friends.where((f) => f.name.equals('Moa'))),
   whereBestFriendEquals: () =>
-    Person.select().where((p) => p.bestFriend.equals({id: 'p3'})),
+    Person.select().where((p) => p.bestFriend.equals(entity('p3'))),
   whereHobbyEquals: () =>
     Person.select((p) => p.hobby.where((h) => h.equals('Jogging'))),
   whereAnd: () =>
@@ -232,7 +236,7 @@ export const queryFactories = {
       p.bestFriend.select((f) => [f.name, f.birthDate, f.isRealPerson]),
     ),
   customResultEqualsBoolean: () =>
-    Person.select((p) => ({isBestFriend: p.bestFriend.equals({id: 'p3'})})),
+    Person.select((p) => ({isBestFriend: p.bestFriend.equals(entity('p3'))})),
   customResultNumFriends: () =>
     Person.select((p) => ({numFriends: p.friends.size()})),
   countEquals: () =>
@@ -246,7 +250,7 @@ export const queryFactories = {
   selectShapeAs: () =>
     Person.select((p) => p.firstPet.as(Dog).guardDogLevel),
   selectOne: () =>
-    Person.select((p) => p.name).where((p) => p.equals({id: 'p1'})).one(),
+    Person.select((p) => p.name).where((p) => p.equals(entity('p1'))).one(),
   nestedQueries2: () =>
     Person.select((p) => [
       p.friends.select((p2) => [
@@ -267,43 +271,43 @@ export const queryFactories = {
   sortByAsc: () => Person.select((p) => p.name).sortBy((p) => p.name),
   sortByDesc: () =>
     Person.select((p) => p.name).sortBy((p) => p.name, 'DESC'),
-  updateSimple: () => Person.update({id: 'p1'}, updateSimple),
+  updateSimple: () => Person.update(entity('p1'), updateSimple),
   createSimple: () => Person.create({name: 'Test Create', hobby: 'Chess'}),
   createWithFriends: () =>
     Person.create({
       name: 'Test Create',
-      friends: [{id: 'p2'}, {name: 'New Friend'}],
+      friends: [entity('p2'), {name: 'New Friend'}],
     }),
   createWithFixedId: () =>
     Person.create({
-      __id: 'fixed-id',
+      __id: `${tmpEntityBase}fixed-id`,
       name: 'Fixed',
-      bestFriend: {id: 'fixed-id-2'},
+      bestFriend: entity('fixed-id-2'),
     } as any),
-  deleteSingle: () => Person.delete({id: 'to-delete'}),
-  deleteSingleRef: () => Person.delete({id: 'to-delete'}),
+  deleteSingle: () => Person.delete(entity('to-delete')),
+  deleteSingleRef: () => Person.delete(entity('to-delete')),
   deleteMultiple: () =>
-    Person.delete([{id: 'to-delete-1'}, {id: 'to-delete-2'}]),
+    Person.delete([entity('to-delete-1'), entity('to-delete-2')]),
   deleteMultipleFull: () =>
-    Person.delete([{id: 'to-delete-1'}, {id: 'to-delete-2'}]),
-  updateOverwriteSet: () => Person.update({id: 'p1'}, updateOverwriteSet),
+    Person.delete([entity('to-delete-1'), entity('to-delete-2')]),
+  updateOverwriteSet: () => Person.update(entity('p1'), updateOverwriteSet),
   updateUnsetSingleUndefined: () =>
-    Person.update({id: 'p1'}, updateUnsetSingleUndefined),
+    Person.update(entity('p1'), updateUnsetSingleUndefined),
   updateUnsetSingleNull: () =>
-    Person.update({id: 'p1'}, updateUnsetSingleNull),
+    Person.update(entity('p1'), updateUnsetSingleNull),
   updateOverwriteNested: () =>
-    Person.update({id: 'p1'}, updateOverwriteNested),
+    Person.update(entity('p1'), updateOverwriteNested),
   updatePassIdReferences: () =>
-    Person.update({id: 'p1'}, updatePassIdReferences),
+    Person.update(entity('p1'), updatePassIdReferences),
   updateAddRemoveMulti: () =>
-    Person.update({id: 'p1'}, updateAddRemoveMulti),
-  updateRemoveMulti: () => Person.update({id: 'p1'}, updateRemoveMulti),
-  updateAddRemoveSame: () => Person.update({id: 'p1'}, updateAddRemoveSame),
+    Person.update(entity('p1'), updateAddRemoveMulti),
+  updateRemoveMulti: () => Person.update(entity('p1'), updateRemoveMulti),
+  updateAddRemoveSame: () => Person.update(entity('p1'), updateAddRemoveSame),
   updateUnsetMultiUndefined: () =>
-    Person.update({id: 'p1'}, updateUnsetMultiUndefined),
+    Person.update(entity('p1'), updateUnsetMultiUndefined),
   updateNestedWithPredefinedId: () =>
-    Person.update({id: 'p1'}, updateNestedWithPredefinedId),
-  updateBirthDate: () => Person.update({id: 'p1'}, updateBirthDate),
+    Person.update(entity('p1'), updateNestedWithPredefinedId),
+  updateBirthDate: () => Person.update(entity('p1'), updateBirthDate),
   preloadBestFriend: () =>
     Person.select((p) => p.bestFriend.preloadFor(componentLike)),
 };

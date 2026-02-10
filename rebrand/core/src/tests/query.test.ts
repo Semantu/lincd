@@ -9,7 +9,7 @@ import {UpdateQueryFactory} from '../queries/UpdateQuery';
 import {CreateQueryFactory} from '../queries/CreateQuery';
 import {DeleteQueryFactory} from '../queries/DeleteQuery';
 import {NodeId} from '../queries/MutationQuery';
-import {Dog, Person, Pet, queryFactories, name as namePath} from '../test-helpers/query-fixtures';
+import {Dog, Person, Pet, queryFactories, name as namePath, tmpEntityBase} from '../test-helpers/query-fixtures';
 import {setQueryContext} from '../queries/QueryContext';
 
 class QueryCaptureStore implements IQueryParser {
@@ -107,7 +107,7 @@ describe('1. Basic Property Selection', () => {
     const query = await captureQuery(() => queryFactories.selectById());
 
     expectSelectQuery(query);
-    expect(query?.subject).toEqual({id: 'p1'});
+    expect(query?.subject).toEqual({id: `${tmpEntityBase}p1`});
     expect(query?.singleResult).toBe(true);
   });
 
@@ -115,7 +115,7 @@ describe('1. Basic Property Selection', () => {
     const query = await captureQuery(() => queryFactories.selectByIdReference());
 
     expectSelectQuery(query);
-    expect(query?.subject).toEqual({id: 'p1'});
+    expect(query?.subject).toEqual({id: `${tmpEntityBase}p1`});
     expect(query?.singleResult).toBe(true);
   });
 
@@ -470,7 +470,7 @@ describe('8. CRUD Operations (Create, Update, Delete)', () => {
     const query = await captureQuery(() => queryFactories.updateSimple());
 
     expect(query?.type).toBe('update');
-    expect(query?.id).toBe('p1');
+    expect(query?.id).toBe(`${tmpEntityBase}p1`);
   });
 
   test('create query 1 - create simple person with literal fields', async () => {
@@ -495,7 +495,7 @@ describe('8. CRUD Operations (Create, Update, Delete)', () => {
     const query = await captureQuery(() => queryFactories.deleteSingle());
 
     expect(query?.type).toBe('delete');
-    expect(query?.ids?.[0]).toEqual({id: 'to-delete'});
+    expect(query?.ids?.[0]).toEqual({id: `${tmpEntityBase}to-delete`});
   });
 
   test('delete query 2 - delete newly created node by node reference', async () => {
