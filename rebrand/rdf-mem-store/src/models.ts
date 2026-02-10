@@ -501,6 +501,13 @@ export class NamedNode
   }
 
   /**
+   * Alias for uri, so NamedNode satisfies NodeReferenceValue ({id: string}) from core.
+   */
+  get id(): string {
+    return this._value;
+  }
+
+  /**
    * Returns true if this node has a temporary URI and only exists in the local environment.
    * e.g. this is usually true if you create a new NamedNode without having specified a URI yet
    */

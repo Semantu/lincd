@@ -1,5 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import {NamedNode, Literal, Quad, defaultGraph} from '../models';
+import {toNamedNode} from '../utils/toNamedNode';
 
 // Use unique URIs per test to avoid singleton collisions
 let counter = 0;
@@ -65,5 +66,43 @@ describe('RDF models smoke test', () => {
     const inverseResults = o.getAllInverse(p);
     expect(inverseResults.size).toBe(1);
     expect(inverseResults.has(s)).toBe(true);
+  });
+
+  test('NamedNode.id aliases uri (NodeReferenceValue compatibility)', () => {
+    const u = uri('node-with-id');
+    const node = NamedNode.getOrCreate(u);
+    expect(node.id).toBe(u);
+    expect(node.id).toBe(node.uri);
+  });
+
+  test('NamedNode satisfies NodeReferenceValue interface', () => {
+    const u = uri('ref-value');
+    const node = NamedNode.getOrCreate(u);
+    // NodeReferenceValue = {id: string}
+    const ref: {id: string} = node;
+    expect(ref.id).toBe(u);
+  });
+});
+
+describe('toNamedNode helper', () => {
+  test('passes through NamedNode instances unchanged', () => {
+    const node = NamedNode.getOrCreate(uri('existing'));
+    const result = toNamedNode(node);
+    expect(result).toBe(node);
+  });
+
+  test('converts plain {id} to NamedNode', () => {
+    const u = uri('plain-ref');
+    const result = toNamedNode({id: u});
+    expect(result).toBeInstanceOf(NamedNode);
+    expect(result.uri).toBe(u);
+    expect(result.id).toBe(u);
+  });
+
+  test('returns same singleton for same URI', () => {
+    const u = uri('singleton-check');
+    const fromRef = toNamedNode({id: u});
+    const fromGetOrCreate = NamedNode.getOrCreate(u);
+    expect(fromRef).toBe(fromGetOrCreate);
   });
 });

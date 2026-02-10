@@ -216,10 +216,11 @@ Updated 17 imports across 10 files:
 
 ### Phase 4 — NodeReferenceValue / NamedNode bridge
 
-- [ ] Ensure `NamedNode` has `.id` property (getter aliased to `.uri`) so it satisfies `{id: string}`
-- [ ] In `LocalQueryResolver`: update any `instanceof NamedNode` checks to also handle plain `{id: string}` objects — convert via `NamedNode.getOrCreate(ref.id)` at boundaries
-- [ ] In `models.ts`: where ontology values (now `NodeReferenceValue`) are used as `NamedNode`, convert at boundaries
-- [ ] In `InMemoryStore`: replace `this.namedNode.uri` with `this.uri` or `this.id`
+- [x] Added `get id(): string` getter on NamedNode (aliases `uri`) so it satisfies `NodeReferenceValue = {id: string}`
+- [x] Created `utils/toNamedNode.ts` helper: converts `{id: string}` → `NamedNode.getOrCreate(ref.id)`, passes through NamedNode instances
+- [x] Tests: 11/11 pass (6 original + 2 id-alias tests + 3 toNamedNode tests)
+- [ ] LocalQueryResolver fixes deferred to Phase 5 (uses toNamedNode throughout)
+- [ ] InMemoryStore fixes deferred to Phase 6
 
 ### Phase 5 — Adapt LocalQueryResolver for core types (CRITICAL)
 
