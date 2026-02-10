@@ -51,8 +51,45 @@ const PersonCard = linkedComponent(
 Props received by the wrapped component:
 - Query result props: all top-level keys from the query result become direct props (for example `name`).
 - `source`: the resolved shape instance for the input `of` subject.
-- `_refresh(updatedProps?)`: rerun the query (`_refresh()`) or patch local result props before rerender (`_refresh({...})`).
+- `_refresh(updatedProps?)`: rerun the query (`_refresh()`) or patch local query-result props before rerender (`_refresh({...})`).
 - Custom props: any additional props you pass to the linked component are forwarded as normal.
+
+#### `_refresh(updatedProps?)` on linked components
+
+`_refresh` is injected into wrapped `linkedComponent(...)` render functions.
+
+- `_refresh()` reruns the query and rerenders when results return.
+- `_refresh(updatedProps)` merges `updatedProps` into current query result state and rerenders immediately (without fetching first).
+- `updatedProps` is for query result keys only (for example `name`, `active` from your query), not regular additional props passed by parents.
+
+Example use case: optimistic UI after a mutation.
+
+```tsx
+const PersonCard = linkedComponent(
+  Person.query((p) => [p.name, p.active]),
+  ({id, name, active, _refresh, title}) => (
+    <div>
+      <h4>{title}</h4>
+      <span>{name}</span>
+      <button
+        onClick={async () => {
+          // Patch query-result keys immediately (name/active/id/etc.)
+          _refresh({active: !active}); // optimistic local query-result update
+          await saveActiveFlag(id, !active); // your write call
+          _refresh(); // optional: sync with store response
+          // Not for parent custom props like `title`; those come from parent rerender.
+        }}
+      >
+        Toggle active
+      </button>
+    </div>
+  ),
+);
+```
+
+### `linkedSetComponent(...)`
+
+Use `linkedSetComponent(...)` when you want to render a list of sources.
 
 ### `linkedSetComponent(...)` (direct query format)
 
@@ -99,35 +136,6 @@ Loading fallback is currently fixed to:
 ```
 
 There is no API prop to replace this element today. You can style it via CSS class `.ld-loader`.
-
-## `_refresh(updatedProps?)` on linked components
-
-`_refresh` is injected into wrapped `linkedComponent(...)` render functions.
-
-- `_refresh()` reruns the query and rerenders when results return.
-- `_refresh(updatedProps)` merges `updatedProps` into current query result state and rerenders immediately (without fetching first).
-
-Example use case: optimistic UI after a mutation.
-
-```tsx
-const PersonCard = linkedComponent(
-  Person.query((p) => [p.name, p.active]),
-  ({id, name, active, _refresh}) => (
-    <div>
-      <span>{name}</span>
-      <button
-        onClick={async () => {
-          _refresh({active: !active}); // optimistic local update
-          await saveActiveFlag(id, !active); // your write call
-          _refresh(); // optional: sync with store response
-        }}
-      >
-        Toggle active
-      </button>
-    </div>
-  ),
-);
-```
 
 ## Linked set pagination API
 
@@ -216,6 +224,11 @@ import {InMemoryStore} from '@_linked/rdf-mem-store';
 
 LinkedStorage.setDefaultStore(new InMemoryStore());
 ```
+
+## TODO
+
+- Add `setOffset` to `linkedSetComponent` query controller.
+- Make loader configurable and/or switch to passing a loading-state prop.
 
 ## Development
 

@@ -288,11 +288,27 @@ For each completed phase/sub-phase, append:
 
 ### Phase 4c — linkedComponent docs structure follow-up
 - Status: `completed`
-- Commit: `<to be filled after commit>`
+- Commit: `fe0bdf2`
 - Summary:
   - Renamed the section title from "Input props and mapped props" to `linkedComponent(...)`.
   - Rewrote the intro paragraph to clarify `Shape.query(...)` vs `Shape.select(...)`, subject binding through `of`, and top-level query key-to-prop mapping.
   - Added an explicit prop breakdown list after the `linkedComponent(...)` example and moved the `@_linked/rdf-mem-store` setup example to the bottom of the README.
+- Validation:
+  - Tests passed: `12`
+  - Tests failed: `0`
+  - Command(s):
+    - `npm test -- --runInBand` (in `rebrand/react`) -> pass (`3 passed suites`, `12 passed tests`)
+- Deviations from plan:
+  - None.
+- Next step: `Done`
+
+### Phase 4d — `_refresh` semantics and ordering docs follow-up
+- Status: `completed`
+- Commit: `<to be filled after commit>`
+- Summary:
+  - Clarified `_refresh(updatedProps)` semantics as patching query-result keys only, not regular/custom props.
+  - Moved the `_refresh` section to the bottom of the `linkedComponent(...)` section before `linkedSetComponent(...)` docs.
+  - Added explicit linked-set purpose text ("render a list of sources") and appended a README TODO list for `setOffset` and configurable loader/loading state.
 - Validation:
   - Tests passed: `12`
   - Tests failed: `0`
