@@ -38,6 +38,7 @@
     "react-usestateref": "^1.0.8"
   },
   "devDependencies": {
+    "@testing-library/react": "^14.2.1",
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.12.7",

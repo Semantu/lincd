@@ -183,7 +183,7 @@ For each completed phase/sub-phase, append:
 
 ### Phase 1 — Scaffold `@_linked/react` package
 - Status: `completed`
-- Commit: `<to be filled after commit>`
+- Commit: `1242c6f`
 - Summary:
   - Created `rebrand/react` package scaffold with package metadata, dual-output build scripts, TS/Jest config, and starter source files.
   - Added `react` to `rebrand/package.json` workspaces.
@@ -198,3 +198,20 @@ For each completed phase/sub-phase, append:
   - Added local TypeScript path mapping to `@_linked/core` in `rebrand/react/tsconfig.json` so compile works before core is built.
   - Used local npm cache (`npm install --cache ./.npm-cache`) due permission issue in `~/.npm`.
 - Next step: `Phase 2 — Migrate runtime React APIs (no behavior changes)`
+
+### Phase 2 — Migrate runtime React APIs (no behavior changes)
+- Status: `completed`
+- Commit: `<to be filled after commit>`
+- Summary:
+  - Added core-compatible React runtime implementation in `rebrand/react/src/utils/LinkedComponent.ts` for `linkedComponent` and `linkedSetComponent`.
+  - Added `rebrand/react/src/utils/LinkedComponentClass.tsx` and slimmed hooks to `useStyles` only (`rebrand/react/src/utils/Hooks.ts`), removing legacy watch APIs per direction.
+  - Updated package surface (`rebrand/react/src/package.ts`, `rebrand/react/src/index.ts`) to expose React APIs under package tree `@_linked/react`.
+- Validation:
+  - Tests passed: `3`
+  - Tests failed: `0`
+  - Command(s):
+    - `npm run compile` (in `rebrand/react`) -> pass
+    - `npm test` (in `rebrand/react`) -> pass
+- Deviations from plan:
+  - Added a focused runtime test file `rebrand/react/src/tests/linked-component-runtime.test.tsx` already in Phase 2 to validate migrated runtime behavior before larger Phase 3 test porting.
+- Next step: `Phase 3 — Migrate and stabilize React tests`
