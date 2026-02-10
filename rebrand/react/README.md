@@ -2,6 +2,8 @@
 
 React bindings for `@_linked/core`.
 
+`@_linked/react` takes a Linked query from `@_linked/core`'s [Schema-Parameterized Query DSL](../core/README.md#schema-parameterized-query-dsl) and maps the top-level query result keys to props for a React component.
+
 This package provides:
 - `linkedComponent(...)`
 - `linkedSetComponent(...)`
@@ -14,13 +16,20 @@ This package provides:
 npm install @_linked/react @_linked/core react react-dom
 ```
 
-For runtime data resolution, also add a store package (for example `@_linked/rdf-mem-store`) and configure `LinkedStorage`.
+`@_linked/react` does not include RDF storage. For local in-memory setup, add `@_linked/rdf-mem-store` and register it as the default store in `LinkedStorage`:
+
+```tsx
+import {LinkedStorage} from '@_linked/core';
+import {InMemoryStore} from '@_linked/rdf-mem-store';
+
+LinkedStorage.setDefaultStore(new InMemoryStore());
+```
 
 ## Usage
 
 ### Setup package exports
 
-```ts
+```tsx
 import {
   linkedComponent,
   linkedSetComponent,
@@ -73,8 +82,7 @@ Both formats are supported.
 ## Notes
 
 - This package depends on `@_linked/core` query APIs and `preloadFor(...)` / `BoundComponent` behavior from core.
-- `@_linked/react` itself does not provide RDF storage; use a store package and set a default store in `LinkedStorage`.
-- Legacy watch hooks from monolithic LINCD (`useWatchProperty*`) are intentionally not included in this package.
+- `@_linked/react` itself does not provide RDF storage; use a store package and set a default store in `LinkedStorage` (for example `@_linked/rdf-mem-store`).
 
 ## Development
 
