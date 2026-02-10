@@ -37,16 +37,25 @@ import {
 } from '@_linked/react';
 ```
 
-### `linkedComponent(...)`
+### Input props and mapped props
 
 ```tsx
 const PersonCard = linkedComponent(
   Person.query((p) => p.name),
-  ({name}) => <div>{name}</div>,
+  ({source, name, _refresh}) => (
+    <article>
+      <h3>{name}</h3>
+      <small>{source.id}</small>
+      <button onClick={() => _refresh()}>Reload</button>
+    </article>
+  ),
 );
 
+// External API: pass `of` as a node reference (`{id: string}`), Shape, or QResult.
 <PersonCard of={{id: 'https://example.org/p1'}} />;
 ```
+
+`linkedComponent(...)` maps the external `of` prop into an internal `source` prop for the wrapped render function.
 
 ### `linkedSetComponent(...)` (direct query format)
 
@@ -77,7 +86,123 @@ const NameList = linkedSetComponent({persons: personQuery}, ({persons}) => (
 ));
 ```
 
-Both formats are supported.
+Both formats are supported. For linked-set wrappers, the external API is also `of` (optional). Internally this becomes `sources` for the wrapped component.
+
+## Render lifecycle and loading state
+
+When `LinkedStorage` is initialized and data is not already preloaded in `of`:
+- First render: returns a loading element.
+- Query resolves: component rerenders with mapped query result props.
+- Source changes (`of` changes): prior query result is cleared and query runs again.
+
+Loading fallback is currently fixed to:
+
+```html
+<div class="ld-loader" role="status" aria-label="Loading"></div>
+```
+
+There is no API prop to replace this element today. You can style it via CSS class `.ld-loader`.
+
+## `_refresh(updatedProps?)` on linked components
+
+`_refresh` is injected into wrapped `linkedComponent(...)` render functions.
+
+- `_refresh()` reruns the query and rerenders when results return.
+- `_refresh(updatedProps)` merges `updatedProps` into current query result state and rerenders immediately (without fetching first).
+
+Example use case: optimistic UI after a mutation.
+
+```tsx
+const PersonCard = linkedComponent(
+  Person.query((p) => [p.name, p.active]),
+  ({id, name, active, _refresh}) => (
+    <div>
+      <span>{name}</span>
+      <button
+        onClick={async () => {
+          _refresh({active: !active}); // optimistic local update
+          await saveActiveFlag(id, !active); // your write call
+          _refresh(); // optional: sync with store response
+        }}
+      >
+        Toggle active
+      </button>
+    </div>
+  ),
+);
+```
+
+## Linked set pagination API
+
+When `linkedSetComponent(...)` has a limit (explicit query limit or default limit), wrapped props include:
+- `query.nextPage()`
+- `query.previousPage()`
+- `query.setPage(pageIndex)`
+- `query.setLimit(limit)`
+
+There is no public `setOffset(...)` in the React query controller; use `setPage`, `nextPage`, or `previousPage`.
+
+Example:
+
+```tsx
+import React from 'react';
+
+const PeopleList = linkedSetComponent(
+  Person.query((p) => [p.name]).limit(5),
+  ({linkedData = [], query}) => {
+    const [page, setPage] = React.useState(0);
+
+    return (
+      <section>
+        <ul>
+          {linkedData.map((person) => (
+            <li key={person.id}>{person.name}</li>
+          ))}
+        </ul>
+
+        <div>
+          <button
+            onClick={() => {
+              query?.previousPage();
+              setPage((p) => Math.max(0, p - 1));
+            }}
+          >
+            Previous
+          </button>
+
+          <span>Page {page + 1}</span>
+
+          <button
+            onClick={() => {
+              query?.nextPage();
+              setPage((p) => p + 1);
+            }}
+          >
+            Next
+          </button>
+
+          <label>
+            Page size
+            <select
+              defaultValue="5"
+              onChange={(e) => {
+                const nextLimit = Number(e.target.value);
+                query?.setLimit(nextLimit);
+                query?.setPage(0);
+                setPage(0);
+              }}
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+            </select>
+          </label>
+        </div>
+      </section>
+    );
+  },
+);
+```
 
 ## Notes
 

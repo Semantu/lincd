@@ -256,7 +256,7 @@ For each completed phase/sub-phase, append:
 
 ### Phase 4a — README clarification follow-up
 - Status: `completed`
-- Commit: `<to be filled after commit>`
+- Commit: `8c9ed38`
 - Summary:
   - Expanded `rebrand/react/README.md` introduction to explain query DSL to React-props mapping and linked to the core DSL section.
   - Documented `@_linked/rdf-mem-store` as the simple starter store and showed `LinkedStorage.setDefaultStore(...)` setup.
@@ -268,4 +268,20 @@ For each completed phase/sub-phase, append:
     - `npm test -- --runInBand` (in `rebrand/react`) -> pass (`3 passed suites`, `12 passed tests`)
 - Deviations from plan:
   - Added a post-phase README sub-phase for clarity updates requested after Phase 4 completion.
+- Next step: `Done`
+
+### Phase 4b — Runtime behavior docs follow-up
+- Status: `completed`
+- Commit: `<to be filled after commit>`
+- Summary:
+  - Documented loading/render lifecycle for both `linkedComponent(...)` and `linkedSetComponent(...)`, including first render loading state and rerender after query resolution.
+  - Documented fixed loading fallback element (`<div class="ld-loader" role="status" aria-label="Loading" />`) and clarified that replacement is not currently configurable by API.
+  - Added docs for `_refresh(updatedProps?)`, `of` vs internal `source/sources` mapping, and a full pagination example with `nextPage`, `previousPage`, `setPage`, and `setLimit`.
+- Validation:
+  - Tests passed: `12`
+  - Tests failed: `0`
+  - Command(s):
+    - `npm test -- --runInBand` (in `rebrand/react`) -> pass (`3 passed suites`, `12 passed tests`)
+- Deviations from plan:
+  - Added additional runtime-behavior clarification section requested after initial docs completion.
 - Next step: `Done`
