@@ -304,7 +304,7 @@ For each completed phase/sub-phase, append:
 
 ### Phase 4d — `_refresh` semantics and ordering docs follow-up
 - Status: `completed`
-- Commit: `<to be filled after commit>`
+- Commit: `eac17b9`
 - Summary:
   - Clarified `_refresh(updatedProps)` semantics as patching query-result keys only, not regular/custom props.
   - Moved the `_refresh` section to the bottom of the `linkedComponent(...)` section before `linkedSetComponent(...)` docs.
