@@ -44,7 +44,7 @@ export interface LinkedComponent<
     P & LinkedComponentInputProps<ShapeType> & React.ComponentPropsWithRef<any>
   > {
   original?: LinkableComponent<P, ShapeType>;
-  query?: SelectQueryFactory<any>;
+  query: SelectQueryFactory<any>;
   shape?: typeof Shape;
 }
 
@@ -58,7 +58,7 @@ export interface LinkedSetComponent<
       React.ComponentPropsWithRef<any>
   > {
   original?: LinkableSetComponent<P, ShapeType>;
-  query?: SelectQueryFactory<any>;
+  query: SelectQueryFactory<any> | QueryWrapperObject<ShapeType>;
   shape?: typeof Shape;
 }
 
@@ -268,22 +268,20 @@ export function createLinkedSetComponentFn(
   registerComponent,
 ) {
   return function linkedSetComponent<
-    QueryType extends SelectQueryFactory<any> = null,
+    QueryType extends
+      | SelectQueryFactory<any>
+      | {[key: string]: SelectQueryFactory<any>} = null,
     CustomProps = {},
     ShapeType extends Shape = GetQueryShapeType<QueryType>,
-    Res = GetQueryResponseType<QueryType>,
+    Res = ToQueryResultSet<QueryType>,
   >(
     query: QueryType,
     functionalComponent: LinkableSetComponent<
-      CustomProps &
-        QueryResponseToResultType<
-          GetQueryResponseType<SelectQueryFactory<ShapeType, Res>>,
-          ShapeType
-        >,
+      CustomProps & GetCustomObjectKeys<QueryType> & QueryControllerProps,
       ShapeType
     >,
   ): LinkedSetComponent<CustomProps, ShapeType, Res> {
-    let [shapeClass, actualQuery] = processQuery<ShapeType>(query, true);
+    let [shapeClass, actualQuery] = processQuery<ShapeType>(query as any, true);
 
     let usingStorage = LinkedStorage.isInitialised();
 
@@ -296,11 +294,7 @@ export function createLinkedSetComponentFn(
 
         let linkedProps = getLinkedSetComponentProps<
           ShapeType,
-          CustomProps &
-            QueryResponseToResultType<
-              GetQueryResponseType<SelectQueryFactory<ShapeType, Res>>,
-              ShapeType
-            >
+          any
         >(props, shapeClass, functionalComponent);
 
         let defaultLimit = actualQuery.getLimit() || DEFAULT_LIMIT;
@@ -398,7 +392,7 @@ export function createLinkedSetComponentFn(
         } else {
           return createLoadingSpinner();
         }
-      });
+      }) as any;
 
     _wrappedComponent.original = functionalComponent;
     _wrappedComponent.query = query;

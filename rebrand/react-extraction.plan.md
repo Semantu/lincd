@@ -201,7 +201,7 @@ For each completed phase/sub-phase, append:
 
 ### Phase 2 — Migrate runtime React APIs (no behavior changes)
 - Status: `completed`
-- Commit: `<to be filled after commit>`
+- Commit: `ce4af64`
 - Summary:
   - Added core-compatible React runtime implementation in `rebrand/react/src/utils/LinkedComponent.ts` for `linkedComponent` and `linkedSetComponent`.
   - Added `rebrand/react/src/utils/LinkedComponentClass.tsx` and slimmed hooks to `useStyles` only (`rebrand/react/src/utils/Hooks.ts`), removing legacy watch APIs per direction.
@@ -215,3 +215,20 @@ For each completed phase/sub-phase, append:
 - Deviations from plan:
   - Added a focused runtime test file `rebrand/react/src/tests/linked-component-runtime.test.tsx` already in Phase 2 to validate migrated runtime behavior before larger Phase 3 test porting.
 - Next step: `Phase 3 — Migrate and stabilize React tests`
+
+### Phase 3 — Migrate and stabilize React tests
+- Status: `completed`
+- Commit: `<to be filled after commit>`
+- Summary:
+  - Ported the legacy React integration tests (section `6. React Component Integration`) into `rebrand/react/src/tests/query-react-integration.test.tsx` with structure and assertions kept close to the original.
+  - Wired tests to `@_linked/rdf-mem-store` by seeding graph data using `NamedNode`/`Literal` and resolving queries through an `InMemoryStore`-backed query parser.
+  - Updated React runtime types to support typed `preloadFor(...)` and object-query `linkedSetComponent({persons: query}, ...)` test cases.
+- Validation:
+  - Tests passed: `12`
+  - Tests failed: `0`
+  - Command(s):
+    - `npm run compile` (in `rebrand/react`) -> pass
+    - `npm test -- --runInBand` (in `rebrand/react`) -> pass
+- Deviations from plan:
+  - Kept the Phase 2 runtime smoke/integration tests alongside the ported legacy integration file to preserve incremental validation.
+- Next step: `Phase 4 — Integration verification and docs`
