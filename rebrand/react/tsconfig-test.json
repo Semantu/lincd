@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@_linked/core": ["../core/src/index"],
+      "@_linked/core/*": ["../core/src/*"],
+      "@_linked/rdf-mem-store": ["../rdf-mem-store/src/index"],
+      "@_linked/rdf-mem-store/*": ["../rdf-mem-store/src/*"],
+      "@_linked/react": ["./src/index"],
+      "@_linked/react/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "./src/**/*.ts",
+    "./src/**/*.tsx"
+  ]
+}

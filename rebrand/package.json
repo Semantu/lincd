@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "core",
-    "rdf-mem-store"
+    "rdf-mem-store",
+    "react"
   ]
 }
