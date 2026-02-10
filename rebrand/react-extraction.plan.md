@@ -272,7 +272,7 @@ For each completed phase/sub-phase, append:
 
 ### Phase 4b — Runtime behavior docs follow-up
 - Status: `completed`
-- Commit: `<to be filled after commit>`
+- Commit: `6db3a5e`
 - Summary:
   - Documented loading/render lifecycle for both `linkedComponent(...)` and `linkedSetComponent(...)`, including first render loading state and rerender after query resolution.
   - Documented fixed loading fallback element (`<div class="ld-loader" role="status" aria-label="Loading" />`) and clarified that replacement is not currently configurable by API.
@@ -284,4 +284,20 @@ For each completed phase/sub-phase, append:
     - `npm test -- --runInBand` (in `rebrand/react`) -> pass (`3 passed suites`, `12 passed tests`)
 - Deviations from plan:
   - Added additional runtime-behavior clarification section requested after initial docs completion.
+- Next step: `Done`
+
+### Phase 4c — linkedComponent docs structure follow-up
+- Status: `completed`
+- Commit: `<to be filled after commit>`
+- Summary:
+  - Renamed the section title from "Input props and mapped props" to `linkedComponent(...)`.
+  - Rewrote the intro paragraph to clarify `Shape.query(...)` vs `Shape.select(...)`, subject binding through `of`, and top-level query key-to-prop mapping.
+  - Added an explicit prop breakdown list after the `linkedComponent(...)` example and moved the `@_linked/rdf-mem-store` setup example to the bottom of the README.
+- Validation:
+  - Tests passed: `12`
+  - Tests failed: `0`
+  - Command(s):
+    - `npm test -- --runInBand` (in `rebrand/react`) -> pass (`3 passed suites`, `12 passed tests`)
+- Deviations from plan:
+  - None.
 - Next step: `Done`

@@ -16,15 +16,6 @@ This package provides:
 npm install @_linked/react @_linked/core react react-dom
 ```
 
-`@_linked/react` does not include RDF storage. For local in-memory setup, add `@_linked/rdf-mem-store` and register it as the default store in `LinkedStorage`:
-
-```tsx
-import {LinkedStorage} from '@_linked/core';
-import {InMemoryStore} from '@_linked/rdf-mem-store';
-
-LinkedStorage.setDefaultStore(new InMemoryStore());
-```
-
 ## Usage
 
 ### Setup package exports
@@ -37,12 +28,14 @@ import {
 } from '@_linked/react';
 ```
 
-### Input props and mapped props
+### `linkedComponent(...)`
+
+`linkedComponent(...)` wraps a React component with a Linked query. You pass a query built with `Shape.query(...)` (which prepares query execution), not `Shape.select(...)` (which executes immediately). At render time, when you pass `of={{id: ...}}`, the wrapper applies the prepared query to that subject and injects the query result keys as props into your component.
 
 ```tsx
 const PersonCard = linkedComponent(
   Person.query((p) => p.name),
-  ({source, name, _refresh}) => (
+  ({name, source, _refresh}) => (
     <article>
       <h3>{name}</h3>
       <small>{source.id}</small>
@@ -55,7 +48,11 @@ const PersonCard = linkedComponent(
 <PersonCard of={{id: 'https://example.org/p1'}} />;
 ```
 
-`linkedComponent(...)` maps the external `of` prop into an internal `source` prop for the wrapped render function.
+Props received by the wrapped component:
+- Query result props: all top-level keys from the query result become direct props (for example `name`).
+- `source`: the resolved shape instance for the input `of` subject.
+- `_refresh(updatedProps?)`: rerun the query (`_refresh()`) or patch local result props before rerender (`_refresh({...})`).
+- Custom props: any additional props you pass to the linked component are forwarded as normal.
 
 ### `linkedSetComponent(...)` (direct query format)
 
@@ -208,6 +205,17 @@ const PeopleList = linkedSetComponent(
 
 - This package depends on `@_linked/core` query APIs and `preloadFor(...)` / `BoundComponent` behavior from core.
 - `@_linked/react` itself does not provide RDF storage; use a store package and set a default store in `LinkedStorage` (for example `@_linked/rdf-mem-store`).
+
+## Storage setup (example: `@_linked/rdf-mem-store`)
+
+For local in-memory setup, register `@_linked/rdf-mem-store` as the default store:
+
+```tsx
+import {LinkedStorage} from '@_linked/core';
+import {InMemoryStore} from '@_linked/rdf-mem-store';
+
+LinkedStorage.setDefaultStore(new InMemoryStore());
+```
 
 ## Development
 
