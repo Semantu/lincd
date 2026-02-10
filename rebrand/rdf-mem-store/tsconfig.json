@@ -13,15 +13,11 @@
     "jsx": "react",
     "moduleResolution": "node",
     "types": ["node", "jest"],
-    "baseUrl": "./",
-    "paths": {
-      "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
-    }
+    "baseUrl": "./"
   },
   "include": [
     "./src/**/*.ts",
-    "./src/**/*.tsx",
-    "../node_modules/ts-jest/globals.d.ts"
+    "./src/**/*.tsx"
   ],
   "exclude": [
     "./src/tests/**"

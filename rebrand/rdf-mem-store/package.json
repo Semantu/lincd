@@ -1,8 +1,8 @@
 {
-  "name": "@_linked/core",
+  "name": "@_linked/rdf-mem-store",
   "version": "0.0.0",
   "license": "MPL-2.0",
-  "description": "Linked.js core query and SHACL shape DSL (copy-then-prune baseline)",
+  "description": "In-memory RDF store and query resolver for @_linked/core",
   "main": "lib/cjs/index.js",
   "module": "lib/esm/index.js",
   "exports": {
@@ -25,10 +25,18 @@
     }
   },
   "scripts": {
-    "build": "node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js",
-    "compile": "echo '💫 Compiling CJS' && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && echo '💫 Compiling ESM' && node ../../node_modules/.bin/tsc -p tsconfig-esm.json",
+    "build": "npx rimraf ./lib && npx tsc -p tsconfig-cjs.json && npx tsc -p tsconfig-esm.json && node ./scripts/dual-package.js",
+    "compile": "echo '💫 Compiling CJS' && npx tsc -p tsconfig-cjs.json && echo '💫 Compiling ESM' && npx tsc -p tsconfig-esm.json",
     "dual-package": "node ./scripts/dual-package.js",
-    "test": "node ../../node_modules/.bin/jest --config jest.config.js"
+    "test": "npx jest --config jest.config.js"
+  },
+  "peerDependencies": {
+    "@_linked/core": "0.0.0"
+  },
+  "dependencies": {
+    "eventemitter3": "^5.0.4",
+    "next-tick": "^1.1.0",
+    "rdflib": "^2.2.33"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
@@ -38,8 +46,5 @@
     "rimraf": "^5.0.7",
     "ts-jest": "^29.1.2",
     "typescript": "^5.7.3"
-  },
-  "dependencies": {
-    "next-tick": "^1.1.0"
   }
 }
