@@ -218,7 +218,7 @@ For each completed phase/sub-phase, append:
 
 ### Phase 3 — Migrate and stabilize React tests
 - Status: `completed`
-- Commit: `<to be filled after commit>`
+- Commit: `c27016e`
 - Summary:
   - Ported the legacy React integration tests (section `6. React Component Integration`) into `rebrand/react/src/tests/query-react-integration.test.tsx` with structure and assertions kept close to the original.
   - Wired tests to `@_linked/rdf-mem-store` by seeding graph data using `NamedNode`/`Literal` and resolving queries through an `InMemoryStore`-backed query parser.
@@ -232,3 +232,24 @@ For each completed phase/sub-phase, append:
 - Deviations from plan:
   - Kept the Phase 2 runtime smoke/integration tests alongside the ported legacy integration file to preserve incremental validation.
 - Next step: `Phase 4 — Integration verification and docs`
+
+### Phase 4 — Integration verification and docs
+- Status: `completed`
+- Commit: `<to be filled after commit>`
+- Summary:
+  - Added `rebrand/react/README.md` documenting package usage, dependencies, and both supported linked set component formats.
+  - Verified package-level build + test for `@_linked/react`.
+  - Re-ran core tests and confirmed no duplicate package-registration warning remains after moving core to a shared package singleton.
+- Validation:
+  - Tests passed: `129`
+  - Tests failed: `0`
+  - Suites passed: `7`
+  - Suites skipped: `1`
+  - Command(s):
+    - `npx jest --config jest.config.js --runInBand` (in `rebrand/core`) -> pass (`4 passed`, `1 skipped`, `98 passed tests`)
+    - `npx tsc -p tsconfig-cjs.json && npx tsc -p tsconfig-esm.json` (in `rebrand/core`) -> pass
+    - `npm run build` (in `rebrand/react`) -> pass
+    - `npm test -- --runInBand` (in `rebrand/react`) -> pass (`3 passed suites`, `12 passed tests`)
+- Deviations from plan:
+  - Included additional core verification in this phase to ensure the package-registration warning was resolved end-to-end.
+- Next step: `Done`
