@@ -8,4 +8,4 @@ export const {
   registerPackageModule,
   packageExports,
   getPackageShape,
-} = linkedPackage('lincd');
+} = linkedPackage('@_linked/core');
