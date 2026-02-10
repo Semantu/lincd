@@ -499,13 +499,13 @@ export function initTree()
 //when this file is used, make sure the tree is initialized
 initTree();
 
-//now that this file is set up, we can link linked shapes in the LINCD module itself
-let lincdPackage = linkedPackage('@_linked/core');
-lincdPackage.linkedShape({
+//now that this file is set up, we can link linked shapes in the core module itself
+export const corePackage = linkedPackage('@_linked/core');
+corePackage.linkedShape({
   description:
     'Represents a SHACL NodeShape; defines constraints for a class of RDF nodes. Links to multiple PropertyShapes. (schema, constraint, class validation)',
 })(NodeShape);
-lincdPackage.linkedShape({
+corePackage.linkedShape({
   description:
     'Represents a SHACL PropertyShape; specifies rules for one property of a NodeShape (path, datatype, cardinality). (validation rule, property constraint)',
 })(PropertyShape);
