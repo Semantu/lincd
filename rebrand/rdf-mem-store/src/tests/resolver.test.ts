@@ -1,12 +1,14 @@
 import {describe, expect, test, beforeAll} from '@jest/globals';
 import {NamedNode, Literal} from '../models';
 import {toNamedNode} from '../utils/toNamedNode';
-import {resolveLocal} from '../utils/LocalQueryResolver';
+import {resolveLocal, createLocal, updateLocal, deleteLocal} from '../utils/LocalQueryResolver';
 import {Shape} from '@_linked/core/shapes/Shape';
 import {SelectQueryFactory, SelectQuery} from '@_linked/core/queries/SelectQuery';
 import {IQueryParser} from '@_linked/core/interfaces/IQueryParser';
 import {AddId, NodeReferenceValue, UpdatePartial} from '@_linked/core/queries/QueryFactory';
-import {DeleteResponse} from '@_linked/core/queries/DeleteQuery';
+import {CreateResponse, CreateQueryFactory} from '@_linked/core/queries/CreateQuery';
+import {UpdateQueryFactory} from '@_linked/core/queries/UpdateQuery';
+import {DeleteQueryFactory, DeleteResponse} from '@_linked/core/queries/DeleteQuery';
 import {NodeId} from '@_linked/core/queries/MutationQuery';
 import {setQueryContext} from '@_linked/core/queries/QueryContext';
 import {
@@ -42,13 +44,22 @@ class ResolverQueryParser implements IQueryParser {
   }
   async createQuery<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
     u: U, s: typeof Shape,
-  ): Promise<any> { return {}; }
+  ): Promise<CreateResponse<U>> {
+    const factory = new CreateQueryFactory(s, u);
+    return createLocal(factory.getQueryObject());
+  }
   async updateQuery<ShapeType extends Shape, U extends UpdatePartial<ShapeType>>(
     id: string | NodeReferenceValue, u: U, s: typeof Shape,
-  ): Promise<AddId<U>> { return {} as AddId<U>; }
+  ): Promise<AddId<U>> {
+    const factory = new UpdateQueryFactory(s, id, u);
+    return updateLocal(factory.getQueryObject());
+  }
   async deleteQuery(
     id: NodeId | NodeId[] | NodeReferenceValue[], s: typeof Shape,
-  ): Promise<DeleteResponse> { return {deleted: [], count: 0}; }
+  ): Promise<DeleteResponse> {
+    const factory = new DeleteQueryFactory(s, id as any);
+    return deleteLocal(factory.getQueryObject());
+  }
 }
 
 const parser = new ResolverQueryParser();
@@ -792,5 +803,354 @@ describe('7. Sorting & Limiting', () => {
     expect(sorted[2].name).toBe('Moa');
     expect(sorted[3].id).toBe(p3Uri);
     expect(sorted[3].name).toBe('Jinx');
+  });
+});
+
+// ─── 8. CRUD Operations ─────────────────────────────────────────────────────
+
+describe('8. CRUD Operations', () => {
+  test('update query 1 - simple literal update', async () => {
+    // p1 has hobby='Chess'. Update to 'Gaming'.
+    const res = await Person.update({id: p1Uri}, {hobby: 'Gaming'});
+
+    expect(res.id).toBeDefined();
+    expect(typeof res.id).toBe('string');
+    expect(res.id).toEqual(p1Uri);
+    expect(res.hobby).toBe('Gaming');
+    expect(res['name']).toBeUndefined();
+
+    // Verify in-graph
+    let qRes = await Person.select((p) => [p.hobby, p.name]).where((p) =>
+      p.name.equals('Semmy'),
+    );
+    expect(qRes[0]).toBeDefined();
+    expect(qRes[0].id).toBe(p1Uri);
+    expect(qRes[0].hobby).toBe('Gaming');
+
+    // Restore
+    await Person.update({id: p1Uri}, {hobby: 'Chess'});
+    let qRes2 = await Person.select((p) => [p.hobby, p.name]).where((p) =>
+      p.name.equals('Semmy'),
+    );
+    expect(qRes2[0].hobby).toBe('Chess');
+  });
+
+  test('create query 1 - simple person', async () => {
+    const res = await Person.create({name: 'Test Create', hobby: 'Hiking'});
+
+    expect(res.id).toBeDefined();
+    expect(res.name).toBe('Test Create');
+    expect(res.hobby).toBe('Hiking');
+
+    const qRes = await Person.select((p) => [p.name, p.hobby]).where((p) =>
+      p.name.equals('Test Create'),
+    );
+    expect(qRes[0].name).toBe('Test Create');
+    expect(qRes[0].hobby).toBe('Hiking');
+
+    // Cleanup
+    await Person.delete(res.id);
+  });
+
+  test('create query 2 - person with new and existing friends', async () => {
+    const res = await Person.create({
+      name: 'Test With Friends',
+      friends: [{name: 'Brand New Friend'}, {id: p1Uri}],
+    });
+
+    expect(res.id).toBeDefined();
+    expect(Array.isArray(res.friends)).toBe(true);
+    expect(res.friends.length).toBe(2);
+    expect(res.friends.some((f: any) => f.name === 'Brand New Friend')).toBe(true);
+    expect(res.friends.some((f: any) => f.id === p1Uri)).toBe(true);
+
+    // Cleanup
+    const newFriendId = res.friends.find((f: any) => f.name === 'Brand New Friend')?.id;
+    await Person.delete(res.id);
+    if (newFriendId) await Person.delete(newFriendId);
+  });
+
+  test('create query 3 - person with fixed ID', async () => {
+    const fixedId = NamedNode.TEMP_URI_BASE + 'p6-test-person';
+    const fixedId2 = NamedNode.TEMP_URI_BASE + 'p6-test-person-friend';
+    const res = await Person.create({
+      __id: fixedId,
+      name: 'Test Create Fixed ID',
+      hobby: 'Swimming',
+      bestFriend: {
+        __id: fixedId2,
+        name: 'Test Create Fixed ID Friend',
+      },
+    } as any);
+
+    expect(res.id).toBeDefined();
+    expect(res.id).toBe(fixedId);
+    expect(res.name).toBe('Test Create Fixed ID');
+    expect(res.hobby).toBe('Swimming');
+
+    const qRes = await Person.select((p) => [p.name, p.hobby, p.bestFriend.name]).where(
+      (p) => p.equals({id: fixedId}),
+    );
+    expect(qRes[0].id).toBe(fixedId);
+    expect(qRes[0].name).toBe('Test Create Fixed ID');
+    expect(qRes[0].hobby).toBe('Swimming');
+    expect(qRes[0].bestFriend).toBeDefined();
+    expect(qRes[0].bestFriend.name).toBe('Test Create Fixed ID Friend');
+    expect(qRes[0].bestFriend.id).toBe(fixedId2);
+
+    // Cleanup
+    await Person.delete(fixedId);
+    await Person.delete(fixedId2);
+  });
+
+  test('delete query 1 - delete newly created node', async () => {
+    const created = await Person.create({name: 'To Be Deleted', hobby: 'Archery'});
+    const id = created.id;
+    expect(id).toBeDefined();
+
+    const check = await Person.select((p) => p.name).where((p) =>
+      p.name.equals('To Be Deleted'),
+    );
+    expect(check[0].name).toBe('To Be Deleted');
+
+    await Person.delete(id);
+
+    const qRes = await Person.select().where((p) => p.name.equals('To Be Deleted'));
+    expect(qRes.length).toBe(0);
+  });
+
+  test('delete query 2 - delete by node reference', async () => {
+    const created = await Person.create({name: 'To Be Deleted 2', hobby: 'Archery'});
+
+    const check = await Person.select((p) => p.name).where((p) =>
+      p.name.equals('To Be Deleted 2'),
+    );
+    expect(check[0].name).toBe('To Be Deleted 2');
+
+    await Person.delete(created);
+
+    const qRes = await Person.select().where((p) => p.name.equals('To Be Deleted 2'));
+    expect(qRes.length).toBe(0);
+  });
+
+  test('delete query 3 - delete multiple nodes', async () => {
+    const created1 = await Person.create({name: 'To Be Deleted 3a', hobby: 'Archery'});
+    const created2 = await Person.create({name: 'To Be Deleted 3b', hobby: 'Archery'});
+
+    const ids = [created1.id, created2.id];
+
+    const check = await Person.select((p) => p.name).where((p) =>
+      p.name.equals('To Be Deleted 3a').or(p.name.equals('To Be Deleted 3b')),
+    );
+    expect(check.length).toBe(2);
+
+    await Person.delete(ids);
+
+    const qRes = await Person.select().where((p) =>
+      p.name.equals('To Be Deleted 3a').or(p.name.equals('To Be Deleted 3b')),
+    );
+    expect(qRes.length).toBe(0);
+  });
+
+  test('delete query 4 - delete multiple by full result objects', async () => {
+    const created1 = await Person.create({name: 'To Be Deleted 4a', hobby: 'Archery'});
+    const created2 = await Person.create({name: 'To Be Deleted 4b', hobby: 'Archery'});
+
+    const check = await Person.select((p) => p.name).where((p) =>
+      p.name.equals('To Be Deleted 4a').or(p.name.equals('To Be Deleted 4b')),
+    );
+    expect(check.length).toBe(2);
+
+    await Person.delete([created1, created2]);
+
+    const qRes = await Person.select().where((p) =>
+      p.name.equals('To Be Deleted 4a').or(p.name.equals('To Be Deleted 4b')),
+    );
+    expect(qRes.length).toBe(0);
+  });
+
+  test('update query 2 - overwrite a set', async () => {
+    const res = await Person.update({id: p1Uri}, {
+      friends: [{name: 'NewFriend'}],
+    });
+
+    expect(res.id).toEqual(p1Uri);
+    expect(res.friends).toBeDefined();
+    expect(typeof res.friends).toBe('object');
+    expect(Array.isArray(res.friends)).toBe(false);
+    expect(res.friends.updatedTo).toBeDefined();
+    expect(Array.isArray(res.friends.updatedTo)).toBe(true);
+    expect(res.friends.updatedTo[0].name).toBe('NewFriend');
+
+    // Verify in-graph
+    let qRes = await Person.select((p) => p.friends.name).where((p) =>
+      p.name.equals('Semmy'),
+    );
+    expect(qRes[0]).toBeDefined();
+    expect(Array.isArray(qRes[0].friends)).toBeTruthy();
+    expect(qRes[0].friends[0].name).toBe('NewFriend');
+
+    // Cleanup: remove the new friend node
+    const newFriendId = res.friends.updatedTo[0].id;
+
+    // Restore p1's friends to p2, p3
+    await Person.update({id: p1Uri}, {friends: [{id: p2Uri}, {id: p3Uri}]});
+    await Person.delete(newFriendId);
+  });
+
+  test('update query 3 - unset single value with undefined', async () => {
+    const res = await Person.update({id: p1Uri}, {hobby: undefined});
+
+    expect(res.id).toEqual(p1Uri);
+    expect(res.hobby).toBeUndefined();
+
+    // Check in-graph
+    let qRes = await Person.select({id: p1Uri}, (p) => p.hobby);
+    expect(qRes).toBeDefined();
+    expect(qRes.hobby).toBeNull();
+
+    // Restore
+    await Person.update({id: p1Uri}, {hobby: 'Chess'});
+    let qRes2 = await Person.select({id: p1Uri}, (p) => p.hobby);
+    expect(qRes2.hobby).toBe('Chess');
+  });
+
+  test('update query 3B - unset single value with null', async () => {
+    const res = await Person.update({id: p1Uri}, {hobby: null});
+
+    expect(res.id).toEqual(p1Uri);
+    expect(res.hobby).toBeUndefined();
+
+    let qRes = await Person.select({id: p1Uri}, (p) => p.hobby);
+    expect(qRes).toBeDefined();
+    expect(qRes.hobby).toBeNull();
+
+    // Restore
+    await Person.update({id: p1Uri}, {hobby: 'Chess'});
+    let qRes2 = await Person.select({id: p1Uri}, (p) => p.hobby);
+    expect(qRes2.hobby).toBe('Chess');
+  });
+
+  test('update query 6 - add to and remove from multi-value property', async () => {
+    const res = await Person.update({id: p1Uri}, {
+      friends: {add: {name: 'Friend Added'}},
+    });
+
+    expect(res.id).toBe(p1Uri);
+    expect(res.friends.added.some((f: any) => f.name === 'Friend Added')).toBe(true);
+
+    // Remove the added friend
+    const addedId = res.friends.added[0].id;
+    const res2 = await Person.update({id: p1Uri}, {
+      friends: {remove: {id: addedId}},
+    });
+    expect(res2.friends.removed.some((f: any) => f.id === addedId)).toBe(true);
+
+    // Verify it's gone
+    let qRes = await Person.select({id: p1Uri}, (p) => p.friends.name);
+    expect(qRes.friends.some((f: any) => f.name === 'Friend Added')).toBe(false);
+  });
+
+  test('update query 7 - remove from multi-value property', async () => {
+    // Add p2 as friend of p3 first
+    await Person.update({id: p3Uri}, {
+      friends: {add: {id: p2Uri}},
+    });
+
+    let verifyAdd = await Person.select({id: p3Uri}, (p) => p.friends);
+    expect(verifyAdd.friends.some((f: any) => f.id === p2Uri)).toBe(true);
+
+    // Now remove
+    const res = await Person.update({id: p3Uri}, {
+      friends: {remove: {id: p2Uri}},
+    });
+
+    expect(res.id).toBe(p3Uri);
+    expect(res.friends.removed.some((f: any) => f.id === p2Uri)).toBe(true);
+  });
+
+  test('update query 8 - add and remove in same update', async () => {
+    const res = await Person.update({id: p1Uri}, {
+      friends: {
+        add: {name: 'Combined Friend'},
+        remove: {id: p2Uri},
+      },
+    });
+
+    expect(res.id).toBe(p1Uri);
+    expect(res.friends.added.some((f: any) => f.name === 'Combined Friend')).toBe(true);
+    expect(res.friends.removed.some((f: any) => f.id === p2Uri)).toBe(true);
+
+    // Cleanup: reverse the operation
+    const addedId = res.friends.added.find((f: any) => f.name === 'Combined Friend')?.id;
+    await Person.update({id: p1Uri}, {
+      friends: {
+        remove: {id: addedId},
+        add: {id: p2Uri},
+      },
+    });
+  });
+
+  test('update query 9 - unset multi-value property with undefined', async () => {
+    // Ensure p3 has friends
+    await Person.update({id: p3Uri}, {
+      friends: [{id: p1Uri}, {id: p2Uri}],
+    });
+
+    let res1 = await Person.select({id: p3Uri}, (p) => p.friends);
+    expect(res1.friends.some((f: any) => f.id === p1Uri)).toBe(true);
+    expect(res1.friends.some((f: any) => f.id === p2Uri)).toBe(true);
+    expect(res1.friends.length).toBe(2);
+
+    const res = await Person.update({id: p3Uri}, {friends: undefined});
+
+    expect(res.id).toBe(p3Uri);
+    expect(Array.isArray(res.friends)).toBe(true);
+    expect(res.friends.length).toBe(0);
+  });
+
+  test('update query 10 - nested object with predefined ID', async () => {
+    const bestFriendId = NamedNode.TEMP_URI_BASE + 'p3-best-friend';
+    const updateRes = await Person.update({id: p3Uri}, {
+      bestFriend: {
+        __id: bestFriendId,
+        name: 'Bestie',
+      } as any,
+    });
+    expect(updateRes.id).toBe(p3Uri);
+    expect(updateRes.bestFriend.id).toBe(bestFriendId);
+    expect(updateRes.bestFriend.name).toBe('Bestie');
+
+    // Verify in-graph
+    let res1 = await Person.select({id: p3Uri}, (p) => p.bestFriend.name);
+    expect(res1.bestFriend).toBeDefined();
+    expect(res1.bestFriend.id).toBe(bestFriendId);
+    expect(res1.bestFriend.name).toBe('Bestie');
+
+    // Cleanup
+    await Person.update({id: p3Uri}, {bestFriend: undefined});
+    await Person.delete(bestFriendId);
+  });
+
+  test('update query 11 - update date datatype', async () => {
+    const res = await Person.update({id: p1Uri}, {
+      birthDate: new Date('2000-06-15'),
+    });
+
+    expect(res.id).toEqual(p1Uri);
+    expect(res.birthDate).toBeDefined();
+    expect(res.birthDate.toISOString()).toBe('2000-06-15T00:00:00.000Z');
+
+    // Check in-graph
+    let qRes = await Person.select({id: p1Uri}, (p) => p.birthDate);
+    expect(qRes).toBeDefined();
+    expect(qRes.birthDate.toISOString()).toBe('2000-06-15T00:00:00.000Z');
+
+    // Restore original
+    await Person.update({id: p1Uri}, {
+      birthDate: new Date('1990-01-01'),
+    });
+    let qRes2 = await Person.select({id: p1Uri}, (p) => p.birthDate);
+    expect(qRes2.birthDate.toISOString()).toBe('1990-01-01T00:00:00.000Z');
   });
 });

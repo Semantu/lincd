@@ -3,24 +3,24 @@
   "version": "0.0.0",
   "license": "MPL-2.0",
   "description": "In-memory RDF store and query resolver for @_linked/core",
-  "main": "lib/cjs/index.js",
-  "module": "lib/esm/index.js",
+  "main": "lib/cjs/rdf-mem-store/src/index.js",
+  "module": "lib/esm/rdf-mem-store/src/index.js",
   "exports": {
     ".": {
-      "types": "./lib/esm/index.d.ts",
-      "import": "./lib/esm/index.js",
-      "require": "./lib/cjs/index.js"
+      "types": "./lib/esm/rdf-mem-store/src/index.d.ts",
+      "import": "./lib/esm/rdf-mem-store/src/index.js",
+      "require": "./lib/cjs/rdf-mem-store/src/index.js"
     },
     "./*": {
-      "types": "./lib/esm/*.d.ts",
-      "import": "./lib/esm/*.js",
-      "require": "./lib/cjs/*.js"
+      "types": "./lib/esm/rdf-mem-store/src/*.d.ts",
+      "import": "./lib/esm/rdf-mem-store/src/*.js",
+      "require": "./lib/cjs/rdf-mem-store/src/*.js"
     }
   },
   "typesVersions": {
     "*": {
       "*": [
-        "lib/esm/*"
+        "lib/esm/rdf-mem-store/src/*"
       ]
     }
   },

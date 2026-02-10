@@ -588,7 +588,9 @@ async function convertNodeDescription(
     node.set(toNamedNode(rdf.type), toNamedNode(valueShape.targetClass));
   }
 
-  await node.save();
+  //mark as non-temporary so save() is a no-op in local-only context
+  //data is already in the global graph from set()/overwrite() calls above
+  node.isTemporaryNode = false;
   plainResults['id'] = node.uri;
 
   return {

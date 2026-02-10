@@ -246,35 +246,45 @@ This is the most complex phase. LocalQueryResolver works with NamedNode graph me
   - 8 Basic Property Selection, 5 Nested & Path Selection, 13 Filtering (Where), 12 Aggregation & Sub-Select, 6 Type Casting, 3 Sorting & Limiting
   - Test data matches original exactly: 4 persons (Semmy, Moa, Jinx, Quinn), 2 dogs, all relationships
 
-### Phase 6 — InMemoryStore cleanup
+### Phase 6 — InMemoryStore cleanup ✅
 
-- [ ] Extract `InMemoryStore` from `tests/storage.test.ts` into its own file (`src/InMemoryStore.ts`)
-- [ ] Make it extend `Shape` from core and implement `IQuadStore` from core
-- [ ] Keep quad-level public methods (`add`, `addMultiple`, `delete`, `deleteMultiple`, `update`, `clearProperties`, `setURIs`, `removeNodes`, `getDefaultGraph`) as the store's own API (not part of IQuadStore)
-- [ ] Replace `LinkedStorage.getGraphForStore(this)` — either use a local graph reference or simplify
-- [ ] Update `getDefaultGraph()` to use `this.id`/`this.uri` instead of `this.namedNode.uri`
+- [x] Extracted `InMemoryStore` from `tests/storage.test.ts` into `src/InMemoryStore.ts`
+- [x] Implements `IQuadStore` from core (does not extend Shape — standalone class, simpler)
+- [x] Keeps quad-level public methods (`add`, `addMultiple`, `delete`, `deleteMultiple`)
+- [x] Replaced `LinkedStorage.getGraphForStore(this)` with `this.targetGraph || defaultGraph`
+- [x] Removed `getDefaultGraph()`, `loadShape`, `loadShapes`, `clearProperties`, `setURIs`, `removeNodes` — these were either LinkedStorage-dependent or unused
+- [x] tsc --noEmit: 0 errors
 
-### Phase 7 — Tests: data setup and result validation
+### Phase 7 — CRUD mutation tests ✅
 
-- [ ] Create test data setup file that builds the RDF graph using `NamedNode`, `Literal`, `Quad` directly (not via Shape setters, since Shape no longer has RDF model ops):
-  - Create NamedNodes with `linked://tmp/entities/` URIs matching core fixture IDs
-  - Create quads for all properties/relationships
-  - Set up the same graph as the original test data (see reference below)
-- [ ] Import query factories from `@_linked/core/src/test-helpers/query-fixtures`
-- [ ] Import shapes (`Person`, `Pet`, `Dog`) from core's query-fixtures
-- [ ] Set up `InMemoryStore`, register via `LinkedStorage.setDefaultStore(store)`, load quads via `store.addMultiple(quads)`
-- [ ] For each query factory: execute query and validate actual results
-- [ ] Port mutation tests (create/update/delete) with result validation
-- [ ] Optionally port quad-level storage tests (`storage.test.ts`)
+- [x] Wired `ResolverQueryParser` to use real `createLocal`/`updateLocal`/`deleteLocal` via core's QueryFactory classes
+- [x] Fixed `node.save()` hang in `convertNodeDescription` — replaced `await node.save()` with `node.isTemporaryNode = false` (data is already in global graph from set/overwrite calls; save() would block waiting for a LinkedStorage listener that doesn't exist in local-only context)
+- [x] Ported 17 CRUD tests from original `query-tests.tsx`:
+  - 1 simple literal update + verify + restore
+  - 3 create tests (simple, with friends, with fixed ID)
+  - 4 delete tests (by id, by reference, multiple by ids, multiple by result objects)
+  - 3 unset tests (undefined, null, multi-value undefined)
+  - 1 overwrite set test
+  - 3 add/remove multi-value tests
+  - 1 nested object with predefined ID
+  - 1 date datatype update
+- [x] All cleanups restore original graph state for test isolation
+- [x] jest: 76 tests pass (11 model + 48 select + 17 CRUD)
 
-### Phase 8 — Package exports & final verification
+### Phase 8 — Package exports & final verification ✅
 
-- [ ] Write `index.ts` exporting: `InMemoryStore`, RDF models, RDF collections, `LocalQueryResolver`, `Datafactory`
-- [ ] All tests pass
-- [ ] No circular dependencies between this package and core
-- [ ] Package builds (CJS + ESM)
-- [ ] Type inference flows correctly from core
-- [ ] Document remaining gaps/TODOs
+- [x] Created `src/index.ts` exporting: InMemoryStore, RDF models (NamedNode, BlankNode, Literal, Quad, Graph, defaultGraph), RDF collections (QuadSet, QuadArray, QuadMap, NodeSet, NodeMap, NodeURIMappings, SearchMap, NodeValuesSet), LocalQueryResolver functions, Datafactory, EventBatcher, toNamedNode
+- [x] All 76 tests pass
+- [x] No circular dependencies between this package and core
+- [x] Package builds (CJS + ESM) with dual-package script
+- [x] Type inference flows correctly from core
+- [x] Package.json exports updated to match nested output paths
+
+**Remaining gaps / TODOs:**
+- Build output is nested under `lib/{cjs,esm}/rdf-mem-store/src/` due to TS path mappings pulling in core source files (preventing `rootDir` from being set). Package.json exports are adjusted accordingly, but this could be cleaned up with TS project references or a post-build copy step.
+- Quad-level storage tests from original `storage.test.ts` were NOT ported (they test LinkedStorage integration: save/remove/unset/promiseUpdated). These are integration tests that require LinkedStorage wiring which is out of scope for this standalone package.
+- React component tests (9 tests) were intentionally excluded.
+- The `loadShape`/`loadShapes` methods from the original InMemoryStore were not ported (depend on `Shape.getQuads()` which doesn't exist in core's Shape).
 
 ## File inventory
 
