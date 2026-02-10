@@ -180,50 +180,27 @@ npm run build        # CJS + ESM builds + dual-package script
 
 Remove files/directories provided by `@_linked/core`:
 
-**Entire directories to remove:**
-- [ ] `queries/` — all query types come from core
-- [ ] `shapes/` — Shape, SHACL, List come from core
-- [ ] `ontologies/` — all ontologies come from core
-- [ ] `css/` — React styling, not needed
+**Entire directories removed:**
+- [x] `queries/` — all query types come from core
+- [x] `shapes/` — Shape, SHACL, List come from core
+- [x] `ontologies/` — all ontologies come from core
+- [x] `css/` — React styling, not needed
 
-**Individual files to remove:**
-- [ ] `utils/LinkedStorage.ts` — comes from core
-- [ ] `utils/Package.ts` — comes from core
-- [ ] `utils/ShapeClass.ts` — comes from core
-- [ ] `utils/Hooks.ts` — React-specific
-- [ ] `utils/LinkedComponent.ts` — React-specific
-- [ ] `utils/LinkedComponentClass.tsx` — React-specific
-- [ ] `utils/TraceShape.ts` — replaced by proxy tracing in core
-- [ ] `interfaces/IQuadStore.ts` — comes from core
-- [ ] `interfaces/IQueryParser.ts` — comes from core
-- [ ] `interfaces/IFileStore.ts` — comes from core
-- [ ] `interfaces/Component.ts` — React-specific
-- [ ] `interfaces/IClass.ts` — check if needed, likely not
-- [ ] `collections/CoreMap.ts` — comes from core
-- [ ] `collections/CoreSet.ts` — comes from core
-- [ ] `collections/ShapeSet.ts` — comes from core
-- [ ] `collections/ShapeValuesSet.ts` — removed entirely; only used by Shape.ts/SHACL.ts/Hooks.ts (all in core or removed), no kept file depends on it
-- [ ] `package.ts` — use linkedPackage from core
-- [ ] `index.ts` — rewrite from scratch
+**Individual files removed:**
+- [x] `utils/LinkedStorage.ts`, `Package.ts`, `ShapeClass.ts`, `Hooks.ts`, `LinkedComponent.ts`, `LinkedComponentClass.tsx`, `TraceShape.ts`
+- [x] `interfaces/IQuadStore.ts`, `IQueryParser.ts`, `IFileStore.ts`, `Component.ts`, `IClass.ts`, `ICoreIterable.ts`
+- [x] `collections/CoreMap.ts`, `CoreSet.ts`, `ShapeSet.ts`, `ShapeValuesSet.ts`
+- [x] `package.ts`, `index.ts`
+- [x] `utils/cached.ts`, `Prefix.ts` (use from core), `Find.ts`, `ForwardReasoning.ts`, `LinkedErrorLogging.ts`, `LinkedFileStorage.ts`, `Module.ts`, `NQuads.ts`, `NameSpace.ts`, `Order.ts`, `Types.ts`, `ClassNames.ts`
 
-**Keep:**
-- [ ] `models.ts` — NamedNode, BlankNode, Literal, Quad, Graph (imports: rdflib, QuadSet, CoreMap→core, QuadMap, QuadArray, NodeSet, ICoreIterable→core, IShape, IGraphObject, NodeValuesSet, EventBatcher, EventEmitter, NodeMap, NodeURIMappings, CoreSet→core, Prefix→core)
-- [ ] `Datafactory.ts`
-- [ ] `collections/QuadSet.ts`, `QuadArray.ts`, `QuadMap.ts`
-- [ ] `collections/NodeSet.ts`, `NodeMap.ts`, `NodeURIMappings.ts`
-- [ ] `collections/SearchMap.ts`
-- [ ] `collections/NodeValuesSet.ts`
-- [ ] `events/EventEmitter.ts`, `EventBatcher.ts` (and any event types/index)
-- [ ] `utils/LocalQueryResolver.ts`
-- [ ] `interfaces/IGraphObject.ts`, `IGraphObjectSet.ts`, `ISingleGraphObject.ts` — needed by models
-- [ ] `interfaces/IShape.ts` — needed by models (NOT in core)
-- [ ] `interfaces/ICoreIterable.ts` — REMOVE, use from core
+**Kept:**
+- [x] `models.ts`, `Datafactory.ts`
+- [x] `collections/`: QuadSet, QuadArray, QuadMap, NodeSet, NodeMap, NodeURIMappings, SearchMap, NodeValuesSet
+- [x] `events/`: EventEmitter, EventBatcher
+- [x] `utils/`: LocalQueryResolver, URI, Debug
+- [x] `interfaces/`: IGraphObject, IGraphObjectSet, ISingleGraphObject, IShape
 
-**Check if needed (by kept files):**
-- [ ] `utils/URI.ts` — check if models.ts or collections reference it
-- [ ] `utils/Debug.ts` — check usage
-- [ ] `utils/cached.ts` — check usage
-- [ ] `utils/Prefix.ts` — REMOVE, already in core
+Note: `utils/URI.ts` and `utils/Debug.ts` kept — imported by NodeSet.ts. `utils/Prefix.ts` removed — models.ts import will redirect to core in Phase 3.
 
 ### Phase 3 — Update imports to use `@_linked/core`
 
