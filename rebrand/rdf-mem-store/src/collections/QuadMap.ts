@@ -6,8 +6,8 @@
 import {NamedNode,Node,Quad} from '../models.js';
 import {NodeSet} from './NodeSet.js';
 import {QuadSet} from './QuadSet.js';
-import {CoreSet} from './CoreSet.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {CoreSet} from '@_linked/core/collections/CoreSet';
+import {ICoreIterable} from '@_linked/core/interfaces/ICoreIterable';
 
 /**
  * A map who's values are sets

@@ -205,16 +205,14 @@ Note: `utils/URI.ts` and `utils/Debug.ts` kept — imported by NodeSet.ts. `util
 ### Phase 3 — Update imports to use `@_linked/core`
 
 For all kept files, update import paths:
-- [ ] `../queries/*` → `@_linked/core/queries/*`
-- [ ] `../shapes/Shape` → `@_linked/core/shapes/Shape`
-- [ ] `../shapes/SHACL` → `@_linked/core/shapes/SHACL`
-- [ ] `../utils/LinkedStorage` → `@_linked/core/utils/LinkedStorage`
-- [ ] `../interfaces/IQuadStore` → `@_linked/core/interfaces/IQuadStore`
-- [ ] `../ontologies/*` → `@_linked/core/ontologies/*`
-- [ ] `../package` → `@_linked/core/package`
-- [ ] `../collections/CoreMap` → `@_linked/core/collections/CoreMap`
-- [ ] `../collections/CoreSet` → `@_linked/core/collections/CoreSet`
-- [ ] `../collections/ShapeSet` → `@_linked/core/collections/ShapeSet`
+Updated 17 imports across 10 files:
+- [x] `CoreMap` (5 imports): models.ts, NodeMap.ts, SearchMap.ts, Datafactory.ts → `@_linked/core/collections/CoreMap`
+- [x] `CoreSet` (5 imports): models.ts, QuadSet.ts, NodeSet.ts, Datafactory.ts, EventBatcher.ts → `@_linked/core/collections/CoreSet`
+- [x] `ICoreIterable` (6 imports): models.ts, NodeMap.ts, QuadMap.ts, NodeSet.ts, IGraphObjectSet.ts, IShape.ts → `@_linked/core/interfaces/ICoreIterable`
+- [x] `Prefix` (1 import): models.ts → `@_linked/core/utils/Prefix`
+- [x] LocalQueryResolver.ts: all 10 imports redirected (queries/*, shapes/*, ontologies/*, collections/*)
+- [x] Models smoke test added: 6/6 pass (NamedNode singleton, Literal, set/getOne, getAll, Quad singleton, getAllInverse)
+- Build: 0 errors outside LocalQueryResolver.ts (31 remaining are Phase 4/5 NodeReferenceValue bridge work)
 
 ### Phase 4 — NodeReferenceValue / NamedNode bridge
 

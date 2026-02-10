@@ -6,7 +6,7 @@ import {NamedNode,Node} from '../models.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {IGraphObject} from './IGraphObject.js';
-import {ICoreIterable} from './ICoreIterable.js';
+import {ICoreIterable} from '@_linked/core/interfaces/ICoreIterable';
 
 /**
  * a set of objects that all have IGraphObject methods, and this set itself also has those methods so you can call them directly on the set instead of for each item

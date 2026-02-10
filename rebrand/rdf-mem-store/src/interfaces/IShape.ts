@@ -5,7 +5,7 @@
  */
 import {IGraphObject} from './IGraphObject.js';
 import {NamedNode,Node} from '../models.js';
-import {ICoreIterable} from './ICoreIterable.js';
+import {ICoreIterable} from '@_linked/core/interfaces/ICoreIterable';
 
 export interface IShape extends IGraphObject {
   namedNode: NamedNode;

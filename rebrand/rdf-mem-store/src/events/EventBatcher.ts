@@ -5,9 +5,8 @@
  */
 import nextTick from 'next-tick';
 import {EventEmitter} from 'eventemitter3';
-import {CoreSet} from '../collections/CoreSet.js';
+import {CoreSet} from '@_linked/core/collections/CoreSet';
 
-//import {CoreMap} from "../collections/CoreMap";
 
 export interface BatchedEventEmitter {
   emitBatchedEvents(resolve?: any, reject?: any): void;

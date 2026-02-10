@@ -3,12 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {CoreSet} from './CoreSet.js';
+import {CoreSet} from '@_linked/core/collections/CoreSet';
 import {Literal,NamedNode,Node} from '../models.js';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
 import {QuadSet} from './QuadSet.js';
 import {QuadArray} from './QuadArray.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {ICoreIterable} from '@_linked/core/interfaces/ICoreIterable';
 import {Debug} from '../utils/Debug.js';
 import {URI} from '../utils/URI.js';
 

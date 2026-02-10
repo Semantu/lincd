@@ -9,8 +9,8 @@ import {
 import {Term} from 'rdflib/lib/tf-types';
 import {NodeURIMappings} from './collections/NodeURIMappings.js';
 import {QuadSet} from './collections/QuadSet.js';
-import {CoreMap} from './collections/CoreMap.js';
-import {CoreSet} from './collections/CoreSet.js';
+import {CoreMap} from '@_linked/core/collections/CoreMap';
+import {CoreSet} from '@_linked/core/collections/CoreSet';
 
 interface DataFactoryConfig {
   preventNewQuads?: boolean;

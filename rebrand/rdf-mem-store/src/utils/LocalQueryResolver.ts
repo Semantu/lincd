@@ -23,12 +23,12 @@ import {
   WhereEvaluationPath,
   WhereMethods,
   WherePath,
-} from '../queries/SelectQuery.js';
-import {ShapeSet} from '../collections/ShapeSet.js';
-import {Shape} from '../shapes/Shape.js';
-import {shacl} from '../ontologies/shacl.js';
-import {CoreMap} from '../collections/CoreMap.js';
-import {UpdateQuery} from '../queries/UpdateQuery.js';
+} from '@_linked/core/queries/SelectQuery';
+import {ShapeSet} from '@_linked/core/collections/ShapeSet';
+import {Shape} from '@_linked/core/shapes/Shape';
+import {shacl} from '@_linked/core/ontologies/shacl';
+import {CoreMap} from '@_linked/core/collections/CoreMap';
+import {UpdateQuery} from '@_linked/core/queries/UpdateQuery';
 import {
   checkNewCount,
   isSetModificationValue,
@@ -37,14 +37,14 @@ import {
   ShapeReferenceValue,
   SinglePropertyUpdateValue,
   UpdateNodePropertyValue,
-} from '../queries/QueryFactory.js';
+} from '@_linked/core/queries/QueryFactory';
 import {Literal, NamedNode} from '../models.js';
-import {xsd} from '../ontologies/xsd.js';
-import {PropertyShape, ValidationReport} from '../shapes/SHACL.js';
-import {rdf} from '../ontologies/rdf.js';
+import {xsd} from '@_linked/core/ontologies/xsd';
+import {PropertyShape, ValidationReport} from '@_linked/core/shapes/SHACL';
+import {rdf} from '@_linked/core/ontologies/rdf';
 import {NodeSet} from '../collections/NodeSet.js';
-import {CreateQuery} from '../queries/CreateQuery.js';
-import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
+import {CreateQuery} from '@_linked/core/queries/CreateQuery';
+import {DeleteQuery, DeleteResponse} from '@_linked/core/queries/DeleteQuery';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 

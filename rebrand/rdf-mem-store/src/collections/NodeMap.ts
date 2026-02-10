@@ -3,13 +3,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {CoreMap} from './CoreMap.js';
+import {CoreMap} from '@_linked/core/collections/CoreMap';
 import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
 import {NamedNode,Node} from '../models.js';
 import {QuadSet} from './QuadSet.js';
 import {QuadArray} from './QuadArray.js';
 import {NodeSet} from './NodeSet.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import {ICoreIterable} from '@_linked/core/interfaces/ICoreIterable';
 
 export class NodeMap<R extends Node>
   extends CoreMap<string, R>

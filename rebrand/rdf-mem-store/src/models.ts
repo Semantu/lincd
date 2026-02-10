@@ -13,12 +13,12 @@ import {DefaultGraphTermType,TermType} from 'rdflib/lib/types.js';
 import {defaultGraphURI} from 'rdflib/lib/utils/default-graph-uri.js';
 
 import {QuadSet} from './collections/QuadSet.js';
-import {CoreMap} from './collections/CoreMap.js';
+import {CoreMap} from '@_linked/core/collections/CoreMap';
 import {QuadMap} from './collections/QuadMap.js';
 import {QuadArray} from './collections/QuadArray.js';
 import {NodeSet} from './collections/NodeSet.js';
 
-import {ICoreIterable} from './interfaces/ICoreIterable.js';
+import {ICoreIterable} from '@_linked/core/interfaces/ICoreIterable';
 import {IShape} from './interfaces/IShape.js';
 import {IGraphObject} from './interfaces/IGraphObject.js';
 
@@ -27,8 +27,8 @@ import {BatchedEventEmitter,eventBatcher} from './events/EventBatcher.js';
 import {EventEmitter} from './events/EventEmitter.js';
 import {NodeMap} from './collections/NodeMap.js';
 import {NodeURIMappings} from './collections/NodeURIMappings.js';
-import {CoreSet} from './collections/CoreSet.js';
-import {Prefix} from './utils/Prefix.js';
+import {CoreSet} from '@_linked/core/collections/CoreSet';
+import {Prefix} from '@_linked/core/utils/Prefix';
 
 export abstract class Node extends EventEmitter {
   /** The type of node */

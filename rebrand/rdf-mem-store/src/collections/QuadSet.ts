@@ -7,7 +7,7 @@
 //require('core-js/fn/set');
 //import * as Set from 'core-js/es6/set';
 import {Graph,NamedNode,Node,Quad} from '../models.js';
-import {CoreSet} from './CoreSet.js';
+import {CoreSet} from '@_linked/core/collections/CoreSet';
 import {NodeSet} from './NodeSet.js';
 
 export class QuadSet extends CoreSet<Quad> {
