@@ -1,3 +1,8 @@
+---
+summary: Extract @_linked/rdf-mem-store from the LINCD monolith. Covers RDF model classes (NamedNode, Literal, Quad, Graph), InMemoryStore, LocalQueryResolver, and all RDF collections.
+packages: [rdf-mem-store]
+---
+
 # @_linked/rdf-mem-store — extraction plan
 
 ## Repository layout

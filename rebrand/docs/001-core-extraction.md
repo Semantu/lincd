@@ -1,3 +1,8 @@
+---
+summary: Extract @_linked/core from the LINCD monolith using copy-then-prune. Covers query DSL, SHACL shapes, package registration, and LinkedStorage. Documents prior failed attempts and why copy-then-prune was chosen.
+packages: [core]
+---
+
 # @_linked/core — package extraction plan (copy-then-prune)
 
 ## Context
