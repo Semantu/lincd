@@ -15,7 +15,5 @@ module.exports = {
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@_linked/core/(.*)$': '<rootDir>/../../../core/src/$1',
-    '^@_linked/core$': '<rootDir>/../../../core/src/index',
   },
 };

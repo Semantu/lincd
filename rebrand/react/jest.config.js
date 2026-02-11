@@ -14,10 +14,6 @@ module.exports = {
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@_linked/core/(.*)$': '<rootDir>/../../../core/src/$1',
-    '^@_linked/core$': '<rootDir>/../../../core/src/index',
-    '^@_linked/rdf-mem-store/(.*)$': '<rootDir>/../../../rdf-mem-store/src/$1',
-    '^@_linked/rdf-mem-store$': '<rootDir>/../../../rdf-mem-store/src/index',
     '^@_linked/react/(.*)$': '<rootDir>/../$1',
     '^@_linked/react$': '<rootDir>/../index',
   },

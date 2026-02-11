@@ -31,13 +31,14 @@
     "test": "npx jest --config jest.config.js"
   },
   "peerDependencies": {
-    "@_linked/core": "0.0.0",
+    "@_linked/core": "^1.0.0",
     "react": "^18.2.0"
   },
   "dependencies": {
     "react-usestateref": "^1.0.8"
   },
   "devDependencies": {
+    "@_linked/rdf-mem-store": "^1.0.0",
     "@testing-library/react": "^14.2.1",
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.12",
