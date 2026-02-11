@@ -1,3 +1,8 @@
+---
+summary: Extract @_linked/react from the LINCD monolith. Covers linkedComponent, linkedSetComponent, LinkedComponentClass, useStyles, and React-specific tests.
+packages: [react]
+---
+
 # @_linked/react — extraction plan (rewrite)
 
 ## Goal

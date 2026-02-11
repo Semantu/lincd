@@ -25,10 +25,10 @@
     }
   },
   "scripts": {
-    "build": "node ../../node_modules/.bin/rimraf ./lib && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && node ../../node_modules/.bin/tsc -p tsconfig-esm.json && node ./scripts/dual-package.js",
-    "compile": "echo '💫 Compiling CJS' && node ../../node_modules/.bin/tsc -p tsconfig-cjs.json && echo '💫 Compiling ESM' && node ../../node_modules/.bin/tsc -p tsconfig-esm.json",
+    "build": "npx rimraf ./lib && npx tsc -p tsconfig-cjs.json && npx tsc -p tsconfig-esm.json && node ./scripts/dual-package.js",
+    "compile": "echo '💫 Compiling CJS' && npx tsc -p tsconfig-cjs.json && echo '💫 Compiling ESM' && npx tsc -p tsconfig-esm.json",
     "dual-package": "node ./scripts/dual-package.js",
-    "test": "node ../../node_modules/.bin/jest --config jest.config.js"
+    "test": "npx jest --config jest.config.js"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
