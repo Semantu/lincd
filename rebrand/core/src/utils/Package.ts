@@ -440,7 +440,7 @@ function registerPackageInTree(packageName,packageExports?)
     //This probably means package.ts is loaded twice, through different paths and could point to a problem
     //So we log about it. But there is one exception. LINCD itself registers itself twice: once in the bottom of this file and once in its package.ts file.
     //But if there are already other packages registered, then probably there is 2 versions of LINCD being loaded, and that IS a problem.
-    if (packageName !== 'lincd' || Object.keys(lincd._modules).length !== 1)
+    if (packageName !== '@_linked/core' || Object.keys(lincd._modules).length !== 1)
     {
       console.warn(
         'A package with the name ' +
@@ -499,13 +499,13 @@ export function initTree()
 //when this file is used, make sure the tree is initialized
 initTree();
 
-//now that this file is set up, we can link linked shapes in the LINCD module itself
-let lincdPackage = linkedPackage('lincd');
-lincdPackage.linkedShape({
+//now that this file is set up, we can link linked shapes in the core module itself
+export const corePackage = linkedPackage('@_linked/core');
+corePackage.linkedShape({
   description:
     'Represents a SHACL NodeShape; defines constraints for a class of RDF nodes. Links to multiple PropertyShapes. (schema, constraint, class validation)',
 })(NodeShape);
-lincdPackage.linkedShape({
+corePackage.linkedShape({
   description:
     'Represents a SHACL PropertyShape; specifies rules for one property of a NodeShape (path, datatype, cardinality). (validation rule, property constraint)',
 })(PropertyShape);

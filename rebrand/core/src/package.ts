@@ -1,4 +1,4 @@
-import {linkedPackage} from './utils/Package.js';
+import {corePackage} from './utils/Package.js';
 
 export const {
   linkedShape,
@@ -8,4 +8,4 @@ export const {
   registerPackageModule,
   packageExports,
   getPackageShape,
-} = linkedPackage('lincd');
+} = corePackage;
