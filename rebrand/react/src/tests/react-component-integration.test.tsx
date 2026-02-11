@@ -137,7 +137,7 @@ afterEach(() => {
   setDefaultPageLimit(12);
 });
 
-describe('6. React Component Integration', () => {
+describe('React component integration', () => {
   test('component with single property query', async () => {
     const Component = linkedComponent(
       Person.query((p) => p.name),

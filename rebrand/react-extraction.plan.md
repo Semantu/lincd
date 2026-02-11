@@ -320,7 +320,7 @@ For each completed phase/sub-phase, append:
 
 ### Phase 5 — Gap-closure test phase
 - Status: `completed`
-- Commit: `<to be filled after commit>`
+- Commit: `1960921`
 - Summary:
   - Added `rebrand/react/src/tests/gap-closure-react-behavior.test.tsx` covering loading state rendering, `_refresh()` refetch flow, `_refresh(updatedProps)` local patch flow, linked-set pagination controller methods, set-input validation, query-wrapper validation, source conversion edge cases, and component metadata exposure.
   - Added `rebrand/react/src/tests/gap-closure-hooks-and-class.test.tsx` covering `useStyles` merge behavior and `LinkedComponentClass` source-shape lifecycle behavior.
@@ -335,4 +335,22 @@ For each completed phase/sub-phase, append:
 - Deviations from plan:
   - For `linkedSetComponent(null, ...)`, runtime currently throws `TypeError: Cannot convert undefined or null to object` before hitting the friendly `'Unknown data query type'` branch; tests assert the friendly branch via a numeric invalid input.
   - Parser-missing validation in React event flow required window error capture in tests because the error is reported as an uncaught event error in JSDOM.
+- Next step: `Done`
+
+### Phase 5a — Test-suite reorganization
+- Status: `completed`
+- Commit: `<to be filled after commit>`
+- Summary:
+  - Reorganized React package tests into two files: `react-component-integration.test.tsx` and `react-component-behavior.test.tsx`.
+  - Merged utility coverage (`useStyles`, `LinkedComponentClass`) into the behavior suite and removed `react-component-utils.test.tsx`.
+  - Removed legacy naming (`gap closure`) from describe blocks and dropped redundant smoke/runtime test files from the package test tree.
+- Validation:
+  - Tests passed: `27`
+  - Tests failed: `0`
+  - Suites passed: `2`
+  - Suites failed: `0`
+  - Command(s):
+    - `npm test -- --runInBand` (in `rebrand/react`) -> pass (`2 passed suites`, `27 passed tests`)
+- Deviations from plan:
+  - Test count reduced from prior `30` to `27` after consolidating/removing redundant smoke/runtime coverage; behavior coverage remains represented in the remaining suites.
 - Next step: `Done`

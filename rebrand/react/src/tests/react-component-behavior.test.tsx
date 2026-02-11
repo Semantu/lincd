@@ -8,6 +8,8 @@ import {LinkedStorage} from '@_linked/core/utils/LinkedStorage';
 import {SelectQueryFactory} from '@_linked/core/queries/SelectQuery';
 import {ShapeSet} from '@_linked/core/collections/ShapeSet';
 import {getSourceFromInputProps} from '../utils/LinkedComponent.js';
+import {useStyles} from '../utils/Hooks.js';
+import {LinkedComponentClass} from '../utils/LinkedComponentClass.js';
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -45,6 +47,20 @@ class Dog extends Person {
 @linkedShape
 class Cat extends Shape {
   static targetClass = catClass;
+}
+
+class TestLinkedClass extends LinkedComponentClass<Person> {
+  static shape = Person;
+
+  render() {
+    return <div>ok</div>;
+  }
+}
+
+class BrokenLinkedClass extends LinkedComponentClass<Person> {
+  render() {
+    return <div>broken</div>;
+  }
 }
 
 class QueryParserStub {
@@ -109,7 +125,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('gap closure: linked component behavior', () => {
+describe('React component behavior', () => {
   test('shows loader before linkedComponent query resolves', async () => {
     const deferred = createDeferred<any>();
     parser.queueResult(deferred.promise);
@@ -485,5 +501,78 @@ describe('gap closure: linked component behavior', () => {
       expect(screen.getByText('Semmy')).toBeTruthy();
       expect(screen.getByText('Moa')).toBeTruthy();
     });
+  });
+});
+
+describe('React utility helpers', () => {
+  test('useStyles merges class names and styles, filtering falsy values', () => {
+    const result = useStyles(
+      {
+        className: ['base', '', null, 'active'],
+        style: {color: 'red'},
+        other: 'value',
+      },
+      ['extra', false as any, 'focus'],
+      {fontWeight: 'bold'},
+    );
+
+    expect(result.className).toBe('base active extra focus');
+    expect(result.style).toEqual({color: 'red', fontWeight: 'bold'});
+    expect(result.other).toBe('value');
+    expect((result as any).className.includes('  ')).toBe(false);
+  });
+
+  test('useStyles supports string class input and style object input', () => {
+    const withClass = useStyles({className: 'root'}, 'extra-class');
+    expect(withClass.className).toBe('root extra-class');
+
+    const withStyles = useStyles({style: {color: 'blue'}}, {marginTop: 4});
+    expect(withStyles.style).toEqual({color: 'blue', marginTop: 4});
+  });
+
+  test('LinkedComponentClass sourceShape resolves and resets when source changes', () => {
+    const ref = React.createRef<TestLinkedClass>();
+
+    const firstSource = new Person({id: 'urn:test:gapclass:p1'});
+    const secondSource = new Person({id: 'urn:test:gapclass:p2'});
+
+    const {rerender} = render(
+      <TestLinkedClass source={firstSource} _refresh={() => {}} ref={ref} />,
+    );
+
+    const firstShape = ref.current.sourceShape;
+    expect(firstShape.id).toBe('urn:test:gapclass:p1');
+
+    rerender(
+      <TestLinkedClass source={secondSource} _refresh={() => {}} ref={ref} />,
+    );
+
+    const secondShape = ref.current.sourceShape;
+    expect(secondShape.id).toBe('urn:test:gapclass:p2');
+    expect(secondShape).not.toBe(firstShape);
+  });
+
+  test('LinkedComponentClass sourceShape throws when class is not linked to a shape', () => {
+    const ref = React.createRef<BrokenLinkedClass>();
+
+    render(
+      <BrokenLinkedClass
+        source={new Person({id: 'urn:test:gapclass:p1'}) as any}
+        _refresh={() => {}}
+        ref={ref}
+      />,
+    );
+
+    expect(() => ref.current.sourceShape).toThrow(
+      'BrokenLinkedClass is not linked to a shape',
+    );
+  });
+
+  test('LinkedComponentClass sourceShape returns null when no source is provided', () => {
+    const ref = React.createRef<TestLinkedClass>();
+
+    render(<TestLinkedClass source={null as any} _refresh={() => {}} ref={ref} />);
+
+    expect(ref.current.sourceShape).toBeNull();
   });
 });
