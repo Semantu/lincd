@@ -317,3 +317,22 @@ For each completed phase/sub-phase, append:
 - Deviations from plan:
   - None.
 - Next step: `Done`
+
+### Phase 5 — Gap-closure test phase
+- Status: `completed`
+- Commit: `<to be filled after commit>`
+- Summary:
+  - Added `rebrand/react/src/tests/gap-closure-react-behavior.test.tsx` covering loading state rendering, `_refresh()` refetch flow, `_refresh(updatedProps)` local patch flow, linked-set pagination controller methods, set-input validation, query-wrapper validation, source conversion edge cases, and component metadata exposure.
+  - Added `rebrand/react/src/tests/gap-closure-hooks-and-class.test.tsx` covering `useStyles` merge behavior and `LinkedComponentClass` source-shape lifecycle behavior.
+  - Exercised parser-missing error path via `_refresh()` and validated emitted runtime error capture in test harness.
+- Validation:
+  - Tests passed: `30`
+  - Tests failed: `0`
+  - Suites passed: `5`
+  - Suites failed: `0`
+  - Command(s):
+    - `npm test -- --runInBand` (in `rebrand/react`) -> pass (`5 passed suites`, `30 passed tests`)
+- Deviations from plan:
+  - For `linkedSetComponent(null, ...)`, runtime currently throws `TypeError: Cannot convert undefined or null to object` before hitting the friendly `'Unknown data query type'` branch; tests assert the friendly branch via a numeric invalid input.
+  - Parser-missing validation in React event flow required window error capture in tests because the error is reported as an uncaught event error in JSDOM.
+- Next step: `Done`
