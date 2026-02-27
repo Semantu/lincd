@@ -64,12 +64,30 @@ export abstract class LinkedFileStorage {
 /**
  * Get the full path of an asset based on the way LinkedFileStorage is configured
  * Returns accessURL + directory (/public by default) + path
+ * - Absolute URLs (http/https/data/blob) are returned unchanged
+ * - `/public/...` inputs are normalized to avoid `/public/public/...`
  * @param path asset path
  * @param directory asset directory (optional, default is /public)
  * @returns asset url. e.g. https://cdn.example.com/public/image.png
  */
 export function asset(path: string, directory: string = '/public'): string {
-  const accessURL = LinkedFileStorage.accessURL;
-  const assetUrl = accessURL + directory + path;
-  return assetUrl;
+  if (!path) {
+    return path;
+  }
+
+  if (/^(?:https?:)?\/\//i.test(path) || /^(data|blob):/i.test(path)) {
+    return path;
+  }
+
+  const accessURL = LinkedFileStorage.accessURL || '';
+  const normalizedDirectory = directory.endsWith('/')
+    ? directory.slice(0, -1)
+    : directory;
+  const normalizedPath = path.startsWith('/public/')
+    ? path.replace(/^\/public/, '')
+    : path.startsWith('/')
+      ? path
+      : `/${path}`;
+
+  return accessURL + normalizedDirectory + normalizedPath;
 }
