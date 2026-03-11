@@ -93,17 +93,16 @@ const appendPathSegment = (base?: string, segment?: string) => {
 };
 
 const getStaticAccessURLFromEnv = () => {
-  // 1) Use explicit static base if provided by storage bootstrap.
-  // 2) Otherwise derive static base from shared CDN + VERSION.
+  // Use explicit static base if provided by storage bootstrap.
   const staticAccessURL = readEnv(() => process.env.STATIC_ACCESS_URL);
-  const sharedAccessURL = readEnv(() => process.env.S3_CDN_URL);
   const version = readEnv(() => process.env.VERSION);
 
   if (staticAccessURL) {
     return trimTrailingSlash(staticAccessURL);
   }
-
-  return appendPathSegment(sharedAccessURL, version);
+  else {
+    throw new Error("No STATIC_ACCESS_URL env variable available");
+  }
 };
 
 /**
