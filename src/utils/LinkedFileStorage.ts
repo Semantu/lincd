@@ -61,15 +61,81 @@ export abstract class LinkedFileStorage {
   }
 }
 
+const trimTrailingSlash = (value: string = '') => value.replace(/\/+$/g, '');
+const trimSlashes = (value: string = '') => value.replace(/^\/+|\/+$/g, '');
+
+/**
+ * Safe env access for both browser and server bundles.
+ * In browser builds, direct process access can throw when not polyfilled.
+ */
+const readEnv = (getter: () => string | undefined) => {
+  try {
+    return getter();
+  } catch (_error) {
+    return undefined;
+  }
+};
+
+/**
+ * Append a path segment exactly once, normalizing slashes.
+ * Example: ("https://cdn.example.com", "4.1.2") -> "https://cdn.example.com/4.1.2"
+ */
+const appendPathSegment = (base?: string, segment?: string) => {
+  const cleanBase = trimTrailingSlash(base || '');
+  const cleanSegment = trimSlashes(segment || '');
+  if (!cleanBase) {
+    return undefined;
+  }
+  if (!cleanSegment || cleanBase.endsWith(`/${cleanSegment}`)) {
+    return cleanBase;
+  }
+  return `${cleanBase}/${cleanSegment}`;
+};
+
+const getStaticAccessURLFromEnv = () => {
+  // Use explicit static base if provided by storage bootstrap.
+  const staticAccessURL = readEnv(() => process.env.STATIC_ACCESS_URL);
+  const version = readEnv(() => process.env.VERSION);
+
+  if (staticAccessURL) {
+    return trimTrailingSlash(staticAccessURL);
+  }
+  else {
+    throw new Error("No STATIC_ACCESS_URL env variable available");
+  }
+};
+
 /**
  * Get the full path of an asset based on the way LinkedFileStorage is configured
  * Returns accessURL + directory (/public by default) + path
+ * - Absolute URLs (http/https/data/blob) are returned unchanged
+ * - `/public/...` inputs are normalized to avoid `/public/public/...`
  * @param path asset path
  * @param directory asset directory (optional, default is /public)
  * @returns asset url. e.g. https://cdn.example.com/public/image.png
  */
 export function asset(path: string, directory: string = '/public'): string {
-  const accessURL = LinkedFileStorage.accessURL;
-  const assetUrl = accessURL + directory + path;
-  return assetUrl;
+  if (!path) {
+    return path;
+  }
+
+  if (/^(?:https?:)?\/\//i.test(path) || /^(data|blob):/i.test(path)) {
+    return path;
+  }
+
+  // Prefer static env-derived URL for deterministic bundle/image hosting.
+  // Fallback to default LinkedFileStorage URL for backward compatibility.
+  const accessURL =
+    getStaticAccessURLFromEnv() ||
+    trimTrailingSlash(LinkedFileStorage.accessURL || '');
+  const normalizedDirectory = directory.endsWith('/')
+    ? directory.slice(0, -1)
+    : directory;
+  const normalizedPath = path.startsWith('/public/')
+    ? path.replace(/^\/public/, '')
+    : path.startsWith('/')
+      ? path
+      : `/${path}`;
+
+  return accessURL + normalizedDirectory + normalizedPath;
 }
