@@ -1,0 +1,9 @@
+{
+  "name": "@_linked/rebrand-workspace",
+  "private": true,
+  "workspaces": [
+    "core",
+    "rdf-mem-store",
+    "react"
+  ]
+}
