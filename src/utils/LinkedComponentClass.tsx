@@ -1,6 +1,6 @@
 import React from 'react';
 import {Shape} from '../shapes/Shape.js';
-import {LinkedComponentProps} from './LinkedComponent.js';
+import type {LinkedComponentProps} from './LinkedComponent.js';
 import {NamedNode} from '../models.js';
 
 /**

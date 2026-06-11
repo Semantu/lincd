@@ -1,13 +1,13 @@
-import {Shape,ShapeType} from '../shapes/Shape.js';
+import {Shape,type ShapeType} from '../shapes/Shape.js';
 import {TestNode} from '../utils/TraceShape.js';
 import {PropertyShape} from '../shapes/SHACL.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreSet} from '../collections/CoreSet.js';
-import {LinkedComponent,LinkedSetComponent} from '../utils/LinkedComponent.js';
+import type {LinkedComponent,LinkedSetComponent} from '../utils/LinkedComponent.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {getPropertyShapeByLabel,getShapeClass} from '../utils/ShapeClass.js';
-import {NodeReferenceValue,Prettify,QueryFactory,ShapeReferenceValue} from './QueryFactory.js';
+import {type NodeReferenceValue,type Prettify,QueryFactory,type ShapeReferenceValue} from './QueryFactory.js';
 import {xsd} from '../ontologies/xsd.js';
 import {NamedNode} from '../models.js';
 

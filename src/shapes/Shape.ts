@@ -11,9 +11,9 @@ import {rdfs} from '../ontologies/rdfs.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {QuadArray} from '../collections/QuadArray.js';
 import {Find} from '../utils/Find.js';
-import {IShape} from '../interfaces/IShape.js';
+import type {IShape} from '../interfaces/IShape.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import type {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {SearchMap} from '../collections/SearchMap.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {QuadSet} from '../collections/QuadSet.js';
@@ -26,22 +26,22 @@ import {
   getSubShapesClasses,
 } from '../utils/ShapeClass.js';
 import {
-  GetQueryResponseType,
-  PatchedQueryPromise,
-  QResult,
-  QShape,
-  QueryBuildFn,
-  QueryResponseToResultType,
+  type GetQueryResponseType,
+  type PatchedQueryPromise,
+  type QResult,
+  type QShape,
+  type QueryBuildFn,
+  type QueryResponseToResultType,
   QueryShape,
   SelectQueryFactory,
 } from '../queries/SelectQuery.js';
-import {IQueryParser} from '../interfaces/IQueryParser.js';
+import type {IQueryParser} from '../interfaces/IQueryParser.js';
 import {TestNode} from '../utils/TraceShape.js';
-import {AddId,NodeReferenceValue,UpdatePartial} from '../queries/QueryFactory.js';
-import {ClassOf} from '../utils/Types.js';
-import {CreateResponse} from '../queries/CreateQuery.js';
-import {NodeId} from '../queries/MutationQuery.js';
-import {DeleteResponse} from '../queries/DeleteQuery.js';
+import type {AddId,NodeReferenceValue,UpdatePartial} from '../queries/QueryFactory.js';
+import type {ClassOf} from '../utils/Types.js';
+import type {CreateResponse} from '../queries/CreateQuery.js';
+import type {NodeId} from '../queries/MutationQuery.js';
+import type {DeleteResponse} from '../queries/DeleteQuery.js';
 
 declare var dprint: (item, includeIncomingProperties?: boolean) => void;
 

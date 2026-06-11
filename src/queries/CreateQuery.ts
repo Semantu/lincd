@@ -1,7 +1,7 @@
 import {Shape} from '../shapes/Shape.js';
 import {NodeShape} from '../shapes/SHACL.js';
-import {LinkedQuery} from './SelectQuery.js';
-import {AddId, NodeDescriptionValue, UpdatePartial} from './QueryFactory.js';
+import type {LinkedQuery} from './SelectQuery.js';
+import type {AddId, NodeDescriptionValue, UpdatePartial} from './QueryFactory.js';
 import {MutationQueryFactory} from './MutationQuery.js';
 
 export interface CreateQuery<ResponseType = null> extends LinkedQuery {

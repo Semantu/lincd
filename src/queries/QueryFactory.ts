@@ -1,4 +1,4 @@
-import {LinkedQuery} from './SelectQuery.js';
+import type {LinkedQuery} from './SelectQuery.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
 import {Shape} from '../shapes/Shape.js';
 import {ShapeSet} from '../collections/ShapeSet.js';

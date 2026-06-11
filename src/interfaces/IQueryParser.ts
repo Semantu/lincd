@@ -1,17 +1,17 @@
 import {
-  GetQueryResponseType,
-  QueryResponseToResultType,
+  type GetQueryResponseType,
+  type QueryResponseToResultType,
   SelectQueryFactory,
 } from '../queries/SelectQuery.js';
 import {Shape} from '../shapes/Shape.js';
-import {
+import type {
   AddId,
   NodeReferenceValue,
   UpdatePartial,
 } from '../queries/QueryFactory.js';
-import {CreateResponse} from '../queries/CreateQuery.js';
-import {NodeId} from '../queries/MutationQuery.js';
-import {DeleteResponse} from '../queries/DeleteQuery.js';
+import type {CreateResponse} from '../queries/CreateQuery.js';
+import type {NodeId} from '../queries/MutationQuery.js';
+import type {DeleteResponse} from '../queries/DeleteQuery.js';
 
 export interface IQueryParser {
   selectQuery<

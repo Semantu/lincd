@@ -9,7 +9,7 @@ import {rdf} from '../ontologies/rdf.js';
 import {rdfs} from '../ontologies/rdfs.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {URI} from './URI.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import type {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {SearchMap} from '../collections/SearchMap.js';
 
 export class Find {

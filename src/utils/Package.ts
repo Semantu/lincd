@@ -22,11 +22,11 @@ import {rdf} from '../ontologies/rdf.js';
 import {URI} from './URI.js';
 import {addNodeShapeToShapeClass,getShapeClass} from './ShapeClass.js';
 import {
-  Component,
+  type Component,
   createLinkedComponentFn,
   createLinkedSetComponentFn,
-  LinkedComponentFactoryFn,
-  LinkedSetComponentFactoryFn,
+  type LinkedComponentFactoryFn,
+  type LinkedSetComponentFactoryFn,
 } from '../utils/LinkedComponent.js';
 import {shacl} from '../ontologies/shacl.js';
 import {rdfs} from '../ontologies/rdfs.js';

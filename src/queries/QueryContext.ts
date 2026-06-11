@@ -1,5 +1,5 @@
 import {useEffect} from 'react';
-import {QShape, QueryShape} from './SelectQuery.js';
+import {type QShape, QueryShape} from './SelectQuery.js';
 import {Shape} from '../shapes/Shape.js';
 import {TestNode} from '../utils/TraceShape.js';
 

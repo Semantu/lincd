@@ -1,16 +1,16 @@
 import {QuadSet} from '../collections/QuadSet.js';
 import {Graph, NamedNode, Quad} from '../models.js';
 import {NodeSet} from '../collections/NodeSet.js';
-import {ICoreIterable} from './ICoreIterable.js';
+import type {ICoreIterable} from './ICoreIterable.js';
 import {Shape} from '../shapes/Shape.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {SelectQuery} from '../queries/SelectQuery.js';
-import {LinkedDataRequest} from '../utils/TraceShape.js';
+import type {SelectQuery} from '../queries/SelectQuery.js';
+import type {LinkedDataRequest} from '../utils/TraceShape.js';
 import {QuadArray} from '../collections/QuadArray.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
-import {UpdateQuery} from '../queries/UpdateQuery.js';
-import {CreateQuery} from '../queries/CreateQuery.js';
-import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
+import type {UpdateQuery} from '../queries/UpdateQuery.js';
+import type {CreateQuery} from '../queries/CreateQuery.js';
+import type {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
 
 export interface IQuadStore {
   /**

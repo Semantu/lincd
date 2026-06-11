@@ -736,7 +736,7 @@ function connectValueShape<
   if ((config as ObjectPropertyShapeConfig).shape) {
     const shapeConfig = (config as ObjectPropertyShapeConfig).shape;
     
-    // If shape is a tuple like ['lincd-schema', 'ImageObject'], use the URI directly
+    // If shape is a tuple like ['@_linked/schema', 'ImageObject'], use the URI directly
     // without waiting for the Shape class to be ready
     if (Array.isArray(shapeConfig)) {
       const [packageName, shapeName] = shapeConfig;

@@ -18,12 +18,12 @@ import {QuadMap} from './collections/QuadMap.js';
 import {QuadArray} from './collections/QuadArray.js';
 import {NodeSet} from './collections/NodeSet.js';
 
-import {ICoreIterable} from './interfaces/ICoreIterable.js';
-import {IShape} from './interfaces/IShape.js';
-import {IGraphObject} from './interfaces/IGraphObject.js';
+import type {ICoreIterable} from './interfaces/ICoreIterable.js';
+import type {IShape} from './interfaces/IShape.js';
+import type {IGraphObject} from './interfaces/IGraphObject.js';
 
 import {NodeValuesSet} from './collections/NodeValuesSet.js';
-import {BatchedEventEmitter,eventBatcher} from './events/EventBatcher.js';
+import {type BatchedEventEmitter,eventBatcher} from './events/EventBatcher.js';
 import {EventEmitter} from './events/EventEmitter.js';
 import {NodeMap} from './collections/NodeMap.js';
 import {NodeURIMappings} from './collections/NodeURIMappings.js';

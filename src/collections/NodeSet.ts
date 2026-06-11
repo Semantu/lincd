@@ -5,10 +5,10 @@
  */
 import {CoreSet} from './CoreSet.js';
 import {Literal,NamedNode,Node} from '../models.js';
-import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
+import type {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
 import {QuadSet} from './QuadSet.js';
 import {QuadArray} from './QuadArray.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import type {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {Debug} from '../utils/Debug.js';
 import {URI} from '../utils/URI.js';
 

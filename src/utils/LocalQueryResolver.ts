@@ -1,50 +1,50 @@
 import {
-  ArgPath,
-  ComponentQueryPath,
-  CustomQueryObject,
+  type ArgPath,
+  type ComponentQueryPath,
+  type CustomQueryObject,
   Evaluation,
-  GetQueryResponseType,
-  JSPrimitive,
-  NodeResultMap,
-  PropertyQueryStep,
-  QResult,
-  QueryArg,
+  type GetQueryResponseType,
+  type JSPrimitive,
+  type NodeResultMap,
+  type PropertyQueryStep,
+  type QResult,
+  type QueryArg,
   QueryBuilderObject,
-  QueryPath,
+  type QueryPath,
   QueryPrimitiveSet,
-  QueryResponseToEndValues,
-  QueryStep,
-  SelectQuery,
+  type QueryResponseToEndValues,
+  type QueryStep,
+  type SelectQuery,
   SelectQueryFactory,
-  SizeStep,
-  SortByPath,
-  SubQueryPaths,
-  WhereAndOr,
-  WhereEvaluationPath,
+  type SizeStep,
+  type SortByPath,
+  type SubQueryPaths,
+  type WhereAndOr,
+  type WhereEvaluationPath,
   WhereMethods,
-  WherePath,
+  type WherePath,
 } from '../queries/SelectQuery.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {Shape} from '../shapes/Shape.js';
 import {shacl} from '../ontologies/shacl.js';
 import {CoreMap} from '../collections/CoreMap.js';
-import {UpdateQuery} from '../queries/UpdateQuery.js';
+import type {UpdateQuery} from '../queries/UpdateQuery.js';
 import {
   checkNewCount,
   isSetModificationValue,
-  NodeDescriptionValue,
-  NodeReferenceValue,
-  ShapeReferenceValue,
-  SinglePropertyUpdateValue,
-  UpdateNodePropertyValue,
+  type NodeDescriptionValue,
+  type NodeReferenceValue,
+  type ShapeReferenceValue,
+  type SinglePropertyUpdateValue,
+  type UpdateNodePropertyValue,
 } from '../queries/QueryFactory.js';
 import {Literal, NamedNode} from '../models.js';
 import {xsd} from '../ontologies/xsd.js';
 import {PropertyShape, ValidationReport} from '../shapes/SHACL.js';
 import {rdf} from '../ontologies/rdf.js';
 import {NodeSet} from '../collections/NodeSet.js';
-import {CreateQuery} from '../queries/CreateQuery.js';
-import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
+import type {CreateQuery} from '../queries/CreateQuery.js';
+import type {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
 
 const primitiveTypes: string[] = ['string', 'number', 'boolean', 'Date'];
 

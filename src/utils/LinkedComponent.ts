@@ -1,14 +1,14 @@
 import {
-  GetCustomObjectKeys,
-  GetQueryResponseType,
-  GetQueryShapeType,
-  QResult,
-  QueryController,
-  QueryControllerProps,
-  QueryResponseToResultType,
-  QueryWrapperObject,
+  type GetCustomObjectKeys,
+  type GetQueryResponseType,
+  type GetQueryShapeType,
+  type QResult,
+  type QueryController,
+  type QueryControllerProps,
+  type QueryResponseToResultType,
+  type QueryWrapperObject,
   SelectQueryFactory,
-  ToQueryResultSet,
+  type ToQueryResultSet,
 } from '../queries/SelectQuery.js';
 import {Shape} from '../shapes/Shape.js';
 

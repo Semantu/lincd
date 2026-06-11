@@ -1,5 +1,5 @@
 import {Shape} from '../shapes/Shape.js';
-import {AddId, NodeDescriptionValue, UpdatePartial} from './QueryFactory.js';
+import type {AddId, NodeDescriptionValue, UpdatePartial} from './QueryFactory.js';
 import {NodeShape} from '../shapes/SHACL.js';
 import {MutationQueryFactory} from './MutationQuery.js';
 

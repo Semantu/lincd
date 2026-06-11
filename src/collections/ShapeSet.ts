@@ -6,11 +6,11 @@
 import {CoreSet} from './CoreSet.js';
 import {NamedNode,Node} from '../models.js';
 import {Shape} from '../shapes/Shape.js';
-import {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
+import type {IGraphObjectSet} from '../interfaces/IGraphObjectSet.js';
 import {QuadSet} from './QuadSet.js';
 import {QuadArray} from './QuadArray.js';
 import {NodeSet} from './NodeSet.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import type {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {getLeastSpecificShapeClasses} from '../utils/ShapeClass.js';
 
 export class ShapeSet<R extends Shape = Shape>

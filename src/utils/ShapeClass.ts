@@ -1,7 +1,7 @@
 import {NamedNode} from '../models.js';
 import {Shape} from '../shapes/Shape.js';
 import {NodeShape, PropertyShape} from '../shapes/SHACL.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import type {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {rdf} from '../ontologies/rdf.js';
 
 let subShapesSpecificityCache: Map<string, (typeof Shape)[][]> = new Map();

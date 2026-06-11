@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import type {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {BlankNode,Graph,Literal,NamedNode,Node,Quad} from '../models.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {Shape} from '../shapes/Shape.js';

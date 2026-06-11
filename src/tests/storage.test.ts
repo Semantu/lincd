@@ -1,6 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
-import {IQuadStore} from '../interfaces/IQuadStore.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import type {IQuadStore} from '../interfaces/IQuadStore.js';
+import type {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {LinkedStorage} from '../utils/LinkedStorage.js';
 import {defaultGraph, Graph, Literal, NamedNode, Quad} from '../models.js';
 import {QuadSet} from '../collections/QuadSet.js';
@@ -12,16 +12,16 @@ import {NodeSet} from '../collections/NodeSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {PropertyShape} from '../shapes/SHACL.js';
-import {SelectQuery} from '../queries/SelectQuery.js';
+import type {SelectQuery} from '../queries/SelectQuery.js';
 import {
   createLocal,
   deleteLocal,
   resolveLocal,
   updateLocal,
 } from '../utils/LocalQueryResolver.js';
-import {UpdateQuery} from '../queries/UpdateQuery.js';
-import {CreateQuery} from '../queries/CreateQuery.js';
-import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
+import type {UpdateQuery} from '../queries/UpdateQuery.js';
+import type {CreateQuery} from '../queries/CreateQuery.js';
+import type {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
 
 export class InMemoryStore extends Shape implements IQuadStore {
   /**

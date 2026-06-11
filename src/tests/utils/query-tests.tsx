@@ -9,7 +9,7 @@ import {Literal, NamedNode} from '../../models.js';
 import {xsd} from '../../ontologies/xsd.js';
 import {TestNode} from '../../utils/TraceShape.js';
 import {describe, expect, test} from '@jest/globals';
-import {QResult} from '../../queries/SelectQuery.js';
+import type {QResult} from '../../queries/SelectQuery.js';
 import {render, waitFor} from '@testing-library/react';
 import {ShapeSet} from '../../collections/ShapeSet.js';
 import {setDefaultPageLimit} from '../../utils/Package.js';

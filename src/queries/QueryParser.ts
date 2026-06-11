@@ -1,16 +1,16 @@
-import {IQueryParser, staticImplements} from '../interfaces/IQueryParser.js';
+import {type IQueryParser, staticImplements} from '../interfaces/IQueryParser.js';
 import {
-  GetQueryResponseType,
-  QueryResponseToResultType,
+  type GetQueryResponseType,
+  type QueryResponseToResultType,
   SelectQueryFactory,
 } from './SelectQuery.js';
-import {AddId, NodeReferenceValue, UpdatePartial} from './QueryFactory.js';
+import type {AddId, NodeReferenceValue, UpdatePartial} from './QueryFactory.js';
 import {Shape} from '../shapes/Shape.js';
 import {LinkedStorage} from '../utils/LinkedStorage.js';
 import {UpdateQueryFactory} from './UpdateQuery.js';
-import {CreateQueryFactory, CreateResponse} from './CreateQuery.js';
-import {DeleteQueryFactory, DeleteResponse} from './DeleteQuery.js';
-import {NodeId} from './MutationQuery.js';
+import {CreateQueryFactory, type CreateResponse} from './CreateQuery.js';
+import {DeleteQueryFactory, type DeleteResponse} from './DeleteQuery.js';
+import type {NodeId} from './MutationQuery.js';
 
 @staticImplements<IQueryParser>() /* this class implements this interface with static methods */
 export class QueryParser {

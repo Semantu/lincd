@@ -1,8 +1,8 @@
 import {Shape} from '../shapes/Shape.js';
 import {NodeShape} from '../shapes/SHACL.js';
-import {LinkedQuery} from './SelectQuery.js';
-import {NodeReferenceValue, UpdatePartial} from './QueryFactory.js';
-import {MutationQueryFactory, NodeId} from './MutationQuery.js';
+import type {LinkedQuery} from './SelectQuery.js';
+import type {NodeReferenceValue, UpdatePartial} from './QueryFactory.js';
+import {MutationQueryFactory, type NodeId} from './MutationQuery.js';
 
 export interface DeleteQuery extends LinkedQuery {
   type: 'delete';

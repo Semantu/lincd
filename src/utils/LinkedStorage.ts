@@ -1,25 +1,25 @@
-import {IQuadStore} from '../interfaces/IQuadStore.js';
+import type {IQuadStore} from '../interfaces/IQuadStore.js';
 import {defaultGraph, Graph, NamedNode, Node, Quad} from '../models.js';
 import {QuadSet} from '../collections/QuadSet.js';
 import {CoreMap} from '../collections/CoreMap.js';
 import {NodeSet} from '../collections/NodeSet.js';
 import {Shape} from '../shapes/Shape.js';
 import {PropertyShape} from '../shapes/SHACL.js';
-import {ICoreIterable} from '../interfaces/ICoreIterable.js';
+import type {ICoreIterable} from '../interfaces/ICoreIterable.js';
 import {eventBatcher} from '../events/EventBatcher.js';
 import {QuadArray} from '../collections/QuadArray.js';
 import {CoreSet} from '../collections/CoreSet.js';
 import {ShapeSet} from '../collections/ShapeSet.js';
 import {getShapeClass, getSuperShapesClasses} from './ShapeClass.js';
-import {SelectQuery} from '../queries/SelectQuery.js';
-import {LinkedDataRequest} from './TraceShape.js';
-import {UpdateQuery} from '../queries/UpdateQuery.js';
-import {UpdatePartial} from '../queries/QueryFactory.js';
+import type {SelectQuery} from '../queries/SelectQuery.js';
+import type {LinkedDataRequest} from './TraceShape.js';
+import type {UpdateQuery} from '../queries/UpdateQuery.js';
+import type {UpdatePartial} from '../queries/QueryFactory.js';
 import {rdf} from '../ontologies/rdf.js';
 import nextTick from 'next-tick';
-import {CreateQuery} from '../queries/CreateQuery.js';
+import type {CreateQuery} from '../queries/CreateQuery.js';
 import {QueryParser} from '../queries/QueryParser.js';
-import {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
+import type {DeleteQuery, DeleteResponse} from '../queries/DeleteQuery.js';
 
 export abstract class LinkedStorage {
   private static defaultStore: IQuadStore;
@@ -401,7 +401,7 @@ export abstract class LinkedStorage {
   static selectQuery<S extends Shape, ResultType>(
     query: SelectQuery<S>,
   ): Promise<ResultType> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(query.shape);
+    let quadStore: IQuadStore = this.getDatasetForShapeClass(query.shape);
     return quadStore.selectQuery(query);
   }
 
@@ -409,21 +409,21 @@ export abstract class LinkedStorage {
     ShapeType extends Shape,
     U extends UpdatePartial<ShapeType>,
   >(query: UpdateQuery<U>): Promise<U> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(
+    let quadStore: IQuadStore = this.getDatasetForShapeClass(
       getShapeClass(query.shape.namedNode),
     );
     return quadStore.updateQuery(query);
   }
 
   static createQuery<R>(query: CreateQuery<R>): Promise<R> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(
+    let quadStore: IQuadStore = this.getDatasetForShapeClass(
       getShapeClass(query.shape.namedNode),
     );
     return quadStore.createQuery(query);
   }
 
   static deleteQuery(query: DeleteQuery): Promise<DeleteResponse> {
-    let quadStore: IQuadStore = this.getStoreForShapeClass(
+    let quadStore: IQuadStore = this.getDatasetForShapeClass(
       getShapeClass(query.shape.namedNode),
     );
     return quadStore.deleteQuery(query);

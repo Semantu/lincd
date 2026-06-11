@@ -1,4 +1,4 @@
-import {IFileStore} from '../interfaces/IFileStore.js';
+import type {IFileStore} from '../interfaces/IFileStore.js';
 import type {Readable} from 'stream';
 
 export abstract class LinkedFileStorage {
