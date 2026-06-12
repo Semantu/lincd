@@ -631,26 +631,20 @@ export function initTree()
       : typeof global !== 'undefined'
         ? global
         : undefined;
-  if ('lincd' in globalObject)
-  {
-    // Plan-011 §I2 — accepted during the Linked-eradication interim,
-    // mirroring the silencing in @_linked/core. The legacy `lincd`
-    // package is still imported transitively by `lincd-*` packages
-    // (e.g. peacegame's deps) and tripped this throw whenever Vite
-    // SSR loaded a workspace package that pulled lincd in. Downgrade
-    // to a one-shot warning so dev doesn't crash; root cause work is
-    // tracked separately.
-    if (!(globalObject as any)._linkedLegacyMultiWarned) {
-      console.warn(
-        'Multiple versions of LINCD (legacy lincd package) are loaded — accepted during Linked-eradication interim. Re-using the first registered tree.',
-      );
-      (globalObject as any)._linkedLegacyMultiWarned = true;
-    }
-  }
-  else
-  {
-    globalObject['lincd'] = {_modules: {}};
-  }
+  // Plan-011 — legacy `lincd` package eradication.
+  //
+  // This file should NEVER be loaded post-eradication. CN dropped the
+  // `lincd` portal dep + deleted the only direct-import (src/shapes.ts)
+  // in plan-011 phase 1+3. If this code runs, something transitively
+  // pulled legacy lincd back in — that's a regression worth surfacing
+  // loudly, not silently tolerating.
+  throw new Error(
+    'LINCD is being imported! The legacy `lincd` package was eradicated ' +
+    'in plan-011. Find what imported `lincd/...` and replace with the ' +
+    '@_linked/* equivalent (usually @_linked/core).'
+  );
+  // Unreachable; kept for type-shape compatibility:
+  globalObject['lincd'] = {_modules: {}};
 }
 
 //when this file is used, make sure the tree is initialized
