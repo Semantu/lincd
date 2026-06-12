@@ -633,7 +633,19 @@ export function initTree()
         : undefined;
   if ('lincd' in globalObject)
   {
-    throw new Error('Multiple versions of LINCD are loaded');
+    // Plan-011 §I2 — accepted during the Linked-eradication interim,
+    // mirroring the silencing in @_linked/core. The legacy `lincd`
+    // package is still imported transitively by `lincd-*` packages
+    // (e.g. peacegame's deps) and tripped this throw whenever Vite
+    // SSR loaded a workspace package that pulled lincd in. Downgrade
+    // to a one-shot warning so dev doesn't crash; root cause work is
+    // tracked separately.
+    if (!(globalObject as any)._linkedLegacyMultiWarned) {
+      console.warn(
+        'Multiple versions of LINCD (legacy lincd package) are loaded — accepted during Linked-eradication interim. Re-using the first registered tree.',
+      );
+      (globalObject as any)._linkedLegacyMultiWarned = true;
+    }
   }
   else
   {
