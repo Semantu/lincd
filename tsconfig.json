@@ -12,16 +12,33 @@
     "esModuleInterop": true,
     "pretty": true,
     "jsx": "react",
-    "types": ["node", "react", "eventemitter3"],
+    "types": [
+      "node",
+      "react",
+      "eventemitter3"
+    ],
     "baseUrl": "./",
     "paths": {
-      "*": ["node_modules/@types/*", "../../node_modules/@types/*", "*"]
+      "*": [
+        "node_modules/@types/*",
+        "../../node_modules/@types/*",
+        "*"
+      ]
     }
   },
   "include": [
     "./src/index.ts",
     "./src/custom-types/next-tick.d.ts",
     "./src/tests/*",
-    "../node_modules/ts-jest/globals.d.ts"
+    "../node_modules/ts-jest/globals.d.ts",
+    "./src/**/*.ts",
+    "./src/**/*.tsx"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "./src/__tests__/**",
+    "./src/tests/**",
+    "./src/test-helpers/**"
   ]
 }
